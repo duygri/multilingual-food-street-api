@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using PROJECT_C_.DTOs;
 using PROJECT_C_.Models;
 
 namespace PROJECT_C_.Controllers
@@ -8,9 +9,17 @@ namespace PROJECT_C_.Controllers
     [ApiController]
     public class FoodController : ControllerBase
     {
+        private readonly IFoodService _foodService;
+
+        public FoodController(IFoodService foodService)
+        {
+            _foodService = foodService;
+        }
+
         [HttpGet]
         public IActionResult GetFood()
         {
+
             var foods = new List<Food>
             {
                 new Food
@@ -34,43 +43,25 @@ namespace PROJECT_C_.Controllers
         }
         // API GPS
         [HttpGet("near")]
-        public IActionResult GetFoodNear(double lat, double lng)
+        public IActionResult GetFoodNear(
+            [FromQuery] double lat,
+            [FromQuery] double lng,
+            [FromQuery] int top = 3)
         {
-            var foods = new List<Food>
+            if(lat == 0 || lng == 0)
             {
-                new Food
-                {
-                    Id = 1,
-                    Name = "Banh mi",
-                    Description = "Banh mi",
-                    Latitude = 10.762622,
-                    Longitude  = 106.660172
-                },
-                new Food
-                {
-                    Id = 2,
-                    Name = "Pho",
-                    Description = "Pho",
-                    Latitude = 10.776889,
-                    Longitude = 106.700806
-                }
+                return BadRequest("Latitude and Longitude are required.");
+            }
+
+            var foods = _foodService.GetNearestFoods(lat, lng, top);
+
+            var response = new ApiResponse<List<FoodDto>>
+            {
+                Total = foods.Count,
+                Data = foods
             };
-            var result = foods
-                .Select(f =>
-                {
-                    var km = CalculateDistance(lat, lng, f.Latitude, f.Longitude);
-                    return new
-                    {
-                        Id = f.Id,
-                        Name = f.Name,
-                        Distance = km < 1 ? Math.Round(km * 1000, 0) : Math.Round(km, 2),
-                        Unit = km < 1 ? "m" : "km"
-                    };
-                })
-                .OrderBy(f => f.Distance)
-                .Take(3)
-                .ToList();
-            return Ok(result);
+
+            return Ok(response);
         }
         
         // GPS CALCULATOR

@@ -2,5 +2,5 @@
 
 public interface IFoodService
 {
-    List<FoodDto> GetNeareastFoods (double lat, double lng, int top );
+    List<FoodDto> GetNearestFoods (double lat, double lng, int top );
 }

@@ -1,5 +1,6 @@
 ﻿using PROJECT_C_.DTOs;
 using PROJECT_C_.Models;
+using System.Xml.Linq;
 
 public class FoodService : IFoodService
 {
@@ -23,27 +24,32 @@ public class FoodService : IFoodService
         }
     };
     
-    public List<FoodDto> GetNeareastFoods(double lat, double lng, int top)
+    public List<FoodDto> GetNearestFoods(double lat, double lng, int top)
     {
         return _foods
             .Select(f =>
             {
-                var km = CalculatorDistance(lat, lng, f.Latitude, f.Longitude);
-                return new FoodDto
+                var km = CalculateDistance(lat, lng, f.Latitude, f.Longitude);
+                return new 
                 {
-                    Id = f.Id,
-                    Name = f.Name,
-                    Description = f.Description,
-                    Distance = km < 1 ? km * 1000 : km,
-                    Unit = km < 1 ? "m" : "km"
+                    Food = f,
+                    Km = km
                 };
             })
-            .OrderBy(f => f.Distance)
+            .OrderBy(x => x.Km)
             .Take(top)
+            .Select(x => new FoodDto
+            {
+                Id = x.Food.Id,
+                Name = x.Food.Name,
+                Description = x.Food.Description,
+                Distance = x.Km < 1 ? Math.Round(x.Km * 1000, 0) : Math.Round(x.Km, 2),
+                Unit = x.Km < 1 ? "m" : "km"
+            })
             .ToList();
     }
     
-    public double CalculatorDistance(
+    public double CalculateDistance(
         double lat1, double lng1,
         double lat2, double lng2)
     {
