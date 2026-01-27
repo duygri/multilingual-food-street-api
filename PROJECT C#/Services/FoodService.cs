@@ -1,5 +1,4 @@
 ﻿using PROJECT_C_.DTOs;
-using PROJECT_C_.Models;
 using PROJECT_C_.Services.Interfaces;
 using PROJECT_C_.Data;
 using Microsoft.EntityFrameworkCore;
@@ -11,17 +10,19 @@ namespace PROJECT_C_.Services
         private readonly AppDbContext _context;
         private readonly IDistanceCalculator _distanceCalculator;
 
-        public FoodService(AppDbContext context, IDistanceCalculator distanceCalculator)
+        public FoodService(
+            AppDbContext context,
+            IDistanceCalculator distanceCalculator)
         {
             _context = context;
             _distanceCalculator = distanceCalculator;
         }
 
         public PagedResult<FoodDto> GetNearestFoods(
-    double lat,
-    double lng,
-    int page,
-    int pageSize)
+            double lat,
+            double lng,
+            int page,
+            int pageSize)
         {
             var foods = _context.Foods
                 .AsNoTracking()
@@ -34,7 +35,7 @@ namespace PROJECT_C_.Services
                     f.Latitude,
                     f.Longitude
                 })
-                .ToList(); // chốt DB tại đây
+                .ToList();
 
             var total = foods.Count;
 
@@ -61,8 +62,11 @@ namespace PROJECT_C_.Services
                 })
                 .ToList();
 
-            return new PagedResult<FoodDto>(items, page, total, pageSize);
+            return new PagedResult<FoodDto>(
+                items,
+                page,
+                total,
+                pageSize);
         }
-
     }
 }

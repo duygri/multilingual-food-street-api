@@ -9,10 +9,13 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
+
 builder.Services.AddScoped<IFoodService, FoodService>();
 builder.Services.AddScoped<IDistanceCalculator, DistanceCalculator>();
 
 
+
+builder.Services.AddScoped<IFoodService, FoodService>();
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
