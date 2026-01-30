@@ -1,0 +1,97 @@
+@page "/admin/dashboard"
+@layout AdminLayout
+@inject HttpClient Http
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="admin-card stat-card">
+            <div class="stat-icon primary">🍜</div>
+            <div class="stat-value">@stats.TotalFoods</div>
+            <div class="stat-label">Total Foods</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="admin-card stat-card">
+            <div class="stat-icon success">🎵</div>
+            <div class="stat-value">@stats.TotalAudios</div>
+            <div class="stat-label">Audio Files</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="admin-card stat-card">
+            <div class="stat-icon warning">👥</div>
+            <div class="stat-value">@stats.TotalUsers</div>
+            <div class="stat-label">Users</div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="admin-card">
+            <h5>Quick Actions</h5>
+            <hr />
+            <div class="d-flex gap-3 flex-wrap">
+                <a href="admin/foods" class="btn btn-admin btn-admin-primary">
+                    ➕ Add New Food
+                </a>
+                <a href="admin/translations" class="btn btn-admin btn-admin-success">
+                    🌐 Manage Translations
+                </a>
+                <a href="https://localhost:7214/swagger" target="_blank" class="btn btn-outline-secondary">
+                    📄 API Documentation
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="admin-card">
+            <h5>System Info</h5>
+            <hr />
+            <table class="table table-sm">
+                <tbody>
+                    <tr>
+                        <td><strong>Backend API</strong></td>
+                        <td><span class="badge bg-success">Online</span> https://localhost:7214</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Frontend</strong></td>
+                        <td><span class="badge bg-success">Online</span> https://localhost:7090</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Database</strong></td>
+                        <td>SQL Server (LocalDB)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@code {
+    private DashboardStats stats = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try 
+        {
+            var result = await Http.GetFromJsonAsync<DashboardStats>("api/admin/stats");
+            if (result != null) stats = result;
+        }
+        catch
+        {
+            // API needs auth or is down - show default values
+            stats = new DashboardStats { TotalFoods = 0, TotalAudios = 0, TotalUsers = 0 };
+        }
+    }
+
+    class DashboardStats
+    {
+        public int TotalFoods { get; set; }
+        public int TotalAudios { get; set; }
+        public int TotalUsers { get; set; }
+    }
+}

@@ -1,0 +1,294 @@
+@page "/admin/translations"
+@layout AdminLayout
+@inject HttpClient Http
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="mb-0">🌐 Manage Translations</h3>
+    <button class="btn btn-admin btn-admin-primary" @onclick="ShowAddModal">
+        ➕ Add Translation
+    </button>
+</div>
+
+<div class="admin-card mb-4">
+    <div class="row align-items-center">
+        <div class="col-md-4">
+            <label class="form-label">Select Food</label>
+            <select class="form-select" @onchange="OnFoodSelected">
+                <option value="">-- Select a food --</option>
+                @if (foods != null)
+                {
+                    @foreach (var food in foods)
+                    {
+                        <option value="@food.Id">@food.Name</option>
+                    }
+                }
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Language</label>
+            <select class="form-select" @bind="selectedLanguage">
+                <option value="">All Languages</option>
+                <option value="vi-VN">🇻🇳 Vietnamese</option>
+                <option value="en-US">🇺🇸 English</option>
+                <option value="ja-JP">🇯🇵 Japanese</option>
+                <option value="ko-KR">🇰🇷 Korean</option>
+                <option value="zh-CN">🇨🇳 Chinese</option>
+            </select>
+        </div>
+        <div class="col-md-4 d-flex align-items-end">
+            <button class="btn btn-outline-primary w-100" @onclick="LoadTranslations">
+                🔍 Filter
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="admin-card">
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary"></div>
+            <p class="mt-3 text-muted">Loading translations...</p>
+        </div>
+    }
+    else if (translations == null || translations.Count == 0)
+    {
+        <div class="text-center py-5">
+            <div style="font-size: 4rem;">🌍</div>
+            <h5 class="mt-3">No translations found</h5>
+            <p class="text-muted">Select a food and click "Add Translation" to add content in different languages.</p>
+        </div>
+    }
+    else
+    {
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Language</th>
+                    <th>Food</th>
+                    <th>Translated Name</th>
+                    <th>Description</th>
+                    <th style="width: 150px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var trans in translations)
+                {
+                    <tr>
+                        <td>
+                            <span class="badge bg-info">@GetLanguageFlag(trans.LanguageCode) @trans.LanguageCode</span>
+                        </td>
+                        <td>@trans.FoodName</td>
+                        <td><strong>@trans.Name</strong></td>
+                        <td class="text-muted">@(trans.Description?.Length > 40 ? trans.Description.Substring(0, 40) + "..." : trans.Description)</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => EditTranslation(trans)">✏️</button>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteTranslation(trans.Id)">🗑️</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@if (showModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content admin-modal">
+                <div class="modal-header">
+                    <h5 class="modal-title">@modalTitle</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Food *</label>
+                            <select class="form-select" @bind="editingTranslation.FoodId">
+                                <option value="0">-- Select --</option>
+                                @if (foods != null)
+                                {
+                                    @foreach (var food in foods)
+                                    {
+                                        <option value="@food.Id">@food.Name</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Language *</label>
+                            <select class="form-select" @bind="editingTranslation.LanguageCode">
+                                <option value="">-- Select --</option>
+                                <option value="vi-VN">🇻🇳 Vietnamese</option>
+                                <option value="en-US">🇺🇸 English</option>
+                                <option value="ja-JP">🇯🇵 Japanese</option>
+                                <option value="ko-KR">🇰🇷 Korean</option>
+                                <option value="zh-CN">🇨🇳 Chinese</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Translated Name *</label>
+                        <input type="text" class="form-control" @bind="editingTranslation.Name" placeholder="Name in selected language" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Translated Description</label>
+                        <textarea class="form-control" rows="4" @bind="editingTranslation.Description" placeholder="Description in selected language..."></textarea>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-admin btn-admin-primary flex-grow-1" @onclick="SaveTranslation">💾 Save Translation</button>
+                        <button class="btn btn-outline-secondary" @onclick="CloseModal">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<FoodItem>? foods;
+    private List<TranslationItem>? translations;
+    private int selectedFoodId;
+    private string selectedLanguage = "";
+    private bool isLoading = false;
+    private bool showModal = false;
+    private string modalTitle = "";
+    private TranslationItem editingTranslation = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadFoods();
+    }
+
+    private async Task LoadFoods()
+    {
+        try
+        {
+            foods = await Http.GetFromJsonAsync<List<FoodItem>>("api/food");
+        }
+        catch
+        {
+            foods = new List<FoodItem>();
+        }
+    }
+
+    private async Task OnFoodSelected(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int foodId))
+        {
+            selectedFoodId = foodId;
+            await LoadTranslations();
+        }
+    }
+
+    private async Task LoadTranslations()
+    {
+        if (selectedFoodId == 0)
+        {
+            translations = new List<TranslationItem>();
+            return;
+        }
+
+        isLoading = true;
+        try
+        {
+            // Note: This endpoint needs to be created in the backend
+            var url = $"api/food/{selectedFoodId}/translations";
+            if (!string.IsNullOrEmpty(selectedLanguage))
+            {
+                url += $"?lang={selectedLanguage}";
+            }
+            translations = await Http.GetFromJsonAsync<List<TranslationItem>>(url);
+        }
+        catch
+        {
+            // If API doesn't exist yet, show empty
+            translations = new List<TranslationItem>();
+        }
+        isLoading = false;
+    }
+
+    private void ShowAddModal()
+    {
+        editingTranslation = new TranslationItem { FoodId = selectedFoodId };
+        modalTitle = "➕ Add Translation";
+        showModal = true;
+    }
+
+    private void EditTranslation(TranslationItem trans)
+    {
+        editingTranslation = new TranslationItem
+        {
+            Id = trans.Id,
+            FoodId = trans.FoodId,
+            LanguageCode = trans.LanguageCode,
+            Name = trans.Name,
+            Description = trans.Description
+        };
+        modalTitle = "✏️ Edit Translation";
+        showModal = true;
+    }
+
+    private async Task SaveTranslation()
+    {
+        try
+        {
+            if (editingTranslation.Id == 0)
+            {
+                await Http.PostAsJsonAsync("api/food/translations", editingTranslation);
+            }
+            else
+            {
+                await Http.PutAsJsonAsync($"api/food/translations/{editingTranslation.Id}", editingTranslation);
+            }
+            showModal = false;
+            await LoadTranslations();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+    }
+
+    private async Task DeleteTranslation(int id)
+    {
+        try
+        {
+            await Http.DeleteAsync($"api/food/translations/{id}");
+            await LoadTranslations();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+    }
+
+    private void CloseModal() => showModal = false;
+
+    private string GetLanguageFlag(string code) => code switch
+    {
+        "vi-VN" => "🇻🇳",
+        "en-US" => "🇺🇸",
+        "ja-JP" => "🇯🇵",
+        "ko-KR" => "🇰🇷",
+        "zh-CN" => "🇨🇳",
+        _ => "🌐"
+    };
+
+    class FoodItem
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+    }
+
+    class TranslationItem
+    {
+        public int Id { get; set; }
+        public int FoodId { get; set; }
+        public string FoodName { get; set; } = "";
+        public string LanguageCode { get; set; } = "";
+        public string Name { get; set; } = "";
+        public string? Description { get; set; }
+    }
+}

@@ -1,4 +1,4 @@
-﻿namespace PROJECT_C_.DTOs
+namespace FoodStreet.Client.DTOs
 {
     public class FoodDto
     {

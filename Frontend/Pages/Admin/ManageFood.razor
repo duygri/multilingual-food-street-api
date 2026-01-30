@@ -1,0 +1,244 @@
+@page "/admin/foods"
+@layout AdminLayout
+@inject FoodStreet.Client.Services.IFoodClientService FoodService
+@using FoodStreet.Client.DTOs
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="mb-0">🍜 Manage Foods</h3>
+    <button class="btn btn-admin btn-admin-primary" @onclick="ShowCreateModal">
+        ➕ Add New Food
+    </button>
+</div>
+
+<div class="admin-card">
+    @if (foods == null)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3 text-muted">Loading foods...</p>
+        </div>
+    }
+    else if (foods.Count == 0)
+    {
+        <div class="text-center py-5">
+            <div style="font-size: 4rem;">🍽️</div>
+            <h5 class="mt-3">No foods yet</h5>
+            <p class="text-muted">Click "Add New Food" to create your first entry.</p>
+        </div>
+    }
+    else
+    {
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Description</th>
+                    <th>Price</th>
+                    <th>Location</th>
+                    <th style="width: 200px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var food in foods)
+                {
+                    <tr>
+                        <td><strong>@food.Name</strong></td>
+                        <td class="text-muted">@(food.Description?.Length > 50 ? food.Description.Substring(0, 50) + "..." : food.Description)</td>
+                        <td><span class="badge bg-success">@food.Price.ToString("N0") VND</span></td>
+                        <td>
+                            <small class="text-muted">
+                                📍 @food.Latitude.ToString("F4"), @food.Longitude.ToString("F4")
+                            </small>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => ShowEditModal(food.Id)">✏️ Edit</button>
+                            <button class="btn btn-sm btn-outline-secondary me-1" @onclick="() => ShowAudioModal(food.Id)">🎵</button>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteFood(food.Id)">🗑️</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@if (showModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content admin-modal">
+                <div class="modal-header">
+                    <h5 class="modal-title">@modalTitle</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="@editingFood" OnValidSubmit="SaveFood">
+                        <DataAnnotationsValidator />
+                        <div class="mb-3">
+                            <label class="form-label">Name *</label>
+                            <InputText @bind-Value="editingFood.Name" class="form-control" placeholder="e.g. Phở Bò" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <InputTextArea @bind-Value="editingFood.Description" class="form-control" rows="3" placeholder="Describe the dish..." />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Price (VND)</label>
+                            <InputNumber @bind-Value="editingFood.Price" class="form-control" placeholder="50000" />
+                        </div>
+                        <div class="row">
+                            <div class="col-6">
+                                <label class="form-label">Latitude</label>
+                                <InputNumber @bind-Value="editingFood.Latitude" class="form-control" />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">Longitude</label>
+                                <InputNumber @bind-Value="editingFood.Longitude" class="form-control" />
+                            </div>
+                        </div>
+                        <div class="mt-4 d-flex gap-2">
+                            <button type="submit" class="btn btn-admin btn-admin-primary flex-grow-1">💾 Save</button>
+                            <button type="button" class="btn btn-outline-secondary" @onclick="CloseModal">Cancel</button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showAudioModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content admin-modal">
+                <div class="modal-header">
+                    <h5 class="modal-title">🎵 Upload Audio</h5>
+                    <button type="button" class="btn-close" @onclick="CloseAudioModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center py-4">
+                        <div style="font-size: 3rem;">🎤</div>
+                        <p class="mt-2">Select an audio file (MP3, WAV)</p>
+                        <InputFile OnChange="@LoadFiles" class="form-control" accept="audio/*" />
+                        @if (uploading)
+                        {
+                            <div class="mt-3">
+                                <div class="spinner-border spinner-border-sm text-primary"></div>
+                                <span class="ms-2">Uploading...</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<FoodDto>? foods;
+    private bool showModal = false;
+    private bool showAudioModal = false;
+    private string modalTitle = "";
+    private FoodDto editingFood = new() { Name = "" };
+    private int selectedFoodIdForAudio;
+    private bool uploading = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadFoods();
+    }
+
+    private async Task LoadFoods()
+    {
+        try
+        {
+            foods = await FoodService.GetAllFoods();
+        }
+        catch
+        {
+            foods = new List<FoodDto>();
+        }
+    }
+
+    private void ShowCreateModal()
+    {
+        editingFood = new FoodDto { Name = "", Description = "" };
+        modalTitle = "➕ Create New Food";
+        showModal = true;
+    }
+
+    private async Task ShowEditModal(int id)
+    {
+        var dto = await FoodService.GetFood(id);
+        if (dto != null)
+        {
+            editingFood = new FoodDto 
+            { 
+                Id = dto.Id, 
+                Name = dto.Name, 
+                Description = dto.Description, 
+                Price = dto.Price,
+                Latitude = dto.Latitude,
+                Longitude = dto.Longitude
+            };
+        }
+        modalTitle = "✏️ Edit Food";
+        showModal = true;
+    }
+
+    private void ShowAudioModal(int id)
+    {
+        selectedFoodIdForAudio = id;
+        showAudioModal = true;
+    }
+
+    private void CloseModal() => showModal = false;
+    private void CloseAudioModal() => showAudioModal = false;
+
+    private async Task SaveFood()
+    {
+        if (editingFood.Id == 0)
+        {
+            await FoodService.CreateFood(editingFood);
+        }
+        else
+        {
+            await FoodService.UpdateFood(editingFood.Id, editingFood);
+        }
+        showModal = false;
+        await LoadFoods();
+    }
+
+    private async Task DeleteFood(int id)
+    {
+        await FoodService.DeleteFood(id);
+        await LoadFoods();
+    }
+
+    private async Task LoadFiles(InputFileChangeEventArgs e)
+    {
+        uploading = true;
+        try
+        {
+            using var content = new MultipartFormDataContent();
+            var file = e.File;
+            var fileContent = new StreamContent(file.OpenReadStream(10 * 1024 * 1024));
+            fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
+            content.Add(fileContent, "file", file.Name);
+
+            await FoodService.UploadAudio(selectedFoodIdForAudio, content);
+            showAudioModal = false;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+        finally
+        {
+            uploading = false;
+        }
+    }
+}

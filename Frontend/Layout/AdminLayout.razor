@@ -1,0 +1,52 @@
+@inherits LayoutComponentBase
+
+<div class="admin-sidebar">
+    <div class="brand">
+        <div class="brand-icon">🍜</div>
+        <span class="brand-text">Food Admin</span>
+    </div>
+    
+    <nav class="nav-menu">
+        <div class="nav-item">
+            <NavLink class="nav-link" href="admin/dashboard" Match="NavLinkMatch.All">
+                <span class="nav-icon">📊</span> Dashboard
+            </NavLink>
+        </div>
+        <div class="nav-item">
+            <NavLink class="nav-link" href="admin/foods">
+                <span class="nav-icon">🍜</span> Foods & Audio
+            </NavLink>
+        </div>
+        <div class="nav-item">
+            <NavLink class="nav-link" href="admin/translations">
+                <span class="nav-icon">🌐</span> Translations
+            </NavLink>
+        </div>
+        
+        <div class="nav-divider"></div>
+        
+        <div class="nav-item">
+            <NavLink class="nav-link" href="admin/login">
+                <span class="nav-icon">🔐</span> Login
+            </NavLink>
+        </div>
+        <div class="nav-item">
+            <NavLink class="nav-link" href="">
+                <span class="nav-icon">🏠</span> Back to Site
+            </NavLink>
+        </div>
+    </nav>
+</div>
+
+<div class="admin-main">
+    <div class="admin-topbar">
+        <h1 class="page-title">Admin Panel</h1>
+        <div class="topbar-actions">
+            <a href="https://localhost:7214/swagger" target="_blank" class="btn btn-sm btn-outline-primary">API Docs</a>
+        </div>
+    </div>
+    
+    <div class="admin-content">
+        @Body
+    </div>
+</div>

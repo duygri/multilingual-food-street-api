@@ -10,5 +10,10 @@
         // GPS coordinates
         public double Latitude { get; set; }
         public double Longitude { get; set; }
+
+        [System.Text.Json.Serialization.JsonIgnore]
+        public ICollection<FoodTranslation> Translations { get; set; } = new List<FoodTranslation>();
+        [System.Text.Json.Serialization.JsonIgnore]
+        public ICollection<AudioFile> AudioFiles { get; set; } = new List<AudioFile>();
     }
 }

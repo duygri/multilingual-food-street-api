@@ -1,9 +1,12 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using PROJECT_C_.Models;
 
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
+
 namespace PROJECT_C_.Data
 {
-    public class AppDbContext : DbContext
+    public class AppDbContext : IdentityDbContext<IdentityUser>
     {
         public AppDbContext(DbContextOptions<AppDbContext> options)
             : base(options)
@@ -11,6 +14,8 @@ namespace PROJECT_C_.Data
         }
 
         public DbSet<Food> Foods => Set<Food>();
+        public DbSet<FoodTranslation> FoodTranslations => Set<FoodTranslation>();
+        public DbSet<AudioFile> AudioFiles => Set<AudioFile>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -24,22 +29,50 @@ namespace PROJECT_C_.Data
                     Id = 1,
                     Name = "Pho Bo",
                     Description = "Traditional Vietnamese beef noodle soup",
-                    Price = 45000
+                    Price = 45000,
+                    Latitude = 10.776889,
+                    Longitude = 106.700806
                 },
                 new Food
                 {
                     Id = 2,
                     Name = "Banh Mi",
                     Description = "Vietnamese baguette sandwich",
-                    Price = 25000
+                    Price = 25000,
+                    Latitude = 10.762622,
+                    Longitude = 106.660172
                 },
                 new Food
                 {
                     Id = 3,
                     Name = "Com Tam",
                     Description = "Broken rice with grilled pork",
-                    Price = 50000
+                    Price = 50000,
+                    Latitude = 10.792375,
+                    Longitude = 106.691689
                 }
+            );
+
+            // FoodTranslation Configuration
+            modelBuilder.Entity<FoodTranslation>()
+                .HasOne(ft => ft.Food)
+                .WithMany(f => f.Translations)
+                .HasForeignKey(ft => ft.FoodId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Seed Data for Translations
+            modelBuilder.Entity<FoodTranslation>().HasData(
+                // Pho Bo
+                new FoodTranslation { Id = 1, FoodId = 1, LanguageCode = "vi-VN", Name = "Phở Bò", Description = "Phở bò truyền thống Việt Nam" },
+                new FoodTranslation { Id = 2, FoodId = 1, LanguageCode = "en-US", Name = "Beef Pho", Description = "Traditional Vietnamese beef noodle soup" },
+
+                // Banh Mi
+                new FoodTranslation { Id = 3, FoodId = 2, LanguageCode = "vi-VN", Name = "Bánh Mì", Description = "Bánh mì Việt Nam" },
+                new FoodTranslation { Id = 4, FoodId = 2, LanguageCode = "en-US", Name = "Vietnamese Baguette", Description = "Vietnamese baguette sandwich" },
+
+                // Com Tam
+                new FoodTranslation { Id = 5, FoodId = 3, LanguageCode = "vi-VN", Name = "Cơm Tấm", Description = "Cơm tấm sườn" },
+                new FoodTranslation { Id = 6, FoodId = 3, LanguageCode = "en-US", Name = "Broken Rice", Description = "Broken rice with grilled pork" }
             );
 
             base.OnModelCreating(modelBuilder);

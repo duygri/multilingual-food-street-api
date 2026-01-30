@@ -3,6 +3,8 @@ using PROJECT_C_.Services.Interfaces;
 using PROJECT_C_.Data;
 using Microsoft.EntityFrameworkCore;
 
+using PROJECT_C_.Models;
+
 namespace PROJECT_C_.Services
 {
     public class FoodService : IFoodService
@@ -22,18 +24,26 @@ namespace PROJECT_C_.Services
             double lat,
             double lng,
             int page,
-            int pageSize)
+            int pageSize,
+            string languageCode = "vi-VN")
         {
+            // Normalize language code (e.g., "en-US,en;q=0.9" -> "en-US")
+            var lang = languageCode.Split(',')[0].Trim();
+
             var foods = _context.Foods
                 .AsNoTracking()
+                .Include(f => f.Translations) // Eager load translations
                 .Select(f => new
                 {
                     f.Id,
-                    f.Name,
-                    f.Description,
                     f.Price,
                     f.Latitude,
-                    f.Longitude
+                    f.Longitude,
+                    // Get translation or fallback to entity properties
+                    Transl = f.Translations.FirstOrDefault(t => t.LanguageCode == lang) 
+                             ?? f.Translations.FirstOrDefault(t => t.LanguageCode == "vi-VN"),
+                    DefaultName = f.Name,
+                    DefaultDesc = f.Description
                 })
                 .ToList();
 
@@ -52,8 +62,8 @@ namespace PROJECT_C_.Services
                 .Select(x => new FoodDto
                 {
                     Id = x.Food.Id,
-                    Name = x.Food.Name,
-                    Description = x.Food.Description ?? "",
+                    Name = x.Food.Transl?.Name ?? x.Food.DefaultName,
+                    Description = x.Food.Transl?.Description ?? x.Food.DefaultDesc,
                     Price = x.Food.Price,
                     Distance = x.Km < 1
                         ? Math.Round(x.Km * 1000.0, 0)
@@ -68,5 +78,45 @@ namespace PROJECT_C_.Services
                 total,
                 pageSize);
         }
+        public async Task<Food> CreateFoodAsync(Food food)
+        {
+            _context.Foods.Add(food);
+            await _context.SaveChangesAsync();
+            return food;
+        }
+
+        public async Task<Food?> UpdateFoodAsync(int id, Food food)
+        {
+            var existing = await _context.Foods.FindAsync(id);
+            if (existing == null) return null;
+
+            existing.Name = food.Name;
+            existing.Description = food.Description;
+            existing.Price = food.Price;
+            existing.Latitude = food.Latitude;
+            existing.Longitude = food.Longitude;
+
+            await _context.SaveChangesAsync();
+            return existing;
+        }
+
+        public async Task<bool> DeleteFoodAsync(int id)
+        {
+            var food = await _context.Foods.FindAsync(id);
+            if (food == null) return false;
+
+            _context.Foods.Remove(food);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<Food?> GetFoodByIdAsync(int id)
+        {
+            return await _context.Foods
+                .Include(f => f.Translations)
+                .Include(f => f.AudioFiles)
+                .FirstOrDefaultAsync(f => f.Id == id);
+        }
     }
+
 }

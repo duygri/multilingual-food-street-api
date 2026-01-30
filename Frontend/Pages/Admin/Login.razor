@@ -1,0 +1,173 @@
+@page "/admin/login"
+@page "/admin/register"
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<div class="login-container">
+    <div class="login-card">
+        <div class="login-header">
+            <div class="login-icon">🔐</div>
+            <h2 class="login-title">@(isLogin ? "Welcome Back" : "Create Account")</h2>
+            <p class="login-subtitle">@(isLogin ? "Sign in to access admin panel" : "Register a new admin account")</p>
+        </div>
+
+        @if (!string.IsNullOrEmpty(message))
+        {
+            <div class="alert @(isError ? "alert-danger" : "alert-success") mb-4">
+                @message
+            </div>
+        }
+
+        <EditForm Model="@model" OnValidSubmit="HandleSubmit">
+            <DataAnnotationsValidator />
+            
+            @if (!isLogin)
+            {
+                <div class="mb-3">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" class="form-control form-control-lg" @bind="model.FullName" placeholder="Your name" />
+                </div>
+            }
+            
+            <div class="mb-3">
+                <label class="form-label">Email</label>
+                <input type="email" class="form-control form-control-lg" @bind="model.Email" placeholder="admin@example.com" />
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Password</label>
+                <input type="password" class="form-control form-control-lg" @bind="model.Password" placeholder="••••••••" />
+            </div>
+
+            @if (!isLogin)
+            {
+                <div class="mb-3">
+                    <label class="form-label">Confirm Password</label>
+                    <input type="password" class="form-control form-control-lg" @bind="model.ConfirmPassword" placeholder="••••••••" />
+                </div>
+            }
+
+            <button type="submit" class="btn btn-admin btn-admin-primary w-100 py-3 mb-3" disabled="@isLoading">
+                @if (isLoading)
+                {
+                    <span class="spinner-border spinner-border-sm me-2"></span>
+                }
+                @(isLogin ? "🔓 Sign In" : "✨ Create Account")
+            </button>
+        </EditForm>
+
+        <div class="text-center">
+            <button class="btn btn-link" @onclick="ToggleMode">
+                @(isLogin ? "Don't have an account? Register" : "Already have an account? Sign In")
+            </button>
+        </div>
+
+        <hr class="my-4" />
+
+        <div class="text-center">
+            <a href="" class="btn btn-outline-secondary btn-sm">
+                ⬅️ Back to Home
+            </a>
+        </div>
+    </div>
+</div>
+
+@code {
+    private AuthModel model = new();
+    private bool isLogin = true;
+    private bool isLoading = false;
+    private string? message;
+    private bool isError = false;
+
+    protected override void OnInitialized()
+    {
+        // Check URL to determine mode
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        isLogin = !uri.AbsolutePath.Contains("register");
+    }
+
+    private void ToggleMode()
+    {
+        isLogin = !isLogin;
+        message = null;
+        model = new AuthModel();
+        Navigation.NavigateTo(isLogin ? "/admin/login" : "/admin/register");
+    }
+
+    private async Task HandleSubmit()
+    {
+        isLoading = true;
+        message = null;
+
+        try
+        {
+            if (isLogin)
+            {
+                // Login
+                var response = await Http.PostAsJsonAsync("login?useCookies=true", new
+                {
+                    email = model.Email,
+                    password = model.Password
+                });
+
+                if (response.IsSuccessStatusCode)
+                {
+                    Navigation.NavigateTo("/admin/dashboard", forceLoad: true);
+                }
+                else
+                {
+                    isError = true;
+                    message = "Invalid email or password. Please try again.";
+                }
+            }
+            else
+            {
+                // Register
+                if (model.Password != model.ConfirmPassword)
+                {
+                    isError = true;
+                    message = "Passwords do not match.";
+                    isLoading = false;
+                    return;
+                }
+
+                var response = await Http.PostAsJsonAsync("register", new
+                {
+                    email = model.Email,
+                    password = model.Password
+                });
+
+                if (response.IsSuccessStatusCode)
+                {
+                    isError = false;
+                    message = "Account created successfully! You can now sign in.";
+                    isLogin = true;
+                    model = new AuthModel { Email = model.Email };
+                }
+                else
+                {
+                    var error = await response.Content.ReadAsStringAsync();
+                    isError = true;
+                    message = "Registration failed. " + (error.Contains("Password") ? "Password must be at least 6 characters with uppercase, lowercase, and numbers." : "Please try again.");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            isError = true;
+            message = "Connection error: " + ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    public class AuthModel
+    {
+        public string FullName { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string Password { get; set; } = "";
+        public string ConfirmPassword { get; set; } = "";
+    }
+}
