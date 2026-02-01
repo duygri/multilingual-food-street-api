@@ -10,5 +10,20 @@
         public double Longitude { get; set; }
         public double Distance { get; set; }
         public string Unit { get; set; } = "m";
+
+        // POI Extended Fields
+        public string? ImageUrl { get; set; }
+        public string? MapLink { get; set; }
+        
+        // Geofencing
+        public double Radius { get; set; } = 50;
+        public int Priority { get; set; } = 0;
+
+        // TTS Script
+        public string? TtsScript { get; set; }
+
+        // Audio info (for convenience)
+        public bool HasAudio { get; set; }
+        public string? AudioUrl { get; set; }
     }
 }

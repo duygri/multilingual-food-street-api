@@ -1,0 +1,278 @@
+@page "/admin/stats"
+@layout AdminLayout
+@inject HttpClient Http
+@using System.Text.Json
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="mb-0">📊 Analytics Dashboard</h3>
+    <div class="btn-group">
+        <button class="btn @(selectedPeriod == 7 ? "btn-admin btn-admin-primary" : "btn-outline-secondary")" 
+                @onclick="() => LoadData(7)">7 ngày</button>
+        <button class="btn @(selectedPeriod == 30 ? "btn-admin btn-admin-primary" : "btn-outline-secondary")" 
+                @onclick="() => LoadData(30)">30 ngày</button>
+        <button class="btn @(selectedPeriod == 90 ? "btn-admin btn-admin-primary" : "btn-outline-secondary")" 
+                @onclick="() => LoadData(90)">90 ngày</button>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+@if (stats != null)
+{
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="admin-card text-center py-4">
+                <div style="font-size: 2.5rem;">▶️</div>
+                <div class="fw-bold fs-2 text-primary">@stats.TotalPlays</div>
+                <small class="text-muted">Tổng lượt nghe</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="admin-card text-center py-4">
+                <div style="font-size: 2.5rem;">📅</div>
+                <div class="fw-bold fs-2 text-success">@stats.TodayPlays</div>
+                <small class="text-muted">Hôm nay</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="admin-card text-center py-4">
+                <div style="font-size: 2.5rem;">📆</div>
+                <div class="fw-bold fs-2 text-info">@stats.WeekPlays</div>
+                <small class="text-muted">Tuần này</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="admin-card text-center py-4">
+                <div style="font-size: 2.5rem;">👥</div>
+                <div class="fw-bold fs-2 text-warning">@stats.UniqueSessions</div>
+                <small class="text-muted">Unique Sessions</small>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="row">
+    <!-- Top POIs -->
+    <div class="col-md-6 mb-4">
+        <div class="admin-card h-100">
+            <h5 class="mb-3">🏆 Top Điểm Được Nghe Nhiều</h5>
+            @if (topPois != null && topPois.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>POI</th>
+                                <th>Lượt nghe</th>
+                                <th>TB (giây)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{ var rank = 1; }
+                            @foreach (var poi in topPois)
+                            {
+                                <tr>
+                                    <td>
+                                        @if (rank == 1) { <span>🥇</span> }
+                                        else if (rank == 2) { <span>🥈</span> }
+                                        else if (rank == 3) { <span>🥉</span> }
+                                        else { @rank }
+                                    </td>
+                                    <td class="fw-bold">@poi.FoodName</td>
+                                    <td>@poi.PlayCount</td>
+                                    <td>@poi.AvgDuration.ToString("F1")</td>
+                                </tr>
+                                rank++;
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <p class="text-muted text-center py-4">Chưa có dữ liệu</p>
+            }
+        </div>
+    </div>
+
+    <!-- Source Breakdown -->
+    <div class="col-md-6 mb-4">
+        <div class="admin-card h-100">
+            <h5 class="mb-3">📱 Nguồn Phát</h5>
+            @if (sources != null && sources.Any())
+            {
+                @foreach (var source in sources)
+                {
+                    var percentage = stats?.TotalPlays > 0 ? (source.Count * 100.0 / stats.TotalPlays) : 0;
+                    var icon = source.Source switch
+                    {
+                        "qr_scan" => "📱",
+                        "geofence" => "📍",
+                        "manual" => "👆",
+                        _ => "❓"
+                    };
+                    var label = source.Source switch
+                    {
+                        "qr_scan" => "QR Code Scan",
+                        "geofence" => "Geofence Auto",
+                        "manual" => "Manual Play",
+                        _ => source.Source
+                    };
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>@icon @label</span>
+                            <span class="fw-bold">@source.Count (@percentage.ToString("F1")%)</span>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-success" style="width: @percentage%"></div>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <p class="text-muted text-center py-4">Chưa có dữ liệu</p>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Device Breakdown -->
+    <div class="col-md-6 mb-4">
+        <div class="admin-card h-100">
+            <h5 class="mb-3">💻 Thiết bị</h5>
+            @if (devices != null && devices.Any())
+            {
+                @foreach (var device in devices)
+                {
+                    var percentage = stats?.TotalPlays > 0 ? (device.Count * 100.0 / stats.TotalPlays) : 0;
+                    var icon = device.Device?.ToLower() switch
+                    {
+                        "mobile" => "📱",
+                        "desktop" => "💻",
+                        "tablet" => "📟",
+                        _ => "❓"
+                    };
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>@icon @device.Device</span>
+                            <span class="fw-bold">@device.Count</span>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-info" style="width: @percentage%"></div>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <p class="text-muted text-center py-4">Chưa có dữ liệu</p>
+            }
+        </div>
+    </div>
+
+    <!-- Recent Plays -->
+    <div class="col-md-6 mb-4">
+        <div class="admin-card h-100">
+            <h5 class="mb-3">🕐 Lượt Nghe Gần Đây</h5>
+            @if (recentPlays != null && recentPlays.Any())
+            {
+                <div class="list-group list-group-flush" style="max-height: 300px; overflow-y: auto;">
+                    @foreach (var play in recentPlays.Take(10))
+                    {
+                        <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <div>
+                                <div class="fw-bold">@play.FoodName</div>
+                                <small class="text-muted">@play.PlayedAt.ToString("dd/MM HH:mm") • @play.Source</small>
+                            </div>
+                            <span class="badge bg-secondary">@play.DurationSeconds.ToString("F0")s</span>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <p class="text-muted text-center py-4">Chưa có lượt nghe</p>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private StatsDto? stats;
+    private List<TopPoiDto>? topPois;
+    private List<SourceDto>? sources;
+    private List<DeviceDto>? devices;
+    private List<RecentPlayDto>? recentPlays;
+    private int selectedPeriod = 30;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData(30);
+    }
+
+    private async Task LoadData(int days)
+    {
+        selectedPeriod = days;
+        
+        try
+        {
+            stats = await Http.GetFromJsonAsync<StatsDto>("api/analytics/stats");
+            topPois = await Http.GetFromJsonAsync<List<TopPoiDto>>($"api/analytics/top-pois?days={days}");
+            sources = await Http.GetFromJsonAsync<List<SourceDto>>("api/analytics/sources");
+            devices = await Http.GetFromJsonAsync<List<DeviceDto>>("api/analytics/devices");
+            recentPlays = await Http.GetFromJsonAsync<List<RecentPlayDto>>("api/analytics/recent");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading analytics: {ex.Message}");
+        }
+        
+        StateHasChanged();
+    }
+
+    // DTOs
+    public class StatsDto
+    {
+        public int TotalPlays { get; set; }
+        public int TodayPlays { get; set; }
+        public int WeekPlays { get; set; }
+        public int MonthPlays { get; set; }
+        public int UniqueSessions { get; set; }
+        public int TotalPOIs { get; set; }
+        public int POIsWithAudio { get; set; }
+    }
+
+    public class TopPoiDto
+    {
+        public int FoodId { get; set; }
+        public string FoodName { get; set; } = "";
+        public int PlayCount { get; set; }
+        public double TotalDuration { get; set; }
+        public double AvgDuration { get; set; }
+    }
+
+    public class SourceDto
+    {
+        public string Source { get; set; } = "";
+        public int Count { get; set; }
+    }
+
+    public class DeviceDto
+    {
+        public string? Device { get; set; }
+        public int Count { get; set; }
+    }
+
+    public class RecentPlayDto
+    {
+        public int Id { get; set; }
+        public int FoodId { get; set; }
+        public string FoodName { get; set; } = "";
+        public DateTime PlayedAt { get; set; }
+        public double DurationSeconds { get; set; }
+        public string Source { get; set; } = "";
+        public string? DeviceType { get; set; }
+    }
+}

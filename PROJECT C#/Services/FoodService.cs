@@ -32,14 +32,20 @@ namespace PROJECT_C_.Services
 
             var foods = _context.Foods
                 .AsNoTracking()
-                .Include(f => f.Translations) // Eager load translations
+                .Include(f => f.Translations)
+                .Include(f => f.AudioFiles)
                 .Select(f => new
                 {
                     f.Id,
                     f.Price,
                     f.Latitude,
                     f.Longitude,
-                    // Get translation or fallback to entity properties
+                    f.ImageUrl,
+                    f.MapLink,
+                    f.Radius,
+                    f.Priority,
+                    f.TtsScript,
+                    Audio = f.AudioFiles.FirstOrDefault(),
                     Transl = f.Translations.FirstOrDefault(t => t.LanguageCode == lang) 
                              ?? f.Translations.FirstOrDefault(t => t.LanguageCode == "vi-VN"),
                     DefaultName = f.Name,
@@ -65,6 +71,15 @@ namespace PROJECT_C_.Services
                     Name = x.Food.Transl?.Name ?? x.Food.DefaultName,
                     Description = x.Food.Transl?.Description ?? x.Food.DefaultDesc,
                     Price = x.Food.Price,
+                    Latitude = x.Food.Latitude,
+                    Longitude = x.Food.Longitude,
+                    ImageUrl = x.Food.ImageUrl,
+                    MapLink = x.Food.MapLink,
+                    Radius = x.Food.Radius,
+                    Priority = x.Food.Priority,
+                    TtsScript = x.Food.TtsScript,
+                    HasAudio = x.Food.Audio != null,
+                    AudioUrl = x.Food.Audio != null ? $"/api/audio/{x.Food.Audio.Id}" : null,
                     Distance = x.Km < 1
                         ? Math.Round(x.Km * 1000.0, 0)
                         : Math.Round(x.Km, 2),
@@ -95,6 +110,11 @@ namespace PROJECT_C_.Services
             existing.Price = food.Price;
             existing.Latitude = food.Latitude;
             existing.Longitude = food.Longitude;
+            existing.ImageUrl = food.ImageUrl;
+            existing.MapLink = food.MapLink;
+            existing.Radius = food.Radius;
+            existing.Priority = food.Priority;
+            existing.TtsScript = food.TtsScript;
 
             await _context.SaveChangesAsync();
             return existing;

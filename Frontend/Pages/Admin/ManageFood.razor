@@ -88,14 +88,30 @@
                             <label class="form-label">Price (VND)</label>
                             <InputNumber @bind-Value="editingFood.Price" class="form-control" placeholder="50000" />
                         </div>
-                        <div class="row">
+                        <div class="mb-3">
+                            <label class="form-label">🖼️ Image URL</label>
+                            <InputText @bind-Value="editingFood.ImageUrl" class="form-control" placeholder="https://example.com/image.jpg" />
+                        </div>
+                        <div class="row mb-3">
                             <div class="col-6">
-                                <label class="form-label">Latitude</label>
+                                <label class="form-label">📍 Latitude</label>
                                 <InputNumber @bind-Value="editingFood.Latitude" class="form-control" />
                             </div>
                             <div class="col-6">
-                                <label class="form-label">Longitude</label>
+                                <label class="form-label">📍 Longitude</label>
                                 <InputNumber @bind-Value="editingFood.Longitude" class="form-control" />
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <label class="form-label">📏 Radius (m)</label>
+                                <InputNumber @bind-Value="editingFood.Radius" class="form-control" />
+                                <small class="text-muted">Bán kính kích hoạt geofence</small>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">⭐ Priority</label>
+                                <InputNumber @bind-Value="editingFood.Priority" class="form-control" />
+                                <small class="text-muted">Cao hơn = ưu tiên hơn</small>
                             </div>
                         </div>
                         <div class="mt-4 d-flex gap-2">
@@ -182,7 +198,10 @@
                 Description = dto.Description, 
                 Price = dto.Price,
                 Latitude = dto.Latitude,
-                Longitude = dto.Longitude
+                Longitude = dto.Longitude,
+                ImageUrl = dto.ImageUrl,
+                Radius = dto.Radius,
+                Priority = dto.Priority
             };
         }
         modalTitle = "✏️ Edit Food";

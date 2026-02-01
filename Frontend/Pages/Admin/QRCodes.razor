@@ -1,0 +1,227 @@
+@page "/admin/qrcodes"
+@layout AdminLayout
+@inject HttpClient Http
+@inject IFoodClientService FoodService
+@using FoodStreet.Client.DTOs
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="mb-0">📱 QR Code Generator</h3>
+    <div class="btn-group">
+        <button class="btn btn-admin btn-admin-primary" @onclick="DownloadSelected" disabled="@(!selectedIds.Any())">
+            📥 Download Selected (@selectedIds.Count)
+        </button>
+        <button class="btn btn-outline-secondary" @onclick="PrintSelected" disabled="@(!selectedIds.Any())">
+            🖨️ Print Sheet
+        </button>
+    </div>
+</div>
+
+<!-- Info Card -->
+<div class="alert alert-info mb-4">
+    <strong>💡 Hướng dẫn:</strong> QR codes này khi quét sẽ mở trang nghe audio của món ăn. 
+    Dán tại các điểm dừng xe buýt Khánh Hội, Vĩnh Hội, Xóm Chiếu để du khách quét và nghe ngay!
+</div>
+
+<!-- QR Code Grid -->
+<div class="admin-card">
+    @if (foods == null)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary"></div>
+            <p class="mt-2">Loading POIs...</p>
+        </div>
+    }
+    else if (!foods.Any())
+    {
+        <div class="text-center py-5">
+            <div style="font-size: 4rem;">📱</div>
+            <p class="text-muted">No POIs found. Create some POIs first!</p>
+        </div>
+    }
+    else
+    {
+        <!-- Select All -->
+        <div class="mb-4 d-flex align-items-center gap-3">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="selectAll" 
+                       checked="@(selectedIds.Count == foods.Count)"
+                       @onchange="ToggleSelectAll" />
+                <label class="form-check-label" for="selectAll">
+                    Select All (@foods.Count POIs)
+                </label>
+            </div>
+        </div>
+
+        <!-- QR Grid -->
+        <div class="row g-4">
+            @foreach (var food in foods)
+            {
+                <div class="col-md-4 col-lg-3">
+                    <div class="card h-100 @(selectedIds.Contains(food.Id) ? "border-primary border-2" : "")">
+                        <div class="card-header d-flex align-items-center gap-2">
+                            <input type="checkbox" class="form-check-input" 
+                                   checked="@selectedIds.Contains(food.Id)"
+                                   @onchange="() => ToggleSelection(food.Id)" />
+                            <span class="fw-bold text-truncate">@food.Name</span>
+                        </div>
+                        <div class="card-body text-center">
+                            <!-- QR Code Image -->
+                            <img src="@GetQrCodeUrl(food.Id)" 
+                                 alt="QR Code for @food.Name" 
+                                 class="img-fluid mb-3"
+                                 style="max-width: 200px;" />
+                            
+                            <p class="small text-muted mb-2">
+                                📍 @food.Latitude.ToString("F4"), @food.Longitude.ToString("F4")
+                            </p>
+                            
+                            @if (food.HasAudio)
+                            {
+                                <span class="badge bg-success">🎵 Has Audio</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning text-dark">⚠️ No Audio</span>
+                            }
+                        </div>
+                        <div class="card-footer">
+                            <div class="btn-group btn-group-sm w-100">
+                                <a href="@GetQrCodeUrl(food.Id)" download="@($"qr-{food.Id}.png")" 
+                                   class="btn btn-outline-primary" title="Download PNG">
+                                    📥 PNG
+                                </a>
+                                <button class="btn btn-outline-info" @onclick="() => CopyLink(food.Id)" title="Copy Link">
+                                    🔗 Copy
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<!-- Print Preview Modal -->
+@if (showPrintModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content admin-modal">
+                <div class="modal-header">
+                    <h5 class="modal-title">🖨️ Print Sheet Preview</h5>
+                    <button type="button" class="btn-close" @onclick="ClosePrintModal"></button>
+                </div>
+                <div class="modal-body" id="printArea">
+                    <div class="row g-3">
+                        @foreach (var id in selectedIds)
+                        {
+                            var food = foods?.FirstOrDefault(f => f.Id == id);
+                            if (food != null)
+                            {
+                                <div class="col-6 col-md-4 text-center border p-3">
+                                    <img src="@GetQrCodeUrl(id, 150)" alt="QR" style="width: 150px; height: 150px;" />
+                                    <p class="fw-bold mb-0 mt-2">@food.Name</p>
+                                    <small class="text-muted">ID: @id</small>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline-secondary" @onclick="ClosePrintModal">Close</button>
+                    <button class="btn btn-admin btn-admin-primary" onclick="window.print()">🖨️ Print</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<FoodDto>? foods;
+    private HashSet<int> selectedIds = new();
+    private bool showPrintModal;
+    private string baseApiUrl = "https://localhost:7214";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadFoods();
+    }
+
+    private async Task LoadFoods()
+    {
+        try
+        {
+            var result = await FoodService.GetFoods();
+            foods = result?.Items ?? new();
+        }
+        catch
+        {
+            foods = new();
+        }
+    }
+
+    private string GetQrCodeUrl(int foodId, int size = 200)
+    {
+        return $"{baseApiUrl}/api/qrcode/{foodId}?size={size}";
+    }
+
+    private void ToggleSelection(int id)
+    {
+        if (selectedIds.Contains(id))
+            selectedIds.Remove(id);
+        else
+            selectedIds.Add(id);
+    }
+
+    private void ToggleSelectAll()
+    {
+        if (foods == null) return;
+        
+        if (selectedIds.Count == foods.Count)
+            selectedIds.Clear();
+        else
+            selectedIds = foods.Select(f => f.Id).ToHashSet();
+    }
+
+    private void DownloadSelected()
+    {
+        // In real app, would trigger batch download
+        // For now, user can right-click and save each QR
+    }
+
+    private void PrintSelected()
+    {
+        if (selectedIds.Any())
+            showPrintModal = true;
+    }
+
+    private void ClosePrintModal() => showPrintModal = false;
+
+    private void CopyLink(int foodId)
+    {
+        // Would use JS interop to copy to clipboard
+        // For now, shows the URL pattern
+    }
+}
+
+<style>
+    @@media print {
+        .admin-sidebar, .admin-header, .modal-header, .modal-footer, 
+        .btn, button, .form-check {
+            display: none !important;
+        }
+        .modal {
+            position: static !important;
+            background: white !important;
+        }
+        .modal-dialog {
+            max-width: 100% !important;
+            margin: 0 !important;
+        }
+        .modal-content {
+            border: none !important;
+            box-shadow: none !important;
+        }
+    }
+</style>

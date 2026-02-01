@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PROJECT_C_.Data;
 
@@ -11,9 +12,11 @@ using PROJECT_C_.Data;
 namespace PROJECT_C_.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260201102533_AddPoiExtendedFields")]
+    partial class AddPoiExtendedFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -418,49 +421,6 @@ namespace PROJECT_C_.Migrations
                         });
                 });
 
-            modelBuilder.Entity("PROJECT_C_.Models.PlayLog", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("DeviceType")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<double>("DurationSeconds")
-                        .HasColumnType("float");
-
-                    b.Property<int>("FoodId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Language")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<double?>("Latitude")
-                        .HasColumnType("float");
-
-                    b.Property<double?>("Longitude")
-                        .HasColumnType("float");
-
-                    b.Property<DateTime>("PlayedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("SessionId")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Source")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("FoodId");
-
-                    b.ToTable("PlayLogs");
-                });
-
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -525,17 +485,6 @@ namespace PROJECT_C_.Migrations
                 {
                     b.HasOne("PROJECT_C_.Models.Food", "Food")
                         .WithMany("Translations")
-                        .HasForeignKey("FoodId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Food");
-                });
-
-            modelBuilder.Entity("PROJECT_C_.Models.PlayLog", b =>
-                {
-                    b.HasOne("PROJECT_C_.Models.Food", "Food")
-                        .WithMany()
                         .HasForeignKey("FoodId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();

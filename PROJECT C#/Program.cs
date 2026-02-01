@@ -171,4 +171,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+// Seed sample data
+await SeedData.InitializeAsync(app.Services);
+
 app.Run();

@@ -8,6 +8,7 @@ namespace FoodStreet.Client.Services
     public interface IFoodClientService
     {
         Task<PagedResult<FoodDto>?> GetNearestFoods(double lat, double lng, int page, int pageSize);
+        Task<PagedResult<FoodDto>?> GetFoods();
         Task<List<FoodDto>> GetAllFoods();
         Task<FoodDto?> GetFood(int id);
         Task CreateFood(FoodDto food);
@@ -57,6 +58,11 @@ namespace FoodStreet.Client.Services
              // For Admin List
              var result = await _http.GetFromJsonAsync<PagedResult<FoodDto>>($"api/Food/near?lat=0&lng=0&page=1&pageSize=100");
              return result?.Items ?? new List<FoodDto>();
+        }
+
+        public async Task<PagedResult<FoodDto>?> GetFoods()
+        {
+             return await _http.GetFromJsonAsync<PagedResult<FoodDto>>($"api/Food/near?lat=0&lng=0&page=1&pageSize=100");
         }
         
         public async Task<FoodDto?> GetFood(int id)
