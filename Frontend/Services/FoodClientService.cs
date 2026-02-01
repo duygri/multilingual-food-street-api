@@ -33,6 +33,10 @@ namespace FoodStreet.Client.Services
         public void SetLanguage(string languageCode)
         {
             CurrentLanguage = languageCode;
+            var culture = new System.Globalization.CultureInfo(languageCode);
+            System.Globalization.CultureInfo.DefaultThreadCurrentCulture = culture;
+            System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = culture;
+
             _http.DefaultRequestHeaders.AcceptLanguage.Clear();
             _http.DefaultRequestHeaders.AcceptLanguage.ParseAdd(languageCode);
             OnLanguageChanged?.Invoke();

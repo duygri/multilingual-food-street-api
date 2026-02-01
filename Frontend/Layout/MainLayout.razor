@@ -1,17 +1,22 @@
-﻿@inherits LayoutComponentBase
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
+@inherits LayoutComponentBase
+@inject NavigationManager Navigation
 
-    <main>
-        <div class="top-row px-4">
-            <LanguageSelector />
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
-        </div>
+@* 
+    MainLayout - Server Admin Only
+    Redirects all public routes to Admin Login
+*@
 
-        <article class="content px-4">
-            @Body
-        </article>
-    </main>
-</div>
+@Body
+
+@code {
+    protected override void OnInitialized()
+    {
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        
+        // If not in admin section, redirect to admin login
+        if (!uri.AbsolutePath.StartsWith("/admin", StringComparison.OrdinalIgnoreCase))
+        {
+            Navigation.NavigateTo("/admin/login", forceLoad: true);
+        }
+    }
+}

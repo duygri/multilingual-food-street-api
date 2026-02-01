@@ -1,0 +1,10 @@
+@page "/"
+@inject NavigationManager Navigation
+
+@code {
+    protected override void OnInitialized()
+    {
+        // Redirect root to admin login
+        Navigation.NavigateTo("/admin/login", forceLoad: true);
+    }
+}

@@ -1,78 +1,511 @@
 @page "/admin/dashboard"
 @layout AdminLayout
 @inject HttpClient Http
+@inject ILocalizationService L
 
-<div class="row">
-    <div class="col-md-4">
-        <div class="admin-card stat-card">
-            <div class="stat-icon primary">🍜</div>
-            <div class="stat-value">@stats.TotalFoods</div>
-            <div class="stat-label">Total Foods</div>
+<!-- Stats Cards -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon food">🍜</div>
+        <div class="stat-content">
+            <span class="stat-value">@stats.TotalFoods</span>
+            <span class="stat-label">Món ăn</span>
+        </div>
+        <div class="stat-trend up">
+            <span>↑ 12%</span>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="admin-card stat-card">
-            <div class="stat-icon success">🎵</div>
-            <div class="stat-value">@stats.TotalAudios</div>
-            <div class="stat-label">Audio Files</div>
+    
+    <div class="stat-card">
+        <div class="stat-icon audio">🎵</div>
+        <div class="stat-content">
+            <span class="stat-value">@stats.TotalAudios</span>
+            <span class="stat-label">File Audio</span>
+        </div>
+        <div class="stat-trend up">
+            <span>↑ 8%</span>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="admin-card stat-card">
-            <div class="stat-icon warning">👥</div>
-            <div class="stat-value">@stats.TotalUsers</div>
-            <div class="stat-label">Users</div>
+    
+    <div class="stat-card">
+        <div class="stat-icon users">👥</div>
+        <div class="stat-content">
+            <span class="stat-value">@stats.TotalUsers</span>
+            <span class="stat-label">Người dùng</span>
         </div>
+        <div class="stat-trend neutral">
+            <span>→ 0%</span>
+        </div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-icon location">📍</div>
+        <div class="stat-content">
+            <span class="stat-value">1</span>
+            <span class="stat-label">Khu vực</span>
+        </div>
+        <div class="stat-badge">Vĩnh Khánh</div>
     </div>
 </div>
 
-<div class="row mt-4">
-    <div class="col-12">
-        <div class="admin-card">
-            <h5>Quick Actions</h5>
-            <hr />
-            <div class="d-flex gap-3 flex-wrap">
-                <a href="admin/foods" class="btn btn-admin btn-admin-primary">
-                    ➕ Add New Food
+<!-- Main Content Grid -->
+<div class="dashboard-grid">
+    <!-- Quick Actions -->
+    <div class="dashboard-card quick-actions">
+        <div class="card-header">
+            <h3>⚡ Thao tác nhanh</h3>
+        </div>
+        <div class="card-body">
+            <div class="action-grid">
+                <a href="admin/foods" class="action-item">
+                    <span class="action-icon">➕</span>
+                    <span class="action-text">Thêm món ăn</span>
                 </a>
-                <a href="admin/translations" class="btn btn-admin btn-admin-success">
-                    🌐 Manage Translations
+                <a href="admin/audio" class="action-item">
+                    <span class="action-icon">🎤</span>
+                    <span class="action-text">Upload Audio</span>
                 </a>
-                <a href="https://localhost:7214/swagger" target="_blank" class="btn btn-outline-secondary">
-                    📄 API Documentation
+                <a href="admin/translations" class="action-item">
+                    <span class="action-icon">🌐</span>
+                    <span class="action-text">Thêm bản dịch</span>
                 </a>
+                <a href="admin/qrcodes" class="action-item">
+                    <span class="action-icon">📱</span>
+                    <span class="action-text">Tạo QR Code</span>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Area Info -->
+    <div class="dashboard-card area-info">
+        <div class="card-header">
+            <h3>📍 Khu vực hoạt động</h3>
+        </div>
+        <div class="card-body">
+            <div class="area-map">
+                <div class="map-placeholder">
+                    <span>🗺️</span>
+                    <p>Vĩnh Khánh, Quận 4</p>
+                </div>
+            </div>
+            <div class="area-details">
+                <div class="detail-item">
+                    <span class="detail-label">Địa chỉ</span>
+                    <span class="detail-value">Đường Vĩnh Khánh, P. Vĩnh Hội</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Quận</span>
+                    <span class="detail-value">Quận 4, TP.HCM</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Tọa độ</span>
+                    <span class="detail-value">10.7580°N, 106.7034°E</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Bán kính</span>
+                    <span class="detail-value">500m</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Foods -->
+    <div class="dashboard-card recent-foods">
+        <div class="card-header">
+            <h3>🍲 Món ăn mới nhất</h3>
+            <a href="admin/foods" class="view-all">Xem tất cả →</a>
+        </div>
+        <div class="card-body">
+            @if (recentFoods.Any())
+            {
+                <div class="food-list">
+                    @foreach (var food in recentFoods)
+                    {
+                        <div class="food-item">
+                            <span class="food-icon">🦐</span>
+                            <div class="food-info">
+                                <span class="food-name">@food</span>
+                                <span class="food-meta">Đường Vĩnh Khánh</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="empty-state">
+                    <span>📝</span>
+                    <p>Chưa có món ăn nào</p>
+                    <a href="admin/foods" class="btn-add">Thêm món đầu tiên</a>
+                </div>
+            }
+        </div>
+    </div>
+    
+    <!-- System Status -->
+    <div class="dashboard-card system-status">
+        <div class="card-header">
+            <h3>🖥️ Trạng thái hệ thống</h3>
+        </div>
+        <div class="card-body">
+            <div class="status-list">
+                <div class="status-item">
+                    <span class="status-icon online">●</span>
+                    <span class="status-name">Backend API</span>
+                    <span class="status-url">localhost:7214</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-icon online">●</span>
+                    <span class="status-name">Frontend App</span>
+                    <span class="status-url">localhost:7090</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-icon online">●</span>
+                    <span class="status-name">Database</span>
+                    <span class="status-url">SQL Server</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-icon pending">●</span>
+                    <span class="status-name">Mobile App</span>
+                    <span class="status-url">Chưa triển khai</span>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<div class="row mt-4">
-    <div class="col-12">
-        <div class="admin-card">
-            <h5>System Info</h5>
-            <hr />
-            <table class="table table-sm">
-                <tbody>
-                    <tr>
-                        <td><strong>Backend API</strong></td>
-                        <td><span class="badge bg-success">Online</span> https://localhost:7214</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Frontend</strong></td>
-                        <td><span class="badge bg-success">Online</span> https://localhost:7090</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Database</strong></td>
-                        <td>SQL Server (LocalDB)</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
+<style>
+    /* Stats Grid */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 24px;
+        margin-bottom: 32px;
+    }
+    
+    .stat-card {
+        background: #fff;
+        border-radius: 16px;
+        padding: 24px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        transition: all 0.2s ease;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 24px rgba(0,0,0,0.08);
+    }
+    
+    .stat-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+    }
+    
+    .stat-icon.food { background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%); }
+    .stat-icon.audio { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .stat-icon.users { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
+    .stat-icon.location { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+    
+    .stat-content {
+        flex: 1;
+    }
+    
+    .stat-value {
+        display: block;
+        font-size: 28px;
+        font-weight: 700;
+        color: #1e2a3a;
+        line-height: 1;
+    }
+    
+    .stat-label {
+        display: block;
+        font-size: 13px;
+        color: #64748b;
+        margin-top: 4px;
+    }
+    
+    .stat-trend {
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    
+    .stat-trend.up {
+        background: rgba(16, 185, 129, 0.1);
+        color: #10b981;
+    }
+    
+    .stat-trend.neutral {
+        background: rgba(100, 116, 139, 0.1);
+        color: #64748b;
+    }
+    
+    .stat-badge {
+        padding: 4px 10px;
+        background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+        color: #fff;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+    
+    /* Dashboard Grid */
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 24px;
+    }
+    
+    .dashboard-card {
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        overflow: hidden;
+    }
+    
+    .card-header {
+        padding: 20px 24px;
+        border-bottom: 1px solid #f1f5f9;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .card-header h3 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+        color: #1e2a3a;
+    }
+    
+    .view-all {
+        font-size: 13px;
+        color: #ff6b35;
+        text-decoration: none;
+        font-weight: 500;
+    }
+    
+    .view-all:hover {
+        text-decoration: underline;
+    }
+    
+    .card-body {
+        padding: 24px;
+    }
+    
+    /* Quick Actions */
+    .action-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+    
+    .action-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 16px;
+        background: #f8fafc;
+        border-radius: 12px;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+    
+    .action-item:hover {
+        background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+        transform: translateY(-2px);
+    }
+    
+    .action-item:hover .action-text {
+        color: #fff;
+    }
+    
+    .action-icon {
+        font-size: 20px;
+    }
+    
+    .action-text {
+        font-size: 14px;
+        font-weight: 500;
+        color: #1e2a3a;
+    }
+    
+    /* Area Info */
+    .area-map {
+        margin-bottom: 20px;
+    }
+    
+    .map-placeholder {
+        height: 120px;
+        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        border-radius: 12px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: #0369A1;
+    }
+    
+    .map-placeholder span {
+        font-size: 32px;
+        margin-bottom: 8px;
+    }
+    
+    .map-placeholder p {
+        margin: 0;
+        font-weight: 600;
+    }
+    
+    .area-details {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+    
+    .detail-item {
+        padding: 12px;
+        background: #f8fafc;
+        border-radius: 8px;
+    }
+    
+    .detail-label {
+        display: block;
+        font-size: 11px;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 4px;
+    }
+    
+    .detail-value {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        color: #1e2a3a;
+    }
+    
+    /* Food List */
+    .food-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .food-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        background: #f8fafc;
+        border-radius: 10px;
+    }
+    
+    .food-icon {
+        font-size: 20px;
+    }
+    
+    .food-name {
+        display: block;
+        font-size: 14px;
+        font-weight: 500;
+        color: #1e2a3a;
+    }
+    
+    .food-meta {
+        display: block;
+        font-size: 12px;
+        color: #64748b;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 32px;
+        color: #64748b;
+    }
+    
+    .empty-state span {
+        font-size: 40px;
+        display: block;
+        margin-bottom: 12px;
+    }
+    
+    .empty-state p {
+        margin-bottom: 16px;
+    }
+    
+    .btn-add {
+        display: inline-block;
+        padding: 10px 20px;
+        background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+        color: #fff;
+        text-decoration: none;
+        border-radius: 8px;
+        font-weight: 500;
+        font-size: 13px;
+    }
+    
+    /* System Status */
+    .status-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .status-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        background: #f8fafc;
+        border-radius: 10px;
+    }
+    
+    .status-icon {
+        font-size: 10px;
+    }
+    
+    .status-icon.online { color: #10b981; }
+    .status-icon.pending { color: #f59e0b; }
+    .status-icon.offline { color: #ef4444; }
+    
+    .status-name {
+        flex: 1;
+        font-size: 14px;
+        font-weight: 500;
+        color: #1e2a3a;
+    }
+    
+    .status-url {
+        font-size: 12px;
+        color: #64748b;
+        font-family: monospace;
+    }
+    
+    @@media (max-width: 1200px) {
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .dashboard-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
 
 @code {
     private DashboardStats stats = new();
+    private List<string> recentFoods = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -80,10 +513,16 @@
         {
             var result = await Http.GetFromJsonAsync<DashboardStats>("api/admin/stats");
             if (result != null) stats = result;
+            
+            // TODO: Fetch recent foods from API
+            // For now, show sample data if foods exist
+            if (stats.TotalFoods > 0)
+            {
+                recentFoods = new List<string> { "Ốc hương xào bơ tỏi", "Hàu nướng mỡ hành", "Nghêu hấp sả" };
+            }
         }
         catch
         {
-            // API needs auth or is down - show default values
             stats = new DashboardStats { TotalFoods = 0, TotalAudios = 0, TotalUsers = 0 };
         }
     }

@@ -1,5 +1,82 @@
 ﻿@page "/not-found"
-@layout MainLayout
+@inject NavigationManager Navigation
 
-<h3>Not Found</h3>
-<p>Sorry, the content you are looking for does not exist.</p>
+<div class="not-found-page">
+    <div class="not-found-card">
+        <div class="error-code">404</div>
+        <h2>Không tìm thấy trang</h2>
+        <p>Trang bạn đang tìm kiếm không tồn tại hoặc đã bị di chuyển.</p>
+        <button class="btn-back" @onclick="GoToAdmin">
+            🏠 Về trang Admin
+        </button>
+    </div>
+</div>
+
+<style>
+    .not-found-page {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #1e2a3a 0%, #0f1724 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+    }
+    
+    .not-found-card {
+        background: #fff;
+        border-radius: 24px;
+        padding: 48px;
+        text-align: center;
+        max-width: 450px;
+        box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+    }
+    
+    .error-code {
+        font-size: 80px;
+        font-weight: 800;
+        background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1;
+        margin-bottom: 16px;
+    }
+    
+    .not-found-card h2 {
+        color: #1e2a3a;
+        margin: 0 0 12px;
+        font-weight: 700;
+    }
+    
+    .not-found-card p {
+        color: #64748b;
+        margin: 0 0 32px;
+    }
+    
+    .btn-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 14px 32px;
+        background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+        border: none;
+        border-radius: 12px;
+        color: #fff;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .btn-back:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(255,107,53,0.35);
+    }
+</style>
+
+@code {
+    private void GoToAdmin()
+    {
+        Navigation.NavigateTo("/admin/login");
+    }
+}

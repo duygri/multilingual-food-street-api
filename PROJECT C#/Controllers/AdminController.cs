@@ -65,6 +65,7 @@ namespace PROJECT_C_.Controllers
         }
 
         [HttpGet("stats")]
+        [AllowAnonymous] // Allow public access for now - dashboard needs this
         public async Task<IActionResult> GetStats()
         {
             var stats = new

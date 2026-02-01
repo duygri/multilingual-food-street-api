@@ -1,161 +1,559 @@
 @page "/admin/login"
 @page "/admin/register"
-@inject HttpClient Http
+@inject IAuthService AuthService
 @inject NavigationManager Navigation
+@inject ILocalizationService L
+@implements IDisposable
 
-<div class="login-container">
-    <div class="login-card">
-        <div class="login-header">
-            <div class="login-icon">🔐</div>
-            <h2 class="login-title">@(isLogin ? "Welcome Back" : "Create Account")</h2>
-            <p class="login-subtitle">@(isLogin ? "Sign in to access admin panel" : "Register a new admin account")</p>
+<div class="auth-page">
+    <div class="auth-container">
+        <!-- Left Side - Branding -->
+        <div class="auth-branding">
+            <div class="branding-content">
+                <div class="brand-logo">
+                    <span class="logo-icon">🍜</span>
+                </div>
+                <h1 class="brand-title">Vĩnh Khánh</h1>
+                <p class="brand-tagline">Food Street Guide</p>
+                <div class="brand-features">
+                    <div class="feature-item">
+                        <span class="feature-icon">📍</span>
+                        <span>Quận 4, TP.HCM</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon">🦐</span>
+                        <span>Thiên đường hải sản</span>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon">🎵</span>
+                        <span>Audio guide đa ngôn ngữ</span>
+                    </div>
+                </div>
+            </div>
+            <div class="branding-footer">
+                <span>Admin Content Management System</span>
+            </div>
         </div>
-
-        @if (!string.IsNullOrEmpty(message))
-        {
-            <div class="alert @(isError ? "alert-danger" : "alert-success") mb-4">
-                @message
-            </div>
-        }
-
-        <EditForm Model="@model" OnValidSubmit="HandleSubmit">
-            <DataAnnotationsValidator />
-            
-            @if (!isLogin)
-            {
-                <div class="mb-3">
-                    <label class="form-label">Full Name</label>
-                    <input type="text" class="form-control form-control-lg" @bind="model.FullName" placeholder="Your name" />
+        
+        <!-- Right Side - Form -->
+        <div class="auth-form-container">
+            <div class="auth-form-wrapper">
+                <div class="auth-header">
+                    <h2>@(isLogin ? "Đăng nhập" : "Tạo tài khoản")</h2>
+                    <p>@(isLogin ? "Chào mừng trở lại hệ thống quản trị" : "Đăng ký tài khoản quản trị mới")</p>
                 </div>
-            }
-            
-            <div class="mb-3">
-                <label class="form-label">Email</label>
-                <input type="email" class="form-control form-control-lg" @bind="model.Email" placeholder="admin@example.com" />
-            </div>
-            
-            <div class="mb-3">
-                <label class="form-label">Password</label>
-                <input type="password" class="form-control form-control-lg" @bind="model.Password" placeholder="••••••••" />
-            </div>
 
-            @if (!isLogin)
-            {
-                <div class="mb-3">
-                    <label class="form-label">Confirm Password</label>
-                    <input type="password" class="form-control form-control-lg" @bind="model.ConfirmPassword" placeholder="••••••••" />
-                </div>
-            }
-
-            <button type="submit" class="btn btn-admin btn-admin-primary w-100 py-3 mb-3" disabled="@isLoading">
-                @if (isLoading)
+                @if (!string.IsNullOrEmpty(message))
                 {
-                    <span class="spinner-border spinner-border-sm me-2"></span>
+                    <div class="alert-box @(isError ? "alert-error" : "alert-success")">
+                        <span class="alert-icon">@(isError ? "⚠️" : "✅")</span>
+                        <div class="alert-content">
+                            @if (errorList != null && errorList.Any())
+                            {
+                                <ul>
+                                    @foreach (var err in errorList)
+                                    {
+                                        <li>@err</li>
+                                    }
+                                </ul>
+                            }
+                            else
+                            {
+                                <span>@message</span>
+                            }
+                        </div>
+                    </div>
                 }
-                @(isLogin ? "🔓 Sign In" : "✨ Create Account")
-            </button>
-        </EditForm>
 
-        <div class="text-center">
-            <button class="btn btn-link" @onclick="ToggleMode">
-                @(isLogin ? "Don't have an account? Register" : "Already have an account? Sign In")
-            </button>
-        </div>
+                <form @onsubmit="HandleSubmit" @onsubmit:preventDefault>
+                    @if (!isLogin)
+                    {
+                        <div class="form-group">
+                            <label>Họ và tên</label>
+                            <div class="input-wrapper">
+                                <span class="input-icon">👤</span>
+                                <input type="text" @bind="model.FullName" placeholder="Nhập họ và tên" />
+                            </div>
+                        </div>
+                    }
+                    
+                    <div class="form-group">
+                        <label>Email</label>
+                        <div class="input-wrapper @(validationErrors.ContainsKey("Email") ? "has-error" : "")">
+                            <span class="input-icon">✉️</span>
+                            <input type="email" @bind="model.Email" placeholder="admin@vinhkhanh.vn" />
+                        </div>
+                        @if (validationErrors.ContainsKey("Email"))
+                        {
+                            <span class="error-text">@validationErrors["Email"]</span>
+                        }
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Mật khẩu</label>
+                        <div class="input-wrapper @(validationErrors.ContainsKey("Password") ? "has-error" : "")">
+                            <span class="input-icon">🔒</span>
+                            <input type="password" @bind="model.Password" placeholder="••••••••" />
+                        </div>
+                        @if (validationErrors.ContainsKey("Password"))
+                        {
+                            <span class="error-text">@validationErrors["Password"]</span>
+                        }
+                    </div>
 
-        <hr class="my-4" />
+                    @if (!isLogin)
+                    {
+                        <div class="form-group">
+                            <label>Xác nhận mật khẩu</label>
+                            <div class="input-wrapper @(validationErrors.ContainsKey("ConfirmPassword") ? "has-error" : "")">
+                                <span class="input-icon">🔒</span>
+                                <input type="password" @bind="model.ConfirmPassword" placeholder="••••••••" />
+                            </div>
+                            @if (validationErrors.ContainsKey("ConfirmPassword"))
+                            {
+                                <span class="error-text">@validationErrors["ConfirmPassword"]</span>
+                            }
+                        </div>
+                    }
 
-        <div class="text-center">
-            <a href="" class="btn btn-outline-secondary btn-sm">
-                ⬅️ Back to Home
-            </a>
+                    <button type="submit" class="btn-submit" disabled="@isLoading">
+                        @if (isLoading)
+                        {
+                            <span class="spinner"></span>
+                        }
+                        <span>@(isLogin ? "Đăng nhập" : "Tạo tài khoản")</span>
+                    </button>
+                </form>
+
+                <div class="auth-switch">
+                    <span>@(isLogin ? "Chưa có tài khoản?" : "Đã có tài khoản?")</span>
+                    <button @onclick="ToggleMode">
+                        @(isLogin ? "Tạo tài khoản mới" : "Đăng nhập")
+                    </button>
+                </div>
+
+                <div class="auth-footer">
+                    <a href="">← Về trang chủ</a>
+                </div>
+            </div>
         </div>
     </div>
 </div>
+
+<style>
+    .auth-page {
+        min-height: 100vh;
+        background: #f0f2f5;
+    }
+    
+    .auth-container {
+        display: flex;
+        min-height: 100vh;
+    }
+    
+    /* Branding Side */
+    .auth-branding {
+        width: 45%;
+        background: linear-gradient(135deg, #1e2a3a 0%, #0f1724 100%);
+        padding: 48px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .auth-branding::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle, rgba(255,107,53,0.15) 0%, transparent 70%);
+    }
+    
+    .branding-content {
+        position: relative;
+        z-index: 1;
+    }
+    
+    .brand-logo {
+        margin-bottom: 24px;
+    }
+    
+    .brand-logo .logo-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+        border-radius: 20px;
+        font-size: 40px;
+        box-shadow: 0 12px 40px rgba(255,107,53,0.4);
+    }
+    
+    .brand-title {
+        font-size: 48px;
+        font-weight: 800;
+        color: #fff;
+        margin: 0 0 8px;
+        letter-spacing: -1px;
+    }
+    
+    .brand-tagline {
+        font-size: 20px;
+        color: rgba(255,255,255,0.6);
+        margin: 0 0 48px;
+    }
+    
+    .brand-features {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+    
+    .feature-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: rgba(255,255,255,0.8);
+        font-size: 16px;
+    }
+    
+    .feature-icon {
+        width: 40px;
+        height: 40px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+    }
+    
+    .branding-footer {
+        position: absolute;
+        bottom: 32px;
+        left: 48px;
+        color: rgba(255,255,255,0.4);
+        font-size: 13px;
+    }
+    
+    /* Form Side */
+    .auth-form-container {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 48px;
+    }
+    
+    .auth-form-wrapper {
+        width: 100%;
+        max-width: 420px;
+    }
+    
+    .auth-header {
+        margin-bottom: 32px;
+    }
+    
+    .auth-header h2 {
+        font-size: 28px;
+        font-weight: 700;
+        color: #1e2a3a;
+        margin: 0 0 8px;
+    }
+    
+    .auth-header p {
+        color: #64748b;
+        margin: 0;
+    }
+    
+    .alert-box {
+        display: flex;
+        gap: 12px;
+        padding: 16px;
+        border-radius: 12px;
+        margin-bottom: 24px;
+    }
+    
+    .alert-error {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+    }
+    
+    .alert-success {
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+    }
+    
+    .alert-icon {
+        font-size: 20px;
+    }
+    
+    .alert-content {
+        flex: 1;
+        font-size: 14px;
+    }
+    
+    .alert-content ul {
+        margin: 0;
+        padding-left: 16px;
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-group label {
+        display: block;
+        font-size: 14px;
+        font-weight: 600;
+        color: #1e2a3a;
+        margin-bottom: 8px;
+    }
+    
+    .input-wrapper {
+        display: flex;
+        align-items: center;
+        background: #fff;
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 0 16px;
+        transition: all 0.2s ease;
+    }
+    
+    .input-wrapper:focus-within {
+        border-color: #ff6b35;
+        box-shadow: 0 0 0 3px rgba(255,107,53,0.1);
+    }
+    
+    .input-wrapper.has-error {
+        border-color: #ef4444;
+    }
+    
+    .input-icon {
+        font-size: 16px;
+        margin-right: 12px;
+    }
+    
+    .input-wrapper input {
+        flex: 1;
+        border: none;
+        padding: 14px 0;
+        font-size: 15px;
+        background: transparent;
+        outline: none;
+    }
+    
+    .error-text {
+        display: block;
+        color: #ef4444;
+        font-size: 13px;
+        margin-top: 6px;
+    }
+    
+    .btn-submit {
+        width: 100%;
+        padding: 16px;
+        background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+        border: none;
+        border-radius: 12px;
+        color: #fff;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: all 0.2s ease;
+    }
+    
+    .btn-submit:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(255,107,53,0.35);
+    }
+    
+    .btn-submit:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+    
+    .spinner {
+        width: 20px;
+        height: 20px;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-top-color: #fff;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+    
+    @@keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    
+    .auth-switch {
+        text-align: center;
+        margin-top: 24px;
+        color: #64748b;
+        font-size: 14px;
+    }
+    
+    .auth-switch button {
+        background: none;
+        border: none;
+        color: #ff6b35;
+        font-weight: 600;
+        cursor: pointer;
+        margin-left: 4px;
+    }
+    
+    .auth-switch button:hover {
+        text-decoration: underline;
+    }
+    
+    .auth-footer {
+        text-align: center;
+        margin-top: 32px;
+        padding-top: 24px;
+        border-top: 1px solid #e2e8f0;
+    }
+    
+    .auth-footer a {
+        color: #64748b;
+        text-decoration: none;
+        font-size: 14px;
+    }
+    
+    .auth-footer a:hover {
+        color: #ff6b35;
+    }
+    
+    @@media (max-width: 900px) {
+        .auth-branding {
+            display: none;
+        }
+        
+        .auth-form-container {
+            padding: 24px;
+        }
+    }
+</style>
 
 @code {
     private AuthModel model = new();
     private bool isLogin = true;
     private bool isLoading = false;
     private string? message;
+    private List<string>? errorList;
     private bool isError = false;
+    private Dictionary<string, string> validationErrors = new();
 
     protected override void OnInitialized()
     {
-        // Check URL to determine mode
         var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
         isLogin = !uri.AbsolutePath.Contains("register");
+        L.OnLanguageChanged += OnLanguageChanged;
+    }
+
+    private void OnLanguageChanged()
+    {
+        message = null;
+        errorList = null;
+        validationErrors.Clear();
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        L.OnLanguageChanged -= OnLanguageChanged;
     }
 
     private void ToggleMode()
     {
         isLogin = !isLogin;
         message = null;
+        errorList = null;
+        validationErrors.Clear();
         model = new AuthModel();
         Navigation.NavigateTo(isLogin ? "/admin/login" : "/admin/register");
     }
 
+    private bool ValidateForm()
+    {
+        validationErrors.Clear();
+
+        if (string.IsNullOrWhiteSpace(model.Email))
+        {
+            validationErrors["Email"] = "Vui lòng nhập email";
+        }
+        else if (!model.Email.Contains("@") || !model.Email.Contains("."))
+        {
+            validationErrors["Email"] = "Email không hợp lệ";
+        }
+
+        if (string.IsNullOrWhiteSpace(model.Password))
+        {
+            validationErrors["Password"] = "Vui lòng nhập mật khẩu";
+        }
+        else if (model.Password.Length < 8)
+        {
+            validationErrors["Password"] = "Mật khẩu phải có ít nhất 8 ký tự";
+        }
+
+        if (!isLogin)
+        {
+            if (model.Password != model.ConfirmPassword)
+            {
+                validationErrors["ConfirmPassword"] = "Mật khẩu không khớp";
+            }
+        }
+
+        return validationErrors.Count == 0;
+    }
+
     private async Task HandleSubmit()
     {
+        if (!ValidateForm())
+        {
+            return;
+        }
+
         isLoading = true;
         message = null;
+        errorList = null;
 
         try
         {
+            AuthResult result;
+
             if (isLogin)
             {
-                // Login
-                var response = await Http.PostAsJsonAsync("login?useCookies=true", new
-                {
-                    email = model.Email,
-                    password = model.Password
-                });
-
-                if (response.IsSuccessStatusCode)
-                {
-                    Navigation.NavigateTo("/admin/dashboard", forceLoad: true);
-                }
-                else
-                {
-                    isError = true;
-                    message = "Invalid email or password. Please try again.";
-                }
+                result = await AuthService.LoginAsync(model.Email, model.Password);
             }
             else
             {
-                // Register
-                if (model.Password != model.ConfirmPassword)
-                {
-                    isError = true;
-                    message = "Passwords do not match.";
-                    isLoading = false;
-                    return;
-                }
+                result = await AuthService.RegisterAsync(model.Email, model.Password, model.FullName);
+            }
 
-                var response = await Http.PostAsJsonAsync("register", new
-                {
-                    email = model.Email,
-                    password = model.Password
-                });
-
-                if (response.IsSuccessStatusCode)
-                {
-                    isError = false;
-                    message = "Account created successfully! You can now sign in.";
-                    isLogin = true;
-                    model = new AuthModel { Email = model.Email };
-                }
-                else
-                {
-                    var error = await response.Content.ReadAsStringAsync();
-                    isError = true;
-                    message = "Registration failed. " + (error.Contains("Password") ? "Password must be at least 6 characters with uppercase, lowercase, and numbers." : "Please try again.");
-                }
+            if (result.Success)
+            {
+                Navigation.NavigateTo("/admin/dashboard", forceLoad: true);
+            }
+            else
+            {
+                isError = true;
+                message = result.Message ?? (isLogin ? "Đăng nhập thất bại" : "Đăng ký thất bại");
+                errorList = result.Errors;
             }
         }
         catch (Exception ex)
         {
             isError = true;
-            message = "Connection error: " + ex.Message;
+            message = "Lỗi kết nối: " + ex.Message;
         }
         finally
         {
