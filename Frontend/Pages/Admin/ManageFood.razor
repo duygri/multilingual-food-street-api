@@ -1,12 +1,13 @@
 @page "/admin/foods"
 @layout AdminLayout
 @inject FoodStreet.Client.Services.IFoodClientService FoodService
+@inject ILocalizationService L
 @using FoodStreet.Client.DTOs
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="mb-0">🍜 Manage Foods</h3>
+    <h3 class="mb-0">🍜 Quản lý Món ăn</h3>
     <button class="btn btn-admin btn-admin-primary" @onclick="ShowCreateModal">
-        ➕ Add New Food
+        ➕ Thêm món mới
     </button>
 </div>
 
@@ -15,17 +16,17 @@
     {
         <div class="text-center py-5">
             <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
+                <span class="visually-hidden">Đang tải...</span>
             </div>
-            <p class="mt-3 text-muted">Loading foods...</p>
+            <p class="mt-3 text-muted">Đang tải...</p>
         </div>
     }
     else if (foods.Count == 0)
     {
         <div class="text-center py-5">
             <div style="font-size: 4rem;">🍽️</div>
-            <h5 class="mt-3">No foods yet</h5>
-            <p class="text-muted">Click "Add New Food" to create your first entry.</p>
+            <h5 class="mt-3">Chưa có món ăn nào</h5>
+            <p class="text-muted">Nhấn "Thêm món mới" để bắt đầu.</p>
         </div>
     }
     else
@@ -33,11 +34,11 @@
         <table class="admin-table">
             <thead>
                 <tr>
-                    <th>Name</th>
-                    <th>Description</th>
-                    <th>Price</th>
-                    <th>Location</th>
-                    <th style="width: 200px;">Actions</th>
+                    <th>Tên món</th>
+                    <th>Mô tả</th>
+                    <th>Giá</th>
+                    <th>Vị trí</th>
+                    <th style="width: 200px;">Thao tác</th>
                 </tr>
             </thead>
             <tbody>
@@ -53,7 +54,7 @@
                             </small>
                         </td>
                         <td>
-                            <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => ShowEditModal(food.Id)">✏️ Edit</button>
+                            <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => ShowEditModal(food.Id)">✏️ Sửa</button>
                             <button class="btn btn-sm btn-outline-secondary me-1" @onclick="() => ShowAudioModal(food.Id)">🎵</button>
                             <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteFood(food.Id)">🗑️</button>
                         </td>
@@ -77,46 +78,46 @@
                     <EditForm Model="@editingFood" OnValidSubmit="SaveFood">
                         <DataAnnotationsValidator />
                         <div class="mb-3">
-                            <label class="form-label">Name *</label>
-                            <InputText @bind-Value="editingFood.Name" class="form-control" placeholder="e.g. Phở Bò" />
+                            <label class="form-label">Tên món *</label>
+                            <InputText @bind-Value="editingFood.Name" class="form-control" placeholder="VD: Phở Bò" />
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Description</label>
-                            <InputTextArea @bind-Value="editingFood.Description" class="form-control" rows="3" placeholder="Describe the dish..." />
+                            <label class="form-label">Mô tả</label>
+                            <InputTextArea @bind-Value="editingFood.Description" class="form-control" rows="3" />
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Price (VND)</label>
+                            <label class="form-label">Giá (VND)</label>
                             <InputNumber @bind-Value="editingFood.Price" class="form-control" placeholder="50000" />
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">🖼️ Image URL</label>
+                            <label class="form-label">🖼️ Link hình ảnh</label>
                             <InputText @bind-Value="editingFood.ImageUrl" class="form-control" placeholder="https://example.com/image.jpg" />
                         </div>
                         <div class="row mb-3">
                             <div class="col-6">
-                                <label class="form-label">📍 Latitude</label>
+                                <label class="form-label">📍 Vĩ độ</label>
                                 <InputNumber @bind-Value="editingFood.Latitude" class="form-control" />
                             </div>
                             <div class="col-6">
-                                <label class="form-label">📍 Longitude</label>
+                                <label class="form-label">📍 Kinh độ</label>
                                 <InputNumber @bind-Value="editingFood.Longitude" class="form-control" />
                             </div>
                         </div>
                         <div class="row mb-3">
                             <div class="col-6">
-                                <label class="form-label">📏 Radius (m)</label>
+                                <label class="form-label">📏 Bán kính (m)</label>
                                 <InputNumber @bind-Value="editingFood.Radius" class="form-control" />
                                 <small class="text-muted">Bán kính kích hoạt geofence</small>
                             </div>
                             <div class="col-6">
-                                <label class="form-label">⭐ Priority</label>
+                                <label class="form-label">⭐ Độ ưu tiên</label>
                                 <InputNumber @bind-Value="editingFood.Priority" class="form-control" />
-                                <small class="text-muted">Cao hơn = ưu tiên hơn</small>
+                                <small class="text-muted">Số cao hơn = ưu tiên hơn</small>
                             </div>
                         </div>
                         <div class="mt-4 d-flex gap-2">
-                            <button type="submit" class="btn btn-admin btn-admin-primary flex-grow-1">💾 Save</button>
-                            <button type="button" class="btn btn-outline-secondary" @onclick="CloseModal">Cancel</button>
+                            <button type="submit" class="btn btn-admin btn-admin-primary flex-grow-1">💾 Lưu</button>
+                            <button type="button" class="btn btn-outline-secondary" @onclick="CloseModal">Hủy</button>
                         </div>
                     </EditForm>
                 </div>
@@ -131,19 +132,19 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content admin-modal">
                 <div class="modal-header">
-                    <h5 class="modal-title">🎵 Upload Audio</h5>
+                    <h5 class="modal-title">🎵 @L["UploadAudio"]</h5>
                     <button type="button" class="btn-close" @onclick="CloseAudioModal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="text-center py-4">
                         <div style="font-size: 3rem;">🎤</div>
-                        <p class="mt-2">Select an audio file (MP3, WAV)</p>
+                        <p class="mt-2">@L["SelectAudioFile"]</p>
                         <InputFile OnChange="@LoadFiles" class="form-control" accept="audio/*" />
                         @if (uploading)
                         {
                             <div class="mt-3">
                                 <div class="spinner-border spinner-border-sm text-primary"></div>
-                                <span class="ms-2">Uploading...</span>
+                                <span class="ms-2">@L["Uploading"]</span>
                             </div>
                         }
                     </div>
@@ -182,7 +183,7 @@
     private void ShowCreateModal()
     {
         editingFood = new FoodDto { Name = "", Description = "" };
-        modalTitle = "➕ Create New Food";
+        modalTitle = "➕ " + L["CreateNewFood"];
         showModal = true;
     }
 
@@ -204,7 +205,7 @@
                 Priority = dto.Priority
             };
         }
-        modalTitle = "✏️ Edit Food";
+        modalTitle = "✏️ " + L["EditFood"];
         showModal = true;
     }
 

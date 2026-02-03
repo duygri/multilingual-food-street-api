@@ -2,6 +2,8 @@
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
 @inject ILocalizationService L
+@inject IFoodClientService FoodClient
+@inject IJSRuntime JS
 
 <AuthorizeView>
     <Authorized>
@@ -20,10 +22,10 @@
                 
                 <nav class="sidebar-nav">
                     <div class="nav-section">
-                        <span class="nav-section-title">MAIN</span>
+                        <span class="nav-section-title">CHÍNH</span>
                         <NavLink class="nav-item" href="admin/dashboard" Match="NavLinkMatch.All">
                             <span class="nav-icon">📊</span>
-                            <span class="nav-text">Dashboard</span>
+                            <span class="nav-text">Thống kê</span>
                         </NavLink>
                         <NavLink class="nav-item" href="admin/foods">
                             <span class="nav-icon">🍲</span>
@@ -33,13 +35,17 @@
                             <span class="nav-icon">📍</span>
                             <span class="nav-text">Địa điểm</span>
                         </NavLink>
+                        <NavLink class="nav-item" href="admin/tours">
+                            <span class="nav-icon">🗺️</span>
+                            <span class="nav-text">Quản lý Tour</span>
+                        </NavLink>
                     </div>
                     
                     <div class="nav-section">
-                        <span class="nav-section-title">CONTENT</span>
+                        <span class="nav-section-title">NỘI DUNG</span>
                         <NavLink class="nav-item" href="admin/audio">
                             <span class="nav-icon">🎵</span>
-                            <span class="nav-text">Audio Files</span>
+                            <span class="nav-text">Tệp âm thanh</span>
                         </NavLink>
                         <NavLink class="nav-item" href="admin/translations">
                             <span class="nav-icon">🌐</span>
@@ -47,12 +53,12 @@
                         </NavLink>
                         <NavLink class="nav-item" href="admin/qrcodes">
                             <span class="nav-icon">📱</span>
-                            <span class="nav-text">QR Codes</span>
+                            <span class="nav-text">Mã QR</span>
                         </NavLink>
                     </div>
                     
                     <div class="nav-section">
-                        <span class="nav-section-title">ANALYTICS</span>
+                        <span class="nav-section-title">PHÂN TÍCH</span>
                         <NavLink class="nav-item" href="admin/stats">
                             <span class="nav-icon">📈</span>
                             <span class="nav-text">Thống kê</span>
@@ -60,6 +66,14 @@
                         <NavLink class="nav-item" href="admin/visitors">
                             <span class="nav-icon">👥</span>
                             <span class="nav-text">Lượt truy cập</span>
+                        </NavLink>
+                        <NavLink class="nav-item" href="admin/history">
+                            <span class="nav-icon">📜</span>
+                            <span class="nav-text">Lịch sử sử dụng</span>
+                        </NavLink>
+                        <NavLink class="nav-item" href="admin/gps-test">
+                            <span class="nav-icon">📍</span>
+                            <span class="nav-text">Test GPS</span>
                         </NavLink>
                     </div>
                 </nav>
@@ -71,7 +85,7 @@
                         </div>
                         <div class="user-info">
                             <span class="user-name">@context.User.Identity?.Name</span>
-                            <span class="user-role">Administrator</span>
+                            <span class="user-role">Quản trị viên</span>
                         </div>
                     </div>
                     <button class="logout-btn" @onclick="HandleLogout">
@@ -86,7 +100,7 @@
                     <div class="header-left">
                         <h1 class="page-title">@GetPageTitle()</h1>
                         <nav class="breadcrumb-nav">
-                            <span class="breadcrumb-item">Admin</span>
+                            <span class="breadcrumb-item">Quản trị</span>
                             <span class="breadcrumb-separator">/</span>
                             <span class="breadcrumb-item active">@GetPageName()</span>
                         </nav>
@@ -495,9 +509,58 @@
         box-shadow: 0 8px 25px rgba(255, 107, 53, 0.35);
         color: #fff;
     }
+    
+    /* Language Switcher */
+    .language-switcher {
+        display: flex;
+        gap: 4px;
+        padding: 4px;
+        background: #f1f5f9;
+        border-radius: 10px;
+    }
+    
+    .lang-btn {
+        padding: 6px 12px;
+        border: none;
+        background: transparent;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 500;
+        color: #64748b;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .lang-btn:hover {
+        color: #1e2a3a;
+    }
+    
+    .lang-btn.active {
+        background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+        color: #fff;
+        box-shadow: 0 2px 8px rgba(255, 107, 53, 0.25);
+    }
 </style>
 
 @code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                var savedLang = await JS.InvokeAsync<string>("localStorage.getItem", "admin_language");
+                if (!string.IsNullOrEmpty(savedLang) && savedLang != L.CurrentLanguage)
+                {
+                    L.SetLanguage(savedLang);
+                    FoodClient.SetLanguage(savedLang);
+                    StateHasChanged();
+                }
+            }
+            catch { }
+        }
+    }
+    
     private async Task HandleLogout()
     {
         await AuthService.LogoutAsync();
@@ -507,28 +570,49 @@
     private string GetPageTitle()
     {
         var uri = Navigation.Uri;
-        if (uri.Contains("dashboard")) return "Dashboard";
+        if (uri.Contains("dashboard")) return "Thống kê";
         if (uri.Contains("foods")) return "Quản lý Món ăn";
         if (uri.Contains("locations")) return "Địa điểm";
-        if (uri.Contains("audio")) return "Audio Files";
+        if (uri.Contains("audio")) return "Tệp âm thanh";
         if (uri.Contains("translations")) return "Bản dịch";
-        if (uri.Contains("qrcodes")) return "QR Codes";
+        if (uri.Contains("qrcodes")) return "Mã QR";
         if (uri.Contains("stats")) return "Thống kê";
         if (uri.Contains("visitors")) return "Lượt truy cập";
-        return "Admin Panel";
+        if (uri.Contains("tours")) return "Quản lý Tour";
+        if (uri.Contains("history")) return "Lịch sử sử dụng";
+        if (uri.Contains("gps-test")) return "Kiểm tra GPS";
+        return "Quản trị";
     }
     
     private string GetPageName()
     {
         var uri = Navigation.Uri;
-        if (uri.Contains("dashboard")) return "Dashboard";
-        if (uri.Contains("foods")) return "Foods";
-        if (uri.Contains("locations")) return "Locations";
-        if (uri.Contains("audio")) return "Audio";
-        if (uri.Contains("translations")) return "Translations";
-        if (uri.Contains("qrcodes")) return "QR Codes";
-        if (uri.Contains("stats")) return "Statistics";
-        if (uri.Contains("visitors")) return "Visitors";
-        return "Overview";
+        if (uri.Contains("dashboard")) return "Thống kê";
+        if (uri.Contains("foods")) return "Món ăn";
+        if (uri.Contains("locations")) return "Địa điểm";
+        if (uri.Contains("audio")) return "Âm thanh";
+        if (uri.Contains("translations")) return "Bản dịch";
+        if (uri.Contains("qrcodes")) return "Mã QR";
+        if (uri.Contains("stats")) return "Thống kê";
+        if (uri.Contains("visitors")) return "Truy cập";
+        if (uri.Contains("tours")) return "Tour";
+        if (uri.Contains("history")) return "Lịch sử";
+        if (uri.Contains("gps-test")) return "GPS";
+        return "Tổng quan";
+    }
+    
+    private async Task SwitchLanguageAsync(string langCode)
+    {
+        L.SetLanguage(langCode);
+        FoodClient.SetLanguage(langCode);
+        // Save to localStorage
+        await JS.InvokeVoidAsync("localStorage.setItem", "admin_language", langCode);
+        // Update UI instantly without page reload
+        StateHasChanged();
+    }
+    
+    private string GetLangClass(string langCode)
+    {
+        return L.CurrentLanguage == langCode ? "active" : "";
     }
 }

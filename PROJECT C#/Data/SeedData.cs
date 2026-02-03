@@ -19,11 +19,48 @@ namespace PROJECT_C_.Data
             // Seed Admin User
             await SeedAdminUser(userManager);
 
+            // Fix existing foods with English names
+            await FixExistingFoodNames(context);
+
             // Seed Foods (Vĩnh Khánh specialties)
             await SeedFoods(context);
 
             // Seed PlayLogs for Analytics demo
             await SeedPlayLogs(context);
+        }
+
+        private static async Task FixExistingFoodNames(AppDbContext context)
+        {
+            // Dictionary mapping English names to Vietnamese names
+            var nameMapping = new Dictionary<string, (string ViName, string ViDesc)>
+            {
+                ["Mung Bean Sweet Soup"] = ("Chè Đậu Xanh Đường Phèn", "Chè đậu xanh nấu nhừ với đường phèn thanh mát"),
+                ["Vinh Hoi Fresh Spring Rolls"] = ("Gỏi Cuốn Vĩnh Hội", "Gỏi cuốn tôm thịt tươi ngon với nước chấm đậu phộng"),
+                ["Mixed Rice Paper Salad"] = ("Bánh Tráng Trộn", "Bánh tráng trộn đầy đủ topping, cay cay chua chua"),
+                ["Phnom Penh Style Noodle Soup"] = ("Hủ Tiếu Nam Vang", "Hủ tiếu khô hoặc nước với thịt, tôm, gan heo"),
+                ["Vinh Khanh Pork Organ Porridge"] = ("Cháo Lòng Vĩnh Khánh", "Cháo lòng heo truyền thống, nước dùng đậm đà, lòng giòn sần sật"),
+                ["Xom Chieu Fermented Fish Noodle Soup"] = ("Bún Mắm Xóm Chiếu", "Bún mắm đặc sản miền Tây với tôm, mực, thịt heo quay"),
+                ["Khanh Hoi Steamed Rice Rolls"] = ("Bánh Cuốn Khánh Hội", "Bánh cuốn nóng hổi với nhân thịt và mộc nhĩ"),
+                ["Traditional Vietnamese Beef Stew"] = ("Bò Kho Truyền Thống", "Bò kho hầm mềm với bánh mì nóng giòn"),
+            };
+
+            var foods = await context.Foods.ToListAsync();
+            bool hasChanges = false;
+
+            foreach (var food in foods)
+            {
+                if (nameMapping.TryGetValue(food.Name, out var viData))
+                {
+                    food.Name = viData.ViName;
+                    food.Description = viData.ViDesc;
+                    hasChanges = true;
+                }
+            }
+
+            if (hasChanges)
+            {
+                await context.SaveChangesAsync();
+            }
         }
 
         private static async Task SeedAdminUser(UserManager<IdentityUser> userManager)

@@ -17,6 +17,10 @@ namespace PROJECT_C_.Data
         public DbSet<FoodTranslation> FoodTranslations => Set<FoodTranslation>();
         public DbSet<AudioFile> AudioFiles => Set<AudioFile>();
         public DbSet<PlayLog> PlayLogs => Set<PlayLog>();
+        public DbSet<Tour> Tours => Set<Tour>();
+        public DbSet<TourItem> TourItems => Set<TourItem>();
+        public DbSet<UserLocation> UserLocations => Set<UserLocation>();
+        public DbSet<PushSubscription> PushSubscriptions => Set<PushSubscription>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

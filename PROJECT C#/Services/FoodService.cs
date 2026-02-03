@@ -68,8 +68,9 @@ namespace PROJECT_C_.Services
                 .Select(x => new FoodDto
                 {
                     Id = x.Food.Id,
-                    Name = x.Food.Transl?.Name ?? x.Food.DefaultName,
-                    Description = x.Food.Transl?.Description ?? x.Food.DefaultDesc,
+                    // For vi-VN: use original name. For other languages: use translation
+                    Name = lang == "vi-VN" ? x.Food.DefaultName : (x.Food.Transl?.Name ?? x.Food.DefaultName),
+                    Description = lang == "vi-VN" ? x.Food.DefaultDesc : (x.Food.Transl?.Description ?? x.Food.DefaultDesc),
                     Price = x.Food.Price,
                     Latitude = x.Food.Latitude,
                     Longitude = x.Food.Longitude,

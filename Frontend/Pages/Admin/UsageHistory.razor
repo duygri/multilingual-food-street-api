@@ -1,0 +1,654 @@
+@page "/admin/history"
+@layout AdminLayout
+@inject HttpClient Http
+@inject ILocalizationService L
+@inject IJSRuntime JS
+
+<div class="history-page">
+    <!-- Filters Section -->
+    <div class="filters-card">
+        <div class="filters-header">
+            <h3>🔍 Bộ lọc</h3>
+            <button class="btn-reset" @onclick="ResetFilters">Đặt lại</button>
+        </div>
+        <div class="filters-grid">
+            <div class="filter-item">
+                <label>Từ ngày</label>
+                <input type="date" @bind="fromDate" />
+            </div>
+            <div class="filter-item">
+                <label>Đến ngày</label>
+                <input type="date" @bind="toDate" />
+            </div>
+            <div class="filter-item">
+                <label>Thiết bị</label>
+                <select @bind="deviceFilter">
+                    <option value="">Tất cả</option>
+                    <option value="mobile">Mobile</option>
+                    <option value="desktop">Desktop</option>
+                    <option value="tablet">Tablet</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <label>Nguồn</label>
+                <select @bind="sourceFilter">
+                    <option value="">Tất cả</option>
+                    <option value="qr_scan">QR Scan</option>
+                    <option value="geofence">Geofence</option>
+                    <option value="manual">Manual</option>
+                </select>
+            </div>
+            <div class="filter-actions">
+                <button class="btn-filter" @onclick="ApplyFilters">
+                    <span>🔍</span> Lọc
+                </button>
+                <button class="btn-export" @onclick="ExportCsv">
+                    <span>📥</span> Export CSV
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Summary -->
+    <div class="stats-summary">
+        <div class="summary-item">
+            <span class="summary-value">@pagination.TotalCount</span>
+            <span class="summary-label">Tổng lượt phát</span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-value">@pagination.TotalPages</span>
+            <span class="summary-label">Trang</span>
+        </div>
+    </div>
+
+    <!-- History Table -->
+    <div class="table-card">
+        <div class="table-header">
+            <h3>📜 Lịch sử sử dụng</h3>
+        </div>
+        
+        @if (isLoading)
+        {
+            <div class="loading-state">
+                <div class="spinner"></div>
+                <p>Đang tải dữ liệu...</p>
+            </div>
+        }
+        else if (!historyItems.Any())
+        {
+            <div class="empty-state">
+                <span>📭</span>
+                <p>Chưa có dữ liệu lịch sử</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Thời gian</th>
+                            <th>Món ăn</th>
+                            <th>Thiết bị</th>
+                            <th>Nguồn</th>
+                            <th>Thời lượng</th>
+                            <th>Ngôn ngữ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in historyItems)
+                        {
+                            <tr>
+                                <td class="time-cell">
+                                    <span class="date">@item.PlayedAt.ToString("dd/MM/yyyy")</span>
+                                    <span class="time">@item.PlayedAt.ToString("HH:mm:ss")</span>
+                                </td>
+                                <td class="food-cell">
+                                    <span class="food-icon">🍜</span>
+                                    @item.FoodName
+                                </td>
+                                <td>
+                                    <span class="device-badge @GetDeviceClass(item.DeviceType)">
+                                        @GetDeviceIcon(item.DeviceType) @item.DeviceType
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="source-badge @GetSourceClass(item.Source)">
+                                        @GetSourceIcon(item.Source) @GetSourceLabel(item.Source)
+                                    </span>
+                                </td>
+                                <td class="duration-cell">
+                                    @FormatDuration(item.DurationSeconds)
+                                </td>
+                                <td class="language-cell">
+                                    @GetLanguageFlag(item.Language) @item.Language
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="pagination">
+                <button class="page-btn" disabled="@(pagination.CurrentPage <= 1)" @onclick="PrevPage">
+                    ← Trước
+                </button>
+                <span class="page-info">
+                    Trang @pagination.CurrentPage / @pagination.TotalPages
+                </span>
+                <button class="page-btn" disabled="@(pagination.CurrentPage >= pagination.TotalPages)" @onclick="NextPage">
+                    Sau →
+                </button>
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .history-page {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+    }
+
+    /* Filters Card */
+    .filters-card {
+        background: #fff;
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    .filters-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .filters-header h3 {
+        margin: 0;
+        font-size: 16px;
+        color: #1e2a3a;
+    }
+
+    .btn-reset {
+        background: transparent;
+        border: none;
+        color: #64748b;
+        cursor: pointer;
+        font-size: 13px;
+    }
+
+    .btn-reset:hover {
+        color: #ff6b35;
+    }
+
+    .filters-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 16px;
+        align-items: end;
+    }
+
+    .filter-item label {
+        display: block;
+        font-size: 12px;
+        color: #64748b;
+        margin-bottom: 6px;
+        font-weight: 500;
+    }
+
+    .filter-item input,
+    .filter-item select {
+        width: 100%;
+        padding: 10px 14px;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        font-size: 14px;
+        background: #f8fafc;
+        transition: all 0.2s;
+    }
+
+    .filter-item input:focus,
+    .filter-item select:focus {
+        outline: none;
+        border-color: #ff6b35;
+        background: #fff;
+        box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+    }
+
+    .filter-actions {
+        display: flex;
+        gap: 10px;
+    }
+
+    .btn-filter,
+    .btn-export {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 10px 16px;
+        border: none;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-filter {
+        background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+        color: #fff;
+    }
+
+    .btn-filter:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+    }
+
+    .btn-export {
+        background: #f1f5f9;
+        color: #475569;
+    }
+
+    .btn-export:hover {
+        background: #e2e8f0;
+    }
+
+    /* Stats Summary */
+    .stats-summary {
+        display: flex;
+        gap: 16px;
+    }
+
+    .summary-item {
+        background: #fff;
+        padding: 16px 24px;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    .summary-value {
+        display: block;
+        font-size: 24px;
+        font-weight: 700;
+        color: #1e2a3a;
+    }
+
+    .summary-label {
+        font-size: 13px;
+        color: #64748b;
+    }
+
+    /* Table Card */
+    .table-card {
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        overflow: hidden;
+    }
+
+    .table-header {
+        padding: 20px 24px;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    .table-header h3 {
+        margin: 0;
+        font-size: 16px;
+        color: #1e2a3a;
+    }
+
+    .table-wrapper {
+        overflow-x: auto;
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .data-table th {
+        background: #f8fafc;
+        padding: 14px 20px;
+        text-align: left;
+        font-size: 12px;
+        font-weight: 600;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .data-table td {
+        padding: 16px 20px;
+        border-bottom: 1px solid #f1f5f9;
+        font-size: 14px;
+        color: #1e2a3a;
+    }
+
+    .data-table tr:hover {
+        background: #fafbfc;
+    }
+
+    .time-cell {
+        white-space: nowrap;
+    }
+
+    .time-cell .date {
+        display: block;
+        font-weight: 500;
+    }
+
+    .time-cell .time {
+        display: block;
+        font-size: 12px;
+        color: #64748b;
+    }
+
+    .food-cell {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .food-icon {
+        font-size: 18px;
+    }
+
+    .device-badge,
+    .source-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+
+    .device-badge.mobile {
+        background: rgba(16, 185, 129, 0.1);
+        color: #10b981;
+    }
+
+    .device-badge.desktop {
+        background: rgba(59, 130, 246, 0.1);
+        color: #3b82f6;
+    }
+
+    .device-badge.tablet {
+        background: rgba(139, 92, 246, 0.1);
+        color: #8b5cf6;
+    }
+
+    .source-badge.qr {
+        background: rgba(255, 107, 53, 0.1);
+        color: #ff6b35;
+    }
+
+    .source-badge.geofence {
+        background: rgba(16, 185, 129, 0.1);
+        color: #10b981;
+    }
+
+    .source-badge.manual {
+        background: rgba(100, 116, 139, 0.1);
+        color: #64748b;
+    }
+
+    .duration-cell {
+        font-family: monospace;
+        font-weight: 500;
+    }
+
+    .language-cell {
+        white-space: nowrap;
+    }
+
+    /* Pagination */
+    .pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 16px;
+        padding: 20px;
+        border-top: 1px solid #f1f5f9;
+    }
+
+    .page-btn {
+        padding: 8px 16px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        background: #fff;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .page-btn:hover:not(:disabled) {
+        border-color: #ff6b35;
+        color: #ff6b35;
+    }
+
+    .page-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .page-info {
+        font-size: 14px;
+        color: #64748b;
+    }
+
+    /* Loading & Empty States */
+    .loading-state,
+    .empty-state {
+        padding: 60px 20px;
+        text-align: center;
+        color: #64748b;
+    }
+
+    .spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid #f1f5f9;
+        border-top-color: #ff6b35;
+        border-radius: 50%;
+        margin: 0 auto 16px;
+        animation: spin 1s linear infinite;
+    }
+
+    @@keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    .empty-state span {
+        font-size: 48px;
+        display: block;
+        margin-bottom: 12px;
+    }
+</style>
+
+@code {
+    private List<HistoryItem> historyItems = new();
+    private PaginationInfo pagination = new();
+    private bool isLoading = true;
+
+    // Filters
+    private DateTime? fromDate;
+    private DateTime? toDate;
+    private string deviceFilter = "";
+    private string sourceFilter = "";
+    private int currentPage = 1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadHistory();
+    }
+
+    private async Task LoadHistory()
+    {
+        isLoading = true;
+        try
+        {
+            var queryParams = new List<string> { $"page={currentPage}", "pageSize=20" };
+            
+            if (fromDate.HasValue)
+                queryParams.Add($"fromDate={fromDate.Value:yyyy-MM-dd}");
+            if (toDate.HasValue)
+                queryParams.Add($"toDate={toDate.Value:yyyy-MM-dd}");
+            if (!string.IsNullOrEmpty(deviceFilter))
+                queryParams.Add($"deviceType={deviceFilter}");
+            if (!string.IsNullOrEmpty(sourceFilter))
+                queryParams.Add($"source={sourceFilter}");
+
+            var url = $"api/analytics/history?{string.Join("&", queryParams)}";
+            var response = await Http.GetFromJsonAsync<HistoryResponse>(url);
+
+            if (response != null)
+            {
+                historyItems = response.Items ?? new();
+                pagination = response.Pagination ?? new();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading history: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task ApplyFilters()
+    {
+        currentPage = 1;
+        await LoadHistory();
+    }
+
+    private async Task ResetFilters()
+    {
+        fromDate = null;
+        toDate = null;
+        deviceFilter = "";
+        sourceFilter = "";
+        currentPage = 1;
+        await LoadHistory();
+    }
+
+    private async Task PrevPage()
+    {
+        if (currentPage > 1)
+        {
+            currentPage--;
+            await LoadHistory();
+        }
+    }
+
+    private async Task NextPage()
+    {
+        if (currentPage < pagination.TotalPages)
+        {
+            currentPage++;
+            await LoadHistory();
+        }
+    }
+
+    private async Task ExportCsv()
+    {
+        var queryParams = new List<string>();
+        if (fromDate.HasValue)
+            queryParams.Add($"fromDate={fromDate.Value:yyyy-MM-dd}");
+        if (toDate.HasValue)
+            queryParams.Add($"toDate={toDate.Value:yyyy-MM-dd}");
+
+        var url = $"api/analytics/export";
+        if (queryParams.Any())
+            url += "?" + string.Join("&", queryParams);
+
+        await JS.InvokeVoidAsync("open", url, "_blank");
+    }
+
+    private string GetDeviceIcon(string? device) => device?.ToLower() switch
+    {
+        "mobile" => "📱",
+        "desktop" => "🖥️",
+        "tablet" => "📟",
+        _ => "❓"
+    };
+
+    private string GetDeviceClass(string? device) => device?.ToLower() ?? "unknown";
+
+    private string GetSourceIcon(string? source) => source?.ToLower() switch
+    {
+        "qr_scan" => "📷",
+        "geofence" => "📍",
+        "manual" => "👆",
+        _ => "❓"
+    };
+
+    private string GetSourceLabel(string? source) => source?.ToLower() switch
+    {
+        "qr_scan" => "QR Code",
+        "geofence" => "GPS",
+        "manual" => "Thủ công",
+        _ => source ?? "Unknown"
+    };
+
+    private string GetSourceClass(string? source) => source?.ToLower() switch
+    {
+        "qr_scan" => "qr",
+        "geofence" => "geofence",
+        _ => "manual"
+    };
+
+    private string GetLanguageFlag(string? lang) => lang?.ToLower() switch
+    {
+        "vi-vn" or "vi" => "🇻🇳",
+        "en-us" or "en" => "🇺🇸",
+        "zh-cn" or "zh" => "🇨🇳",
+        "ja-jp" or "ja" => "🇯🇵",
+        "ko-kr" or "ko" => "🇰🇷",
+        _ => "🌐"
+    };
+
+    private string FormatDuration(double seconds)
+    {
+        if (seconds < 60)
+            return $"{seconds:0}s";
+        var minutes = Math.Floor(seconds / 60);
+        var secs = seconds % 60;
+        return $"{minutes:0}m {secs:0}s";
+    }
+
+    // DTOs
+    class HistoryResponse
+    {
+        public List<HistoryItem>? Items { get; set; }
+        public PaginationInfo? Pagination { get; set; }
+    }
+
+    class HistoryItem
+    {
+        public int Id { get; set; }
+        public int FoodId { get; set; }
+        public string FoodName { get; set; } = "";
+        public DateTime PlayedAt { get; set; }
+        public double DurationSeconds { get; set; }
+        public string? Source { get; set; }
+        public string? DeviceType { get; set; }
+        public string? Language { get; set; }
+        public string? SessionId { get; set; }
+    }
+
+    class PaginationInfo
+    {
+        public int CurrentPage { get; set; } = 1;
+        public int PageSize { get; set; } = 20;
+        public int TotalCount { get; set; } = 0;
+        public int TotalPages { get; set; } = 0;
+    }
+}

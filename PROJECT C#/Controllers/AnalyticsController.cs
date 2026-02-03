@@ -189,6 +189,113 @@ namespace PROJECT_C_.Controllers
 
             return Ok(recentPlays);
         }
+
+        /// <summary>
+        /// Get detailed play history with pagination and filters
+        /// </summary>
+        [HttpGet("history")]
+        [Authorize]
+        public async Task<IActionResult> GetHistory(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20,
+            [FromQuery] DateTime? fromDate = null,
+            [FromQuery] DateTime? toDate = null,
+            [FromQuery] string? deviceType = null,
+            [FromQuery] string? source = null,
+            [FromQuery] int? foodId = null)
+        {
+            var query = _context.PlayLogs.Include(p => p.Food).AsQueryable();
+
+            // Apply filters
+            if (fromDate.HasValue)
+                query = query.Where(p => p.PlayedAt >= fromDate.Value);
+            if (toDate.HasValue)
+                query = query.Where(p => p.PlayedAt <= toDate.Value.AddDays(1));
+            if (!string.IsNullOrEmpty(deviceType))
+                query = query.Where(p => p.DeviceType == deviceType);
+            if (!string.IsNullOrEmpty(source))
+                query = query.Where(p => p.Source == source);
+            if (foodId.HasValue)
+                query = query.Where(p => p.FoodId == foodId.Value);
+
+            var totalCount = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+
+            var items = await query
+                .OrderByDescending(p => p.PlayedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(p => new
+                {
+                    p.Id,
+                    p.FoodId,
+                    FoodName = p.Food != null ? p.Food.Name : "Unknown",
+                    p.PlayedAt,
+                    p.DurationSeconds,
+                    p.Source,
+                    p.DeviceType,
+                    p.Language,
+                    p.SessionId,
+                    p.Latitude,
+                    p.Longitude
+                })
+                .ToListAsync();
+
+            return Ok(new
+            {
+                items,
+                pagination = new
+                {
+                    currentPage = page,
+                    pageSize,
+                    totalCount,
+                    totalPages
+                }
+            });
+        }
+
+        /// <summary>
+        /// Export history to CSV
+        /// </summary>
+        [HttpGet("export")]
+        [Authorize]
+        public async Task<IActionResult> ExportHistory(
+            [FromQuery] DateTime? fromDate = null,
+            [FromQuery] DateTime? toDate = null)
+        {
+            var query = _context.PlayLogs.Include(p => p.Food).AsQueryable();
+
+            if (fromDate.HasValue)
+                query = query.Where(p => p.PlayedAt >= fromDate.Value);
+            if (toDate.HasValue)
+                query = query.Where(p => p.PlayedAt <= toDate.Value.AddDays(1));
+
+            var data = await query
+                .OrderByDescending(p => p.PlayedAt)
+                .Select(p => new
+                {
+                    p.Id,
+                    FoodName = p.Food != null ? p.Food.Name : "Unknown",
+                    PlayedAt = p.PlayedAt.ToString("yyyy-MM-dd HH:mm:ss"),
+                    p.DurationSeconds,
+                    p.Source,
+                    p.DeviceType,
+                    p.Language,
+                    p.SessionId
+                })
+                .ToListAsync();
+
+            // Build CSV
+            var csv = new System.Text.StringBuilder();
+            csv.AppendLine("ID,Món ăn,Thời gian,Thời lượng (s),Nguồn,Thiết bị,Ngôn ngữ,Session");
+            foreach (var row in data)
+            {
+                csv.AppendLine($"{row.Id},\"{row.FoodName}\",{row.PlayedAt},{row.DurationSeconds},{row.Source},{row.DeviceType},{row.Language},{row.SessionId}");
+            }
+
+            var bytes = System.Text.Encoding.UTF8.GetBytes(csv.ToString());
+            return File(bytes, "text/csv", $"usage-history-{DateTime.UtcNow:yyyyMMdd}.csv");
+        }
     }
 
     public class LogPlayRequest

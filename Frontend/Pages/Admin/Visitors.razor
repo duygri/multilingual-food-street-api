@@ -1,0 +1,191 @@
+@page "/admin/visitors"
+@layout AdminLayout
+@inject HttpClient Http
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="mb-0">👥 Lượt truy cập</h3>
+    <div class="d-flex gap-2">
+        <select class="form-select" style="width: 150px;" @bind="selectedPeriod" @bind:after="LoadData">
+            <option value="7">7 ngày qua</option>
+            <option value="30">30 ngày qua</option>
+            <option value="90">90 ngày qua</option>
+        </select>
+    </div>
+</div>
+
+<!-- Stats Overview -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="admin-card text-center p-4">
+            <div style="font-size: 2.5rem; color: #4f46e5;">@totalVisits</div>
+            <div class="text-muted">Tổng lượt xem</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="admin-card text-center p-4">
+            <div style="font-size: 2.5rem; color: #10b981;">@uniqueSessions</div>
+            <div class="text-muted">Phiên truy cập</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="admin-card text-center p-4">
+            <div style="font-size: 2.5rem; color: #f59e0b;">@avgDuration s</div>
+            <div class="text-muted">Thời lượng TB</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="admin-card text-center p-4">
+            <div style="font-size: 2.5rem; color: #ef4444;">@topSource</div>
+            <div class="text-muted">Nguồn chính</div>
+        </div>
+    </div>
+</div>
+
+<!-- Visitors Table -->
+<div class="admin-card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">📊 Chi tiết lượt truy cập</h5>
+    </div>
+    
+    @if (visitors == null)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-3 text-muted">Đang tải dữ liệu...</p>
+        </div>
+    }
+    else if (visitors.Count == 0)
+    {
+        <div class="text-center py-5">
+            <div style="font-size: 4rem;">📭</div>
+            <h5 class="mt-3">Chưa có dữ liệu</h5>
+            <p class="text-muted">Dữ liệu lượt truy cập sẽ xuất hiện khi có người dùng.</p>
+        </div>
+    }
+    else
+    {
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Thời gian</th>
+                    <th>Món ăn</th>
+                    <th>Nguồn</th>
+                    <th>Thiết bị</th>
+                    <th>Ngôn ngữ</th>
+                    <th>Thời lượng</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var v in visitors)
+                {
+                    <tr>
+                        <td>@v.PlayedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                        <td><strong>@v.FoodName</strong></td>
+                        <td>
+                            <span class="badge @GetSourceBadgeClass(v.Source)">
+                                @GetSourceIcon(v.Source) @GetSourceLabel(v.Source)
+                            </span>
+                        </td>
+                        <td>@GetDeviceIcon(v.DeviceType) @v.DeviceType</td>
+                        <td>@(v.Language == "vi-VN" ? "🇻🇳 VI" : "🇺🇸 EN")</td>
+                        <td>@v.DurationSeconds giây</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@code {
+    private List<VisitorLog>? visitors;
+    private int selectedPeriod = 7;
+    private int totalVisits = 0;
+    private int uniqueSessions = 0;
+    private int avgDuration = 0;
+    private string topSource = "N/A";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        // Generate sample data for demo
+        var random = new Random();
+        var sources = new[] { "qr_scan", "geofence", "manual" };
+        var devices = new[] { "mobile", "desktop", "tablet" };
+        var foods = new[] { "Cháo Lòng Vĩnh Khánh", "Bún Mắm Xóm Chiếu", "Bánh Cuốn Khánh Hội", 
+                           "Hủ Tiếu Nam Vang", "Gỏi Cuốn Vĩnh Hội", "Bò Kho Truyền Thống" };
+
+        visitors = Enumerable.Range(0, 50)
+            .Select(i => new VisitorLog
+            {
+                Id = i + 1,
+                PlayedAt = DateTime.Now.AddHours(-random.Next(0, selectedPeriod * 24)),
+                FoodName = foods[random.Next(foods.Length)],
+                Source = sources[random.Next(sources.Length)],
+                DeviceType = devices[random.Next(devices.Length)],
+                Language = random.Next(10) < 7 ? "vi-VN" : "en-US",
+                DurationSeconds = random.Next(15, 120)
+            })
+            .OrderByDescending(v => v.PlayedAt)
+            .ToList();
+
+        // Calculate stats
+        totalVisits = visitors.Count;
+        uniqueSessions = visitors.Select(v => v.SessionId).Distinct().Count();
+        avgDuration = (int)visitors.Average(v => v.DurationSeconds);
+        
+        var sourceCount = visitors.GroupBy(v => v.Source)
+            .OrderByDescending(g => g.Count())
+            .FirstOrDefault();
+        topSource = GetSourceLabel(sourceCount?.Key ?? "");
+
+        await Task.CompletedTask;
+    }
+
+    private string GetSourceBadgeClass(string source) => source switch
+    {
+        "qr_scan" => "bg-primary",
+        "geofence" => "bg-success",
+        "manual" => "bg-secondary",
+        _ => "bg-light text-dark"
+    };
+
+    private string GetSourceIcon(string source) => source switch
+    {
+        "qr_scan" => "📱",
+        "geofence" => "📍",
+        "manual" => "👆",
+        _ => "❓"
+    };
+
+    private string GetSourceLabel(string source) => source switch
+    {
+        "qr_scan" => "Quét QR",
+        "geofence" => "GPS",
+        "manual" => "Thủ công",
+        _ => source
+    };
+
+    private string GetDeviceIcon(string device) => device switch
+    {
+        "mobile" => "📱",
+        "desktop" => "💻",
+        "tablet" => "📲",
+        _ => "🖥️"
+    };
+
+    public class VisitorLog
+    {
+        public int Id { get; set; }
+        public DateTime PlayedAt { get; set; }
+        public string FoodName { get; set; } = "";
+        public string Source { get; set; } = "";
+        public string DeviceType { get; set; } = "";
+        public string Language { get; set; } = "";
+        public int DurationSeconds { get; set; }
+        public string SessionId { get; set; } = $"session_{new Random().Next(1, 50)}";
+    }
+}
