@@ -11,8 +11,8 @@ Dự án cung cấp giải pháp chuyển đổi số cho phố ẩm thực, bao
 ## 🛠️ Công nghệ
 - **Backend**: ASP.NET Core 8 Web API
 - **Frontend**: Blazor WebAssembly
-- **Cơ sở dữ liệu**: PostgreSQL (Thay thế SQL Server)
-- **Deployment**: Docker & Render.com
+- **Cơ sở dữ liệu**: PostgreSQL
+
 
 ## 📦 Cấu trúc Solution
 - `FoodStreet.Server`: Backend API & Auth Server.
@@ -51,13 +51,6 @@ Dự án cung cấp giải pháp chuyển đổi số cho phố ẩm thực, bao
     ```bash
     dotnet run --project FoodStreet.Server
     ```
-
-## 🐳 Chạy bằng Docker (Optional)
-Dự án đã hỗ trợ Docker. Để build và chạy container:
-```bash
-docker build -t foodstreet-api .
-docker run -p 8080:8080 foodstreet-api
-```
 
 ## 📄 License
 Internal Project.
