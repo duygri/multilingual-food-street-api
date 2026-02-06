@@ -44,28 +44,31 @@ namespace PROJECT_C_.Controllers
         {
             if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
             {
-                return BadRequest(new AuthResponse
-                {
-                    Success = false,
-                    Message = "Email and password are required",
-                    Errors = new List<string> { "Email and password are required" }
-                });
+                return BadRequest(new AuthResponse { Success = false, Message = "Email and password are required" });
             }
+
+            // Validate Role
+            var allowedRoles = new[] { "User", "Seller" };
+            if (!allowedRoles.Contains(request.Role)) request.Role = "User";
 
             var user = new IdentityUser
             {
                 UserName = request.Email,
-                Email = request.Email
+                Email = request.Email,
+                EmailConfirmed = true // Email verified by default for simplicity
             };
+
+            // If Seller -> Lock account until approved
+            if (request.Role == "Seller")
+            {
+                user.LockoutEnabled = true;
+                user.LockoutEnd = DateTimeOffset.UtcNow.AddYears(100); // Indefinite lock
+            }
 
             var result = await _userManager.CreateAsync(user, request.Password);
 
             if (!result.Succeeded)
             {
-                _logger.LogWarning("Registration failed for {Email}: {Errors}", 
-                    request.Email, 
-                    string.Join(", ", result.Errors.Select(e => e.Description)));
-
                 return BadRequest(new AuthResponse
                 {
                     Success = false,
@@ -74,10 +77,21 @@ namespace PROJECT_C_.Controllers
                 });
             }
 
-            _logger.LogInformation("User registered successfully: {Email}", request.Email);
+            await _userManager.AddToRoleAsync(user, request.Role);
+            _logger.LogInformation("User registered: {Email} as {Role}", request.Email, request.Role);
 
-            // Auto-login after registration
-            var token = GenerateJwtToken(user);
+            // If Seller, do not auto-login
+            if (request.Role == "Seller")
+            {
+                return Ok(new AuthResponse
+                {
+                    Success = true,
+                    Message = "Account created. Please wait for Admin approval."
+                });
+            }
+
+            // Auto-login for regular users
+            var token = await GenerateJwtToken(user);
             var refreshToken = GenerateRefreshToken();
 
             return Ok(new AuthResponse
@@ -120,6 +134,15 @@ namespace PROJECT_C_.Controllers
 
             var result = await _signInManager.CheckPasswordSignInAsync(user, request.Password, lockoutOnFailure: false);
 
+            if (result.IsLockedOut)
+            {
+                return Unauthorized(new AuthResponse
+                {
+                    Success = false,
+                    Message = "Account is not approved yet or has been locked."
+                });
+            }
+
             if (!result.Succeeded)
             {
                 _logger.LogWarning("Login failed - invalid password for: {Email}", request.Email);
@@ -130,7 +153,7 @@ namespace PROJECT_C_.Controllers
                 });
             }
 
-            var token = GenerateJwtToken(user);
+            var token = await GenerateJwtToken(user);
             var refreshToken = GenerateRefreshToken();
 
             _logger.LogInformation("User logged in successfully: {Email}", request.Email);
@@ -203,10 +226,12 @@ namespace PROJECT_C_.Controllers
 
         #region Private Methods
 
-        private string GenerateJwtToken(IdentityUser user)
+        private async Task<string> GenerateJwtToken(IdentityUser user)
         {
             var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Secret));
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+
+            var roles = await _userManager.GetRolesAsync(user);
 
             var claims = new List<Claim>
             {
@@ -216,6 +241,11 @@ namespace PROJECT_C_.Controllers
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 new Claim(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64)
             };
+
+            foreach (var role in roles)
+            {
+                claims.Add(new Claim(ClaimTypes.Role, role));
+            }
 
             var token = new JwtSecurityToken(
                 issuer: _jwtSettings.Issuer,

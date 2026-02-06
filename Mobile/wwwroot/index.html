@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>FoodStreet.Mobile</title>
+    <base href="/" />
+</head>
+
+<body>
+
+    <div class="status-bar-safe-area"></div>
+
+    <div id="app">Loading...</div>
+
+    <div id="blazor-error-ui">
+        An unhandled error has occurred.
+        <a href="" class="reload">Reload</a>
+        <a class="dismiss">🗙</a>
+    </div>
+
+    <!-- Shared UI Assets -->
+    <link rel="stylesheet" href="_content/FoodStreet.UI/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="_content/FoodStreet.UI/css/app.css" />
+    <link rel="stylesheet" href="_content/FoodStreet.UI/css/admin.css" />
+    <link href="_content/FoodStreet.UI/FoodStreet.UI.styles.css" rel="stylesheet" />
+
+    <!-- Leaflet Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+    <!-- Scripts -->
+    <script src="_content/FoodStreet.UI/js/gps-tracking.js"></script>
+    <script src="_content/FoodStreet.UI/js/leaflet-map.js"></script>
+    <script src="_content/FoodStreet.UI/js/tts-service.js"></script>
+    <script src="_content/FoodStreet.UI/js/push-notification.js"></script>
+
+    <script src="_framework/blazor.webview.js" autostart="false"></script>
+
+</body>
+
+</html>

@@ -1,0 +1,171 @@
+@page "/admin/users"
+@layout AdminLayout
+@inject IUserService UserService
+@inject IJSRuntime JS
+@using FoodStreet.Client.Services
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Admin")]
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="mb-0">👥 User Management</h3>
+</div>
+
+<div class="admin-card">
+    <ul class="nav nav-tabs mb-4">
+        <li class="nav-item">
+            <button class="nav-link @(activeTab == "all" ? "active" : "")" @onclick="@(() => activeTab = "all")">
+                All Users
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link @(activeTab == "pending" ? "active" : "")" @onclick="@(() => activeTab = "pending")">
+                ⏳ Pending Sellers
+            </button>
+        </li>
+    </ul>
+
+    <div class="table-responsive">
+        <table class="table table-hover admin-table">
+            <thead>
+                <tr>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (FilteredUsers.Any())
+                {
+                    @foreach (var user in FilteredUsers)
+                    {
+                        <tr>
+                            <td>@user.Email</td>
+                            <td>
+                                @foreach (var role in user.Roles)
+                                {
+                                    <span class="badge @GetRoleBadgeClass(role) me-1">@role</span>
+                                }
+                            </td>
+                            <td>
+                                @if (user.IsLocked)
+                                {
+                                    @if (user.Roles.Contains("Seller"))
+                                    {
+                                         // If we want to distinguish "New Registration" (Pending) vs "Manually Locked", we need more data.
+                                         // But user specifically asked for "Locked" when they lock it.
+                                         // Since we use the same mechanism (LockoutEnd), we can't easily tell the difference without a separate "IsApproved" flag.
+                                         // For now, I will change the logic to simply show "Locked" if it's locked, 
+                                         // BUT show "Pending Approval" ONLY in the "Pending Sellers" tab or if we add a heuristic.
+                                         
+                                         // Re-reading request: "khi lock seller nó hiện lại pending bạn fix dùm tôi là locket"
+                                         // Means when I manually lock, I want to see "Locked". 
+                                         // I will use a different badge style but the text "Locked" is what is requested.
+                                         // I'll keep "Pending Approval" logic ONLY for my specific "Pending Sellers" tab if I can, OR just change the text.
+                                         
+                                         // Simplest fix satisfying the prompt: Change the text for manual locks.
+                                         // Since every pending seller is locked, I'll just show "Locked / Pending" or just "Locked".
+                                         
+                                         <span class="badge bg-danger">Locked</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger">Locked</span>
+                                    }
+                                }
+                                else
+                                {
+                                    <span class="badge bg-success">Active</span>
+                                }
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    @* Approve button removed as per request - Use Unlock button instead *@
+                                    
+                                    @if (!user.Roles.Contains("Admin"))
+                                    {
+                                        <button class="btn @(user.IsLocked ? "btn-outline-warning" : "btn-outline-secondary")" 
+                                                @onclick="() => ToggleLock(user.Id)" 
+                                                title="@(user.IsLocked ? "Unlock" : "Lock")">
+                                            @(user.IsLocked ? "🔓" : "🔒")
+                                        </button>
+                                        <button class="btn btn-outline-danger" @onclick="() => DeleteUser(user.Id)" title="Delete">
+                                            🗑️
+                                        </button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="4" class="text-center py-4 text-muted">No users found.</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    private List<UserDto> users = new();
+    private string activeTab = "all";
+
+    private IEnumerable<UserDto> FilteredUsers
+    {
+        get
+        {
+            if (activeTab == "pending")
+            {
+                return users.Where(u => u.Roles.Contains("Seller") && u.IsLocked);
+            }
+            return users;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsers();
+    }
+
+    private async Task LoadUsers()
+    {
+        users = await UserService.GetUsersAsync();
+    }
+
+    private async Task ApproveSeller(string userId)
+    {
+        if (await UserService.ApproveSellerAsync(userId))
+        {
+            await LoadUsers();
+        }
+    }
+
+    private async Task ToggleLock(string userId)
+    {
+        if (await UserService.ToggleLockAsync(userId))
+        {
+            await LoadUsers();
+        }
+    }
+
+    private async Task DeleteUser(string userId)
+    {
+        if (await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete this user?"))
+        {
+            if (await UserService.DeleteUserAsync(userId))
+            {
+                await LoadUsers();
+            }
+        }
+    }
+
+    private string GetRoleBadgeClass(string role) => role switch
+    {
+        "Admin" => "bg-danger",
+        "Seller" => "bg-info text-dark",
+        _ => "bg-secondary"
+    };
+}

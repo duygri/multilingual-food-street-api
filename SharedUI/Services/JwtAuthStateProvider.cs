@@ -45,18 +45,28 @@ namespace FoodStreet.Client.Services
         private static IEnumerable<Claim> ParseClaimsFromJwt(string jwt)
         {
             var claims = new List<Claim>();
-
             try
             {
                 var handler = new JwtSecurityTokenHandler();
                 var token = handler.ReadJwtToken(jwt);
-                claims.AddRange(token.Claims);
+                
+                foreach (var claim in token.Claims)
+                {
+                    // Fix Role Claim Type Mismatch
+                    if (claim.Type == "role" || claim.Type == "http://schemas.microsoft.com/ws/2008/06/identity/claims/role")
+                    {
+                        claims.Add(new Claim(ClaimTypes.Role, claim.Value));
+                    }
+                    else
+                    {
+                        claims.Add(claim);
+                    }
+                }
             }
             catch
             {
-                // Invalid token - return empty claims
+                // Invalid token
             }
-
             return claims;
         }
     }

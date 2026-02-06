@@ -8,7 +8,7 @@ namespace FoodStreet.Client.Services
     public interface IAuthService
     {
         Task<AuthResult> LoginAsync(string email, string password);
-        Task<AuthResult> RegisterAsync(string email, string password, string? fullName = null);
+        Task<AuthResult> RegisterAsync(string email, string password, string? fullName = null, string role = "User");
         Task LogoutAsync();
         Task<string?> GetTokenAsync();
         Task<bool> IsAuthenticatedAsync();
@@ -60,7 +60,7 @@ namespace FoodStreet.Client.Services
             }
         }
 
-        public async Task<AuthResult> RegisterAsync(string email, string password, string? fullName = null)
+        public async Task<AuthResult> RegisterAsync(string email, string password, string? fullName = null, string role = "User")
         {
             try
             {
@@ -68,16 +68,21 @@ namespace FoodStreet.Client.Services
                 {
                     email,
                     password,
-                    fullName
+                    fullName,
+                    role
                 });
 
                 var result = await response.Content.ReadFromJsonAsync<AuthApiResponse>();
 
                 if (response.IsSuccessStatusCode && result?.Success == true)
                 {
-                    await StoreTokensAsync(result);
-                    OnAuthStateChanged?.Invoke();
-                    return AuthResult.Ok(result.Email);
+                    // Only store tokens if provided (Admin might approve later)
+                    if (!string.IsNullOrEmpty(result.AccessToken))
+                    {
+                        await StoreTokensAsync(result);
+                        OnAuthStateChanged?.Invoke();
+                    }
+                    return AuthResult.Ok(result.Email); // Or handle specific success message
                 }
 
                 return AuthResult.Fail(result?.Message ?? "Registration failed", result?.Errors);

@@ -10,6 +10,7 @@ namespace FoodStreet.Client.Services
         Task<AudioStatsDto?> GetStatsAsync();
         Task<bool> DeleteAudioAsync(int id);
         Task<bool> AssignToFoodAsync(int audioId, int? foodId);
+        Task<AudioFileDto?> UploadAudioAsync(HttpContent content, string fileName, Action<double> onProgress);
     }
 
     public class AudioService : IAudioService
@@ -82,6 +83,38 @@ namespace FoodStreet.Client.Services
             catch
             {
                 return false;
+            }
+        }
+
+        public async Task<AudioFileDto?> UploadAudioAsync(HttpContent content, string fileName, Action<double> onProgress)
+        {
+            try
+            {
+                var progressContent = new ProgressableStreamContent(content, (sent, total) =>
+                {
+                    if (total > 0)
+                    {
+                        var percentage = (double)sent / total * 100;
+                        onProgress(percentage);
+                    }
+                });
+
+                using var formData = new MultipartFormDataContent();
+                formData.Add(progressContent, "file", fileName);
+
+                var response = await _http.PostAsync("api/audio", formData);
+                
+                if (response.IsSuccessStatusCode)
+                {
+                     return await response.Content.ReadFromJsonAsync<AudioFileDto>();
+                }
+                
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Upload failed: {ex.Message}");
+                return null;
             }
         }
     }

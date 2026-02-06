@@ -7,6 +7,11 @@ using PROJECT_C_.DTOs;
 using PROJECT_C_.Models;
 
 
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using PROJECT_C_.Data;
+
 namespace PROJECT_C_.Controllers
 {
     [ApiController]
@@ -14,18 +19,31 @@ namespace PROJECT_C_.Controllers
     public class FoodController : ControllerBase
     {
         private readonly IFoodService _foodService;
+        private readonly AppDbContext _context;
+        private readonly UserManager<IdentityUser> _userManager;
 
-        public FoodController(IFoodService foodService)
+        public FoodController(AppDbContext context, UserManager<IdentityUser> userManager, IFoodService foodService)
 
         {
+            _context = context;
+            _userManager = userManager;
             _foodService = foodService;
         }
 
         [HttpGet]
-        public IActionResult GetFoods()
+        public async Task<ActionResult<IEnumerable<Food>>> GetFoods()
         {
-             // Simplified generic getAll for admin testing, real app uses paging
-             return Ok(_foodService.GetNearestFoods(0, 0, 1, 100)); 
+            var query = _context.Foods.Include(f => f.Translations).AsQueryable();
+
+            // Socratic Logic: Seller Isolation
+            // Only apply filter if User IS authenticated and IS a Seller
+            if (User.Identity?.IsAuthenticated == true && User.IsInRole("Seller"))
+            {
+                var userId = _userManager.GetUserId(User);
+                query = query.Where(f => f.OwnerId == userId);
+            }
+
+            return await query.ToListAsync();
         }
 
         [HttpGet("{id}")]
@@ -46,16 +64,19 @@ namespace PROJECT_C_.Controllers
         }
 
         [HttpPost]
-        [Microsoft.AspNetCore.Authorization.Authorize]
+        [Authorize(Roles = "Admin,Seller")]
         public async Task<ActionResult<FoodDto>> CreateFood([FromBody] FoodDto foodDto)
         {
+            var userId = _userManager.GetUserId(User);
+
             var food = new Food
             {
                 Name = foodDto.Name,
                 Description = foodDto.Description,
                 Price = foodDto.Price,
                 Latitude = foodDto.Latitude,
-                Longitude = foodDto.Longitude
+                Longitude = foodDto.Longitude,
+                OwnerId = userId 
             };
             
             var created = await _foodService.CreateFoodAsync(food);
@@ -74,10 +95,23 @@ namespace PROJECT_C_.Controllers
         }
 
         [HttpPut("{id}")]
-        [Microsoft.AspNetCore.Authorization.Authorize]
+        [Authorize(Roles = "Admin,Seller")]
         public async Task<IActionResult> UpdateFood(int id, [FromBody] FoodDto foodDto)
         {
             if (id != foodDto.Id && foodDto.Id != 0) return BadRequest();
+
+            var existingFood = await _context.Foods.AsNoTracking().FirstOrDefaultAsync(f => f.Id == id);
+            if (existingFood == null) return NotFound();
+
+            // Ownership Check
+            if (User.IsInRole("Seller"))
+            {
+                var userId = _userManager.GetUserId(User);
+                if (existingFood.OwnerId != userId)
+                {
+                    return Forbid(); 
+                }
+            }
 
             var food = new Food
             {
@@ -96,9 +130,27 @@ namespace PROJECT_C_.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Microsoft.AspNetCore.Authorization.Authorize]
+        [Authorize(Roles = "Admin,Seller")]
         public async Task<IActionResult> DeleteFood(int id)
         {
+            var food = await _context.Foods.FindAsync(id);
+            if (food == null) return NotFound();
+
+            // Ownership Check
+            if (User.IsInRole("Seller"))
+            {
+                var userId = _userManager.GetUserId(User);
+                if (food.OwnerId != userId)
+                {
+                    return Forbid();
+                }
+            }
+
+            // Use context to remove to ensure consistency with controller logic, 
+            // OR use service if it has extra logic. Service usually has logic.
+            // But we already fetched 'food' from context.
+            // Let's use service to be safe about business logic, but we passed the auth check.
+            
             var success = await _foodService.DeleteFoodAsync(id);
             if (!success) return NotFound();
             return NoContent();

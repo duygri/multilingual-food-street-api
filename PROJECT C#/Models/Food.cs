@@ -6,6 +6,7 @@
         public required string Name { get; set; }
         public string Description { get; set; } = string.Empty;
         public decimal Price { get; set; } 
+        public string? OwnerId { get; set; } 
 
         // GPS coordinates
         public double Latitude { get; set; }

@@ -43,6 +43,7 @@ builder.Services.AddAuthorizationCore();
 // ========================================
 builder.Services.AddScoped<IFoodClientService, FoodClientService>();
 builder.Services.AddScoped<IAudioService, AudioService>();
+builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<GpsTrackingService>();
 builder.Services.AddLocalization();
 builder.Services.AddSingleton<ILocalizationService, LocalizationService>();

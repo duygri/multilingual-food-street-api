@@ -1,0 +1,34 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FoodStreet.Server", "PROJECT C#\FoodStreet.Server.csproj", "{BE53989C-70DE-4E3C-B1E1-94840CDCC6C4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FoodStreet.Client", "Frontend\FoodStreet.Client.csproj", "{AD7B2499-2028-4190-8742-73D03318A69D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FoodStreet.UI", "SharedUI\FoodStreet.UI.csproj", "{BD806A89-263F-4713-8944-1A92023A2BBB}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{BE53989C-70DE-4E3C-B1E1-94840CDCC6C4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BE53989C-70DE-4E3C-B1E1-94840CDCC6C4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BE53989C-70DE-4E3C-B1E1-94840CDCC6C4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BE53989C-70DE-4E3C-B1E1-94840CDCC6C4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AD7B2499-2028-4190-8742-73D03318A69D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AD7B2499-2028-4190-8742-73D03318A69D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AD7B2499-2028-4190-8742-73D03318A69D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AD7B2499-2028-4190-8742-73D03318A69D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BD806A89-263F-4713-8944-1A92023A2BBB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BD806A89-263F-4713-8944-1A92023A2BBB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BD806A89-263F-4713-8944-1A92023A2BBB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BD806A89-263F-4713-8944-1A92023A2BBB}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

@@ -3,6 +3,7 @@
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
 @inject ILocalizationService L
+@inject AuthenticationStateProvider AuthStateProvider
 @implements IDisposable
 
 <div class="auth-page">
@@ -39,8 +40,8 @@
         <div class="auth-form-container">
             <div class="auth-form-wrapper">
                 <div class="auth-header">
-                    <h2>@(isLogin ? "Đăng nhập" : "Tạo tài khoản")</h2>
-                    <p>@(isLogin ? "Chào mừng trở lại hệ thống quản trị" : "Đăng ký tài khoản quản trị mới")</p>
+                    <h2>@(isLogin ? "Cổng thông tin Quản lý" : "Đăng ký làm Đối tác Bán hàng")</h2>
+                    <p>@(isLogin ? "Dành cho Quản trị viên & Đối tác" : "Mở gian hàng trực tuyến của bạn ngay hôm nay")</p>
                 </div>
 
                 @if (!string.IsNullOrEmpty(message))
@@ -115,20 +116,22 @@
                             }
                         </div>
                     }
+                    
+                    @* Checkbox removed - Registration is strictly for Sellers now *@
 
                     <button type="submit" class="btn-submit" disabled="@isLoading">
                         @if (isLoading)
                         {
                             <span class="spinner"></span>
                         }
-                        <span>@(isLogin ? "Đăng nhập" : "Tạo tài khoản")</span>
+                        <span>@(isLogin ? "Đăng nhập" : "Đăng ký Đối tác")</span>
                     </button>
                 </form>
 
                 <div class="auth-switch">
                     <span>@(isLogin ? "Chưa có tài khoản?" : "Đã có tài khoản?")</span>
                     <button @onclick="ToggleMode">
-                        @(isLogin ? "Tạo tài khoản mới" : "Đăng nhập")
+                        @(isLogin ? "Mở gian hàng mới" : "Đăng nhập quản lý")
                     </button>
                 </div>
 
@@ -441,6 +444,71 @@
             padding: 24px;
         }
     }
+        .auth-form-container {
+            padding: 24px;
+        }
+    }
+
+    .checkbox-group {
+        display: flex;
+        align-items: center;
+    }
+    
+    .checkbox-container {
+        display: flex;
+        align-items: center;
+        position: relative;
+        cursor: pointer;
+        font-size: 15px;
+        user-select: none;
+        color: #1e2a3a;
+    }
+    
+    .checkbox-container input {
+        position: absolute;
+        opacity: 0;
+        cursor: pointer;
+        height: 0;
+        width: 0;
+    }
+    
+    .checkmark {
+        height: 20px;
+        width: 20px;
+        background-color: #eee;
+        border-radius: 4px;
+        margin-right: 10px;
+        position: relative;
+        transition: all 0.2s;
+    }
+    
+    .checkbox-container:hover input ~ .checkmark {
+        background-color: #ccc;
+    }
+    
+    .checkbox-container input:checked ~ .checkmark {
+        background-color: #ff6b35;
+    }
+    
+    .checkmark:after {
+        content: "";
+        position: absolute;
+        display: none;
+    }
+    
+    .checkbox-container input:checked ~ .checkmark:after {
+        display: block;
+    }
+    
+    .checkbox-container .checkmark:after {
+        left: 7px;
+        top: 3px;
+        width: 6px;
+        height: 12px;
+        border: solid white;
+        border-width: 0 2px 2px 0;
+        transform: rotate(45deg);
+    }
 </style>
 
 @code {
@@ -536,12 +604,37 @@
             }
             else
             {
-                result = await AuthService.RegisterAsync(model.Email, model.Password, model.FullName);
+                // FORCE SELLER ROLE for public registration
+                result = await AuthService.RegisterAsync(model.Email, model.Password, model.FullName, "Seller");
             }
 
             if (result.Success)
             {
-                Navigation.NavigateTo("/admin/dashboard", forceLoad: true);
+                if (!isLogin)
+                {
+                    isError = false;
+                    message = "Hồ sơ đăng ký đã được gửi. Vui lòng chờ Quản trị viên duyệt để kích hoạt gian hàng.";
+                    isLogin = true; 
+                    model = new AuthModel(); 
+                }
+                else
+                {
+                    // [NEW] Restrict Web to Admin/Seller only
+                    // Force refresh of auth state to read the new token
+                    var authState = await ((JwtAuthStateProvider)AuthStateProvider).GetAuthenticationStateAsync();
+                    var user = authState.User;
+
+                    // If user does NOT have Admin or Seller role (i.e., is just a User)
+                    if (!user.IsInRole("Admin") && !user.IsInRole("Seller"))
+                    {
+                        await AuthService.LogoutAsync();
+                        isError = true;
+                        message = "Trang Web chỉ dành cho Quản trị viên và Người bán hàng. Vui lòng sử dụng App Mobile.";
+                        return;
+                    }
+
+                    Navigation.NavigateTo("/admin/dashboard", forceLoad: true);
+                }
             }
             else
             {
@@ -567,5 +660,6 @@
         public string Email { get; set; } = "";
         public string Password { get; set; } = "";
         public string ConfirmPassword { get; set; } = "";
+        public bool IsSeller { get; set; } = false;
     }
 }
