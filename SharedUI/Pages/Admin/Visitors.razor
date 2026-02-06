@@ -111,26 +111,8 @@
 
     private async Task LoadData()
     {
-        // Generate sample data for demo
-        var random = new Random();
-        var sources = new[] { "qr_scan", "geofence", "manual" };
-        var devices = new[] { "mobile", "desktop", "tablet" };
-        var foods = new[] { "Cháo Lòng Vĩnh Khánh", "Bún Mắm Xóm Chiếu", "Bánh Cuốn Khánh Hội", 
-                           "Hủ Tiếu Nam Vang", "Gỏi Cuốn Vĩnh Hội", "Bò Kho Truyền Thống" };
-
-        visitors = Enumerable.Range(0, 50)
-            .Select(i => new VisitorLog
-            {
-                Id = i + 1,
-                PlayedAt = DateTime.Now.AddHours(-random.Next(0, selectedPeriod * 24)),
-                FoodName = foods[random.Next(foods.Length)],
-                Source = sources[random.Next(sources.Length)],
-                DeviceType = devices[random.Next(devices.Length)],
-                Language = random.Next(10) < 7 ? "vi-VN" : "en-US",
-                DurationSeconds = random.Next(15, 120)
-            })
-            .OrderByDescending(v => v.PlayedAt)
-            .ToList();
+        // Mock data removed. TODO: Integrate with Analytics API
+        visitors = new List<VisitorLog>();
 
         // Calculate stats
         totalVisits = visitors.Count;

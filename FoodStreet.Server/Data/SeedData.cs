@@ -23,13 +23,13 @@ namespace PROJECT_C_.Data
             await SeedAdminUser(userManager);
 
             // Fix existing foods with English names
-            await FixExistingFoodNames(context);
+            // await FixExistingFoodNames(context);
 
             // Seed Foods (Vĩnh Khánh specialties)
-            await SeedFoods(context);
+            // await SeedFoods(context);
 
             // Seed PlayLogs for Analytics demo
-            await SeedPlayLogs(context);
+            // await SeedPlayLogs(context);
         }
 
         private static async Task FixExistingFoodNames(AppDbContext context)
@@ -269,43 +269,6 @@ namespace PROJECT_C_.Data
             _ => name
         };
 
-        private static async Task SeedPlayLogs(AppDbContext context)
-        {
-            // Skip if already has data
-            if (await context.PlayLogs.AnyAsync())
-                return;
 
-            var foods = await context.Foods.ToListAsync();
-            if (!foods.Any()) return;
-
-            var random = new Random(42); // Fixed seed for reproducibility
-            var playLogs = new List<PlayLog>();
-            var sources = new[] { "qr_scan", "geofence", "manual" };
-            var devices = new[] { "mobile", "desktop", "tablet" };
-
-            // Generate 200 sample play logs over the last 30 days
-            for (int i = 0; i < 200; i++)
-            {
-                var food = foods[random.Next(foods.Count)];
-                var daysAgo = random.Next(0, 30);
-                var hoursAgo = random.Next(0, 24);
-
-                playLogs.Add(new PlayLog
-                {
-                    FoodId = food.Id,
-                    PlayedAt = DateTime.UtcNow.AddDays(-daysAgo).AddHours(-hoursAgo),
-                    DurationSeconds = random.Next(10, 120),
-                    SessionId = $"session_{random.Next(1, 50)}",
-                    DeviceType = devices[random.Next(devices.Length)],
-                    Language = random.Next(10) < 7 ? "vi-VN" : "en-US",
-                    Source = sources[random.Next(sources.Length)],
-                    Latitude = food.Latitude + (random.NextDouble() - 0.5) * 0.001,
-                    Longitude = food.Longitude + (random.NextDouble() - 0.5) * 0.001
-                });
-            }
-
-            context.PlayLogs.AddRange(playLogs);
-            await context.SaveChangesAsync();
-        }
     }
 }
