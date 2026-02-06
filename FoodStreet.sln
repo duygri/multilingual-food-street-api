@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FoodStreet.Server", "PROJECT C#\FoodStreet.Server.csproj", "{BE53989C-70DE-4E3C-B1E1-94840CDCC6C4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FoodStreet.Server", "FoodStreet.Server\FoodStreet.Server.csproj", "{BE53989C-70DE-4E3C-B1E1-94840CDCC6C4}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FoodStreet.Client", "Frontend\FoodStreet.Client.csproj", "{AD7B2499-2028-4190-8742-73D03318A69D}"
 EndProject
