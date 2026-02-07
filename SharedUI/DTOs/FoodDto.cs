@@ -25,5 +25,9 @@ namespace FoodStreet.Client.DTOs
         // Audio info
         public bool HasAudio { get; set; }
         public string? AudioUrl { get; set; }
+
+        // Category
+        public int? CategoryId { get; set; }
+        public string? CategoryName { get; set; }
     }
 }

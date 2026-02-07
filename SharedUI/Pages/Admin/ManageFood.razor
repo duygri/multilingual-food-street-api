@@ -3,6 +3,7 @@
 @inject FoodStreet.Client.Services.IFoodClientService FoodService
 @inject ILocalizationService L
 @using FoodStreet.Client.DTOs
+@inject HttpClient Http
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h3 class="mb-0">🍜 Quản lý Món ăn</h3>
@@ -35,6 +36,7 @@
             <thead>
                 <tr>
                     <th>Tên món</th>
+                    <th>Phân loại</th>
                     <th>Mô tả</th>
                     <th>Giá</th>
                     <th>Vị trí</th>
@@ -46,6 +48,16 @@
                 {
                     <tr>
                         <td><strong>@food.Name</strong></td>
+                        <td>
+                            @if (!string.IsNullOrEmpty(food.CategoryName))
+                            {
+                                <span class="badge bg-info">@food.CategoryName</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">—</span>
+                            }
+                        </td>
                         <td class="text-muted">@(food.Description?.Length > 50 ? food.Description.Substring(0, 50) + "..." : food.Description)</td>
                         <td><span class="badge bg-success">@food.Price.ToString("N0") VND</span></td>
                         <td>
@@ -88,6 +100,19 @@
                         <div class="mb-3">
                             <label class="form-label">Giá (VND)</label>
                             <InputNumber @bind-Value="editingFood.Price" class="form-control" placeholder="50000" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">📂 Phân loại</label>
+                            <InputSelect @bind-Value="editingFood.CategoryId" class="form-select">
+                                <option value="">-- Chọn phân loại --</option>
+                                @if (categories != null)
+                                {
+                                    @foreach (var cat in categories)
+                                    {
+                                        <option value="@cat.Id">@cat.Icon @cat.Name</option>
+                                    }
+                                }
+                            </InputSelect>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">🖼️ Link hình ảnh</label>
@@ -156,6 +181,7 @@
 
 @code {
     private List<FoodDto>? foods;
+    private List<CategoryDto>? categories;
     private bool showModal = false;
     private bool showAudioModal = false;
     private string modalTitle = "";
@@ -166,6 +192,7 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadFoods();
+        await LoadCategories();
     }
 
     private async Task LoadFoods()
@@ -177,6 +204,18 @@
         catch
         {
             foods = new List<FoodDto>();
+        }
+    }
+
+    private async Task LoadCategories()
+    {
+        try
+        {
+            categories = await Http.GetFromJsonAsync<List<CategoryDto>>("api/category");
+        }
+        catch
+        {
+            categories = new List<CategoryDto>();
         }
     }
 
@@ -202,7 +241,8 @@
                 Longitude = dto.Longitude,
                 ImageUrl = dto.ImageUrl,
                 Radius = dto.Radius,
-                Priority = dto.Priority
+                Priority = dto.Priority,
+                CategoryId = dto.CategoryId
             };
         }
         modalTitle = "✏️ " + L["EditFood"];
