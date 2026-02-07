@@ -27,6 +27,10 @@
         public int? CategoryId { get; set; }
         public Category? Category { get; set; }
 
+        // Approval Workflow
+        public bool IsApproved { get; set; } = false;
+        public DateTime? ApprovedAt { get; set; }
+
         [System.Text.Json.Serialization.JsonIgnore]
         public ICollection<FoodTranslation> Translations { get; set; } = new List<FoodTranslation>();
         [System.Text.Json.Serialization.JsonIgnore]

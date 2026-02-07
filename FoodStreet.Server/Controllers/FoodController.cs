@@ -157,6 +157,49 @@ namespace PROJECT_C_.Controllers
             if (!success) return NotFound();
             return NoContent();
         }
+
+        // GET: api/food/pending (Admin only - get foods awaiting approval)
+        [HttpGet("pending")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<IEnumerable<Food>>> GetPendingFoods()
+        {
+            var pendingFoods = await _context.Foods
+                .Include(f => f.Category)
+                .Where(f => !f.IsApproved)
+                .OrderByDescending(f => f.Id)
+                .ToListAsync();
+
+            return Ok(pendingFoods);
+        }
+
+        // POST: api/food/{id}/approve (Admin only)
+        [HttpPost("{id}/approve")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> ApproveFood(int id)
+        {
+            var food = await _context.Foods.FindAsync(id);
+            if (food == null) return NotFound();
+
+            food.IsApproved = true;
+            food.ApprovedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Món ăn đã được duyệt", foodId = id });
+        }
+
+        // POST: api/food/{id}/reject (Admin only - delete the food)
+        [HttpPost("{id}/reject")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> RejectFood(int id)
+        {
+            var food = await _context.Foods.FindAsync(id);
+            if (food == null) return NotFound();
+
+            _context.Foods.Remove(food);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Món ăn đã bị từ chối và xóa", foodId = id });
+        }
         // API GPS
         [HttpGet("near")]
         public IActionResult GetNearestFoods(

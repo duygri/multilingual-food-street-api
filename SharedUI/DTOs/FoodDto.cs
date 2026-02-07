@@ -29,5 +29,8 @@ namespace FoodStreet.Client.DTOs
         // Category
         public int? CategoryId { get; set; }
         public string? CategoryName { get; set; }
+
+        // Approval
+        public bool IsApproved { get; set; }
     }
 }

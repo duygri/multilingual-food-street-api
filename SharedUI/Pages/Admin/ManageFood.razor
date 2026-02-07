@@ -7,9 +7,7 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h3 class="mb-0">🍜 Quản lý Món ăn</h3>
-    <button class="btn btn-admin btn-admin-primary" @onclick="ShowCreateModal">
-        ➕ Thêm món mới
-    </button>
+    @* Admin chỉ duyệt, không tạo mới - nút này ẩn *@
 </div>
 
 <div class="admin-card">
@@ -39,8 +37,8 @@
                     <th>Phân loại</th>
                     <th>Mô tả</th>
                     <th>Giá</th>
-                    <th>Vị trí</th>
-                    <th style="width: 200px;">Thao tác</th>
+                    <th>Trạng thái</th>
+                    <th style="width: 250px;">Thao tác</th>
                 </tr>
             </thead>
             <tbody>
@@ -61,13 +59,22 @@
                         <td class="text-muted">@(food.Description?.Length > 50 ? food.Description.Substring(0, 50) + "..." : food.Description)</td>
                         <td><span class="badge bg-success">@food.Price.ToString("N0") VND</span></td>
                         <td>
-                            <small class="text-muted">
-                                📍 @food.Latitude.ToString("F4"), @food.Longitude.ToString("F4")
-                            </small>
+                            @if (food.IsApproved)
+                            {
+                                <span class="badge bg-success">✅ Đã duyệt</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning text-dark">⏳ Chờ duyệt</span>
+                            }
                         </td>
                         <td>
-                            <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => ShowEditModal(food.Id)">✏️ Sửa</button>
-                            <button class="btn btn-sm btn-outline-secondary me-1" @onclick="() => ShowAudioModal(food.Id)">🎵</button>
+                            @if (!food.IsApproved)
+                            {
+                                <button class="btn btn-sm btn-success me-1" @onclick="() => ApproveFood(food.Id)">✅ Duyệt</button>
+                                <button class="btn btn-sm btn-danger me-1" @onclick="() => RejectFood(food.Id)">❌ Từ chối</button>
+                            }
+                            <button class="btn btn-sm btn-outline-secondary" @onclick="() => ShowAudioModal(food.Id)">🎵</button>
                             <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteFood(food.Id)">🗑️</button>
                         </td>
                     </tr>
@@ -276,6 +283,32 @@
     {
         await FoodService.DeleteFood(id);
         await LoadFoods();
+    }
+
+    private async Task ApproveFood(int id)
+    {
+        try
+        {
+            await Http.PostAsync($"api/food/{id}/approve", null);
+            await LoadFoods();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error approving food: {ex.Message}");
+        }
+    }
+
+    private async Task RejectFood(int id)
+    {
+        try
+        {
+            await Http.PostAsync($"api/food/{id}/reject", null);
+            await LoadFoods();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error rejecting food: {ex.Message}");
+        }
     }
 
     private async Task LoadFiles(InputFileChangeEventArgs e)
