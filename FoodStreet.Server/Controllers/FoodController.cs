@@ -33,7 +33,7 @@ namespace PROJECT_C_.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Food>>> GetFoods()
         {
-            var query = _context.Foods.Include(f => f.Translations).AsQueryable();
+            var query = _context.Foods.Include(f => f.Translations).Include(f => f.Category).AsQueryable();
 
             // Socratic Logic: Seller Isolation
             // Only apply filter if User IS authenticated and IS a Seller
@@ -76,7 +76,8 @@ namespace PROJECT_C_.Controllers
                 Price = foodDto.Price,
                 Latitude = foodDto.Latitude,
                 Longitude = foodDto.Longitude,
-                OwnerId = userId 
+                OwnerId = userId,
+                CategoryId = foodDto.CategoryId
             };
             
             var created = await _foodService.CreateFoodAsync(food);
@@ -120,7 +121,8 @@ namespace PROJECT_C_.Controllers
                 Description = foodDto.Description,
                 Price = foodDto.Price,
                 Latitude = foodDto.Latitude,
-                Longitude = foodDto.Longitude
+                Longitude = foodDto.Longitude,
+                CategoryId = foodDto.CategoryId
             };
 
             var updated = await _foodService.UpdateFoodAsync(id, food);

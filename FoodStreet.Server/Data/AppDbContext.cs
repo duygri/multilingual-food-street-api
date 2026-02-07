@@ -21,6 +21,7 @@ namespace PROJECT_C_.Data
         public DbSet<TourItem> TourItems => Set<TourItem>();
         public DbSet<UserLocation> UserLocations => Set<UserLocation>();
         public DbSet<PushSubscription> PushSubscriptions => Set<PushSubscription>();
+        public DbSet<Category> Categories => Set<Category>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -79,6 +80,22 @@ namespace PROJECT_C_.Data
                 new FoodTranslation { Id = 5, FoodId = 3, LanguageCode = "vi-VN", Name = "Cơm Tấm", Description = "Cơm tấm sườn" },
                 new FoodTranslation { Id = 6, FoodId = 3, LanguageCode = "en-US", Name = "Broken Rice", Description = "Broken rice with grilled pork" }
             );
+
+            // Category seed data
+            modelBuilder.Entity<Category>().HasData(
+                new Category { Id = 1, Name = "Ốc & Hải sản", Icon = "🦪", Description = "Các món ốc, nghêu, sò, hải sản" },
+                new Category { Id = 2, Name = "Lẩu & Nướng", Icon = "🍲", Description = "Lẩu các loại, đồ nướng BBQ" },
+                new Category { Id = 3, Name = "Bún & Phở", Icon = "🍜", Description = "Bún, phở, hủ tiếu, mì" },
+                new Category { Id = 4, Name = "Đồ uống", Icon = "🧋", Description = "Nước giải khát, trà sữa, bia" },
+                new Category { Id = 5, Name = "Ăn vặt", Icon = "🍡", Description = "Bánh tráng, xiên que, đồ chiên" }
+            );
+
+            // Food - Category relationship
+            modelBuilder.Entity<Food>()
+                .HasOne(f => f.Category)
+                .WithMany(c => c.Foods)
+                .HasForeignKey(f => f.CategoryId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             base.OnModelCreating(modelBuilder);
         }

@@ -23,6 +23,10 @@
         // TTS Script (nếu không có audio file)
         public string? TtsScript { get; set; }
 
+        // Category
+        public int? CategoryId { get; set; }
+        public Category? Category { get; set; }
+
         [System.Text.Json.Serialization.JsonIgnore]
         public ICollection<FoodTranslation> Translations { get; set; } = new List<FoodTranslation>();
         [System.Text.Json.Serialization.JsonIgnore]
