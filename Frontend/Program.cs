@@ -42,6 +42,7 @@ builder.Services.AddAuthorizationCore();
 // APPLICATION SERVICES
 // ========================================
 builder.Services.AddScoped<IFoodClientService, FoodClientService>();
+builder.Services.AddScoped<ILocationClientService, LocationClientService>();
 builder.Services.AddScoped<IAudioService, AudioService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<GpsTrackingService>();

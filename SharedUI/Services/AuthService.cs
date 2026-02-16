@@ -10,8 +10,10 @@ namespace FoodStreet.Client.Services
         Task<AuthResult> LoginAsync(string email, string password);
         Task<AuthResult> RegisterAsync(string email, string password, string? fullName = null, string role = "User");
         Task LogoutAsync();
+        Task ClearTokensAsync();
         Task<string?> GetTokenAsync();
         Task<bool> IsAuthenticatedAsync();
+        void NotifyStateChanged();
         event Action? OnAuthStateChanged;
     }
 
@@ -33,6 +35,11 @@ namespace FoodStreet.Client.Services
             _localStorage = localStorage;
         }
 
+        private static readonly System.Text.Json.JsonSerializerOptions _jsonOptions = new()
+        {
+            PropertyNameCaseInsensitive = true
+        };
+
         public async Task<AuthResult> LoginAsync(string email, string password)
         {
             try
@@ -43,20 +50,22 @@ namespace FoodStreet.Client.Services
                     password
                 });
 
-                var result = await response.Content.ReadFromJsonAsync<AuthApiResponse>();
+                var result = await response.Content.ReadFromJsonAsync<AuthApiResponse>(_jsonOptions);
 
                 if (response.IsSuccessStatusCode && result?.Success == true)
                 {
                     await StoreTokensAsync(result);
-                    OnAuthStateChanged?.Invoke();
+                    // NOTE: Do NOT call OnAuthStateChanged here.
+                    // The caller (Login page) must call NotifyStateChanged() 
+                    // AFTER verifying the user's role to prevent premature re-renders.
                     return AuthResult.Ok(result.Email);
                 }
 
-                return AuthResult.Fail(result?.Message ?? "Login failed", result?.Errors);
+                return AuthResult.Fail(result?.Message ?? "Đăng nhập thất bại", result?.Errors);
             }
             catch (Exception ex)
             {
-                return AuthResult.Fail($"Connection error: {ex.Message}");
+                return AuthResult.Fail($"Lỗi kết nối: {ex.Message}");
             }
         }
 
@@ -72,7 +81,7 @@ namespace FoodStreet.Client.Services
                     role
                 });
 
-                var result = await response.Content.ReadFromJsonAsync<AuthApiResponse>();
+                var result = await response.Content.ReadFromJsonAsync<AuthApiResponse>(_jsonOptions);
 
                 if (response.IsSuccessStatusCode && result?.Success == true)
                 {
@@ -85,21 +94,35 @@ namespace FoodStreet.Client.Services
                     return AuthResult.Ok(result.Email); // Or handle specific success message
                 }
 
-                return AuthResult.Fail(result?.Message ?? "Registration failed", result?.Errors);
+                return AuthResult.Fail(result?.Message ?? "Đăng ký thất bại", result?.Errors);
             }
             catch (Exception ex)
             {
-                return AuthResult.Fail($"Connection error: {ex.Message}");
+                return AuthResult.Fail($"Lỗi kết nối: {ex.Message}");
             }
         }
 
+        public void NotifyStateChanged()
+        {
+            OnAuthStateChanged?.Invoke();
+        }
+
         public async Task LogoutAsync()
+        {
+            await ClearTokensAsync();
+            OnAuthStateChanged?.Invoke();
+        }
+
+        /// <summary>
+        /// Clears stored tokens WITHOUT triggering OnAuthStateChanged.
+        /// Use when you need to clear auth but don't want component tree re-renders.
+        /// </summary>
+        public async Task ClearTokensAsync()
         {
             await _localStorage.RemoveItemAsync(AccessTokenKey);
             await _localStorage.RemoveItemAsync(RefreshTokenKey);
             await _localStorage.RemoveItemAsync(TokenExpiryKey);
             await _localStorage.RemoveItemAsync(UserEmailKey);
-            OnAuthStateChanged?.Invoke();
         }
 
         public async Task<string?> GetTokenAsync()

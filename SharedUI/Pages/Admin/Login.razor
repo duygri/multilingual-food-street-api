@@ -1,5 +1,7 @@
 @page "/admin/login"
 @page "/admin/register"
+@page "/seller/login"
+@page "/seller/register"
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
 @inject ILocalizationService L
@@ -9,30 +11,48 @@
 <div class="auth-page">
     <div class="auth-container">
         <!-- Left Side - Branding -->
-        <div class="auth-branding">
+        <div class="auth-branding" style="@(isSellerMode ? "background: linear-gradient(135deg, #0f766e 0%, #064e3b 100%);" : "")">
             <div class="branding-content">
                 <div class="brand-logo">
-                    <span class="logo-icon">🍜</span>
+                    <span class="logo-icon" style="@(isSellerMode ? "background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); box-shadow: 0 12px 40px rgba(20,184,166,0.4);" : "")">@(isSellerMode ? "🏪" : "🍜")</span>
                 </div>
                 <h1 class="brand-title">Vĩnh Khánh</h1>
-                <p class="brand-tagline">Thiên đường ẩm thực</p>
+                <p class="brand-tagline">@(isSellerMode ? "Cổng đối tác bán hàng" : "Thiên đường ẩm thực")</p>
                 <div class="brand-features">
-                    <div class="feature-item">
-                        <span class="feature-icon">📍</span>
-                        <span>Quận 4, TP.HCM</span>
-                    </div>
-                    <div class="feature-item">
-                        <span class="feature-icon">🍜</span>
-                        <span>Thiên đường ẩm thực</span>
-                    </div>
-                    <div class="feature-item">
-                        <span class="feature-icon">🎵</span>
-                        <span>Thuyết minh đa ngôn ngữ</span>
-                    </div>
+                    @if (isSellerMode)
+                    {
+                        <div class="feature-item">
+                            <span class="feature-icon">📍</span>
+                            <span>Đăng ký & quản lý POI</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">🍜</span>
+                            <span>Thêm món ăn vào gian hàng</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">📊</span>
+                            <span>Theo dõi lượt truy cập</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="feature-item">
+                            <span class="feature-icon">📍</span>
+                            <span>Quận 4, TP.HCM</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">🍜</span>
+                            <span>Thiên đường ẩm thực</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">🎵</span>
+                            <span>Thuyết minh đa ngôn ngữ</span>
+                        </div>
+                    }
                 </div>
             </div>
             <div class="branding-footer">
-                <span>Hệ thống quản trị nội dung</span>
+                <span>@(isSellerMode ? "Hệ thống quản lý gian hàng" : "Hệ thống quản trị nội dung")</span>
             </div>
         </div>
         
@@ -40,8 +60,16 @@
         <div class="auth-form-container">
             <div class="auth-form-wrapper">
                 <div class="auth-header">
-                    <h2>@(isLogin ? "Cổng thông tin Quản lý" : "Đăng ký làm Đối tác Bán hàng")</h2>
-                    <p>@(isLogin ? "Dành cho Quản trị viên & Đối tác" : "Mở gian hàng trực tuyến của bạn ngay hôm nay")</p>
+                    @if (isSellerMode)
+                    {
+                        <h2>@(isLogin ? "Đăng nhập Seller" : "Đăng ký làm Đối tác")</h2>
+                        <p>@(isLogin ? "Dành cho Người bán hàng" : "Mở gian hàng trực tuyến của bạn ngay hôm nay")</p>
+                    }
+                    else
+                    {
+                        <h2>@(isLogin ? "Đăng nhập Admin" : "Đăng ký tài khoản")</h2>
+                        <p>@(isLogin ? "Dành cho Quản trị viên" : "Tạo tài khoản quản trị")</p>
+                    }
                 </div>
 
                 @if (!string.IsNullOrEmpty(message))
@@ -82,7 +110,7 @@
                         <label>Email</label>
                         <div class="input-wrapper @(validationErrors.ContainsKey("Email") ? "has-error" : "")">
                             <span class="input-icon">✉️</span>
-                            <input type="email" @bind="model.Email" placeholder="admin@vinhkhanh.vn" />
+                            <input type="email" @bind="model.Email" placeholder="email" />
                         </div>
                         @if (validationErrors.ContainsKey("Email"))
                         {
@@ -116,27 +144,38 @@
                             }
                         </div>
                     }
-                    
-                    @* Checkbox removed - Registration is strictly for Sellers now *@
 
-                    <button type="submit" class="btn-submit" disabled="@isLoading">
+                    <button type="submit" class="btn-submit" disabled="@isLoading" style="@(isSellerMode ? "background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);" : "")">
                         @if (isLoading)
                         {
                             <span class="spinner"></span>
                         }
-                        <span>@(isLogin ? "Đăng nhập" : "Đăng ký Đối tác")</span>
+                        <span>@(isLogin ? "Đăng nhập" : (isSellerMode ? "Đăng ký Đối tác" : "Đăng ký"))</span>
                     </button>
                 </form>
 
-                <div class="auth-switch">
-                    <span>@(isLogin ? "Chưa có tài khoản?" : "Đã có tài khoản?")</span>
-                    <button @onclick="ToggleMode">
-                        @(isLogin ? "Mở gian hàng mới" : "Đăng nhập quản lý")
-                    </button>
-                </div>
+                @if (isSellerMode)
+                {
+                    <div class="auth-switch">
+                        <span>@(isLogin ? "Chưa có tài khoản?" : "Đã có tài khoản?")</span>
+                        <button @onclick="ToggleMode">
+                            @(isLogin ? "Đăng ký gian hàng" : "Đăng nhập")
+                        </button>
+                    </div>
+                }
 
                 <div class="auth-footer">
                     <a href="">← Về trang chủ</a>
+                    @if (isSellerMode)
+                    {
+                        <span style="margin: 0 8px; color: #cbd5e1;">|</span>
+                        <a href="admin/login">Đăng nhập Admin</a>
+                    }
+                    else
+                    {
+                        <span style="margin: 0 8px; color: #cbd5e1;">|</span>
+                        <a href="seller/login">Đăng nhập Seller</a>
+                    }
                 </div>
             </div>
         </div>
@@ -444,76 +483,12 @@
             padding: 24px;
         }
     }
-        .auth-form-container {
-            padding: 24px;
-        }
-    }
-
-    .checkbox-group {
-        display: flex;
-        align-items: center;
-    }
-    
-    .checkbox-container {
-        display: flex;
-        align-items: center;
-        position: relative;
-        cursor: pointer;
-        font-size: 15px;
-        user-select: none;
-        color: #1e2a3a;
-    }
-    
-    .checkbox-container input {
-        position: absolute;
-        opacity: 0;
-        cursor: pointer;
-        height: 0;
-        width: 0;
-    }
-    
-    .checkmark {
-        height: 20px;
-        width: 20px;
-        background-color: #eee;
-        border-radius: 4px;
-        margin-right: 10px;
-        position: relative;
-        transition: all 0.2s;
-    }
-    
-    .checkbox-container:hover input ~ .checkmark {
-        background-color: #ccc;
-    }
-    
-    .checkbox-container input:checked ~ .checkmark {
-        background-color: #ff6b35;
-    }
-    
-    .checkmark:after {
-        content: "";
-        position: absolute;
-        display: none;
-    }
-    
-    .checkbox-container input:checked ~ .checkmark:after {
-        display: block;
-    }
-    
-    .checkbox-container .checkmark:after {
-        left: 7px;
-        top: 3px;
-        width: 6px;
-        height: 12px;
-        border: solid white;
-        border-width: 0 2px 2px 0;
-        transform: rotate(45deg);
-    }
 </style>
 
 @code {
     private AuthModel model = new();
     private bool isLogin = true;
+    private bool isSellerMode = false;
     private bool isLoading = false;
     private string? message;
     private List<string>? errorList;
@@ -522,9 +497,27 @@
 
     protected override void OnInitialized()
     {
-        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
-        isLogin = !uri.AbsolutePath.Contains("register");
+        DetectModeFromUrl();
         L.OnLanguageChanged += OnLanguageChanged;
+        Navigation.LocationChanged += OnLocationChanged;
+    }
+
+    private void DetectModeFromUrl()
+    {
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var path = uri.AbsolutePath.ToLower();
+        isSellerMode = path.Contains("/seller/");
+        isLogin = !path.Contains("register");
+    }
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        DetectModeFromUrl();
+        message = null;
+        errorList = null;
+        validationErrors.Clear();
+        model = new AuthModel();
+        StateHasChanged();
     }
 
     private void OnLanguageChanged()
@@ -538,6 +531,7 @@
     public void Dispose()
     {
         L.OnLanguageChanged -= OnLanguageChanged;
+        Navigation.LocationChanged -= OnLocationChanged;
     }
 
     private void ToggleMode()
@@ -547,7 +541,9 @@
         errorList = null;
         validationErrors.Clear();
         model = new AuthModel();
-        Navigation.NavigateTo(isLogin ? "/admin/login" : "/admin/register");
+        
+        var prefix = isSellerMode ? "/seller" : "/admin";
+        Navigation.NavigateTo(isLogin ? $"{prefix}/login" : $"{prefix}/register");
     }
 
     private bool ValidateForm()
@@ -604,8 +600,9 @@
             }
             else
             {
-                // FORCE SELLER ROLE for public registration
-                result = await AuthService.RegisterAsync(model.Email, model.Password, model.FullName, "Seller");
+                // Seller registration only allowed from /seller/register
+                var role = isSellerMode ? "Seller" : "Admin";
+                result = await AuthService.RegisterAsync(model.Email, model.Password, model.FullName, role);
             }
 
             if (result.Success)
@@ -613,27 +610,47 @@
                 if (!isLogin)
                 {
                     isError = false;
-                    message = "Hồ sơ đăng ký đã được gửi. Vui lòng chờ Quản trị viên duyệt để kích hoạt gian hàng.";
+                    message = isSellerMode 
+                        ? "Hồ sơ đăng ký đã được gửi. Vui lòng chờ Quản trị viên duyệt để kích hoạt gian hàng."
+                        : "Tạo tài khoản thành công!";
                     isLogin = true; 
                     model = new AuthModel(); 
                 }
                 else
                 {
-                    // [NEW] Restrict Web to Admin/Seller only
-                    // Force refresh of auth state to read the new token
+                    // Get claims from stored token (auth state not notified yet)
                     var authState = await ((JwtAuthStateProvider)AuthStateProvider).GetAuthenticationStateAsync();
                     var user = authState.User;
 
-                    // If user does NOT have Admin or Seller role (i.e., is just a User)
-                    if (!user.IsInRole("Admin") && !user.IsInRole("Seller"))
+                    if (isSellerMode)
                     {
-                        await AuthService.LogoutAsync();
-                        isError = true;
-                        message = "Trang Web chỉ dành cho Quản trị viên và Người bán hàng. Vui lòng sử dụng App Mobile.";
-                        return;
+                        // Seller login: only allow Seller role
+                        if (!user.IsInRole("Seller"))
+                        {
+                            // Clear tokens silently without notifying auth state
+                            // (to prevent RedirectToLogin from re-mounting this component)
+                            await AuthService.ClearTokensAsync();
+                            isError = true;
+                            message = "Đăng nhập không hợp lệ hoặc sai mật khẩu!";
+                            return;
+                        }
+                        // Role OK → notify auth state then navigate
+                        AuthService.NotifyStateChanged();
+                        Navigation.NavigateTo("/seller/locations");
                     }
-
-                    Navigation.NavigateTo("/admin/dashboard", forceLoad: true);
+                    else
+                    {
+                        // Admin login: only allow Admin role
+                        if (!user.IsInRole("Admin"))
+                        {
+                            await AuthService.ClearTokensAsync();
+                            isError = true;
+                            message = "Đăng nhập không hợp lệ hoặc sai mật khẩu!";
+                            return;
+                        }
+                        AuthService.NotifyStateChanged();
+                        Navigation.NavigateTo("/admin/dashboard");
+                    }
                 }
             }
             else
@@ -660,6 +677,5 @@
         public string Email { get; set; } = "";
         public string Password { get; set; } = "";
         public string ConfirmPassword { get; set; } = "";
-        public bool IsSeller { get; set; } = false;
     }
 }

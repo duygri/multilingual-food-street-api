@@ -7,20 +7,20 @@ namespace PROJECT_C_.MCP;
 [McpServerToolType]
 public class FoodTools
 {
-    private readonly IFoodService _foodService;
+    private readonly ILocationService _locationService;
 
-    public FoodTools(IFoodService foodService)
+    public FoodTools(ILocationService locationService)
     {
-        _foodService = foodService;
+        _locationService = locationService;
     }
 
-    [McpServerTool, Description("Get nearest foods based on GPS location")]
-    public object GetNearestFoods(
+    [McpServerTool, Description("Get nearest locations/POIs based on GPS coordinates")]
+    public object GetNearestLocations(
         double lat,
         double lng,
         int page = 1,
         int pageSize = 10)
     {
-        return _foodService.GetNearestFoods(lat, lng, page, pageSize);
+        return _locationService.GetNearestLocations(lat, lng, page, pageSize);
     }
 }

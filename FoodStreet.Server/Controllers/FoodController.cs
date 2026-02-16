@@ -1,11 +1,9 @@
 
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using PROJECT_C_.Services.Interfaces;
-
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using PROJECT_C_.DTOs;
 using PROJECT_C_.Models;
-
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -23,27 +21,42 @@ namespace PROJECT_C_.Controllers
         private readonly UserManager<IdentityUser> _userManager;
 
         public FoodController(AppDbContext context, UserManager<IdentityUser> userManager, IFoodService foodService)
-
         {
             _context = context;
             _userManager = userManager;
             _foodService = foodService;
         }
 
+        /// <summary>
+        /// Lấy tất cả món ăn (Admin xem tất cả, Seller xem theo Location của mình)
+        /// </summary>
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Food>>> GetFoods()
         {
-            var query = _context.Foods.Include(f => f.Translations).Include(f => f.Category).AsQueryable();
+            var query = _context.Foods
+                .Include(f => f.Translations)
+                .Include(f => f.Category)
+                .Include(f => f.Location)
+                .AsQueryable();
 
-            // Socratic Logic: Seller Isolation
-            // Only apply filter if User IS authenticated and IS a Seller
+            // Seller chỉ xem món ăn thuộc Location của mình
             if (User.Identity?.IsAuthenticated == true && User.IsInRole("Seller"))
             {
                 var userId = _userManager.GetUserId(User);
-                query = query.Where(f => f.OwnerId == userId);
+                query = query.Where(f => f.Location != null && f.Location.OwnerId == userId);
             }
 
             return await query.ToListAsync();
+        }
+
+        /// <summary>
+        /// Lấy danh sách món ăn theo địa điểm
+        /// </summary>
+        [HttpGet("by-location/{locationId}")]
+        public async Task<ActionResult<IEnumerable<FoodDto>>> GetFoodsByLocation(int locationId)
+        {
+            var foods = await _foodService.GetFoodsByLocationAsync(locationId);
+            return Ok(foods);
         }
 
         [HttpGet("{id}")]
@@ -58,25 +71,37 @@ namespace PROJECT_C_.Controllers
                 Name = food.Name,
                 Description = food.Description,
                 Price = food.Price,
-                Latitude = food.Latitude,
-                Longitude = food.Longitude
+                ImageUrl = food.ImageUrl,
+                LocationId = food.LocationId,
+                LocationName = food.Location?.Name,
+                CategoryId = food.CategoryId,
+                CategoryName = food.Category?.Name
             };
         }
 
+        /// <summary>
+        /// Seller: Tạo món ăn (phải thuộc về 1 Location của mình)
+        /// </summary>
         [HttpPost]
         [Authorize(Roles = "Admin,Seller")]
         public async Task<ActionResult<FoodDto>> CreateFood([FromBody] FoodDto foodDto)
         {
-            var userId = _userManager.GetUserId(User);
+            // Kiểm tra Location ownership nếu là Seller
+            if (User.IsInRole("Seller") && foodDto.LocationId.HasValue)
+            {
+                var userId = _userManager.GetUserId(User);
+                var location = await _context.Locations.FindAsync(foodDto.LocationId.Value);
+                if (location == null || location.OwnerId != userId)
+                    return Forbid();
+            }
 
             var food = new Food
             {
                 Name = foodDto.Name,
                 Description = foodDto.Description,
                 Price = foodDto.Price,
-                Latitude = foodDto.Latitude,
-                Longitude = foodDto.Longitude,
-                OwnerId = userId,
+                ImageUrl = foodDto.ImageUrl,
+                LocationId = foodDto.LocationId,
                 CategoryId = foodDto.CategoryId
             };
             
@@ -88,8 +113,8 @@ namespace PROJECT_C_.Controllers
                 Name = created.Name,
                 Description = created.Description,
                 Price = created.Price,
-                Latitude = created.Latitude,
-                Longitude = created.Longitude
+                ImageUrl = created.ImageUrl,
+                LocationId = created.LocationId
             };
 
             return CreatedAtAction(nameof(GetFood), new { id = resultDto.Id }, resultDto);
@@ -101,17 +126,18 @@ namespace PROJECT_C_.Controllers
         {
             if (id != foodDto.Id && foodDto.Id != 0) return BadRequest();
 
-            var existingFood = await _context.Foods.AsNoTracking().FirstOrDefaultAsync(f => f.Id == id);
+            var existingFood = await _context.Foods
+                .Include(f => f.Location)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(f => f.Id == id);
             if (existingFood == null) return NotFound();
 
-            // Ownership Check
+            // Seller ownership check qua Location
             if (User.IsInRole("Seller"))
             {
                 var userId = _userManager.GetUserId(User);
-                if (existingFood.OwnerId != userId)
-                {
+                if (existingFood.Location?.OwnerId != userId)
                     return Forbid(); 
-                }
             }
 
             var food = new Food
@@ -120,8 +146,8 @@ namespace PROJECT_C_.Controllers
                 Name = foodDto.Name,
                 Description = foodDto.Description,
                 Price = foodDto.Price,
-                Latitude = foodDto.Latitude,
-                Longitude = foodDto.Longitude,
+                ImageUrl = foodDto.ImageUrl,
+                LocationId = foodDto.LocationId,
                 CategoryId = foodDto.CategoryId
             };
 
@@ -135,108 +161,22 @@ namespace PROJECT_C_.Controllers
         [Authorize(Roles = "Admin,Seller")]
         public async Task<IActionResult> DeleteFood(int id)
         {
-            var food = await _context.Foods.FindAsync(id);
+            var food = await _context.Foods
+                .Include(f => f.Location)
+                .FirstOrDefaultAsync(f => f.Id == id);
             if (food == null) return NotFound();
 
-            // Ownership Check
+            // Seller ownership check qua Location
             if (User.IsInRole("Seller"))
             {
                 var userId = _userManager.GetUserId(User);
-                if (food.OwnerId != userId)
-                {
+                if (food.Location?.OwnerId != userId)
                     return Forbid();
-                }
             }
 
-            // Use context to remove to ensure consistency with controller logic, 
-            // OR use service if it has extra logic. Service usually has logic.
-            // But we already fetched 'food' from context.
-            // Let's use service to be safe about business logic, but we passed the auth check.
-            
             var success = await _foodService.DeleteFoodAsync(id);
             if (!success) return NotFound();
             return NoContent();
-        }
-
-        // GET: api/food/pending (Admin only - get foods awaiting approval)
-        [HttpGet("pending")]
-        [Authorize(Roles = "Admin")]
-        public async Task<ActionResult<IEnumerable<Food>>> GetPendingFoods()
-        {
-            var pendingFoods = await _context.Foods
-                .Include(f => f.Category)
-                .Where(f => !f.IsApproved)
-                .OrderByDescending(f => f.Id)
-                .ToListAsync();
-
-            return Ok(pendingFoods);
-        }
-
-        // POST: api/food/{id}/approve (Admin only)
-        [HttpPost("{id}/approve")]
-        [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> ApproveFood(int id)
-        {
-            var food = await _context.Foods.FindAsync(id);
-            if (food == null) return NotFound();
-
-            food.IsApproved = true;
-            food.ApprovedAt = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "Món ăn đã được duyệt", foodId = id });
-        }
-
-        // POST: api/food/{id}/reject (Admin only - delete the food)
-        [HttpPost("{id}/reject")]
-        [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> RejectFood(int id)
-        {
-            var food = await _context.Foods.FindAsync(id);
-            if (food == null) return NotFound();
-
-            _context.Foods.Remove(food);
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "Món ăn đã bị từ chối và xóa", foodId = id });
-        }
-        // API GPS
-        [HttpGet("near")]
-        public IActionResult GetNearestFoods(
-            double lat,
-            double lng,
-            int page = 1,
-            int pageSize = 10)
-        {
-            string languageCode = Request.Headers["Accept-Language"].ToString();
-            if (string.IsNullOrEmpty(languageCode)) languageCode = "vi-VN";
-
-            var result = _foodService.GetNearestFoods(
-                lat, lng, page, pageSize, languageCode);
-
-            return Ok(result);
-        }
-
-
-        // GPS CALCULATOR
-        private double CalculateDistance(
-            double lat1, double lng1,
-            double lat2, double lng2)
-        {
-            double R = 6371; // Radius of the earth in km
-            var dLat = ToRadians(lat2 - lat1);
-            var dLng = ToRadians(lng2 - lng1);
-
-            var a = Math.Sin(dLat/2) * Math.Sin(dLat/2) +
-                Math.Cos(ToRadians(lat1)) * Math.Cos(ToRadians(lat2)) * 
-                Math.Sin(dLng/2) * Math.Sin(dLng/2);
-
-            var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1-a));
-            return R * c; // Distance in km
-        }
-        private double ToRadians(double deg)
-        {
-            return deg * (Math.PI / 180);
         }
     }
 }

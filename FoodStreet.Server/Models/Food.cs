@@ -5,31 +5,18 @@
         public int Id { get; set; }
         public required string Name { get; set; }
         public string Description { get; set; } = string.Empty;
-        public decimal Price { get; set; } 
-        public string? OwnerId { get; set; } 
+        public decimal Price { get; set; }
 
-        // GPS coordinates
-        public double Latitude { get; set; }
-        public double Longitude { get; set; }
-
-        // POI Extended Fields
+        // Ảnh riêng của món ăn
         public string? ImageUrl { get; set; }
-        public string? MapLink { get; set; }
-        
-        // Geofencing
-        public double Radius { get; set; } = 50; // meters - bán kính kích hoạt
-        public int Priority { get; set; } = 0; // Độ ưu tiên (cao hơn = ưu tiên hơn)
 
-        // TTS Script (nếu không có audio file)
-        public string? TtsScript { get; set; }
+        // Thuộc về Location (địa điểm)
+        public int? LocationId { get; set; }
+        public Location? Location { get; set; }
 
         // Category
         public int? CategoryId { get; set; }
         public Category? Category { get; set; }
-
-        // Approval Workflow
-        public bool IsApproved { get; set; } = false;
-        public DateTime? ApprovedAt { get; set; }
 
         [System.Text.Json.Serialization.JsonIgnore]
         public ICollection<FoodTranslation> Translations { get; set; } = new List<FoodTranslation>();

@@ -268,8 +268,7 @@
         audioFiles = await AudioService.GetAllAudioAsync(currentFilter);
         stats = await AudioService.GetStatsAsync();
         
-        var foodResult = await FoodService.GetFoods();
-        foods = foodResult?.Items ?? new();
+        foods = await FoodService.GetAllFoods();
     }
 
     private async Task OnFilterChanged(ChangeEventArgs e)

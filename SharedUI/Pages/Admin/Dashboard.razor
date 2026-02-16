@@ -6,10 +6,10 @@
 <!-- Stats Cards -->
 <div class="stats-grid">
     <div class="stat-card">
-        <div class="stat-icon food">🍜</div>
+        <div class="stat-icon food">📍</div>
         <div class="stat-content">
             <span class="stat-value">@stats.TotalFoods</span>
-            <span class="stat-label">Món ăn</span>
+            <span class="stat-label">POI</span>
         </div>
         <div class="stat-trend up">
             <span>↑ 12%</span>
@@ -57,9 +57,9 @@
         </div>
         <div class="card-body">
             <div class="action-grid">
-                <a href="admin/foods" class="action-item">
+                <a href="admin/locations" class="action-item">
                     <span class="action-icon">➕</span>
-                    <span class="action-text">Thêm món ăn</span>
+                    <span class="action-text">Thêm POI</span>
                 </a>
                 <a href="admin/audio" class="action-item">
                     <span class="action-icon">🎤</span>
@@ -110,11 +110,11 @@
         </div>
     </div>
     
-    <!-- Recent Foods -->
+    <!-- Recent POIs -->
     <div class="dashboard-card recent-foods">
         <div class="card-header">
-            <h3>🍲 Món ăn mới nhất</h3>
-            <a href="admin/foods" class="view-all">Xem tất cả →</a>
+            <h3>📍 POI mới nhất</h3>
+            <a href="admin/locations" class="view-all">Xem tất cả →</a>
         </div>
         <div class="card-body">
             @if (recentFoods.Any())
@@ -123,7 +123,7 @@
                     @foreach (var food in recentFoods)
                     {
                         <div class="food-item">
-                            <span class="food-icon">🦐</span>
+                            <span class="food-icon">📍</span>
                             <div class="food-info">
                                 <span class="food-name">@food</span>
                                 <span class="food-meta">Đường Vĩnh Khánh</span>
@@ -136,8 +136,8 @@
             {
                 <div class="empty-state">
                     <span>📝</span>
-                    <p>Chưa có món ăn nào</p>
-                    <a href="admin/foods" class="btn-add">Thêm món đầu tiên</a>
+                    <p>Chưa có POI nào</p>
+                    <a href="admin/locations" class="btn-add">Thêm POI đầu tiên</a>
                 </div>
             }
         </div>

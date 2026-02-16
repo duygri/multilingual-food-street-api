@@ -3,6 +3,8 @@
 @code {
     protected override void OnInitialized()
     {
-        Navigation.NavigateTo("admin/login");
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri).AbsolutePath.ToLower();
+        var loginUrl = uri.Contains("/seller/") ? "seller/login" : "admin/login";
+        Navigation.NavigateTo(loginUrl);
     }
 }

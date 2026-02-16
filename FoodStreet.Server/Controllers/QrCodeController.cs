@@ -69,20 +69,20 @@ namespace PROJECT_C_.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAllQrCodes()
         {
-            var foods = await _context.Foods
-                .Select(f => new
+            var locations = await _context.Locations
+                .Select(l => new
                 {
-                    f.Id,
-                    f.Name,
-                    f.Description,
-                    f.Latitude,
-                    f.Longitude,
-                    QrCodeUrl = $"/api/qrcode/{f.Id}",
-                    LabeledQrUrl = $"/api/qrcode/{f.Id}/labeled"
+                    l.Id,
+                    l.Name,
+                    l.Description,
+                    l.Latitude,
+                    l.Longitude,
+                    QrCodeUrl = $"/api/qrcode/{l.Id}",
+                    LabeledQrUrl = $"/api/qrcode/{l.Id}/labeled"
                 })
                 .ToListAsync();
 
-            return Ok(foods);
+            return Ok(locations);
         }
 
         /// <summary>
@@ -90,21 +90,21 @@ namespace PROJECT_C_.Controllers
         /// </summary>
         [HttpPost("batch")]
         [Authorize]
-        public async Task<IActionResult> GenerateBatchQrCodes([FromBody] int[] foodIds)
+        public async Task<IActionResult> GenerateBatchQrCodes([FromBody] int[] locationIds)
         {
-            if (foodIds == null || foodIds.Length == 0)
-                return BadRequest("No POI IDs provided");
+            if (locationIds == null || locationIds.Length == 0)
+                return BadRequest("No Location IDs provided");
 
-            var foods = await _context.Foods
-                .Where(f => foodIds.Contains(f.Id))
+            var locations = await _context.Locations
+                .Where(l => locationIds.Contains(l.Id))
                 .ToListAsync();
 
-            var result = foods.Select(f => new
+            var result = locations.Select(l => new
             {
-                f.Id,
-                f.Name,
-                QrCodeUrl = $"/api/qrcode/{f.Id}",
-                DirectUrl = $"/poi/{f.Id}"
+                l.Id,
+                l.Name,
+                QrCodeUrl = $"/api/qrcode/{l.Id}",
+                DirectUrl = $"/poi/{l.Id}"
             }).ToList();
 
             return Ok(result);
@@ -116,23 +116,23 @@ namespace PROJECT_C_.Controllers
         [HttpGet("print-sheet")]
         public async Task<IActionResult> GetPrintSheet([FromQuery] string? ids = null)
         {
-            var foodQuery = _context.Foods.AsQueryable();
+            var locationQuery = _context.Locations.AsQueryable();
             
             if (!string.IsNullOrEmpty(ids))
             {
                 var idList = ids.Split(',').Select(int.Parse).ToList();
-                foodQuery = foodQuery.Where(f => idList.Contains(f.Id));
+                locationQuery = locationQuery.Where(l => idList.Contains(l.Id));
             }
 
-            var foods = await foodQuery.Take(20).ToListAsync(); // Max 20 for performance
+            var locations = await locationQuery.Take(20).ToListAsync();
 
-            var qrCodes = foods.Select(f => new
+            var qrCodes = locations.Select(l => new
             {
-                f.Id,
-                f.Name,
-                f.Description,
-                Location = $"{f.Latitude:F6}, {f.Longitude:F6}",
-                QrCodeUrl = $"/api/qrcode/{f.Id}?size=200"
+                l.Id,
+                l.Name,
+                l.Description,
+                Location = $"{l.Latitude:F6}, {l.Longitude:F6}",
+                QrCodeUrl = $"/api/qrcode/{l.Id}?size=200"
             }).ToList();
 
             return Ok(qrCodes);

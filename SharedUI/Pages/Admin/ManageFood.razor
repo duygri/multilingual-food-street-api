@@ -1,14 +1,33 @@
 @page "/admin/foods"
+@page "/seller/foods"
 @layout AdminLayout
 @inject FoodStreet.Client.Services.IFoodClientService FoodService
+@inject FoodStreet.Client.Services.ILocationClientService LocationService
 @inject ILocalizationService L
 @using FoodStreet.Client.DTOs
 @inject HttpClient Http
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h3 class="mb-0">🍜 Quản lý Món ăn</h3>
-    @* Admin chỉ duyệt, không tạo mới - nút này ẩn *@
+    <button class="btn btn-admin btn-admin-primary" @onclick="ShowCreateModal">
+        ➕ Thêm món mới
+    </button>
 </div>
+
+@if (errorMessage != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        ❌ @errorMessage
+        <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+    </div>
+}
+@if (successMessage != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        ✅ @successMessage
+        <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+    </div>
+}
 
 <div class="admin-card">
     @if (foods == null)
@@ -35,10 +54,10 @@
                 <tr>
                     <th>Tên món</th>
                     <th>Phân loại</th>
+                    <th>Địa điểm</th>
                     <th>Mô tả</th>
                     <th>Giá</th>
-                    <th>Trạng thái</th>
-                    <th style="width: 250px;">Thao tác</th>
+                    <th style="width: 180px;">Thao tác</th>
                 </tr>
             </thead>
             <tbody>
@@ -56,26 +75,22 @@
                                 <span class="text-muted">—</span>
                             }
                         </td>
-                        <td class="text-muted">@(food.Description?.Length > 50 ? food.Description.Substring(0, 50) + "..." : food.Description)</td>
-                        <td><span class="badge bg-success">@food.Price.ToString("N0") VND</span></td>
                         <td>
-                            @if (food.IsApproved)
+                            @if (!string.IsNullOrEmpty(food.LocationName))
                             {
-                                <span class="badge bg-success">✅ Đã duyệt</span>
+                                <span class="badge bg-secondary">📍 @food.LocationName</span>
                             }
                             else
                             {
-                                <span class="badge bg-warning text-dark">⏳ Chờ duyệt</span>
+                                <span class="text-muted">Chưa gán</span>
                             }
                         </td>
+                        <td class="text-muted">@(food.Description?.Length > 40 ? food.Description.Substring(0, 40) + "..." : food.Description)</td>
+                        <td><span class="badge bg-success">@food.Price.ToString("N0") VND</span></td>
                         <td>
-                            @if (!food.IsApproved)
-                            {
-                                <button class="btn btn-sm btn-success me-1" @onclick="() => ApproveFood(food.Id)">✅ Duyệt</button>
-                                <button class="btn btn-sm btn-danger me-1" @onclick="() => RejectFood(food.Id)">❌ Từ chối</button>
-                            }
-                            <button class="btn btn-sm btn-outline-secondary" @onclick="() => ShowAudioModal(food.Id)">🎵</button>
-                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteFood(food.Id)">🗑️</button>
+                            <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => ShowEditModal(food.Id)" title="Sửa">✏️</button>
+                            <button class="btn btn-sm btn-outline-secondary me-1" @onclick="() => ShowAudioModal(food.Id)" title="Audio">🎵</button>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteFood(food.Id)" title="Xóa">🗑️</button>
                         </td>
                     </tr>
                 }
@@ -84,6 +99,7 @@
     }
 </div>
 
+@* Modal thêm/sửa món ăn *@
 @if (showModal)
 {
     <div class="modal show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
@@ -97,16 +113,29 @@
                     <EditForm Model="@editingFood" OnValidSubmit="SaveFood">
                         <DataAnnotationsValidator />
                         <div class="mb-3">
-                            <label class="form-label">Tên món *</label>
+                            <label class="form-label">🍜 Tên món *</label>
                             <InputText @bind-Value="editingFood.Name" class="form-control" placeholder="VD: Phở Bò" />
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Mô tả</label>
-                            <InputTextArea @bind-Value="editingFood.Description" class="form-control" rows="3" />
+                            <label class="form-label">📝 Mô tả</label>
+                            <InputTextArea @bind-Value="editingFood.Description" class="form-control" rows="2" />
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Giá (VND)</label>
+                            <label class="form-label">💰 Giá (VND)</label>
                             <InputNumber @bind-Value="editingFood.Price" class="form-control" placeholder="50000" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">📍 Địa điểm</label>
+                            <InputSelect @bind-Value="editingFood.LocationId" class="form-select">
+                                <option value="">-- Chọn địa điểm --</option>
+                                @if (locations != null)
+                                {
+                                    @foreach (var loc in locations)
+                                    {
+                                        <option value="@loc.Id">📍 @loc.Name</option>
+                                    }
+                                }
+                            </InputSelect>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">📂 Phân loại</label>
@@ -125,28 +154,6 @@
                             <label class="form-label">🖼️ Link hình ảnh</label>
                             <InputText @bind-Value="editingFood.ImageUrl" class="form-control" placeholder="https://example.com/image.jpg" />
                         </div>
-                        <div class="row mb-3">
-                            <div class="col-6">
-                                <label class="form-label">📍 Vĩ độ</label>
-                                <InputNumber @bind-Value="editingFood.Latitude" class="form-control" />
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label">📍 Kinh độ</label>
-                                <InputNumber @bind-Value="editingFood.Longitude" class="form-control" />
-                            </div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-6">
-                                <label class="form-label">📏 Bán kính (m)</label>
-                                <InputNumber @bind-Value="editingFood.Radius" class="form-control" />
-                                <small class="text-muted">Bán kính kích hoạt geofence</small>
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label">⭐ Độ ưu tiên</label>
-                                <InputNumber @bind-Value="editingFood.Priority" class="form-control" />
-                                <small class="text-muted">Số cao hơn = ưu tiên hơn</small>
-                            </div>
-                        </div>
                         <div class="mt-4 d-flex gap-2">
                             <button type="submit" class="btn btn-admin btn-admin-primary flex-grow-1">💾 Lưu</button>
                             <button type="button" class="btn btn-outline-secondary" @onclick="CloseModal">Hủy</button>
@@ -158,6 +165,7 @@
     </div>
 }
 
+@* Modal upload audio *@
 @if (showAudioModal)
 {
     <div class="modal show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
@@ -189,47 +197,45 @@
 @code {
     private List<FoodDto>? foods;
     private List<CategoryDto>? categories;
+    private List<LocationDto>? locations;
     private bool showModal = false;
     private bool showAudioModal = false;
     private string modalTitle = "";
     private FoodDto editingFood = new() { Name = "" };
     private int selectedFoodIdForAudio;
     private bool uploading = false;
+    private string? errorMessage;
+    private string? successMessage;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadFoods();
         await LoadCategories();
+        await LoadLocations();
     }
 
     private async Task LoadFoods()
     {
-        try
-        {
-            foods = await FoodService.GetAllFoods();
-        }
-        catch
-        {
-            foods = new List<FoodDto>();
-        }
+        try { foods = await FoodService.GetAllFoods(); }
+        catch { foods = new(); }
     }
 
     private async Task LoadCategories()
     {
-        try
-        {
-            categories = await Http.GetFromJsonAsync<List<CategoryDto>>("api/category");
-        }
-        catch
-        {
-            categories = new List<CategoryDto>();
-        }
+        try { categories = await Http.GetFromJsonAsync<List<CategoryDto>>("api/category"); }
+        catch { categories = new(); }
+    }
+
+    private async Task LoadLocations()
+    {
+        try { locations = await LocationService.GetAllLocations(); }
+        catch { locations = new(); }
     }
 
     private void ShowCreateModal()
     {
         editingFood = new FoodDto { Name = "", Description = "" };
-        modalTitle = "➕ " + L["CreateNewFood"];
+        modalTitle = "➕ Thêm món mới";
         showModal = true;
     }
 
@@ -238,76 +244,59 @@
         var dto = await FoodService.GetFood(id);
         if (dto != null)
         {
-            editingFood = new FoodDto 
-            { 
-                Id = dto.Id, 
-                Name = dto.Name, 
-                Description = dto.Description, 
+            editingFood = new FoodDto
+            {
+                Id = dto.Id,
+                Name = dto.Name,
+                Description = dto.Description,
                 Price = dto.Price,
-                Latitude = dto.Latitude,
-                Longitude = dto.Longitude,
                 ImageUrl = dto.ImageUrl,
-                Radius = dto.Radius,
-                Priority = dto.Priority,
+                LocationId = dto.LocationId,
                 CategoryId = dto.CategoryId
             };
         }
-        modalTitle = "✏️ " + L["EditFood"];
+        modalTitle = "✏️ Sửa món ăn";
         showModal = true;
     }
 
-    private void ShowAudioModal(int id)
-    {
-        selectedFoodIdForAudio = id;
-        showAudioModal = true;
-    }
-
+    private void ShowAudioModal(int id) { selectedFoodIdForAudio = id; showAudioModal = true; }
     private void CloseModal() => showModal = false;
     private void CloseAudioModal() => showAudioModal = false;
 
     private async Task SaveFood()
     {
-        if (editingFood.Id == 0)
+        try
         {
-            await FoodService.CreateFood(editingFood);
+            if (editingFood.Id == 0)
+            {
+                await FoodService.CreateFood(editingFood);
+                successMessage = $"Đã tạo \"{editingFood.Name}\"";
+            }
+            else
+            {
+                await FoodService.UpdateFood(editingFood.Id, editingFood);
+                successMessage = $"Đã cập nhật \"{editingFood.Name}\"";
+            }
+            showModal = false;
+            await LoadFoods();
         }
-        else
+        catch (Exception ex)
         {
-            await FoodService.UpdateFood(editingFood.Id, editingFood);
+            errorMessage = $"Lỗi: {ex.Message}";
         }
-        showModal = false;
-        await LoadFoods();
     }
 
     private async Task DeleteFood(int id)
     {
-        await FoodService.DeleteFood(id);
-        await LoadFoods();
-    }
-
-    private async Task ApproveFood(int id)
-    {
         try
         {
-            await Http.PostAsync($"api/food/{id}/approve", null);
+            await FoodService.DeleteFood(id);
+            successMessage = "Đã xóa món ăn";
             await LoadFoods();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error approving food: {ex.Message}");
-        }
-    }
-
-    private async Task RejectFood(int id)
-    {
-        try
-        {
-            await Http.PostAsync($"api/food/{id}/reject", null);
-            await LoadFoods();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error rejecting food: {ex.Message}");
+            errorMessage = $"Không thể xóa: {ex.Message}";
         }
     }
 
@@ -324,10 +313,11 @@
 
             await FoodService.UploadAudio(selectedFoodIdForAudio, content);
             showAudioModal = false;
+            successMessage = "Đã tải lên audio";
         }
         catch (Exception ex)
         {
-            Console.WriteLine(ex.Message);
+            errorMessage = $"Lỗi upload: {ex.Message}";
         }
         finally
         {

@@ -85,20 +85,22 @@ namespace PROJECT_C_.Controllers
         /// </summary>
         private async Task<List<NearbyPoiResponse>> GetNearbyPoisInternal(double lat, double lng, double radius)
         {
-            var foods = await _context.Foods.ToListAsync();
+            var locations = await _context.Locations
+                .Where(l => l.IsApproved)
+                .ToListAsync();
 
-            var nearbyPois = foods
-                .Select(f => new NearbyPoiResponse
+            var nearbyPois = locations
+                .Select(l => new NearbyPoiResponse
                 {
-                    Id = f.Id,
-                    Name = f.Name,
-                    Description = f.Description,
-                    Latitude = f.Latitude,
-                    Longitude = f.Longitude,
-                    Radius = f.Radius,
-                    ImageUrl = f.ImageUrl,
-                    Distance = CalculateHaversineDistance(lat, lng, f.Latitude, f.Longitude),
-                    IsInGeofence = CalculateHaversineDistance(lat, lng, f.Latitude, f.Longitude) <= f.Radius
+                    Id = l.Id,
+                    Name = l.Name,
+                    Description = l.Description,
+                    Latitude = l.Latitude,
+                    Longitude = l.Longitude,
+                    Radius = l.Radius,
+                    ImageUrl = l.ImageUrl,
+                    Distance = CalculateHaversineDistance(lat, lng, l.Latitude, l.Longitude),
+                    IsInGeofence = CalculateHaversineDistance(lat, lng, l.Latitude, l.Longitude) <= l.Radius
                 })
                 .Where(p => p.Distance <= radius)
                 .OrderBy(p => p.Distance)

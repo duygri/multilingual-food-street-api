@@ -105,6 +105,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // APPLICATION SERVICES
 // ========================================
 builder.Services.AddScoped<IFoodService, FoodService>();
+builder.Services.AddScoped<ILocationService, LocationService>();
 builder.Services.AddScoped<IDistanceCalculator, DistanceCalculator>();
 
 // ========================================

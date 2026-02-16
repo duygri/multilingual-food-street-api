@@ -1,29 +1,83 @@
 @page "/admin/locations"
+@page "/seller/locations"
 @layout AdminLayout
+@inject FoodStreet.Client.Services.ILocationClientService LocationService
+@using FoodStreet.Client.DTOs
+@inject NavigationManager Navigation
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="mb-0">📍 Quản lý Địa điểm</h3>
-    <button class="btn btn-admin btn-admin-primary" @onclick="ShowCreateModal">
-        ➕ Thêm địa điểm mới
-    </button>
+    <h3 class="mb-0">📍 @(isAdmin ? "Quản lý POI" : "POI của tôi")</h3>
+    @if (!isAdmin)
+    {
+        <button class="btn btn-admin btn-admin-primary" @onclick="ShowCreateModal">
+            ➕ Gửi yêu cầu POI
+        </button>
+    }
 </div>
 
+@* Tabs: Admin thấy Tất cả + Chờ duyệt, Seller thấy POI của mình *@
+@if (isAdmin)
+{
+    <ul class="nav nav-tabs mb-3">
+        <li class="nav-item">
+            <button class="nav-link @(activeTab == "all" ? "active" : "")" @onclick='() => SwitchTab("all")'>
+                📋 Tất cả (@(allLocations?.Count ?? 0))
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link @(activeTab == "pending" ? "active" : "")" @onclick='() => SwitchTab("pending")'>
+                ⏳ Chờ duyệt (@(pendingLocations?.Count ?? 0))
+            </button>
+        </li>
+    </ul>
+}
+else
+{
+    <div class="alert alert-info mb-3">
+        💡 <strong>Lưu ý:</strong> POI bạn tạo sẽ ở trạng thái <span class="badge bg-warning text-dark">Chờ duyệt</span> cho đến khi Admin phê duyệt.
+    </div>
+}
+
+@if (errorMessage != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        ❌ @errorMessage
+        <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+    </div>
+}
+
+@if (successMessage != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        ✅ @successMessage
+        <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+    </div>
+}
+
 <div class="admin-card">
-    @if (locations == null)
+    @if (displayedLocations == null)
     {
         <div class="text-center py-5">
             <div class="spinner-border text-primary" role="status">
                 <span class="visually-hidden">Đang tải...</span>
             </div>
-            <p class="mt-3 text-muted">Đang tải danh sách địa điểm...</p>
+            <p class="mt-3 text-muted">Đang tải...</p>
         </div>
     }
-    else if (locations.Count == 0)
+    else if (displayedLocations.Count == 0)
     {
         <div class="text-center py-5">
             <div style="font-size: 4rem;">🗺️</div>
-            <h5 class="mt-3">Chưa có địa điểm nào</h5>
-            <p class="text-muted">Nhấn "Thêm địa điểm mới" để tạo mới.</p>
+            @if (isAdmin)
+            {
+                <h5 class="mt-3">@(activeTab == "pending" ? "Không có POI nào chờ duyệt" : "Chưa có POI nào")</h5>
+                <p class="text-muted">@(activeTab == "pending" ? "Tất cả đã được xử lý." : "Chờ Seller gửi yêu cầu tạo POI.")</p>
+            }
+            else
+            {
+                <h5 class="mt-3">Bạn chưa có POI nào</h5>
+                <p class="text-muted">Nhấn "Gửi yêu cầu POI" để tạo POI đầu tiên.</p>
+            }
         </div>
     }
     else
@@ -31,26 +85,68 @@
         <table class="admin-table">
             <thead>
                 <tr>
-                    <th>Tên địa điểm</th>
-                    <th>Mô tả</th>
-                    <th>Vĩ độ</th>
-                    <th>Kinh độ</th>
-                    <th>Bán kính (m)</th>
-                    <th style="width: 150px;">Thao tác</th>
+                    <th>Tên POI</th>
+                    <th>Địa chỉ</th>
+                    <th>Tọa độ</th>
+                    <th>Bán kính</th>
+                    <th>Trạng thái</th>
+                    @if (isAdmin) { <th>Món ăn</th> }
+                    <th style="width: 220px;">Thao tác</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach (var loc in locations)
+                @foreach (var loc in displayedLocations)
                 {
                     <tr>
-                        <td><strong>@loc.Name</strong></td>
-                        <td class="text-muted">@(loc.Description?.Length > 40 ? loc.Description.Substring(0, 40) + "..." : loc.Description)</td>
-                        <td><code>@loc.Latitude.ToString("F6")</code></td>
-                        <td><code>@loc.Longitude.ToString("F6")</code></td>
+                        <td>
+                            <strong>@loc.Name</strong>
+                            @if (!string.IsNullOrEmpty(loc.Description))
+                            {
+                                <br /><small class="text-muted">@(loc.Description.Length > 40 ? loc.Description.Substring(0, 40) + "..." : loc.Description)</small>
+                            }
+                        </td>
+                        <td class="text-muted">@(loc.Address ?? "—")</td>
+                        <td><code>@loc.Latitude.ToString("F4"), @loc.Longitude.ToString("F4")</code></td>
                         <td><span class="badge bg-info">@loc.Radius m</span></td>
                         <td>
-                            <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => ShowEditModal(loc)">✏️ Sửa</button>
-                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteLocation(loc.Id)">🗑️</button>
+                            @if (loc.IsApproved)
+                            {
+                                <span class="badge bg-success">✅ Đã duyệt</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning text-dark">⏳ Chờ duyệt</span>
+                            }
+                        </td>
+                        @if (isAdmin)
+                        {
+                            <td><span class="badge bg-secondary">@loc.FoodCount món</span></td>
+                        }
+                        <td>
+                            @if (isAdmin)
+                            {
+                                @* Admin: Duyệt/Từ chối nếu đang chờ + Sửa/Xóa *@
+                                @if (!loc.IsApproved)
+                                {
+                                    <button class="btn btn-sm btn-success me-1" @onclick="() => ApproveLocation(loc.Id)" title="Duyệt">✅</button>
+                                    <button class="btn btn-sm btn-danger me-1" @onclick="() => RejectLocation(loc.Id)" title="Từ chối">❌</button>
+                                }
+                                <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => ShowEditModal(loc)" title="Sửa">✏️</button>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteLocation(loc.Id)" title="Xóa">🗑️</button>
+                            }
+                            else
+                            {
+                                @* Seller: chỉ Sửa/Xóa nếu chưa duyệt *@
+                                @if (!loc.IsApproved)
+                                {
+                                    <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => ShowEditModal(loc)" title="Sửa">✏️ Sửa</button>
+                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteLocation(loc.Id)" title="Xóa">🗑️ Xóa</button>
+                                }
+                                else
+                                {
+                                    <span class="text-muted small">Đã duyệt — không thể sửa</span>
+                                }
+                            }
                         </td>
                     </tr>
                 }
@@ -59,43 +155,77 @@
     }
 </div>
 
+@* Modal thêm/sửa POI *@
 @if (showModal)
 {
     <div class="modal show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content admin-modal">
                 <div class="modal-header">
                     <h5 class="modal-title">@modalTitle</h5>
                     <button type="button" class="btn-close" @onclick="CloseModal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Tên địa điểm</label>
-                        <input type="text" class="form-control" @bind="editingLocation.Name" placeholder="VD: Vĩnh Khánh" />
+                    @if (!isAdmin)
+                    {
+                        <div class="alert alert-warning mb-3">
+                            📋 POI sẽ ở trạng thái <strong>Chờ duyệt</strong> cho đến khi Admin phê duyệt.
+                        </div>
+                    }
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">📍 Tên POI *</label>
+                            <input type="text" class="form-control" @bind="editingLocation.Name" placeholder="VD: Quán Phở Vĩnh Khánh" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">🏠 Địa chỉ</label>
+                            <input type="text" class="form-control" @bind="editingLocation.Address" placeholder="VD: 123 Đường Vĩnh Khánh, Q.4" />
+                        </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Mô tả</label>
-                        <textarea class="form-control" rows="3" @bind="editingLocation.Description" placeholder="Mô tả địa điểm..."></textarea>
+                        <label class="form-label">📝 Mô tả</label>
+                        <textarea class="form-control" rows="2" @bind="editingLocation.Description" placeholder="Mô tả ngắn về POI..."></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">🌐 Vĩ độ (Latitude)</label>
+                            <input type="number" step="0.000001" class="form-control" @bind="editingLocation.Latitude" />
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">🌐 Kinh độ (Longitude)</label>
+                            <input type="number" step="0.000001" class="form-control" @bind="editingLocation.Longitude" />
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">📏 Bán kính (m)</label>
+                            <input type="number" class="form-control" @bind="editingLocation.Radius" />
+                            <small class="text-muted">Phạm vi geofence</small>
+                        </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Vĩ độ (Latitude)</label>
-                            <input type="number" step="0.000001" class="form-control" @bind="editingLocation.Latitude" />
+                            <label class="form-label">⭐ Độ ưu tiên</label>
+                            <input type="number" class="form-control" @bind="editingLocation.Priority" />
+                            <small class="text-muted">Số cao hơn = ưu tiên hơn</small>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Kinh độ (Longitude)</label>
-                            <input type="number" step="0.000001" class="form-control" @bind="editingLocation.Longitude" />
+                            <label class="form-label">🖼️ Link hình ảnh</label>
+                            <input type="text" class="form-control" @bind="editingLocation.ImageUrl" placeholder="https://example.com/image.jpg" />
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Bán kính kích hoạt (m)</label>
-                        <input type="number" class="form-control" @bind="editingLocation.Radius" />
-                        <small class="text-muted">Phạm vi kích hoạt geofence</small>
+                        <label class="form-label">🔊 TTS Script (tùy chọn)</label>
+                        <textarea class="form-control" rows="2" @bind="editingLocation.TtsScript" placeholder="Nội dung đọc tự động khi vào vùng geofence..."></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" @onclick="CloseModal">Hủy</button>
-                    <button type="button" class="btn btn-primary" @onclick="SaveLocation">Lưu</button>
+                    <button type="button" class="btn btn-primary" @onclick="SaveLocation" disabled="@saving">
+                        @if (saving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        @(isAdmin ? "💾 Lưu" : "📤 Gửi yêu cầu")
+                    </button>
                 </div>
             </div>
         </div>
@@ -103,100 +233,168 @@
 }
 
 @code {
-    private List<LocationModel>? locations;
+    private List<LocationDto>? allLocations;
+    private List<LocationDto>? pendingLocations;
+    private List<LocationDto>? displayedLocations;
+    private string activeTab = "all";
+    private bool isAdmin = false;
+
     private bool showModal = false;
     private string modalTitle = "";
-    private LocationModel editingLocation = new();
+    private LocationDto editingLocation = new();
     private bool isEditing = false;
+    private bool saving = false;
+
+    private string? errorMessage;
+    private string? successMessage;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadLocations();
+        // Detect role from URL path (reliable, no auth state timing issues)
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri).AbsolutePath.ToLower();
+        isAdmin = uri.StartsWith("/admin/");
+
+        await LoadData();
     }
 
-    private async Task LoadLocations()
+    private async Task LoadData()
     {
-        // Placeholder data - in real app, load from API
-        locations = new List<LocationModel>
+        try
         {
-            new LocationModel 
-            { 
-                Id = 1, 
-                Name = "Vĩnh Khánh", 
-                Description = "Thiên đường ẩm thực Quận 4", 
-                Latitude = 10.7580, 
-                Longitude = 106.7034, 
-                Radius = 500 
+            if (isAdmin)
+            {
+                // Admin: xem tất cả + pending
+                allLocations = await LocationService.GetAllLocations();
+                pendingLocations = await LocationService.GetPendingLocations();
             }
-        };
-        await Task.CompletedTask;
+            else
+            {
+                // Seller: chỉ xem POI của mình
+                allLocations = await LocationService.GetMyLocations();
+                pendingLocations = allLocations?.Where(l => !l.IsApproved).ToList() ?? new();
+            }
+            UpdateDisplayedLocations();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Không thể tải dữ liệu: {ex.Message}";
+            allLocations = new();
+            pendingLocations = new();
+            displayedLocations = new();
+        }
+    }
+
+    private void SwitchTab(string tab)
+    {
+        activeTab = tab;
+        UpdateDisplayedLocations();
+    }
+
+    private void UpdateDisplayedLocations()
+    {
+        displayedLocations = activeTab == "pending" ? pendingLocations : allLocations;
     }
 
     private void ShowCreateModal()
     {
-        editingLocation = new LocationModel();
-        modalTitle = "Thêm địa điểm mới";
+        editingLocation = new LocationDto { Radius = 50 };
+        modalTitle = isAdmin ? "➕ Thêm POI mới" : "📤 Gửi yêu cầu tạo POI";
         isEditing = false;
         showModal = true;
     }
 
-    private void ShowEditModal(LocationModel loc)
+    private void ShowEditModal(LocationDto loc)
     {
-        editingLocation = new LocationModel
+        editingLocation = new LocationDto
         {
             Id = loc.Id,
             Name = loc.Name,
             Description = loc.Description,
+            Address = loc.Address,
             Latitude = loc.Latitude,
             Longitude = loc.Longitude,
-            Radius = loc.Radius
+            Radius = loc.Radius,
+            Priority = loc.Priority,
+            ImageUrl = loc.ImageUrl,
+            TtsScript = loc.TtsScript,
+            CategoryId = loc.CategoryId
         };
-        modalTitle = "Sửa địa điểm";
+        modalTitle = "✏️ Sửa POI";
         isEditing = true;
         showModal = true;
     }
 
-    private void CloseModal()
-    {
-        showModal = false;
-    }
+    private void CloseModal() => showModal = false;
 
     private async Task SaveLocation()
     {
-        if (isEditing)
+        saving = true;
+        try
         {
-            var existing = locations?.FirstOrDefault(l => l.Id == editingLocation.Id);
-            if (existing != null)
+            if (isEditing)
             {
-                existing.Name = editingLocation.Name;
-                existing.Description = editingLocation.Description;
-                existing.Latitude = editingLocation.Latitude;
-                existing.Longitude = editingLocation.Longitude;
-                existing.Radius = editingLocation.Radius;
+                await LocationService.UpdateLocation(editingLocation.Id, editingLocation);
+                successMessage = $"Đã cập nhật \"{editingLocation.Name}\"";
             }
+            else
+            {
+                await LocationService.CreateLocation(editingLocation);
+                successMessage = isAdmin
+                    ? $"Đã tạo \"{editingLocation.Name}\""
+                    : $"Đã gửi yêu cầu tạo \"{editingLocation.Name}\" — chờ Admin duyệt";
+            }
+            showModal = false;
+            await LoadData();
         }
-        else
+        catch (Exception ex)
         {
-            editingLocation.Id = (locations?.Max(l => l.Id) ?? 0) + 1;
-            locations?.Add(editingLocation);
+            errorMessage = $"Lỗi: {ex.Message}";
         }
-        showModal = false;
-        await Task.CompletedTask;
+        finally
+        {
+            saving = false;
+        }
     }
 
     private async Task DeleteLocation(int id)
     {
-        locations?.RemoveAll(l => l.Id == id);
-        await Task.CompletedTask;
+        try
+        {
+            await LocationService.DeleteLocation(id);
+            successMessage = "Đã xóa POI";
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Không thể xóa: {ex.Message}";
+        }
     }
 
-    public class LocationModel
+    private async Task ApproveLocation(int id)
     {
-        public int Id { get; set; }
-        public string Name { get; set; } = "";
-        public string? Description { get; set; }
-        public double Latitude { get; set; }
-        public double Longitude { get; set; }
-        public int Radius { get; set; } = 100;
+        try
+        {
+            await LocationService.ApproveLocation(id);
+            successMessage = "✅ Đã duyệt POI";
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Lỗi duyệt: {ex.Message}";
+        }
+    }
+
+    private async Task RejectLocation(int id)
+    {
+        try
+        {
+            await LocationService.RejectLocation(id);
+            successMessage = "❌ Đã từ chối POI";
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Lỗi từ chối: {ex.Message}";
+        }
     }
 }

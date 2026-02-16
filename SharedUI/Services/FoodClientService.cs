@@ -1,15 +1,12 @@
 using System.Net.Http.Json;
 using FoodStreet.Client.DTOs;
 
-
-
 namespace FoodStreet.Client.Services
 {
     public interface IFoodClientService
     {
-        Task<PagedResult<FoodDto>?> GetNearestFoods(double lat, double lng, int page, int pageSize);
-        Task<PagedResult<FoodDto>?> GetFoods();
         Task<List<FoodDto>> GetAllFoods();
+        Task<List<FoodDto>> GetFoodsByLocation(int locationId);
         Task<FoodDto?> GetFood(int id);
         Task CreateFood(FoodDto food);
         Task UpdateFood(int id, FoodDto food);
@@ -43,28 +40,16 @@ namespace FoodStreet.Client.Services
             OnLanguageChanged?.Invoke();
         }
 
-        public async Task<PagedResult<FoodDto>?> GetNearestFoods(double lat, double lng, int page, int pageSize)
-        {
-             // Header is already handled by SetLanguage logic if we use DefaultRequestHeaders
-             // But to be sure, let's just make the call.
-             // Note: DefaultRequestHeaders is the cleanest way for injected HttpClient.
-            
-            return await _http.GetFromJsonAsync<PagedResult<FoodDto>>(
-                $"api/Food/near?lat={lat}&lng={lng}&page={page}&pageSize={pageSize}"); 
-        }
-
         public async Task<List<FoodDto>> GetAllFoods()
         {
-             // For Admin List
-             var result = await _http.GetFromJsonAsync<PagedResult<FoodDto>>($"api/Food/near?lat=0&lng=0&page=1&pageSize=100");
-             return result?.Items ?? new List<FoodDto>();
+            return await _http.GetFromJsonAsync<List<FoodDto>>("api/Food") ?? new();
         }
 
-        public async Task<PagedResult<FoodDto>?> GetFoods()
+        public async Task<List<FoodDto>> GetFoodsByLocation(int locationId)
         {
-             return await _http.GetFromJsonAsync<PagedResult<FoodDto>>($"api/Food/near?lat=0&lng=0&page=1&pageSize=100");
+            return await _http.GetFromJsonAsync<List<FoodDto>>($"api/Food/by-location/{locationId}") ?? new();
         }
-        
+
         public async Task<FoodDto?> GetFood(int id)
         {
             return await _http.GetFromJsonAsync<FoodDto>($"api/Food/{id}");
@@ -72,23 +57,23 @@ namespace FoodStreet.Client.Services
 
         public async Task CreateFood(FoodDto food)
         {
-             await _http.PostAsJsonAsync("api/Food", food);
+            await _http.PostAsJsonAsync("api/Food", food);
         }
 
         public async Task UpdateFood(int id, FoodDto food)
         {
-             await _http.PutAsJsonAsync($"api/Food/{id}", food);
+            await _http.PutAsJsonAsync($"api/Food/{id}", food);
         }
 
         public async Task DeleteFood(int id)
         {
-             await _http.DeleteAsync($"api/Food/{id}");
+            await _http.DeleteAsync($"api/Food/{id}");
         }
 
         public async Task UploadAudio(int foodId, MultipartFormDataContent content)
         {
-             content.Add(new StringContent(foodId.ToString()), "foodId");
-             await _http.PostAsync("api/admin/audio/upload", content);
+            content.Add(new StringContent(foodId.ToString()), "foodId");
+            await _http.PostAsync("api/admin/audio/upload", content);
         }
     }
 }

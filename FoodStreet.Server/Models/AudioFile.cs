@@ -14,11 +14,17 @@ namespace PROJECT_C_.Models
         public long Size { get; set; }
         public double DurationSeconds { get; set; }
 
-        // Relationship to Food/POI
+        // Relationship to Food
         public int? FoodId { get; set; }
         [ForeignKey("FoodId")]
         [System.Text.Json.Serialization.JsonIgnore]
         public Food? Food { get; set; }
+
+        // Relationship to Location (POI)
+        public int? LocationId { get; set; }
+        [ForeignKey("LocationId")]
+        [System.Text.Json.Serialization.JsonIgnore]
+        public Location? Location { get; set; }
 
         public DateTime UploadedAt { get; set; } = DateTime.UtcNow;
     }

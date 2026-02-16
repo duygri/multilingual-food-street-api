@@ -89,8 +89,8 @@ namespace PROJECT_C_.Controllers
                     i.FoodId,
                     FoodName = i.Food?.Name,
                     FoodImageUrl = i.Food?.ImageUrl,
-                    FoodLatitude = i.Food?.Latitude,
-                    FoodLongitude = i.Food?.Longitude,
+                    FoodLatitude = i.Food != null && i.Food.Location != null ? i.Food.Location.Latitude : (double?)null,
+                    FoodLongitude = i.Food != null && i.Food.Location != null ? i.Food.Location.Longitude : (double?)null,
                     i.Order,
                     i.Note,
                     i.EstimatedStopMinutes

@@ -15,6 +15,8 @@ namespace PROJECT_C_.Data
 
         public DbSet<Food> Foods => Set<Food>();
         public DbSet<FoodTranslation> FoodTranslations => Set<FoodTranslation>();
+        public DbSet<Location> Locations => Set<Location>();
+        public DbSet<LocationTranslation> LocationTranslations => Set<LocationTranslation>();
         public DbSet<AudioFile> AudioFiles => Set<AudioFile>();
         public DbSet<PlayLog> PlayLogs => Set<PlayLog>();
         public DbSet<Tour> Tours => Set<Tour>();
@@ -29,6 +31,44 @@ namespace PROJECT_C_.Data
                 .Property(f => f.Price)
                 .HasColumnType("decimal(18,2)");
 
+            // === Location Seed Data ===
+            modelBuilder.Entity<Location>().HasData(
+                new Location
+                {
+                    Id = 1,
+                    Name = "Quán Phở Bò Vĩnh Khánh",
+                    Description = "Quán phở bò truyền thống",
+                    Address = "Đường Vĩnh Khánh, Q.4, TP.HCM",
+                    Latitude = 10.776889,
+                    Longitude = 106.700806,
+                    Radius = 50,
+                    IsApproved = true
+                },
+                new Location
+                {
+                    Id = 2,
+                    Name = "Tiệm Bánh Mì Sài Gòn",
+                    Description = "Bánh mì nóng giòn",
+                    Address = "Đường Vĩnh Khánh, Q.4, TP.HCM",
+                    Latitude = 10.762622,
+                    Longitude = 106.660172,
+                    Radius = 50,
+                    IsApproved = true
+                },
+                new Location
+                {
+                    Id = 3,
+                    Name = "Quán Cơm Tấm Bụi",
+                    Description = "Cơm tấm sườn nướng",
+                    Address = "Đường Vĩnh Khánh, Q.4, TP.HCM",
+                    Latitude = 10.792375,
+                    Longitude = 106.691689,
+                    Radius = 50,
+                    IsApproved = true
+                }
+            );
+
+            // === Food Seed Data (thuộc Location) ===
             modelBuilder.Entity<Food>().HasData(
                 new Food
                 {
@@ -36,8 +76,7 @@ namespace PROJECT_C_.Data
                     Name = "Pho Bo",
                     Description = "Traditional Vietnamese beef noodle soup",
                     Price = 45000,
-                    Latitude = 10.776889,
-                    Longitude = 106.700806
+                    LocationId = 1
                 },
                 new Food
                 {
@@ -45,8 +84,7 @@ namespace PROJECT_C_.Data
                     Name = "Banh Mi",
                     Description = "Vietnamese baguette sandwich",
                     Price = 25000,
-                    Latitude = 10.762622,
-                    Longitude = 106.660172
+                    LocationId = 2
                 },
                 new Food
                 {
@@ -54,8 +92,7 @@ namespace PROJECT_C_.Data
                     Name = "Com Tam",
                     Description = "Broken rice with grilled pork",
                     Price = 50000,
-                    Latitude = 10.792375,
-                    Longitude = 106.691689
+                    LocationId = 3
                 }
             );
 
@@ -96,6 +133,27 @@ namespace PROJECT_C_.Data
                 .WithMany(c => c.Foods)
                 .HasForeignKey(f => f.CategoryId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            // Food - Location relationship
+            modelBuilder.Entity<Food>()
+                .HasOne(f => f.Location)
+                .WithMany(l => l.Foods)
+                .HasForeignKey(f => f.LocationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Location - Category relationship
+            modelBuilder.Entity<Location>()
+                .HasOne(l => l.Category)
+                .WithMany(c => c.Locations)
+                .HasForeignKey(l => l.CategoryId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // LocationTranslation Configuration
+            modelBuilder.Entity<LocationTranslation>()
+                .HasOne(lt => lt.Location)
+                .WithMany(l => l.Translations)
+                .HasForeignKey(lt => lt.LocationId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             base.OnModelCreating(modelBuilder);
         }

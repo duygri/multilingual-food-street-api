@@ -9,5 +9,7 @@ namespace PROJECT_C_.Models
         
         [System.Text.Json.Serialization.JsonIgnore]
         public ICollection<Food> Foods { get; set; } = new List<Food>();
+        [System.Text.Json.Serialization.JsonIgnore]
+        public ICollection<Location> Locations { get; set; } = new List<Location>();
     }
 }

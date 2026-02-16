@@ -44,7 +44,7 @@ namespace PROJECT_C_.Controllers
         {
             if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
             {
-                return BadRequest(new AuthResponse { Success = false, Message = "Email and password are required" });
+                return BadRequest(new AuthResponse { Success = false, Message = "Vui lòng nhập email và mật khẩu" });
             }
 
             // Validate Role
@@ -72,7 +72,7 @@ namespace PROJECT_C_.Controllers
                 return BadRequest(new AuthResponse
                 {
                     Success = false,
-                    Message = "Registration failed",
+                    Message = "Đăng ký thất bại",
                     Errors = result.Errors.Select(e => e.Description).ToList()
                 });
             }
@@ -86,7 +86,7 @@ namespace PROJECT_C_.Controllers
                 return Ok(new AuthResponse
                 {
                     Success = true,
-                    Message = "Account created. Please wait for Admin approval."
+                    Message = "Tài khoản đã được tạo. Vui lòng chờ Admin phê duyệt."
                 });
             }
 
@@ -101,7 +101,7 @@ namespace PROJECT_C_.Controllers
                 RefreshToken = refreshToken,
                 ExpiresAt = DateTime.UtcNow.AddMinutes(_jwtSettings.AccessTokenExpiryMinutes),
                 Email = user.Email,
-                Message = "Registration successful"
+                Message = "Đăng ký thành công"
             });
         }
 
@@ -117,7 +117,7 @@ namespace PROJECT_C_.Controllers
                 return BadRequest(new AuthResponse
                 {
                     Success = false,
-                    Message = "Email and password are required"
+                    Message = "Vui lòng nhập email và mật khẩu"
                 });
             }
 
@@ -128,7 +128,7 @@ namespace PROJECT_C_.Controllers
                 return Unauthorized(new AuthResponse
                 {
                     Success = false,
-                    Message = "Invalid email or password"
+                    Message = "Email hoặc mật khẩu không đúng"
                 });
             }
 
@@ -139,7 +139,7 @@ namespace PROJECT_C_.Controllers
                 return Unauthorized(new AuthResponse
                 {
                     Success = false,
-                    Message = "Account is not approved yet or has been locked."
+                    Message = "Tài khoản chưa được phê duyệt hoặc đã bị khóa."
                 });
             }
 
@@ -149,7 +149,7 @@ namespace PROJECT_C_.Controllers
                 return Unauthorized(new AuthResponse
                 {
                     Success = false,
-                    Message = "Invalid email or password"
+                    Message = "Email hoặc mật khẩu không đúng"
                 });
             }
 
@@ -165,7 +165,7 @@ namespace PROJECT_C_.Controllers
                 RefreshToken = refreshToken,
                 ExpiresAt = DateTime.UtcNow.AddMinutes(_jwtSettings.AccessTokenExpiryMinutes),
                 Email = user.Email,
-                Message = "Login successful"
+                Message = "Đăng nhập thành công"
             });
         }
 

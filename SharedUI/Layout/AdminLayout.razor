@@ -4,6 +4,7 @@
 @inject ILocalizationService L
 @inject IFoodClientService FoodClient
 @inject IJSRuntime JS
+@inject AuthenticationStateProvider AuthStateProvider
 
 <AuthorizeView>
     <Authorized>
@@ -15,7 +16,10 @@
                         <span class="logo-icon">🍜</span>
                         <div class="logo-text">
                             <span class="logo-title">Vĩnh Khánh</span>
-                            <span class="logo-subtitle">Admin CMS</span>
+                            <span class="logo-subtitle">
+                                <AuthorizeView Roles="Admin"><Authorized Context="ctx1">Admin CMS</Authorized></AuthorizeView>
+                                <AuthorizeView Roles="Seller"><Authorized Context="ctx2">Seller</Authorized></AuthorizeView>
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -31,20 +35,40 @@
                                 </NavLink>
                             </Authorized>
                         </AuthorizeView>
-                        <NavLink class="nav-item" href="admin/dashboard" Match="NavLinkMatch.All">
-                            <span class="nav-icon">📊</span>
-                            <span class="nav-text">Thống kê</span>
-                        </NavLink>
-                        <NavLink class="nav-item" href="admin/foods">
-                            <span class="nav-icon">🍲</span>
-                            <span class="nav-text">Quản lý Món ăn</span>
-                        </NavLink>
+                        <AuthorizeView Roles="Admin">
+                            <Authorized Context="AuthContext">
+                                <NavLink class="nav-item" href="admin/dashboard" Match="NavLinkMatch.All">
+                                    <span class="nav-icon">📊</span>
+                                    <span class="nav-text">Thống kê</span>
+                                </NavLink>
+                            </Authorized>
+                        </AuthorizeView>
                         <AuthorizeView Roles="Admin">
                             <Authorized Context="AuthContext">
                                 <NavLink class="nav-item" href="admin/locations">
                                     <span class="nav-icon">📍</span>
-                                    <span class="nav-text">Địa điểm</span>
+                                    <span class="nav-text">Quản lý POI</span>
                                 </NavLink>
+                                <NavLink class="nav-item" href="admin/foods">
+                                    <span class="nav-icon">🍲</span>
+                                    <span class="nav-text">Món ăn</span>
+                                </NavLink>
+                            </Authorized>
+                        </AuthorizeView>
+                        <AuthorizeView Roles="Seller">
+                            <Authorized Context="AuthContext">
+                                <NavLink class="nav-item" href="seller/locations">
+                                    <span class="nav-icon">📍</span>
+                                    <span class="nav-text">POI của tôi</span>
+                                </NavLink>
+                                <NavLink class="nav-item" href="seller/foods">
+                                    <span class="nav-icon">🍲</span>
+                                    <span class="nav-text">Món ăn</span>
+                                </NavLink>
+                            </Authorized>
+                        </AuthorizeView>
+                        <AuthorizeView Roles="Admin">
+                            <Authorized Context="AuthContext">
                                 <NavLink class="nav-item" href="admin/tours">
                                     <span class="nav-icon">🗺️</span>
                                     <span class="nav-text">Quản lý Tour</span>
@@ -120,7 +144,10 @@
                     <div class="header-left">
                         <h1 class="page-title">@GetPageTitle()</h1>
                         <nav class="breadcrumb-nav">
-                            <span class="breadcrumb-item">Quản trị</span>
+                            <span class="breadcrumb-item">
+                                <AuthorizeView Roles="Admin"><Authorized Context="ctx3">Admin</Authorized></AuthorizeView>
+                                <AuthorizeView Roles="Seller"><Authorized Context="ctx4">Seller</Authorized></AuthorizeView>
+                            </span>
                             <span class="breadcrumb-separator">/</span>
                             <span class="breadcrumb-item active">@GetPageName()</span>
                         </nav>
@@ -147,7 +174,7 @@
                 </div>
                 
                 <footer class="admin-footer">
-                    <span>© 2024 Vĩnh Khánh Food Street Guide - Quận 4, TP.HCM</span>
+                    <span>© 2026 Vĩnh Khánh Food Street Guide - Quận 4, TP.HCM</span>
                     <span class="footer-version">v1.0.0</span>
                 </footer>
             </main>
@@ -583,16 +610,20 @@
     
     private async Task HandleLogout()
     {
+        // Detect role before logout to redirect correctly
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var isSeller = authState.User.IsInRole("Seller");
+        
         await AuthService.LogoutAsync();
-        Navigation.NavigateTo("/admin/login", forceLoad: true);
+        Navigation.NavigateTo(isSeller ? "/seller/login" : "/admin/login", forceLoad: true);
     }
     
     private string GetPageTitle()
     {
         var uri = Navigation.Uri;
         if (uri.Contains("dashboard")) return "Thống kê";
-        if (uri.Contains("foods")) return "Quản lý Món ăn";
-        if (uri.Contains("locations")) return "Địa điểm";
+        if (uri.Contains("locations")) return "Quản lý POI";
+        if (uri.Contains("foods")) return "Món ăn";
         if (uri.Contains("audio")) return "Tệp âm thanh";
         if (uri.Contains("translations")) return "Bản dịch";
         if (uri.Contains("qrcodes")) return "Mã QR";
@@ -608,8 +639,8 @@
     {
         var uri = Navigation.Uri;
         if (uri.Contains("dashboard")) return "Thống kê";
+        if (uri.Contains("locations")) return "POI";
         if (uri.Contains("foods")) return "Món ăn";
-        if (uri.Contains("locations")) return "Địa điểm";
         if (uri.Contains("audio")) return "Âm thanh";
         if (uri.Contains("translations")) return "Bản dịch";
         if (uri.Contains("qrcodes")) return "Mã QR";
