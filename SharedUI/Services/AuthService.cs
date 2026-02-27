@@ -8,7 +8,7 @@ namespace FoodStreet.Client.Services
     public interface IAuthService
     {
         Task<AuthResult> LoginAsync(string email, string password);
-        Task<AuthResult> RegisterAsync(string email, string password, string? fullName = null, string role = "User");
+        Task<AuthResult> RegisterAsync(string email, string password, string? fullName = null, string role = "Seller");
         Task LogoutAsync();
         Task ClearTokensAsync();
         Task<string?> GetTokenAsync();
@@ -69,7 +69,7 @@ namespace FoodStreet.Client.Services
             }
         }
 
-        public async Task<AuthResult> RegisterAsync(string email, string password, string? fullName = null, string role = "User")
+        public async Task<AuthResult> RegisterAsync(string email, string password, string? fullName = null, string role = "Seller")
         {
             try
             {

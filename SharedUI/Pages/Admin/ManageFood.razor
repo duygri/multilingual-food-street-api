@@ -6,6 +6,7 @@
 @inject ILocalizationService L
 @using FoodStreet.Client.DTOs
 @inject HttpClient Http
+@inject AuthenticationStateProvider AuthStateProvider
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h3 class="mb-0">🍜 Quản lý Món ăn</h3>
@@ -206,9 +207,13 @@
     private bool uploading = false;
     private string? errorMessage;
     private string? successMessage;
+    private bool isAdmin = false;
 
     protected override async Task OnInitializedAsync()
     {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        isAdmin = authState.User.IsInRole("Admin");
+
         await LoadFoods();
         await LoadCategories();
         await LoadLocations();
@@ -228,7 +233,13 @@
 
     private async Task LoadLocations()
     {
-        try { locations = await LocationService.GetAllLocations(); }
+        try
+        {
+            // Admin: lấy tất cả, Seller: chỉ lấy POI của mình
+            locations = isAdmin
+                ? await LocationService.GetAllLocations()
+                : await LocationService.GetMyLocations();
+        }
         catch { locations = new(); }
     }
 

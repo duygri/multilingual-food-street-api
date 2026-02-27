@@ -1,5 +1,4 @@
 @page "/admin/login"
-@page "/admin/register"
 @page "/seller/login"
 @page "/seller/register"
 @inject IAuthService AuthService
@@ -28,10 +27,6 @@
                         <div class="feature-item">
                             <span class="feature-icon">🍜</span>
                             <span>Thêm món ăn vào gian hàng</span>
-                        </div>
-                        <div class="feature-item">
-                            <span class="feature-icon">📊</span>
-                            <span>Theo dõi lượt truy cập</span>
                         </div>
                     }
                     else
@@ -67,8 +62,8 @@
                     }
                     else
                     {
-                        <h2>@(isLogin ? "Đăng nhập Admin" : "Đăng ký tài khoản")</h2>
-                        <p>@(isLogin ? "Dành cho Quản trị viên" : "Tạo tài khoản quản trị")</p>
+                        <h2>Đăng nhập Admin</h2>
+                        <p>Dành cho Quản trị viên</p>
                     }
                 </div>
 
@@ -600,9 +595,14 @@
             }
             else
             {
-                // Seller registration only allowed from /seller/register
-                var role = isSellerMode ? "Seller" : "Admin";
-                result = await AuthService.RegisterAsync(model.Email, model.Password, model.FullName, role);
+                // Chỉ Seller được đăng ký công khai, Admin tạo từ trang quản trị
+                if (!isSellerMode)
+                {
+                    isError = true;
+                    message = "Đăng ký Admin không khả dụng. Liên hệ quản trị viên.";
+                    return;
+                }
+                result = await AuthService.RegisterAsync(model.Email, model.Password, model.FullName, "Seller");
             }
 
             if (result.Success)

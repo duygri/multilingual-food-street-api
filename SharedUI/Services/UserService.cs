@@ -5,6 +5,7 @@ namespace FoodStreet.Client.Services
     public interface IUserService
     {
         Task<List<UserDto>> GetUsersAsync();
+        Task<CreateUserResult> CreateUserAsync(string email, string password, string role);
         Task<bool> ApproveSellerAsync(string userId);
         Task<bool> ToggleLockAsync(string userId);
         Task<bool> DeleteUserAsync(string userId);
@@ -28,6 +29,29 @@ namespace FoodStreet.Client.Services
             catch
             {
                 return new();
+            }
+        }
+
+        public async Task<CreateUserResult> CreateUserAsync(string email, string password, string role)
+        {
+            try
+            {
+                var response = await _http.PostAsJsonAsync("api/user/create", new { email, password, role });
+                if (response.IsSuccessStatusCode)
+                {
+                    return new CreateUserResult { Success = true };
+                }
+                var error = await response.Content.ReadFromJsonAsync<CreateUserErrorResponse>();
+                return new CreateUserResult
+                {
+                    Success = false,
+                    Message = error?.Message ?? "Tạo tài khoản thất bại",
+                    Errors = error?.Errors
+                };
+            }
+            catch (Exception ex)
+            {
+                return new CreateUserResult { Success = false, Message = $"Lỗi kết nối: {ex.Message}" };
             }
         }
 
@@ -57,4 +81,18 @@ namespace FoodStreet.Client.Services
         public List<string> Roles { get; set; } = new();
         public bool IsLocked { get; set; }
     }
+
+    public class CreateUserResult
+    {
+        public bool Success { get; set; }
+        public string? Message { get; set; }
+        public List<string>? Errors { get; set; }
+    }
+
+    public class CreateUserErrorResponse
+    {
+        public string? Message { get; set; }
+        public List<string>? Errors { get; set; }
+    }
 }
+

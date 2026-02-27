@@ -83,11 +83,11 @@ namespace PROJECT_C_.Controllers
         /// Seller: Tạo món ăn (phải thuộc về 1 Location của mình)
         /// </summary>
         [HttpPost]
-        [Authorize(Roles = "Admin,Seller")]
+        [Authorize(Roles = "Seller")]
         public async Task<ActionResult<FoodDto>> CreateFood([FromBody] FoodDto foodDto)
         {
-            // Kiểm tra Location ownership nếu là Seller
-            if (User.IsInRole("Seller") && foodDto.LocationId.HasValue)
+            // Kiểm tra Location ownership
+            if (foodDto.LocationId.HasValue)
             {
                 var userId = _userManager.GetUserId(User);
                 var location = await _context.Locations.FindAsync(foodDto.LocationId.Value);

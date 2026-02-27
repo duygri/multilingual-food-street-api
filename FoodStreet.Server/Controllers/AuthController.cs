@@ -48,8 +48,8 @@ namespace PROJECT_C_.Controllers
             }
 
             // Validate Role
-            var allowedRoles = new[] { "User", "Seller" };
-            if (!allowedRoles.Contains(request.Role)) request.Role = "User";
+            var allowedRoles = new[] { "Seller" };
+            if (!allowedRoles.Contains(request.Role)) request.Role = "Seller";
 
             var user = new IdentityUser
             {
@@ -80,28 +80,11 @@ namespace PROJECT_C_.Controllers
             await _userManager.AddToRoleAsync(user, request.Role);
             _logger.LogInformation("User registered: {Email} as {Role}", request.Email, request.Role);
 
-            // If Seller, do not auto-login
-            if (request.Role == "Seller")
-            {
-                return Ok(new AuthResponse
-                {
-                    Success = true,
-                    Message = "Tài khoản đã được tạo. Vui lòng chờ Admin phê duyệt."
-                });
-            }
-
-            // Auto-login for regular users
-            var token = await GenerateJwtToken(user);
-            var refreshToken = GenerateRefreshToken();
-
+            // Seller phải chờ Admin duyệt
             return Ok(new AuthResponse
             {
                 Success = true,
-                AccessToken = token,
-                RefreshToken = refreshToken,
-                ExpiresAt = DateTime.UtcNow.AddMinutes(_jwtSettings.AccessTokenExpiryMinutes),
-                Email = user.Email,
-                Message = "Đăng ký thành công"
+                Message = "Tài khoản đã được tạo. Vui lòng chờ Admin phê duyệt."
             });
         }
 

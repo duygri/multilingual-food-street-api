@@ -5,33 +5,101 @@
 @using FoodStreet.Client.Services
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize(Roles = "Admin")]
+@implements IDisposable
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="mb-0">👥 User Management</h3>
-</div>
+<div class="users-page">
+    <div class="page-header">
+        <div>
+            <h3>👥 Quản lý Người dùng</h3>
+            <span class="user-count">@users.Count người dùng</span>
+        </div>
+        <button class="btn-add" @onclick="ShowCreateForm">
+            ➕ Thêm người dùng
+        </button>
+    </div>
 
-<div class="admin-card">
-    <ul class="nav nav-tabs mb-4">
-        <li class="nav-item">
-            <button class="nav-link @(activeTab == "all" ? "active" : "")" @onclick="@(() => activeTab = "all")">
-                All Users
-            </button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link @(activeTab == "pending" ? "active" : "")" @onclick="@(() => activeTab = "pending")">
-                ⏳ Pending Sellers
-            </button>
-        </li>
-    </ul>
+    @* === FORM TẠO USER MỚI === *@
+    @if (showCreateForm)
+    {
+        <div class="create-form-card">
+            <div class="form-card-header">
+                <h4>🆕 Tạo người dùng mới</h4>
+                <button class="btn-close-form" @onclick="HideCreateForm">✕</button>
+            </div>
 
-    <div class="table-responsive">
-        <table class="table table-hover admin-table">
+            @if (!string.IsNullOrEmpty(createMessage))
+            {
+                <div class="alert-box @(createSuccess ? "alert-success" : "alert-error")">
+                    <span>@(createSuccess ? "✅" : "⚠️")</span>
+                    <div>
+                        <span>@createMessage</span>
+                        @if (createErrors != null)
+                        {
+                            <ul>
+                                @foreach (var err in createErrors)
+                                {
+                                    <li>@err</li>
+                                }
+                            </ul>
+                        }
+                    </div>
+                </div>
+            }
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>✉️ Email</label>
+                    <input type="email" @bind="newEmail" placeholder="email@example.com" />
+                </div>
+                <div class="form-group">
+                    <label>🔒 Mật khẩu</label>
+                    <input type="password" @bind="newPassword" placeholder="Tối thiểu 8 ký tự" />
+                </div>
+                <div class="form-group">
+                    <label>🎭 Vai trò</label>
+                    <select @bind="newRole">
+                        <option value="Seller">Seller (Người bán)</option>
+                        <option value="Admin">Admin (Quản trị viên)</option>
+                    </select>
+                </div>
+                <div class="form-group form-actions">
+                    <button class="btn-create" @onclick="CreateUser" disabled="@isCreating">
+                        @if (isCreating)
+                        {
+                            <span class="spinner-sm"></span>
+                        }
+                        Tạo tài khoản
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+
+    @* === TABS LỌC ROLE === *@
+    <div class="tabs-bar">
+        <button class="tab-btn @(activeTab == "all" ? "active" : "")" @onclick="@(() => activeTab = "all")">
+            Tất cả <span class="tab-count">@users.Count</span>
+        </button>
+        <button class="tab-btn pending @(activeTab == "pending" ? "active" : "")" @onclick="@(() => activeTab = "pending")">
+            ⏳ Chờ duyệt <span class="tab-count">@PendingCount</span>
+        </button>
+        <button class="tab-btn @(activeTab == "admin" ? "active" : "")" @onclick="@(() => activeTab = "admin")">
+            🛡️ Admin <span class="tab-count">@AdminCount</span>
+        </button>
+        <button class="tab-btn @(activeTab == "seller" ? "active" : "")" @onclick="@(() => activeTab = "seller")">
+            🏪 Seller <span class="tab-count">@SellerCount</span>
+        </button>
+    </div>
+
+    @* === BẢNG DANH SÁCH USER === *@
+    <div class="table-card">
+        <table class="users-table">
             <thead>
                 <tr>
                     <th>Email</th>
-                    <th>Role</th>
-                    <th>Status</th>
-                    <th>Actions</th>
+                    <th>Vai trò</th>
+                    <th>Trạng thái</th>
+                    <th>Hành động</th>
                 </tr>
             </thead>
             <tbody>
@@ -40,11 +108,14 @@
                     @foreach (var user in FilteredUsers)
                     {
                         <tr>
-                            <td>@user.Email</td>
+                            <td class="email-cell">
+                                <span class="user-avatar-sm">@(user.Email?.Substring(0,1).ToUpper())</span>
+                                @user.Email
+                            </td>
                             <td>
                                 @foreach (var role in user.Roles)
                                 {
-                                    <span class="badge @GetRoleBadgeClass(role) me-1">@role</span>
+                                    <span class="role-badge @GetRoleBadgeClass(role)">@GetRoleDisplayName(role)</span>
                                 }
                             </td>
                             <td>
@@ -52,46 +123,40 @@
                                 {
                                     @if (user.Roles.Contains("Seller"))
                                     {
-                                         // If we want to distinguish "New Registration" (Pending) vs "Manually Locked", we need more data.
-                                         // But user specifically asked for "Locked" when they lock it.
-                                         // Since we use the same mechanism (LockoutEnd), we can't easily tell the difference without a separate "IsApproved" flag.
-                                         // For now, I will change the logic to simply show "Locked" if it's locked, 
-                                         // BUT show "Pending Approval" ONLY in the "Pending Sellers" tab or if we add a heuristic.
-                                         
-                                         // Re-reading request: "khi lock seller nó hiện lại pending bạn fix dùm tôi là locket"
-                                         // Means when I manually lock, I want to see "Locked". 
-                                         // I will use a different badge style but the text "Locked" is what is requested.
-                                         // I'll keep "Pending Approval" logic ONLY for my specific "Pending Sellers" tab if I can, OR just change the text.
-                                         
-                                         // Simplest fix satisfying the prompt: Change the text for manual locks.
-                                         // Since every pending seller is locked, I'll just show "Locked / Pending" or just "Locked".
-                                         
-                                         <span class="badge bg-danger">Locked</span>
+                                        <span class="status-badge status-pending">Chờ duyệt</span>
                                     }
                                     else
                                     {
-                                        <span class="badge bg-danger">Locked</span>
+                                        <span class="status-badge status-locked">Đã khóa</span>
                                     }
                                 }
                                 else
                                 {
-                                    <span class="badge bg-success">Active</span>
+                                    <span class="status-badge status-active">Hoạt động</span>
                                 }
                             </td>
                             <td>
-                                <div class="btn-group btn-group-sm">
-                                    @* Approve button removed as per request - Use Unlock button instead *@
-                                    
+                                <div class="action-buttons">
                                     @if (!user.Roles.Contains("Admin"))
                                     {
-                                        <button class="btn @(user.IsLocked ? "btn-outline-warning" : "btn-outline-secondary")" 
+                                        @if (user.IsLocked && user.Roles.Contains("Seller"))
+                                        {
+                                            <button class="btn-action btn-approve" @onclick="() => ApproveSeller(user.Id)" title="Duyệt Seller">
+                                                ✅ Duyệt
+                                            </button>
+                                        }
+                                        <button class="btn-action @(user.IsLocked ? "btn-unlock" : "btn-lock")" 
                                                 @onclick="() => ToggleLock(user.Id)" 
-                                                title="@(user.IsLocked ? "Unlock" : "Lock")">
+                                                title="@(user.IsLocked ? "Mở khóa" : "Khóa")">
                                             @(user.IsLocked ? "🔓" : "🔒")
                                         </button>
-                                        <button class="btn btn-outline-danger" @onclick="() => DeleteUser(user.Id)" title="Delete">
+                                        <button class="btn-action btn-delete" @onclick="() => DeleteUser(user.Id)" title="Xóa">
                                             🗑️
                                         </button>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
                                     }
                                 </div>
                             </td>
@@ -101,7 +166,10 @@
                 else
                 {
                     <tr>
-                        <td colspan="4" class="text-center py-4 text-muted">No users found.</td>
+                        <td colspan="4" class="empty-state">
+                            <span>📭</span>
+                            <p>Không có người dùng nào</p>
+                        </td>
                     </tr>
                 }
             </tbody>
@@ -109,25 +177,454 @@
     </div>
 </div>
 
+<style>
+    .users-page {
+        max-width: 1200px;
+    }
+
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+    }
+
+    .page-header h3 {
+        font-size: 22px;
+        font-weight: 700;
+        color: #1e2a3a;
+        margin: 0;
+    }
+
+    .user-count {
+        font-size: 13px;
+        color: #64748b;
+    }
+
+    .btn-add {
+        padding: 10px 20px;
+        background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+        border: none;
+        border-radius: 10px;
+        color: #fff;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .btn-add:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(255, 107, 53, 0.35);
+    }
+
+    /* Create Form */
+    .create-form-card {
+        background: #fff;
+        border-radius: 16px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        border: 2px solid #ff6b35;
+        animation: slideDown 0.3s ease;
+    }
+
+    @@keyframes slideDown {
+        from { opacity: 0; transform: translateY(-12px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .form-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .form-card-header h4 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 600;
+        color: #1e2a3a;
+    }
+
+    .btn-close-form {
+        width: 32px;
+        height: 32px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        background: #fff;
+        cursor: pointer;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+    }
+
+    .btn-close-form:hover {
+        background: #fee2e2;
+        border-color: #fca5a5;
+        color: #ef4444;
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+    }
+
+    .form-group label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        color: #475569;
+        margin-bottom: 6px;
+    }
+
+    .form-group input,
+    .form-group select {
+        width: 100%;
+        padding: 10px 14px;
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        font-size: 14px;
+        background: #f8fafc;
+        transition: all 0.2s;
+        box-sizing: border-box;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+        outline: none;
+        border-color: #ff6b35;
+        background: #fff;
+        box-shadow: 0 0 0 3px rgba(255,107,53,0.1);
+    }
+
+    .form-actions {
+        display: flex;
+        align-items: flex-end;
+    }
+
+    .btn-create {
+        width: 100%;
+        padding: 10px 20px;
+        background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+        border: none;
+        border-radius: 10px;
+        color: #fff;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: all 0.2s;
+    }
+
+    .btn-create:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 15px rgba(34,197,94,0.35);
+    }
+
+    .btn-create:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+
+    .spinner-sm {
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-top-color: #fff;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+
+    @@keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    /* Alert */
+    .alert-box {
+        display: flex;
+        gap: 10px;
+        padding: 12px 16px;
+        border-radius: 10px;
+        margin-bottom: 16px;
+        font-size: 14px;
+    }
+
+    .alert-error { background: #fef2f2; border: 1px solid #fecaca; }
+    .alert-success { background: #f0fdf4; border: 1px solid #bbf7d0; }
+    .alert-box ul { margin: 4px 0 0; padding-left: 16px; }
+
+    /* Tabs */
+    .tabs-bar {
+        display: flex;
+        gap: 4px;
+        background: #fff;
+        border-radius: 12px;
+        padding: 4px;
+        margin-bottom: 16px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    }
+
+    .tab-btn {
+        flex: 1;
+        padding: 10px 16px;
+        border: none;
+        background: transparent;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #64748b;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+    }
+
+    .tab-btn:hover { background: #f1f5f9; color: #1e2a3a; }
+
+    .tab-btn.active {
+        background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+        color: #fff;
+        box-shadow: 0 2px 8px rgba(255,107,53,0.25);
+    }
+
+    .tab-btn.pending.active {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        box-shadow: 0 2px 8px rgba(245,158,11,0.25);
+    }
+
+    .tab-count {
+        background: rgba(0,0,0,0.1);
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 11px;
+    }
+
+    .tab-btn.active .tab-count {
+        background: rgba(255,255,255,0.25);
+    }
+
+    /* Table */
+    .table-card {
+        background: #fff;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+
+    .users-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .users-table thead th {
+        background: #f8fafc;
+        padding: 14px 20px;
+        text-align: left;
+        font-size: 12px;
+        font-weight: 600;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .users-table tbody td {
+        padding: 14px 20px;
+        border-bottom: 1px solid #f1f5f9;
+        font-size: 14px;
+        color: #1e2a3a;
+    }
+
+    .users-table tbody tr:hover {
+        background: #fafbfc;
+    }
+
+    .users-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .email-cell {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 500;
+    }
+
+    .user-avatar-sm {
+        width: 32px;
+        height: 32px;
+        background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 13px;
+        font-weight: 700;
+        flex-shrink: 0;
+    }
+
+    /* Role Badges */
+    .role-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .role-admin {
+        background: #fef2f2;
+        color: #dc2626;
+    }
+
+    .role-seller {
+        background: #ecfdf5;
+        color: #059669;
+    }
+
+    .role-user {
+        background: #f1f5f9;
+        color: #64748b;
+    }
+
+    /* Status Badges */
+    .status-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .status-active {
+        background: #ecfdf5;
+        color: #059669;
+    }
+
+    .status-locked {
+        background: #fef2f2;
+        color: #dc2626;
+    }
+
+    .status-pending {
+        background: #fffbeb;
+        color: #d97706;
+    }
+
+    /* Action Buttons */
+    .action-buttons {
+        display: flex;
+        gap: 6px;
+    }
+
+    .btn-action {
+        padding: 6px 12px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        background: #fff;
+        cursor: pointer;
+        font-size: 13px;
+        transition: all 0.2s;
+        white-space: nowrap;
+    }
+
+    .btn-approve {
+        border-color: #86efac;
+        background: #f0fdf4;
+        color: #16a34a;
+        font-weight: 600;
+    }
+
+    .btn-approve:hover {
+        background: #22c55e;
+        color: #fff;
+        border-color: #22c55e;
+    }
+
+    .btn-unlock:hover { border-color: #fbbf24; background: #fffbeb; }
+    .btn-lock:hover { border-color: #94a3b8; background: #f1f5f9; }
+
+    .btn-delete:hover {
+        border-color: #fca5a5;
+        background: #fef2f2;
+        color: #dc2626;
+    }
+
+    .text-muted { color: #cbd5e1; }
+
+    .empty-state {
+        text-align: center;
+        padding: 48px 20px !important;
+        color: #94a3b8;
+    }
+
+    .empty-state span {
+        font-size: 40px;
+        display: block;
+        margin-bottom: 8px;
+    }
+
+    .empty-state p {
+        margin: 0;
+        font-size: 14px;
+    }
+</style>
+
 @code {
     private List<UserDto> users = new();
     private string activeTab = "all";
+    private System.Threading.Timer? _pollingTimer;
 
-    private IEnumerable<UserDto> FilteredUsers
+    // Create form state
+    private bool showCreateForm = false;
+    private string newEmail = "";
+    private string newPassword = "";
+    private string newRole = "Seller";
+    private bool isCreating = false;
+    private string? createMessage;
+    private bool createSuccess;
+    private List<string>? createErrors;
+
+    private int PendingCount => users.Count(u => u.Roles.Contains("Seller") && u.IsLocked);
+    private int AdminCount => users.Count(u => u.Roles.Contains("Admin"));
+    private int SellerCount => users.Count(u => u.Roles.Contains("Seller"));
+
+    private IEnumerable<UserDto> FilteredUsers => activeTab switch
     {
-        get
-        {
-            if (activeTab == "pending")
-            {
-                return users.Where(u => u.Roles.Contains("Seller") && u.IsLocked);
-            }
-            return users;
-        }
-    }
+        "pending" => users.Where(u => u.Roles.Contains("Seller") && u.IsLocked),
+        "admin" => users.Where(u => u.Roles.Contains("Admin")),
+        "seller" => users.Where(u => u.Roles.Contains("Seller")),
+        _ => users
+    };
 
     protected override async Task OnInitializedAsync()
     {
         await LoadUsers();
+
+        // Auto-refresh mỗi 15 giây
+        _pollingTimer = new System.Threading.Timer(async _ =>
+        {
+            await InvokeAsync(async () =>
+            {
+                try
+                {
+                    await LoadUsers();
+                    StateHasChanged();
+                }
+                catch { }
+            });
+        }, null, TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(15));
     }
 
     private async Task LoadUsers()
@@ -135,6 +632,62 @@
         users = await UserService.GetUsersAsync();
     }
 
+    // === CREATE USER ===
+    private void ShowCreateForm()
+    {
+        showCreateForm = true;
+        ResetCreateForm();
+    }
+
+    private void HideCreateForm()
+    {
+        showCreateForm = false;
+        ResetCreateForm();
+    }
+
+    private void ResetCreateForm()
+    {
+        newEmail = "";
+        newPassword = "";
+        newRole = "Seller";
+        createMessage = null;
+        createErrors = null;
+    }
+
+    private async Task CreateUser()
+    {
+        if (string.IsNullOrWhiteSpace(newEmail) || string.IsNullOrWhiteSpace(newPassword))
+        {
+            createSuccess = false;
+            createMessage = "Vui lòng nhập đầy đủ email và mật khẩu";
+            return;
+        }
+
+        isCreating = true;
+        createMessage = null;
+        createErrors = null;
+
+        var result = await UserService.CreateUserAsync(newEmail, newPassword, newRole);
+
+        if (result.Success)
+        {
+            createSuccess = true;
+            createMessage = $"Tạo tài khoản {newRole} thành công!";
+            newEmail = "";
+            newPassword = "";
+            await LoadUsers();
+        }
+        else
+        {
+            createSuccess = false;
+            createMessage = result.Message;
+            createErrors = result.Errors;
+        }
+
+        isCreating = false;
+    }
+
+    // === ACTIONS ===
     private async Task ApproveSeller(string userId)
     {
         if (await UserService.ApproveSellerAsync(userId))
@@ -153,7 +706,7 @@
 
     private async Task DeleteUser(string userId)
     {
-        if (await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete this user?"))
+        if (await JS.InvokeAsync<bool>("confirm", "Bạn có chắc chắn muốn xóa người dùng này?"))
         {
             if (await UserService.DeleteUserAsync(userId))
             {
@@ -164,8 +717,20 @@
 
     private string GetRoleBadgeClass(string role) => role switch
     {
-        "Admin" => "bg-danger",
-        "Seller" => "bg-info text-dark",
-        _ => "bg-secondary"
+        "Admin" => "role-admin",
+        "Seller" => "role-seller",
+        _ => "role-user"
     };
+
+    private string GetRoleDisplayName(string role) => role switch
+    {
+        "Admin" => "Quản trị viên",
+        "Seller" => "Người bán",
+        _ => "Người dùng"
+    };
+
+    public void Dispose()
+    {
+        _pollingTimer?.Dispose();
+    }
 }

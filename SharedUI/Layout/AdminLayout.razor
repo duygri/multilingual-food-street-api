@@ -590,6 +590,27 @@
 </style>
 
 @code {
+    protected override async Task OnInitializedAsync()
+    {
+        // Auto-redirect: Seller truy cập /admin/* → chuyển sang /seller/*
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (user.Identity?.IsAuthenticated == true && user.IsInRole("Seller") && !user.IsInRole("Admin"))
+        {
+            var path = Navigation.ToAbsoluteUri(Navigation.Uri).AbsolutePath.ToLower();
+            if (path.StartsWith("/admin/locations"))
+            {
+                Navigation.NavigateTo("/seller/locations", replace: true);
+                return;
+            }
+            if (path.StartsWith("/admin/foods"))
+            {
+                Navigation.NavigateTo("/seller/foods", replace: true);
+                return;
+            }
+        }
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)

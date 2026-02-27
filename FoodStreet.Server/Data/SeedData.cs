@@ -68,7 +68,7 @@ namespace PROJECT_C_.Data
 
         private static async Task SeedRoles(RoleManager<IdentityRole> roleManager)
         {
-            string[] roles = { "Admin", "Seller", "User" };
+            string[] roles = { "Admin", "Seller", "User" }; // User chỉ dùng trên Mobile
             foreach (var role in roles)
             {
                 if (!await roleManager.RoleExistsAsync(role))

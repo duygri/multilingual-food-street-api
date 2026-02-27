@@ -39,6 +39,41 @@ namespace PROJECT_C_.Controllers
             return Ok(userDtos);
         }
 
+        /// <summary>
+        /// Admin tạo user mới (gán role Admin hoặc Seller)
+        /// </summary>
+        [HttpPost("create")]
+        public async Task<IActionResult> CreateUser([FromBody] CreateUserRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
+                return BadRequest(new { message = "Email và mật khẩu không được để trống" });
+
+            var allowedRoles = new[] { "Admin", "Seller" };
+            if (!allowedRoles.Contains(request.Role))
+                return BadRequest(new { message = "Role không hợp lệ. Chỉ chấp nhận: Admin, Seller" });
+
+            var user = new IdentityUser
+            {
+                UserName = request.Email,
+                Email = request.Email,
+                EmailConfirmed = true
+            };
+
+            var result = await _userManager.CreateAsync(user, request.Password);
+            if (!result.Succeeded)
+            {
+                return BadRequest(new
+                {
+                    message = "Tạo tài khoản thất bại",
+                    errors = result.Errors.Select(e => e.Description).ToList()
+                });
+            }
+
+            await _userManager.AddToRoleAsync(user, request.Role);
+
+            return Ok(new { message = $"Tạo tài khoản {request.Role} thành công" });
+        }
+
         [HttpPost("{id}/approve")]
         public async Task<IActionResult> ApproveSeller(string id)
         {
@@ -94,9 +129,17 @@ namespace PROJECT_C_.Controllers
 
     public class UserDto
     {
-        public string Id { get; set; }
-        public string Email { get; set; }
-        public List<string> Roles { get; set; }
+        public string Id { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public List<string> Roles { get; set; } = new();
         public bool IsLocked { get; set; }
     }
+
+    public class CreateUserRequest
+    {
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public string Role { get; set; } = "Seller";
+    }
 }
+
