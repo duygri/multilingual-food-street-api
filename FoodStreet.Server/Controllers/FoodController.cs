@@ -4,6 +4,7 @@ using PROJECT_C_.Services.Interfaces;
 using Microsoft.AspNetCore.Http;
 using PROJECT_C_.DTOs;
 using PROJECT_C_.Models;
+using FoodStreet.Server.Extensions;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -83,13 +84,14 @@ namespace PROJECT_C_.Controllers
         /// Seller: Tạo món ăn (phải thuộc về 1 Location của mình)
         /// </summary>
         [HttpPost]
-        [Authorize(Roles = "Seller")]
+        [Authorize]
         public async Task<ActionResult<FoodDto>> CreateFood([FromBody] FoodDto foodDto)
         {
+            if (!User.IsSellerRole()) return Forbid();
             // Kiểm tra Location ownership
             if (foodDto.LocationId.HasValue)
             {
-                var userId = _userManager.GetUserId(User);
+                var userId = User.GetUserId();
                 var location = await _context.Locations.FindAsync(foodDto.LocationId.Value);
                 if (location == null || location.OwnerId != userId)
                     return Forbid();
@@ -121,9 +123,10 @@ namespace PROJECT_C_.Controllers
         }
 
         [HttpPut("{id}")]
-        [Authorize(Roles = "Admin,Seller")]
+        [Authorize]
         public async Task<IActionResult> UpdateFood(int id, [FromBody] FoodDto foodDto)
         {
+            if (!User.IsAdminRole() && !User.IsSellerRole()) return Forbid();
             if (id != foodDto.Id && foodDto.Id != 0) return BadRequest();
 
             var existingFood = await _context.Foods
@@ -133,9 +136,9 @@ namespace PROJECT_C_.Controllers
             if (existingFood == null) return NotFound();
 
             // Seller ownership check qua Location
-            if (User.IsInRole("Seller"))
+            if (User.IsSellerRole())
             {
-                var userId = _userManager.GetUserId(User);
+                var userId = User.GetUserId();
                 if (existingFood.Location?.OwnerId != userId)
                     return Forbid(); 
             }
@@ -158,18 +161,19 @@ namespace PROJECT_C_.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin,Seller")]
+        [Authorize]
         public async Task<IActionResult> DeleteFood(int id)
         {
+            if (!User.IsAdminRole() && !User.IsSellerRole()) return Forbid();
             var food = await _context.Foods
                 .Include(f => f.Location)
                 .FirstOrDefaultAsync(f => f.Id == id);
             if (food == null) return NotFound();
 
             // Seller ownership check qua Location
-            if (User.IsInRole("Seller"))
+            if (User.IsSellerRole())
             {
-                var userId = _userManager.GetUserId(User);
+                var userId = User.GetUserId();
                 if (food.Location?.OwnerId != userId)
                     return Forbid();
             }

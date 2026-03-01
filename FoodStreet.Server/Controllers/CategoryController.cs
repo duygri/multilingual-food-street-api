@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PROJECT_C_.Data;
 using PROJECT_C_.Models;
+using FoodStreet.Server.Extensions;
 
 namespace PROJECT_C_.Controllers
 {
@@ -59,9 +60,10 @@ namespace PROJECT_C_.Controllers
 
         // POST: api/category (Admin only)
         [HttpPost]
-        [Authorize(Roles = "Admin")]
+        [Authorize]
         public async Task<ActionResult<Category>> CreateCategory(CreateCategoryDto dto)
         {
+            if (!User.IsAdminRole()) return Forbid();
             var category = new Category
             {
                 Name = dto.Name,
@@ -77,9 +79,10 @@ namespace PROJECT_C_.Controllers
 
         // PUT: api/category/5 (Admin only)
         [HttpPut("{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize]
         public async Task<IActionResult> UpdateCategory(int id, CreateCategoryDto dto)
         {
+            if (!User.IsAdminRole()) return Forbid();
             var category = await _context.Categories.FindAsync(id);
             if (category == null)
                 return NotFound();
@@ -94,9 +97,10 @@ namespace PROJECT_C_.Controllers
 
         // DELETE: api/category/5 (Admin only)
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize]
         public async Task<IActionResult> DeleteCategory(int id)
         {
+            if (!User.IsAdminRole()) return Forbid();
             var category = await _context.Categories.FindAsync(id);
             if (category == null)
                 return NotFound();

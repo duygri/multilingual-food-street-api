@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using PROJECT_C_.DTOs;
 using PROJECT_C_.Models;
 using PROJECT_C_.Services.Interfaces;
+using FoodStreet.Server.Extensions;
 
 namespace PROJECT_C_.Controllers
 {
@@ -82,10 +83,11 @@ namespace PROJECT_C_.Controllers
         /// Seller: Xem danh sách địa điểm của mình
         /// </summary>
         [HttpGet("my")]
-        [Authorize(Roles = "Seller")]
+        [Authorize]
         public async Task<ActionResult<IEnumerable<LocationDto>>> GetMyLocations()
         {
-            var userId = _userManager.GetUserId(User);
+            if (!User.IsSellerRole()) return Forbid();
+            var userId = User.GetUserId();
             if (userId == null) return Unauthorized();
 
             var locations = await _locationService.GetLocationsByOwnerAsync(userId);
@@ -96,10 +98,11 @@ namespace PROJECT_C_.Controllers
         /// Seller: Tạo địa điểm mới (cần Admin duyệt)
         /// </summary>
         [HttpPost]
-        [Authorize(Roles = "Seller")]
+        [Authorize]
         public async Task<ActionResult<LocationDto>> CreateLocation([FromBody] LocationDto dto)
         {
-            var userId = _userManager.GetUserId(User);
+            if (!User.IsSellerRole()) return Forbid();
+            var userId = User.GetUserId();
 
             var location = new Location
             {
@@ -138,16 +141,17 @@ namespace PROJECT_C_.Controllers
         /// Seller: Cập nhật địa điểm của mình
         /// </summary>
         [HttpPut("{id}")]
-        [Authorize(Roles = "Seller,Admin")]
+        [Authorize]
         public async Task<IActionResult> UpdateLocation(int id, [FromBody] LocationDto dto)
         {
+            if (!User.IsAdminRole() && !User.IsSellerRole()) return Forbid();
             var existing = await _locationService.GetLocationByIdAsync(id);
             if (existing == null) return NotFound();
 
             // Seller chỉ được sửa địa điểm của mình
-            if (User.IsInRole("Seller"))
+            if (User.IsSellerRole())
             {
-                var userId = _userManager.GetUserId(User);
+                var userId = User.GetUserId();
                 if (existing.OwnerId != userId)
                     return Forbid();
             }
@@ -178,16 +182,17 @@ namespace PROJECT_C_.Controllers
         /// Seller/Admin: Xóa địa điểm
         /// </summary>
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Seller,Admin")]
+        [Authorize]
         public async Task<IActionResult> DeleteLocation(int id)
         {
+            if (!User.IsAdminRole() && !User.IsSellerRole()) return Forbid();
             var existing = await _locationService.GetLocationByIdAsync(id);
             if (existing == null) return NotFound();
 
             // Seller chỉ được xóa địa điểm của mình
-            if (User.IsInRole("Seller"))
+            if (User.IsSellerRole())
             {
-                var userId = _userManager.GetUserId(User);
+                var userId = User.GetUserId();
                 if (existing.OwnerId != userId)
                     return Forbid();
             }
@@ -205,9 +210,10 @@ namespace PROJECT_C_.Controllers
         /// Admin: Xem tất cả địa điểm
         /// </summary>
         [HttpGet("admin/all")]
-        [Authorize(Roles = "Admin")]
+        [Authorize]
         public async Task<ActionResult<IEnumerable<LocationDto>>> GetAllLocations()
         {
+            if (!User.IsAdminRole()) return Forbid();
             var locations = await _locationService.GetAllLocationsAsync();
             return Ok(locations.Select(MapToDto));
         }
@@ -216,9 +222,10 @@ namespace PROJECT_C_.Controllers
         /// Admin: Xem địa điểm chờ duyệt
         /// </summary>
         [HttpGet("admin/pending")]
-        [Authorize(Roles = "Admin")]
+        [Authorize]
         public async Task<ActionResult<IEnumerable<LocationDto>>> GetPendingLocations()
         {
+            if (!User.IsAdminRole()) return Forbid();
             var locations = await _locationService.GetPendingLocationsAsync();
             return Ok(locations.Select(MapToDto));
         }
@@ -227,9 +234,10 @@ namespace PROJECT_C_.Controllers
         /// Admin: Duyệt địa điểm
         /// </summary>
         [HttpPost("admin/{id}/approve")]
-        [Authorize(Roles = "Admin")]
+        [Authorize]
         public async Task<IActionResult> ApproveLocation(int id)
         {
+            if (!User.IsAdminRole()) return Forbid();
             var location = await _locationService.GetLocationByIdAsync(id);
             if (location == null) return NotFound();
 
@@ -244,9 +252,10 @@ namespace PROJECT_C_.Controllers
         /// Admin: Từ chối địa điểm (xóa)
         /// </summary>
         [HttpPost("admin/{id}/reject")]
-        [Authorize(Roles = "Admin")]
+        [Authorize]
         public async Task<IActionResult> RejectLocation(int id)
         {
+            if (!User.IsAdminRole()) return Forbid();
             var location = await _locationService.GetLocationByIdAsync(id);
             if (location == null) return NotFound();
 

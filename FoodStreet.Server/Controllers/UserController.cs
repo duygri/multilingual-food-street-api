@@ -3,12 +3,13 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PROJECT_C_.DTOs;
+using FoodStreet.Server.Extensions;
 
 namespace PROJECT_C_.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Admin")]
+    [Authorize]
     public class UserController : ControllerBase
     {
         private readonly UserManager<IdentityUser> _userManager;
@@ -21,6 +22,7 @@ namespace PROJECT_C_.Controllers
         [HttpGet]
         public async Task<ActionResult<List<UserDto>>> GetAllUsers()
         {
+            if (!User.IsAdminRole()) return Forbid();
             var users = await _userManager.Users.ToListAsync();
             var userDtos = new List<UserDto>();
 
@@ -45,6 +47,7 @@ namespace PROJECT_C_.Controllers
         [HttpPost("create")]
         public async Task<IActionResult> CreateUser([FromBody] CreateUserRequest request)
         {
+            if (!User.IsAdminRole()) return Forbid();
             if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
                 return BadRequest(new { message = "Email và mật khẩu không được để trống" });
 
