@@ -83,6 +83,10 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
+// Claims Transformation: đảm bảo role claim khớp cho cả short/long format
+builder.Services.AddTransient<Microsoft.AspNetCore.Authentication.IClaimsTransformation, 
+    FoodStreet.Server.Services.JwtClaimsTransformation>();
+
 // ========================================
 // CORS
 // ========================================

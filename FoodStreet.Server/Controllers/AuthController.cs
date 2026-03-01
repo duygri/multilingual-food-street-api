@@ -18,6 +18,22 @@ namespace PROJECT_C_.Controllers
     [ApiController]
     public class AuthController : ControllerBase
     {
+        // === DEBUG: Xem claims thực tế trên server ===
+        [HttpGet("debug/claims")]
+        [Authorize]
+        public IActionResult DebugClaims()
+        {
+            var claims = User.Claims.Select(c => new { c.Type, c.Value }).ToList();
+            return Ok(new
+            {
+                IsAuthenticated = User.Identity?.IsAuthenticated,
+                AuthType = User.Identity?.AuthenticationType,
+                IsAdmin = User.IsInRole("Admin"),
+                IsSeller = User.IsInRole("Seller"),
+                ClaimCount = claims.Count,
+                Claims = claims
+            });
+        }
         private readonly UserManager<IdentityUser> _userManager;
         private readonly SignInManager<IdentityUser> _signInManager;
         private readonly JwtSettings _jwtSettings;
