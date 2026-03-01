@@ -218,16 +218,16 @@ namespace PROJECT_C_.Controllers
 
             var claims = new List<Claim>
             {
-                new Claim(ClaimTypes.NameIdentifier, user.Id),
-                new Claim(ClaimTypes.Email, user.Email ?? string.Empty),
-                new Claim(ClaimTypes.Name, user.UserName ?? string.Empty),
+                new Claim("sub", user.Id),
+                new Claim("email", user.Email ?? string.Empty),
+                new Claim("name", user.UserName ?? string.Empty),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 new Claim(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64)
             };
 
             foreach (var role in roles)
             {
-                claims.Add(new Claim(ClaimTypes.Role, role));
+                claims.Add(new Claim("role", role));
             }
 
             var token = new JwtSecurityToken(
@@ -238,7 +238,10 @@ namespace PROJECT_C_.Controllers
                 signingCredentials: credentials
             );
 
-            return new JwtSecurityTokenHandler().WriteToken(token);
+            // Tắt outbound mapping để claim ghi "role" → JWT lưu đúng "role"
+            var handler = new JwtSecurityTokenHandler();
+            handler.OutboundClaimTypeMap.Clear();
+            return handler.WriteToken(token);
         }
 
         private static string GenerateRefreshToken()

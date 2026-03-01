@@ -42,6 +42,12 @@ builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
     
     // User settings
     options.User.RequireUniqueEmail = true;
+
+    // Dùng tên ngắn JWT cho Identity (khớp với token)
+    options.ClaimsIdentity.UserIdClaimType = "sub";
+    options.ClaimsIdentity.UserNameClaimType = "name";
+    options.ClaimsIdentity.EmailClaimType = "email";
+    options.ClaimsIdentity.RoleClaimType = "role";
 })
 .AddEntityFrameworkStores<AppDbContext>()
 .AddDefaultTokenProviders();
@@ -58,11 +64,8 @@ builder.Services.AddAuthentication(options =>
 .AddJwtBearer(options =>
 {
     options.SaveToken = true;
-    options.RequireHttpsMetadata = false; // Set to true in production
-    options.MapInboundClaims = true; // Ép mapping: "role" → ClaimTypes.Role
-#pragma warning disable CS0618 // .NET 8 cần dùng handler cũ để MapInboundClaims hoạt động
-    options.UseSecurityTokenValidators = true;
-#pragma warning restore CS0618
+    options.RequireHttpsMetadata = false;
+    options.MapInboundClaims = false; // Giữ nguyên tên ngắn từ JWT
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
@@ -73,8 +76,8 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = jwtSettings.Audience,
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Secret)),
         ClockSkew = TimeSpan.Zero,
-        RoleClaimType = System.Security.Claims.ClaimTypes.Role,
-        NameClaimType = System.Security.Claims.ClaimTypes.Name
+        RoleClaimType = "role",
+        NameClaimType = "name"
     };
 });
 
