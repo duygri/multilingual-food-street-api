@@ -60,6 +60,9 @@ builder.Services.AddAuthentication(options =>
     options.SaveToken = true;
     options.RequireHttpsMetadata = false; // Set to true in production
     options.MapInboundClaims = true; // Ép mapping: "role" → ClaimTypes.Role
+#pragma warning disable CS0618 // .NET 8 cần dùng handler cũ để MapInboundClaims hoạt động
+    options.UseSecurityTokenValidators = true;
+#pragma warning restore CS0618
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
