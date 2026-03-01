@@ -82,8 +82,9 @@ builder.Services.AddAuthentication(options =>
 });
 
 builder.Services.AddAuthorization();
+builder.Services.AddHttpContextAccessor();
 
-// Claims Transformation: đảm bảo role claim khớp cho cả short/long format
+// Claims Transformation: đọc JWT trực tiếp từ header, thêm role claims
 builder.Services.AddTransient<Microsoft.AspNetCore.Authentication.IClaimsTransformation, 
     FoodStreet.Server.Services.JwtClaimsTransformation>();
 
