@@ -257,8 +257,12 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        // Detect role from claims (hỗ trợ cả tên ngắn lẫn dài)
-        if (AuthState != null)
+        // Xác định role từ URL path (đáng tin nhất — route đã quyết định view)
+        var uri = Navigation.ToBaseRelativePath(Navigation.Uri);
+        isAdmin = uri.StartsWith("admin", StringComparison.OrdinalIgnoreCase);
+
+        // Fallback: kiểm tra claims nếu URL không rõ ràng
+        if (!isAdmin && AuthState != null)
         {
             var authState = await AuthState;
             isAdmin = authState.User.IsInRole("Admin")
