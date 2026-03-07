@@ -23,15 +23,25 @@ namespace FoodStreet.Server.Services
             if (identity == null || !identity.IsAuthenticated)
                 return Task.FromResult(principal);
 
-            // Đọc JWT trực tiếp từ header
+            // Đọc JWT từ header hoặc query string (cho SignalR)
             var context = _httpContextAccessor.HttpContext;
             var authHeader = context?.Request.Headers["Authorization"].FirstOrDefault();
-            if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer "))
+            string? token = null;
+
+            if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+            {
+                token = authHeader.Substring("Bearer ".Length).Trim();
+            }
+            else if (context?.Request.Query.TryGetValue("access_token", out var queryToken) == true)
+            {
+                token = queryToken.ToString();
+            }
+
+            if (string.IsNullOrEmpty(token))
                 return Task.FromResult(principal);
 
             try
             {
-                var token = authHeader.Substring("Bearer ".Length).Trim();
                 var handler = new JwtSecurityTokenHandler();
                 var jwt = handler.ReadJwtToken(token);
 

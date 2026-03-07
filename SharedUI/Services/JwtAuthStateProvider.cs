@@ -9,12 +9,12 @@ namespace FoodStreet.Client.Services
     /// </summary>
     public class JwtAuthStateProvider : AuthenticationStateProvider
     {
-        private readonly ILocalStorageService _localStorage;
+        private readonly ISessionStorageService _sessionStorage;
         private readonly IAuthService _authService;
 
-        public JwtAuthStateProvider(ILocalStorageService localStorage, IAuthService authService)
+        public JwtAuthStateProvider(ISessionStorageService sessionStorage, IAuthService authService)
         {
-            _localStorage = localStorage;
+            _sessionStorage = sessionStorage;
             _authService = authService;
             
             // Subscribe to auth changes

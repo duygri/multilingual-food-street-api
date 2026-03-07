@@ -5,6 +5,9 @@
 @inject IFoodClientService FoodClient
 @inject IJSRuntime JS
 @inject AuthenticationStateProvider AuthStateProvider
+@inject INotificationService NotificationSvc
+@implements IDisposable
+@using FoodStreet.Client.Services
 
 <AuthorizeView>
     <Authorized>
@@ -75,6 +78,30 @@
                                 </NavLink>
                             </Authorized>
                         </AuthorizeView>
+                        <AuthorizeView Roles="Admin">
+                            <Authorized Context="ctx_notif_admin">
+                                <NavLink class="nav-item" href="admin/notifications">
+                                    <span class="nav-icon">🔔</span>
+                                    <span class="nav-text">Thông báo</span>
+                                    @if (NotificationSvc.UnreadCount > 0)
+                                    {
+                                        <span class="nav-badge">@(NotificationSvc.UnreadCount > 9 ? "9+" : NotificationSvc.UnreadCount.ToString())</span>
+                                    }
+                                </NavLink>
+                            </Authorized>
+                        </AuthorizeView>
+                        <AuthorizeView Roles="Seller">
+                            <Authorized Context="ctx_notif_seller">
+                                <NavLink class="nav-item" href="seller/notifications">
+                                    <span class="nav-icon">🔔</span>
+                                    <span class="nav-text">Thông báo</span>
+                                    @if (NotificationSvc.UnreadCount > 0)
+                                    {
+                                        <span class="nav-badge">@(NotificationSvc.UnreadCount > 9 ? "9+" : NotificationSvc.UnreadCount.ToString())</span>
+                                    }
+                                </NavLink>
+                            </Authorized>
+                        </AuthorizeView>
                     </div>
                     
                     <AuthorizeView Roles="Admin">
@@ -112,10 +139,6 @@
                                 <NavLink class="nav-item" href="admin/history">
                                     <span class="nav-icon">📜</span>
                                     <span class="nav-text">Lịch sử sử dụng</span>
-                                </NavLink>
-                                <NavLink class="nav-item" href="admin/gps-test">
-                                    <span class="nav-icon">📍</span>
-                                    <span class="nav-text">Test GPS</span>
                                 </NavLink>
                             </div>
                         </Authorized>
@@ -158,12 +181,94 @@
                             <span class="search-icon">🔍</span>
                         </div>
                         <div class="header-actions">
-                            <button class="action-btn notification-btn">
-                                <span>🔔</span>
-                                <span class="notification-badge">3</span>
-                            </button>
-                            <a href="https://localhost:7214/swagger" target="_blank" class="action-btn">
-                                <span>📄</span>
+                            <div class="notification-wrapper" id="notif-wrapper">
+                                <button class="action-btn notification-btn" @onclick="ToggleNotificationPanel" title="Thông báo">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                                    @if (NotificationSvc.UnreadCount > 0)
+                                    {
+                                        <span class="notification-badge">@(NotificationSvc.UnreadCount > 9 ? "9+" : NotificationSvc.UnreadCount.ToString())</span>
+                                    }
+                                </button>
+                                @if (showNotificationPanel)
+                                {
+                                    <div class="notif-overlay" @onclick="CloseNotificationPanel"></div>
+                                    <div class="notification-panel">
+                                        <div class="notification-panel-header">
+                                            <div class="panel-title-group">
+                                                <span class="panel-title">Thông báo</span>
+                                                @if (NotificationSvc.UnreadCount > 0)
+                                                {
+                                                    <span class="panel-count">@NotificationSvc.UnreadCount mới</span>
+                                                }
+                                            </div>
+                                            @if (NotificationSvc.UnreadCount > 0)
+                                            {
+                                                <button class="mark-all-read-btn" @onclick="MarkAllRead" title="Đánh dấu tất cả đã đọc">
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                                    Đọc tất cả
+                                                </button>
+                                            }
+                                        </div>
+                                        <div class="notification-list">
+                                            @if (NotificationSvc.Notifications.Any())
+                                            {
+                                                @foreach (var n in NotificationSvc.Notifications.Take(8))
+                                                {
+                                                    <div class="notification-item @(n.IsRead ? "read" : "unread")" @onclick="() => MarkRead(n.Id)">
+                                                        <div class="notification-icon @GetNotifIconClass(n.Type)">
+                                                            @(n.Type switch
+                                                            {
+                                                                "POI_Created" => "📍",
+                                                                "POI_Approved" => "✅",
+                                                                "POI_Rejected" => "❌",
+                                                                "Food_Created" => "🍜",
+                                                                "Food_Approved" => "✅",
+                                                                "Food_Rejected" => "❌",
+                                                                _ => "🔔"
+                                                            })
+                                                        </div>
+                                                        <div class="notification-content">
+                                                            <span class="notification-title">@n.Title</span>
+                                                            <span class="notification-message">@n.Message</span>
+                                                            <span class="notification-time">@FormatTimeAgo(n.CreatedAt)</span>
+                                                        </div>
+                                                        <div class="notification-actions">
+                                                            @if (!n.IsRead)
+                                                            {
+                                                                <span class="unread-dot" title="Chưa đọc"></span>
+                                                            }
+                                                            <button class="notif-delete-btn" @onclick="() => DeleteNotif(n.Id)" @onclick:stopPropagation="true" title="Xóa">
+                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <div class="notification-empty">
+                                                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                                                    <span>Không có thông báo</span>
+                                                </div>
+                                            }
+                                        </div>
+                                        <div class="notification-panel-footer">
+                                            <AuthorizeView Roles="Admin">
+                                                <Authorized Context="ctx_notif_footer_admin">
+                                                    <a href="admin/notifications" class="view-all-link" @onclick="CloseNotificationPanel">Xem tất cả thông báo →</a>
+                                                </Authorized>
+                                            </AuthorizeView>
+                                            <AuthorizeView Roles="Seller">
+                                                <Authorized Context="ctx_notif_footer_seller">
+                                                    <a href="seller/notifications" class="view-all-link" @onclick="CloseNotificationPanel">Xem tất cả thông báo →</a>
+                                                </Authorized>
+                                            </AuthorizeView>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                            <a href="https://localhost:7214/swagger" target="_blank" class="action-btn" title="API Docs">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                             </a>
                         </div>
                     </div>
@@ -296,6 +401,21 @@
         background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
         color: #fff;
         box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+    }
+
+    .nav-badge {
+        margin-left: auto;
+        min-width: 20px;
+        height: 20px;
+        padding: 0 6px;
+        background: #ef4444;
+        color: #fff;
+        font-size: 11px;
+        font-weight: 600;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
     
     .nav-icon {
@@ -471,20 +591,271 @@
         background: rgba(255, 107, 53, 0.05);
     }
     
+    /* ===== Notification Bell & Dropdown ===== */
+    .notification-btn {
+        color: #475569;
+    }
+
     .notification-badge {
         position: absolute;
-        top: -4px;
-        right: -4px;
-        width: 18px;
+        top: -5px;
+        right: -5px;
+        min-width: 18px;
         height: 18px;
-        background: #ef4444;
+        padding: 0 5px;
+        background: linear-gradient(135deg, #ef4444, #dc2626);
         color: #fff;
         font-size: 10px;
-        font-weight: 600;
-        border-radius: 50%;
+        font-weight: 700;
+        border-radius: 10px;
         display: flex;
         align-items: center;
         justify-content: center;
+        border: 2px solid #fff;
+        animation: pulse-badge 2s ease-in-out infinite;
+    }
+
+    @@keyframes pulse-badge {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+    }
+
+    .notification-wrapper {
+        position: relative;
+    }
+
+    .notif-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 999;
+    }
+
+    .notification-panel {
+        position: absolute;
+        top: calc(100% + 8px);
+        right: -12px;
+        width: 400px;
+        max-height: 520px;
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.12), 0 8px 24px rgba(0,0,0,0.08);
+        z-index: 1001;
+        overflow: hidden;
+        animation: notifSlideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        display: flex;
+        flex-direction: column;
+    }
+
+    @@keyframes notifSlideDown {
+        from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .notification-panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 20px 14px;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    .panel-title-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .panel-title {
+        font-weight: 700;
+        font-size: 16px;
+        color: #1e293b;
+    }
+
+    .panel-count {
+        font-size: 11px;
+        font-weight: 600;
+        color: #ff6b35;
+        background: rgba(255, 107, 53, 0.1);
+        padding: 2px 8px;
+        border-radius: 10px;
+    }
+
+    .mark-all-read-btn {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        background: none;
+        border: none;
+        color: #ff6b35;
+        font-size: 12px;
+        cursor: pointer;
+        font-weight: 600;
+        padding: 6px 10px;
+        border-radius: 8px;
+        transition: all 0.2s;
+    }
+
+    .mark-all-read-btn:hover {
+        background: rgba(255, 107, 53, 0.08);
+    }
+
+    .notification-list {
+        flex: 1;
+        max-height: 380px;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: #e2e8f0 transparent;
+    }
+
+    .notification-list::-webkit-scrollbar { width: 4px; }
+    .notification-list::-webkit-scrollbar-track { background: transparent; }
+    .notification-list::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 4px; }
+
+    .notification-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 14px 20px;
+        cursor: pointer;
+        transition: background 0.15s ease;
+        position: relative;
+        border-bottom: 1px solid #f8fafc;
+    }
+
+    .notification-item:last-child { border-bottom: none; }
+
+    .notification-item:hover {
+        background: #f8fafc;
+    }
+
+    .notification-item:hover .notif-delete-btn {
+        opacity: 1;
+    }
+
+    .notification-item.unread {
+        background: #fff7ed;
+    }
+
+    .notification-item.unread:hover {
+        background: #fef3e2;
+    }
+
+    .notification-icon {
+        font-size: 18px;
+        min-width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px;
+        flex-shrink: 0;
+    }
+
+    .notification-icon.icon-created { background: #eff6ff; }
+    .notification-icon.icon-approved { background: #f0fdf4; }
+    .notification-icon.icon-rejected { background: #fef2f2; }
+    .notification-icon.icon-default { background: #f1f5f9; }
+
+    .notification-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+    }
+
+    .notification-title {
+        font-weight: 600;
+        font-size: 13px;
+        color: #1e293b;
+        line-height: 1.3;
+    }
+
+    .notification-message {
+        font-size: 12px;
+        color: #64748b;
+        line-height: 1.4;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .notification-time {
+        font-size: 11px;
+        color: #94a3b8;
+        margin-top: 2px;
+    }
+
+    .notification-actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
+
+    .unread-dot {
+        width: 8px;
+        height: 8px;
+        background: #ff6b35;
+        border-radius: 50%;
+        flex-shrink: 0;
+        animation: dotPulse 2s ease-in-out infinite;
+    }
+
+    @@keyframes dotPulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(255,107,53,0.4); }
+        50% { box-shadow: 0 0 0 4px rgba(255,107,53,0); }
+    }
+
+    .notif-delete-btn {
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: none;
+        border: none;
+        color: #94a3b8;
+        cursor: pointer;
+        border-radius: 6px;
+        opacity: 0;
+        transition: all 0.15s ease;
+    }
+
+    .notif-delete-btn:hover {
+        background: #fee2e2;
+        color: #ef4444;
+    }
+
+    .notification-empty {
+        padding: 48px 20px;
+        text-align: center;
+        color: #94a3b8;
+        font-size: 14px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .notification-panel-footer {
+        padding: 12px 20px;
+        border-top: 1px solid #f1f5f9;
+        text-align: center;
+    }
+
+    .view-all-link {
+        font-size: 13px;
+        font-weight: 600;
+        color: #ff6b35;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+
+    .view-all-link:hover {
+        color: #e85d26;
     }
     
     .admin-content {
@@ -615,6 +986,7 @@
     {
         if (firstRender)
         {
+            // Load saved language
             try
             {
                 var savedLang = await JS.InvokeAsync<string>("localStorage.getItem", "admin_language");
@@ -622,10 +994,15 @@
                 {
                     L.SetLanguage(savedLang);
                     FoodClient.SetLanguage(savedLang);
-                    StateHasChanged();
                 }
             }
             catch { }
+
+            // Initialize SignalR notifications
+            NotificationSvc.OnNotificationsChanged += OnNotificationsChanged;
+            try { await NotificationSvc.InitializeAsync(); } catch { }
+
+            StateHasChanged();
         }
     }
     
@@ -653,6 +1030,7 @@
         if (uri.Contains("tours")) return "Quản lý Tour";
         if (uri.Contains("history")) return "Lịch sử sử dụng";
         if (uri.Contains("gps-test")) return "Kiểm tra GPS";
+        if (uri.Contains("users")) return "Quản lý Người dùng";
         return "Quản trị";
     }
     
@@ -670,6 +1048,7 @@
         if (uri.Contains("tours")) return "Tour";
         if (uri.Contains("history")) return "Lịch sử";
         if (uri.Contains("gps-test")) return "GPS";
+        if (uri.Contains("users")) return "Người dùng";
         return "Tổng quan";
     }
     
@@ -686,5 +1065,61 @@
     private string GetLangClass(string langCode)
     {
         return L.CurrentLanguage == langCode ? "active" : "";
+    }
+
+    // === Notification methods ===
+    private bool showNotificationPanel = false;
+
+    private void OnNotificationsChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void ToggleNotificationPanel()
+    {
+        showNotificationPanel = !showNotificationPanel;
+    }
+
+    private void CloseNotificationPanel()
+    {
+        showNotificationPanel = false;
+    }
+
+    private async Task MarkRead(int id)
+    {
+        await NotificationSvc.MarkAsReadAsync(id);
+    }
+
+    private async Task MarkAllRead()
+    {
+        await NotificationSvc.MarkAllAsReadAsync();
+    }
+
+    private async Task DeleteNotif(int id)
+    {
+        await NotificationSvc.DeleteAsync(id);
+    }
+
+    private string GetNotifIconClass(string type) => type switch
+    {
+        "POI_Created" or "Food_Created" => "icon-created",
+        "POI_Approved" or "Food_Approved" => "icon-approved",
+        "POI_Rejected" or "Food_Rejected" => "icon-rejected",
+        _ => "icon-default"
+    };
+
+    private string FormatTimeAgo(DateTime createdAt)
+    {
+        var diff = DateTime.UtcNow - createdAt;
+        if (diff.TotalMinutes < 1) return "Vừa xong";
+        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes} phút trước";
+        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours} giờ trước";
+        if (diff.TotalDays < 7) return $"{(int)diff.TotalDays} ngày trước";
+        return createdAt.ToString("dd/MM/yyyy");
+    }
+
+    public void Dispose()
+    {
+        NotificationSvc.OnNotificationsChanged -= OnNotificationsChanged;
     }
 }

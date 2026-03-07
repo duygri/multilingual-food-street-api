@@ -7,14 +7,14 @@ namespace FoodStreet.Client.Services
     /// </summary>
     public class AuthorizingMessageHandler : DelegatingHandler
     {
-        private readonly ILocalStorageService _localStorage;
+        private readonly ISessionStorageService _sessionStorage;
 
         // Keys must match AuthService constants
         private const string AccessTokenKey = "auth_access_token";
 
-        public AuthorizingMessageHandler(ILocalStorageService localStorage)
+        public AuthorizingMessageHandler(ISessionStorageService sessionStorage)
         {
-            _localStorage = localStorage;
+            _sessionStorage = sessionStorage;
         }
 
         protected override async Task<HttpResponseMessage> SendAsync(
@@ -25,7 +25,7 @@ namespace FoodStreet.Client.Services
             var path = request.RequestUri?.PathAndQuery ?? "";
             if (!path.Contains("/api/auth/login") && !path.Contains("/api/auth/register"))
             {
-                var token = await _localStorage.GetItemAsync<string>(AccessTokenKey);
+                var token = await _sessionStorage.GetItemAsync<string>(AccessTokenKey);
                 
                 if (!string.IsNullOrEmpty(token))
                 {

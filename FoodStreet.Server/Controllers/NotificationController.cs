@@ -1,193 +1,166 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using FoodStreet.Server.Extensions;
+using FoodStreet.Server.Hubs;
 using PROJECT_C_.Data;
 using PROJECT_C_.Models;
 
 namespace PROJECT_C_.Controllers
 {
+    [Route("api/[controller]")]
     [ApiController]
-    [Route("api/notifications")]
+    [Authorize]
     public class NotificationController : ControllerBase
     {
         private readonly AppDbContext _context;
-        private readonly ILogger<NotificationController> _logger;
+        private readonly IHubContext<NotificationHub> _hubContext;
 
-        public NotificationController(AppDbContext context, ILogger<NotificationController> logger)
+        public NotificationController(AppDbContext context, IHubContext<NotificationHub> hubContext)
         {
             _context = context;
-            _logger = logger;
+            _hubContext = hubContext;
         }
 
         /// <summary>
-        /// Đăng ký Push Subscription
+        /// Lấy danh sách thông báo của user hiện tại
         /// </summary>
-        [HttpPost("subscribe")]
-        public async Task<IActionResult> Subscribe([FromBody] SubscribeRequest request)
+        [HttpGet]
+        public async Task<ActionResult<List<NotificationDto>>> GetNotifications()
         {
-            // Check if already subscribed
-            var existing = await _context.PushSubscriptions
-                .FirstOrDefaultAsync(p => p.Endpoint == request.Endpoint);
+            var userId = User.GetUserId();
+            if (userId == null) return Unauthorized();
 
-            if (existing != null)
-            {
-                // Update existing subscription
-                existing.P256dh = request.Keys.P256dh;
-                existing.Auth = request.Keys.Auth;
-                existing.IsActive = true;
-                existing.SessionId = request.SessionId;
-            }
-            else
-            {
-                // Create new subscription
-                var subscription = new PushSubscription
+            var isAdmin = User.IsAdminRole();
+            var role = isAdmin ? "Admin" : "Seller";
+
+            var notifications = await _context.Notifications
+                .Where(n => n.UserId == userId || n.TargetRole == role)
+                .OrderByDescending(n => n.CreatedAt)
+                .Take(50)
+                .Select(n => new NotificationDto
                 {
-                    SessionId = request.SessionId,
-                    Endpoint = request.Endpoint,
-                    P256dh = request.Keys.P256dh,
-                    Auth = request.Keys.Auth,
-                    PreferredLanguage = request.Language ?? "vi"
-                };
-                _context.PushSubscriptions.Add(subscription);
-            }
-
-            await _context.SaveChangesAsync();
-            _logger.LogInformation("Push subscription registered for session: {SessionId}", request.SessionId);
-
-            return Ok(new { success = true, message = "Đã đăng ký nhận thông báo" });
-        }
-
-        /// <summary>
-        /// Hủy đăng ký Push Subscription
-        /// </summary>
-        [HttpPost("unsubscribe")]
-        public async Task<IActionResult> Unsubscribe([FromBody] UnsubscribeRequest request)
-        {
-            var subscription = await _context.PushSubscriptions
-                .FirstOrDefaultAsync(p => p.Endpoint == request.Endpoint);
-
-            if (subscription != null)
-            {
-                subscription.IsActive = false;
-                await _context.SaveChangesAsync();
-            }
-
-            return Ok(new { success = true, message = "Đã hủy đăng ký thông báo" });
-        }
-
-        /// <summary>
-        /// Gửi thông báo test (Admin only)
-        /// </summary>
-        [HttpPost("send-test")]
-        public async Task<IActionResult> SendTestNotification([FromBody] SendNotificationRequest request)
-        {
-            var subscriptions = await _context.PushSubscriptions
-                .Where(p => p.IsActive)
+                    Id = n.Id,
+                    Title = n.Title,
+                    Message = n.Message,
+                    Type = n.Type.ToString(),
+                    IsRead = n.IsRead,
+                    CreatedAt = n.CreatedAt,
+                    RelatedId = n.RelatedId,
+                    SenderName = n.SenderName
+                })
                 .ToListAsync();
 
-            // Note: Trong production, sẽ dùng WebPush library để gửi thật
-            // Ở đây chỉ trả về thông tin cho client tự xử lý
-            
-            _logger.LogInformation("Test notification sent to {Count} subscribers", subscriptions.Count);
-
-            return Ok(new 
-            { 
-                success = true, 
-                subscriberCount = subscriptions.Count,
-                notification = new
-                {
-                    title = request.Title,
-                    body = request.Body,
-                    icon = request.Icon ?? "/favicon.png"
-                }
-            });
+            return Ok(notifications);
         }
 
         /// <summary>
-        /// Lấy số lượng subscribers (Admin)
+        /// Đếm số thông báo chưa đọc
         /// </summary>
-        [HttpGet("stats")]
-        public async Task<IActionResult> GetStats()
+        [HttpGet("unread-count")]
+        public async Task<ActionResult<int>> GetUnreadCount()
         {
-            var total = await _context.PushSubscriptions.CountAsync();
-            var active = await _context.PushSubscriptions.CountAsync(p => p.IsActive);
+            var userId = User.GetUserId();
+            if (userId == null) return Unauthorized();
 
-            return Ok(new
-            {
-                totalSubscriptions = total,
-                activeSubscriptions = active
-            });
+            var isAdmin = User.IsAdminRole();
+            var role = isAdmin ? "Admin" : "Seller";
+
+            var count = await _context.Notifications
+                .CountAsync(n => (n.UserId == userId || n.TargetRole == role) && !n.IsRead);
+
+            return Ok(count);
         }
 
         /// <summary>
-        /// Trigger notification khi vào geofence (internal use)
+        /// Đánh dấu thông báo đã đọc
         /// </summary>
-        [HttpPost("geofence-trigger")]
-        public async Task<IActionResult> GeofenceTrigger([FromBody] GeofenceTriggerRequest request)
+        [HttpPost("{id}/read")]
+        public async Task<IActionResult> MarkAsRead(int id)
         {
-            var subscription = await _context.PushSubscriptions
-                .FirstOrDefaultAsync(p => p.SessionId == request.SessionId && p.IsActive);
+            var notification = await _context.Notifications.FindAsync(id);
+            if (notification == null) return NotFound();
 
-            if (subscription == null)
-            {
-                return Ok(new { triggered = false, reason = "No active subscription" });
-            }
+            notification.IsRead = true;
+            await _context.SaveChangesAsync();
 
-            // Return notification data for client to display
-            return Ok(new
-            {
-                triggered = true,
-                notification = new
-                {
-                    title = $"📍 {request.PoiName}",
-                    body = request.PoiDescription ?? "Bạn đang ở gần địa điểm này!",
-                    icon = request.PoiImageUrl ?? "/favicon.png",
-                    tag = $"geofence-{request.PoiId}",
-                    data = new
-                    {
-                        poiId = request.PoiId,
-                        latitude = request.Latitude,
-                        longitude = request.Longitude
-                    }
-                }
-            });
+            return Ok();
+        }
+
+        /// <summary>
+        /// Đánh dấu tất cả đã đọc
+        /// </summary>
+        [HttpPost("read-all")]
+        public async Task<IActionResult> MarkAllAsRead()
+        {
+            var userId = User.GetUserId();
+            if (userId == null) return Unauthorized();
+
+            var isAdmin = User.IsAdminRole();
+            var role = isAdmin ? "Admin" : "Seller";
+
+            await _context.Notifications
+                .Where(n => (n.UserId == userId || n.TargetRole == role) && !n.IsRead)
+                .ExecuteUpdateAsync(s => s.SetProperty(n => n.IsRead, true));
+
+            return Ok();
+        }
+
+        /// <summary>
+        /// Xóa một thông báo
+        /// </summary>
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteNotification(int id)
+        {
+            var userId = User.GetUserId();
+            if (userId == null) return Unauthorized();
+
+            var notification = await _context.Notifications.FindAsync(id);
+            if (notification == null) return NotFound();
+
+            // Chỉ cho phép xóa notification thuộc về user hoặc role của mình
+            var isAdmin = User.IsAdminRole();
+            var role = isAdmin ? "Admin" : "Seller";
+            if (notification.UserId != userId && notification.TargetRole != role)
+                return Forbid();
+
+            _context.Notifications.Remove(notification);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
+        /// <summary>
+        /// Xóa tất cả thông báo đã đọc
+        /// </summary>
+        [HttpDelete("clear-read")]
+        public async Task<IActionResult> ClearReadNotifications()
+        {
+            var userId = User.GetUserId();
+            if (userId == null) return Unauthorized();
+
+            var isAdmin = User.IsAdminRole();
+            var role = isAdmin ? "Admin" : "Seller";
+
+            await _context.Notifications
+                .Where(n => (n.UserId == userId || n.TargetRole == role) && n.IsRead)
+                .ExecuteDeleteAsync();
+
+            return NoContent();
         }
     }
 
-    // Request DTOs
-    public class SubscribeRequest
+    public class NotificationDto
     {
-        public string SessionId { get; set; } = string.Empty;
-        public string Endpoint { get; set; } = string.Empty;
-        public PushKeys Keys { get; set; } = new();
-        public string? Language { get; set; }
-    }
-
-    public class PushKeys
-    {
-        public string P256dh { get; set; } = string.Empty;
-        public string Auth { get; set; } = string.Empty;
-    }
-
-    public class UnsubscribeRequest
-    {
-        public string Endpoint { get; set; } = string.Empty;
-    }
-
-    public class SendNotificationRequest
-    {
-        public string Title { get; set; } = string.Empty;
-        public string Body { get; set; } = string.Empty;
-        public string? Icon { get; set; }
-    }
-
-    public class GeofenceTriggerRequest
-    {
-        public string SessionId { get; set; } = string.Empty;
-        public int PoiId { get; set; }
-        public string PoiName { get; set; } = string.Empty;
-        public string? PoiDescription { get; set; }
-        public string? PoiImageUrl { get; set; }
-        public double Latitude { get; set; }
-        public double Longitude { get; set; }
+        public int Id { get; set; }
+        public string Title { get; set; } = "";
+        public string Message { get; set; } = "";
+        public string Type { get; set; } = "";
+        public bool IsRead { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public int? RelatedId { get; set; }
+        public string? SenderName { get; set; }
     }
 }

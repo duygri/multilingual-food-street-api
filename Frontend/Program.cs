@@ -12,8 +12,9 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 // CORE SERVICES
 // ========================================
 
-// LocalStorage (must be singleton for JSInterop)
+// LocalStorage & SessionStorage (must be singleton for JSInterop)
 builder.Services.AddScoped<ILocalStorageService, LocalStorageService>();
+builder.Services.AddScoped<ISessionStorageService, SessionStorageService>();
 
 // ========================================
 // HTTP CLIENT with Auth Handler
@@ -46,6 +47,7 @@ builder.Services.AddScoped<ILocationClientService, LocationClientService>();
 builder.Services.AddScoped<IAudioService, AudioService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<GpsTrackingService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddLocalization();
 builder.Services.AddSingleton<ILocalizationService, LocalizationService>();
 

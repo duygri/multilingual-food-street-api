@@ -1,0 +1,511 @@
+@page "/admin/notifications"
+@page "/seller/notifications"
+@layout AdminLayout
+@using Microsoft.AspNetCore.Authorization
+@using FoodStreet.Client.Services
+@attribute [Authorize]
+@inject INotificationService NotificationSvc
+@inject NavigationManager Navigation
+@implements IDisposable
+
+<div class="notifications-page">
+    <div class="page-header">
+        <div class="header-info">
+            <h2>🔔 Thông báo</h2>
+            <span class="notification-count">
+                @if (NotificationSvc.UnreadCount > 0)
+                {
+                    <span class="count-badge">@NotificationSvc.UnreadCount chưa đọc</span>
+                }
+                else
+                {
+                    <span class="count-all">Tất cả đã đọc</span>
+                }
+            </span>
+        </div>
+        <div class="header-actions">
+            @if (NotificationSvc.Notifications.Any(n => !n.IsRead))
+            {
+                <button class="btn-action btn-read-all" @onclick="MarkAllRead">
+                    ✅ Đọc tất cả
+                </button>
+            }
+            @if (NotificationSvc.Notifications.Any(n => n.IsRead))
+            {
+                <button class="btn-action btn-clear" @onclick="ClearRead">
+                    🗑️ Xóa đã đọc
+                </button>
+            }
+        </div>
+    </div>
+
+    <!-- Filter tabs -->
+    <div class="filter-tabs">
+        <button class="filter-tab @(activeFilter == "all" ? "active" : "")" @onclick='() => SetFilter("all")'>
+            Tất cả <span class="tab-count">@NotificationSvc.Notifications.Count</span>
+        </button>
+        <button class="filter-tab @(activeFilter == "unread" ? "active" : "")" @onclick='() => SetFilter("unread")'>
+            Chưa đọc <span class="tab-count">@NotificationSvc.Notifications.Count(n => !n.IsRead)</span>
+        </button>
+        <button class="filter-tab @(activeFilter == "poi" ? "active" : "")" @onclick='() => SetFilter("poi")'>
+            📍 POI <span class="tab-count">@NotificationSvc.Notifications.Count(n => n.Type.StartsWith("POI"))</span>
+        </button>
+        <button class="filter-tab @(activeFilter == "food" ? "active" : "")" @onclick='() => SetFilter("food")'>
+            🍜 Món ăn <span class="tab-count">@NotificationSvc.Notifications.Count(n => n.Type.StartsWith("Food"))</span>
+        </button>
+    </div>
+
+    <!-- Notification list -->
+    <div class="notification-list">
+        @if (!FilteredNotifications.Any())
+        {
+            <div class="empty-state">
+                <div class="empty-icon">🔔</div>
+                <h3>Không có thông báo</h3>
+                <p>Bạn sẽ nhận được thông báo khi có hoạt động mới</p>
+            </div>
+        }
+        else
+        {
+            @foreach (var notification in FilteredNotifications)
+            {
+                <div class="notification-card @(notification.IsRead ? "" : "unread")" @onclick="() => HandleClick(notification)">
+                    <div class="card-indicator @GetTypeClass(notification.Type)"></div>
+                    <div class="card-icon">
+                        @GetTypeIcon(notification.Type)
+                    </div>
+                    <div class="card-content">
+                        <div class="card-header">
+                            <span class="card-title">@notification.Title</span>
+                            <span class="card-time">@FormatTimeAgo(notification.CreatedAt)</span>
+                        </div>
+                        <p class="card-message">@notification.Message</p>
+                        <div class="card-meta">
+                            @if (!string.IsNullOrEmpty(notification.SenderName))
+                            {
+                                <span class="meta-sender">👤 @notification.SenderName</span>
+                            }
+                            <span class="meta-type badge-@GetTypeClass(notification.Type)">@GetTypeLabel(notification.Type)</span>
+                        </div>
+                    </div>
+                    <div class="card-actions">
+                        @if (!notification.IsRead)
+                        {
+                            <button class="btn-icon" title="Đánh dấu đã đọc" @onclick:stopPropagation="true" @onclick="() => MarkRead(notification.Id)">
+                                ✅
+                            </button>
+                        }
+                        <button class="btn-icon btn-delete" title="Xóa" @onclick:stopPropagation="true" @onclick="() => Delete(notification.Id)">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+<style>
+    .notifications-page {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+    }
+
+    .page-header h2 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 700;
+        color: #1e2a3a;
+    }
+
+    .header-info {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .count-badge {
+        background: linear-gradient(135deg, #ff6b35, #f7931e);
+        color: #fff;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .count-all {
+        color: #64748b;
+        font-size: 13px;
+    }
+
+    .header-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    .btn-action {
+        padding: 8px 16px;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        background: #fff;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        color: #475569;
+    }
+
+    .btn-action:hover {
+        border-color: #ff6b35;
+        color: #ff6b35;
+        background: rgba(255, 107, 53, 0.05);
+    }
+
+    .btn-clear:hover {
+        border-color: #ef4444;
+        color: #ef4444;
+        background: rgba(239, 68, 68, 0.05);
+    }
+
+    /* Filter tabs */
+    .filter-tabs {
+        display: flex;
+        gap: 4px;
+        padding: 4px;
+        background: #f1f5f9;
+        border-radius: 12px;
+        margin-bottom: 20px;
+    }
+
+    .filter-tab {
+        flex: 1;
+        padding: 10px 16px;
+        border: none;
+        background: transparent;
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: 500;
+        color: #64748b;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+    }
+
+    .filter-tab:hover {
+        color: #1e2a3a;
+        background: rgba(255, 255, 255, 0.6);
+    }
+
+    .filter-tab.active {
+        background: #fff;
+        color: #ff6b35;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        font-weight: 600;
+    }
+
+    .tab-count {
+        background: rgba(100, 116, 139, 0.1);
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 11px;
+    }
+
+    .filter-tab.active .tab-count {
+        background: rgba(255, 107, 53, 0.1);
+        color: #ff6b35;
+    }
+
+    /* Notification cards */
+    .notification-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .notification-card {
+        display: flex;
+        align-items: flex-start;
+        gap: 14px;
+        padding: 16px 20px;
+        background: #fff;
+        border-radius: 14px;
+        border: 1px solid #e2e8f0;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .notification-card:hover {
+        border-color: #cbd5e1;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        transform: translateY(-1px);
+    }
+
+    .notification-card.unread {
+        background: linear-gradient(135deg, rgba(255, 107, 53, 0.03), rgba(247, 147, 30, 0.02));
+        border-color: rgba(255, 107, 53, 0.2);
+    }
+
+    .card-indicator {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        border-radius: 4px 0 0 4px;
+    }
+
+    .card-indicator.type-poi { background: #3b82f6; }
+    .card-indicator.type-food { background: #f59e0b; }
+    .card-indicator.type-approved { background: #22c55e; }
+    .card-indicator.type-rejected { background: #ef4444; }
+    .card-indicator.type-system { background: #8b5cf6; }
+
+    .card-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        background: #f8fafc;
+        flex-shrink: 0;
+    }
+
+    .card-content {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 4px;
+    }
+
+    .card-title {
+        font-weight: 600;
+        font-size: 14px;
+        color: #1e2a3a;
+    }
+
+    .notification-card.unread .card-title {
+        color: #ff6b35;
+    }
+
+    .card-time {
+        font-size: 12px;
+        color: #94a3b8;
+        white-space: nowrap;
+        margin-left: 12px;
+    }
+
+    .card-message {
+        font-size: 13px;
+        color: #64748b;
+        margin: 0 0 8px 0;
+        line-height: 1.5;
+    }
+
+    .card-meta {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .meta-sender {
+        font-size: 12px;
+        color: #94a3b8;
+    }
+
+    .meta-type {
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 6px;
+        font-weight: 500;
+    }
+
+    .badge-type-poi { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+    .badge-type-food { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+    .badge-type-approved { background: rgba(34, 197, 94, 0.1); color: #22c55e; }
+    .badge-type-rejected { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+    .badge-type-system { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
+
+    .card-actions {
+        display: flex;
+        gap: 4px;
+        flex-shrink: 0;
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+
+    .notification-card:hover .card-actions {
+        opacity: 1;
+    }
+
+    .btn-icon {
+        width: 32px;
+        height: 32px;
+        border: none;
+        background: transparent;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s;
+    }
+
+    .btn-icon:hover {
+        background: #f1f5f9;
+    }
+
+    .btn-delete:hover {
+        background: rgba(239, 68, 68, 0.1);
+    }
+
+    /* Empty state */
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #94a3b8;
+    }
+
+    .empty-icon {
+        font-size: 48px;
+        margin-bottom: 16px;
+        opacity: 0.5;
+    }
+
+    .empty-state h3 {
+        color: #64748b;
+        margin: 0 0 8px 0;
+        font-weight: 600;
+    }
+
+    .empty-state p {
+        margin: 0;
+        font-size: 14px;
+    }
+</style>
+
+@code {
+    private string activeFilter = "all";
+
+    private IEnumerable<NotificationDto> FilteredNotifications => activeFilter switch
+    {
+        "unread" => NotificationSvc.Notifications.Where(n => !n.IsRead),
+        "poi" => NotificationSvc.Notifications.Where(n => n.Type.StartsWith("POI")),
+        "food" => NotificationSvc.Notifications.Where(n => n.Type.StartsWith("Food")),
+        _ => NotificationSvc.Notifications
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        NotificationSvc.OnNotificationsChanged += OnChanged;
+        await NotificationSvc.InitializeAsync();
+    }
+
+    private void OnChanged() => InvokeAsync(StateHasChanged);
+
+    private void SetFilter(string filter) => activeFilter = filter;
+
+    private async Task MarkRead(int id)
+    {
+        await NotificationSvc.MarkAsReadAsync(id);
+    }
+
+    private async Task MarkAllRead()
+    {
+        await NotificationSvc.MarkAllAsReadAsync();
+    }
+
+    private async Task Delete(int id)
+    {
+        await NotificationSvc.DeleteAsync(id);
+    }
+
+    private async Task ClearRead()
+    {
+        await NotificationSvc.ClearReadAsync();
+    }
+
+    private void HandleClick(NotificationDto notification)
+    {
+        if (!notification.IsRead)
+        {
+            _ = NotificationSvc.MarkAsReadAsync(notification.Id);
+        }
+
+        // Navigate to related item if available
+        if (notification.RelatedId.HasValue)
+        {
+            var path = notification.Type switch
+            {
+                "POI_Created" or "POI_Approved" or "POI_Rejected" => $"admin/locations",
+                "Food_Created" or "Food_Approved" => $"admin/foods",
+                _ => null
+            };
+            if (path != null) Navigation.NavigateTo(path);
+        }
+    }
+
+    private string GetTypeIcon(string type) => type switch
+    {
+        "POI_Created" => "📍",
+        "POI_Approved" => "✅",
+        "POI_Rejected" => "❌",
+        "Food_Created" => "🍜",
+        "Food_Approved" => "✅",
+        _ => "🔔"
+    };
+
+    private string GetTypeClass(string type) => type switch
+    {
+        "POI_Created" => "type-poi",
+        "POI_Approved" => "type-approved",
+        "POI_Rejected" => "type-rejected",
+        "Food_Created" => "type-food",
+        "Food_Approved" => "type-approved",
+        _ => "type-system"
+    };
+
+    private string GetTypeLabel(string type) => type switch
+    {
+        "POI_Created" => "POI mới",
+        "POI_Approved" => "Đã duyệt",
+        "POI_Rejected" => "Từ chối",
+        "Food_Created" => "Món ăn mới",
+        "Food_Approved" => "Đã duyệt",
+        _ => "Hệ thống"
+    };
+
+    private string FormatTimeAgo(DateTime createdAt)
+    {
+        var diff = DateTime.UtcNow - createdAt;
+        if (diff.TotalMinutes < 1) return "Vừa xong";
+        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes} phút trước";
+        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours} giờ trước";
+        if (diff.TotalDays < 7) return $"{(int)diff.TotalDays} ngày trước";
+        return createdAt.ToString("dd/MM/yyyy HH:mm");
+    }
+
+    public void Dispose()
+    {
+        NotificationSvc.OnNotificationsChanged -= OnChanged;
+    }
+}

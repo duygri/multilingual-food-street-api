@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Components.Authorization;
 using FoodStreet.Client;
 using FoodStreet.Client.Services;
@@ -28,8 +28,9 @@ public static class MauiProgram
         // ========================================
         // CORE SERVICES
         // ========================================
-        // Use JS-based LocalStorage (works in WebView)
+        // Use JS-based Storage (works in WebView)
         builder.Services.AddScoped<ILocalStorageService, LocalStorageService>();
+        builder.Services.AddScoped<ISessionStorageService, SessionStorageService>();
 
         // ========================================
         // HTTP CLIENT

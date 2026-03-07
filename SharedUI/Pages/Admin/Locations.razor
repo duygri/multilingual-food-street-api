@@ -2,6 +2,7 @@
 @page "/seller/locations"
 @layout AdminLayout
 @inject FoodStreet.Client.Services.ILocationClientService LocationService
+@inject IJSRuntime JS
 @using FoodStreet.Client.DTOs
 @inject NavigationManager Navigation
 @implements IDisposable
@@ -126,13 +127,13 @@ else
                         <td>
                             @if (isAdmin)
                             {
-                                @* Admin: Duyệt/Từ chối nếu đang chờ + Sửa/Xóa *@
+                                @* Admin: Chỉ có Duyệt/Từ chối và Xem chi tiết *@
                                 @if (!loc.IsApproved)
                                 {
                                     <button class="btn btn-sm btn-success me-1" @onclick="() => ApproveLocation(loc.Id)" title="Duyệt">✅</button>
                                     <button class="btn btn-sm btn-danger me-1" @onclick="() => RejectLocation(loc.Id)" title="Từ chối">❌</button>
                                 }
-                                <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => ShowEditModal(loc)" title="Sửa">✏️</button>
+                                <button class="btn btn-sm btn-outline-info me-1" @onclick="() => ShowDetailsModal(loc)" title="Xem chi tiết">👁️</button>
                                 <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteLocation(loc.Id)" title="Xóa">🗑️</button>
                             }
                             else
@@ -187,14 +188,25 @@ else
                         <label class="form-label">📝 Mô tả</label>
                         <textarea class="form-control" rows="2" @bind="editingLocation.Description" placeholder="Mô tả ngắn về POI..."></textarea>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label">🗺️ Chọn vị trí trên bản đồ</label>
+                        <div class="input-group mb-2">
+                            <input type="text" class="form-control" placeholder="Nhập địa chỉ cần tìm (VD: Chợ Bến Thành)..." @bind="mapSearchQuery" @bind:event="oninput" @onkeydown="@(e => { if (e.Key == "Enter") SearchLocationMap(); })" />
+                            <button class="btn btn-outline-secondary" type="button" @onclick="SearchLocationMap" disabled="@isSearchingMap">
+                                @if (isSearchingMap) { <span class="spinner-border spinner-border-sm"></span> } else { <span>🔍 Tìm</span> }
+                            </button>
+                        </div>
+                        <div id="poi-map-picker" style="height: 250px; width: 100%; border-radius: 8px; border: 1px solid #e2e8f0; z-index: 1;"></div>
+                        <small class="text-muted">Kéo thả icon 📍 hoặc click điểm trên bản đồ để cập nhật tọa độ</small>
+                    </div>
                     <div class="row">
                         <div class="col-md-4 mb-3">
                             <label class="form-label">🌐 Vĩ độ (Latitude)</label>
-                            <input type="number" step="0.000001" class="form-control" @bind="editingLocation.Latitude" />
+                            <input type="number" step="0.000001" class="form-control" @bind="editingLocation.Latitude" @onblur="SyncMapToInputs" />
                         </div>
                         <div class="col-md-4 mb-3">
                             <label class="form-label">🌐 Kinh độ (Longitude)</label>
-                            <input type="number" step="0.000001" class="form-control" @bind="editingLocation.Longitude" />
+                            <input type="number" step="0.000001" class="form-control" @bind="editingLocation.Longitude" @onblur="SyncMapToInputs" />
                         </div>
                         <div class="col-md-4 mb-3">
                             <label class="form-label">📏 Bán kính (m)</label>
@@ -210,7 +222,20 @@ else
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">🖼️ Link hình ảnh</label>
-                            <input type="text" class="form-control" @bind="editingLocation.ImageUrl" placeholder="https://example.com/image.jpg" />
+                            <div class="input-group mb-2">
+                                <input type="text" class="form-control" @bind="editingLocation.ImageUrl" placeholder="https://example.com/image.jpg" />
+                            </div>
+                            <div class="d-flex align-items-center mt-2">
+                                <label class="btn btn-sm btn-outline-secondary mb-0 me-2" style="cursor: pointer;">
+                                    📸 Chọn từ máy
+                                    <InputFile OnChange="UploadImage" accept="image/*" style="display: none;" />
+                                </label>
+                                @if (isUploadingImage)
+                                {
+                                    <span class="spinner-border spinner-border-sm text-primary me-2"></span>
+                                    <small class="text-muted">Đang tải ảnh lên...</small>
+                                }
+                            </div>
                         </div>
                     </div>
                     <div class="mb-3">
@@ -233,6 +258,79 @@ else
     </div>
 }
 
+@* Modal Xem chi tiết (Read-only cho Admin) *@
+@if (showDetailsModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content admin-modal">
+                <div class="modal-header">
+                    <h5 class="modal-title">👁️ Chi tiết POI</h5>
+                    <button type="button" class="btn-close" @onclick="CloseDetailsModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted">📍 Tên POI</label>
+                            <p class="fw-bold fs-5">@viewLocation.Name</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted">🏠 Địa chỉ</label>
+                            <p>@(string.IsNullOrEmpty(viewLocation.Address) ? "—" : viewLocation.Address)</p>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted">📝 Mô tả</label>
+                        <p class="border p-2 rounded bg-light">@(string.IsNullOrEmpty(viewLocation.Description) ? "—" : viewLocation.Description)</p>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label text-muted">🌐 Vĩ độ (Latitude)</label>
+                            <p><code>@viewLocation.Latitude</code></p>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label text-muted">🌐 Kinh độ (Longitude)</label>
+                            <p><code>@viewLocation.Longitude</code></p>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label text-muted">📏 Bán kính (m)</label>
+                            <p><span class="badge bg-info">@viewLocation.Radius m</span></p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted">⭐ Độ ưu tiên</label>
+                            <p>@viewLocation.Priority</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted">🖼️ Hình ảnh</label>
+                            <div class="mt-1">
+                                @if (!string.IsNullOrEmpty(viewLocation.ImageUrl))
+                                {
+                                    <a href="@viewLocation.ImageUrl" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        👁️ Xem hình ảnh
+                                    </a>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted">🔊 TTS Script (Đọc tự động)</label>
+                        <p class="border p-2 rounded bg-light">@(string.IsNullOrEmpty(viewLocation.TtsScript) ? "—" : viewLocation.TtsScript)</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDetailsModal">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private List<LocationDto>? allLocations;
     private List<LocationDto>? pendingLocations;
@@ -248,15 +346,31 @@ else
     private LocationDto editingLocation = new();
     private bool isEditing = false;
     private bool saving = false;
+    private bool isUploadingImage = false;
+    
+    private bool showDetailsModal = false;
+    private LocationDto viewLocation = new();
 
     private System.Threading.Timer? _pollingTimer;
     private bool _isPolling = false;
+    private DotNetObjectReference<Locations>? objRef;
 
     private string? errorMessage;
     private string? successMessage;
 
+    private string mapSearchQuery = "";
+    private bool isSearchingMap = false;
+
+    public class MapSearchResult {
+        public string lat { get; set; } = "";
+        public string lng { get; set; } = "";
+        public string display_name { get; set; } = "";
+    }
+
     protected override async Task OnInitializedAsync()
     {
+        objRef = DotNetObjectReference.Create(this);
+
         // Xác định role từ URL path (đáng tin nhất — route đã quyết định view)
         var uri = Navigation.ToBaseRelativePath(Navigation.Uri);
         isAdmin = uri.StartsWith("admin", StringComparison.OrdinalIgnoreCase);
@@ -351,16 +465,17 @@ else
         displayedLocations = activeTab == "pending" ? pendingLocations : allLocations;
     }
 
-    private void ShowCreateModal()
+    private async Task ShowCreateModal()
     {
         if (isAdmin) return; // Admin không tạo POI
-        editingLocation = new LocationDto { Radius = 50 };
+        editingLocation = new LocationDto { Radius = 50, Latitude = 10.7680, Longitude = 106.7034 };
         modalTitle = "📤 Gửi yêu cầu tạo POI";
         isEditing = false;
         showModal = true;
+        await InitMapPicker();
     }
 
-    private void ShowEditModal(LocationDto loc)
+    private async Task ShowEditModal(LocationDto loc)
     {
         editingLocation = new LocationDto
         {
@@ -379,9 +494,18 @@ else
         modalTitle = "✏️ Sửa POI";
         isEditing = true;
         showModal = true;
+        await InitMapPicker();
     }
 
     private void CloseModal() => showModal = false;
+
+    private void ShowDetailsModal(LocationDto loc)
+    {
+        viewLocation = loc;
+        showDetailsModal = true;
+    }
+
+    private void CloseDetailsModal() => showDetailsModal = false;
 
     private async Task SaveLocation()
     {
@@ -425,6 +549,51 @@ else
         }
     }
 
+    private async Task UploadImage(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file == null) return;
+
+        isUploadingImage = true;
+        errorMessage = null;
+
+        try
+        {
+            // Limit to 5MB
+            if (file.Size > 5 * 1024 * 1024)
+            {
+                errorMessage = "File ảnh quá lớn (tối đa 5MB).";
+                return;
+            }
+
+            using var stream = file.OpenReadStream(5 * 1024 * 1024);
+            using var content = new MultipartFormDataContent();
+            var fileContent = new StreamContent(stream);
+            fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
+            content.Add(fileContent, "file", file.Name);
+
+            var url = await LocationService.UploadImageAsync(content);
+            if (!string.IsNullOrEmpty(url))
+            {
+                // Update text input with the returned URL from the server
+                editingLocation.ImageUrl = Navigation.BaseUri.TrimEnd('/') + url;
+            }
+            else
+            {
+                errorMessage = "Tải ảnh lên thất bại, vui lòng thử lại.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Lỗi khi tải ảnh: {ex.Message}";
+        }
+        finally
+        {
+            isUploadingImage = false;
+            StateHasChanged();
+        }
+    }
+
     private async Task ApproveLocation(int id)
     {
         try
@@ -456,5 +625,62 @@ else
     public void Dispose()
     {
         _pollingTimer?.Dispose();
+        objRef?.Dispose();
+    }
+
+    [JSInvokable]
+    public void UpdateCoordinatesFromMap(double lat, double lng)
+    {
+        editingLocation.Latitude = lat;
+        editingLocation.Longitude = lng;
+        StateHasChanged();
+    }
+
+    private async Task SyncMapToInputs()
+    {
+        try { await JS.InvokeVoidAsync("LeafletMap.updatePickerMarker", editingLocation.Latitude, editingLocation.Longitude); } catch { }
+    }
+    
+    private async Task SearchLocationMap()
+    {
+        if (string.IsNullOrWhiteSpace(mapSearchQuery)) return;
+        isSearchingMap = true;
+        try 
+        {
+            var result = await JS.InvokeAsync<MapSearchResult>("LeafletMap.searchAddress", mapSearchQuery);
+            if (result != null)
+            {
+                if (double.TryParse(result.lat, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var lat) &&
+                    double.TryParse(result.lng, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var lng))
+                {
+                    editingLocation.Latitude = lat;
+                    editingLocation.Longitude = lng;
+                    await SyncMapToInputs();
+                    
+                    if (string.IsNullOrWhiteSpace(editingLocation.Address)) {
+                        editingLocation.Address = result.display_name;
+                    }
+                }
+            }
+        }
+        catch { }
+        finally {
+            isSearchingMap = false;
+        }
+    }
+
+    private async Task InitMapPicker()
+    {
+        await Task.Delay(300); // Tăng thời gian chờ modal animation
+        try 
+        { 
+            double lat = editingLocation.Latitude != 0 ? editingLocation.Latitude : 10.7680;
+            double lng = editingLocation.Longitude != 0 ? editingLocation.Longitude : 106.7034;
+            editingLocation.Latitude = lat;
+            editingLocation.Longitude = lng;
+            await JS.InvokeVoidAsync("LeafletMap.initPicker", "poi-map-picker", lat, lng, 16, objRef); 
+            StateHasChanged();
+        } 
+        catch { }
     }
 }

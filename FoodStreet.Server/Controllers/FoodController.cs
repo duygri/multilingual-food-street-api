@@ -1,10 +1,12 @@
 
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using PROJECT_C_.Services.Interfaces;
 using Microsoft.AspNetCore.Http;
 using PROJECT_C_.DTOs;
 using PROJECT_C_.Models;
 using FoodStreet.Server.Extensions;
+using FoodStreet.Server.Hubs;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -20,12 +22,18 @@ namespace PROJECT_C_.Controllers
         private readonly IFoodService _foodService;
         private readonly AppDbContext _context;
         private readonly UserManager<IdentityUser> _userManager;
+        private readonly IHubContext<NotificationHub> _hubContext;
 
-        public FoodController(AppDbContext context, UserManager<IdentityUser> userManager, IFoodService foodService)
+        public FoodController(
+            AppDbContext context,
+            UserManager<IdentityUser> userManager,
+            IFoodService foodService,
+            IHubContext<NotificationHub> hubContext)
         {
             _context = context;
             _userManager = userManager;
             _foodService = foodService;
+            _hubContext = hubContext;
         }
 
         /// <summary>
@@ -118,6 +126,31 @@ namespace PROJECT_C_.Controllers
                 ImageUrl = created.ImageUrl,
                 LocationId = created.LocationId
             };
+
+            // Gửi thông báo SignalR cho Admin
+            var senderName = User.Claims.FirstOrDefault(c => c.Type == "name" || c.Type == System.Security.Claims.ClaimTypes.Name)?.Value ?? "Seller";
+            var notification = new Notification
+            {
+                TargetRole = "Admin",
+                Title = "Món ăn mới được tạo",
+                Message = $"{senderName} đã thêm món ăn \"{created.Name}\"",
+                Type = NotificationType.Food_Created,
+                RelatedId = created.Id,
+                SenderName = senderName
+            };
+            _context.Notifications.Add(notification);
+            await _context.SaveChangesAsync();
+
+            await _hubContext.Clients.Group("role_Admin").SendAsync("ReceiveNotification", new
+            {
+                notification.Id,
+                notification.Title,
+                notification.Message,
+                Type = notification.Type.ToString(),
+                notification.CreatedAt,
+                notification.RelatedId,
+                notification.SenderName
+            });
 
             return CreatedAtAction(nameof(GetFood), new { id = resultDto.Id }, resultDto);
         }

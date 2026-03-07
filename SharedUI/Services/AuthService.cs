@@ -20,7 +20,7 @@ namespace FoodStreet.Client.Services
     public class AuthService : IAuthService
     {
         private readonly HttpClient _httpClient;
-        private readonly ILocalStorageService _localStorage;
+        private readonly ISessionStorageService _sessionStorage;
         
         private const string AccessTokenKey = "auth_access_token";
         private const string RefreshTokenKey = "auth_refresh_token";
@@ -29,10 +29,10 @@ namespace FoodStreet.Client.Services
 
         public event Action? OnAuthStateChanged;
 
-        public AuthService(HttpClient httpClient, ILocalStorageService localStorage)
+        public AuthService(HttpClient httpClient, ISessionStorageService sessionStorage)
         {
             _httpClient = httpClient;
-            _localStorage = localStorage;
+            _sessionStorage = sessionStorage;
         }
 
         private static readonly System.Text.Json.JsonSerializerOptions _jsonOptions = new()
@@ -119,16 +119,16 @@ namespace FoodStreet.Client.Services
         /// </summary>
         public async Task ClearTokensAsync()
         {
-            await _localStorage.RemoveItemAsync(AccessTokenKey);
-            await _localStorage.RemoveItemAsync(RefreshTokenKey);
-            await _localStorage.RemoveItemAsync(TokenExpiryKey);
-            await _localStorage.RemoveItemAsync(UserEmailKey);
+            await _sessionStorage.RemoveItemAsync(AccessTokenKey);
+            await _sessionStorage.RemoveItemAsync(RefreshTokenKey);
+            await _sessionStorage.RemoveItemAsync(TokenExpiryKey);
+            await _sessionStorage.RemoveItemAsync(UserEmailKey);
         }
 
         public async Task<string?> GetTokenAsync()
         {
-            var token = await _localStorage.GetItemAsync<string>(AccessTokenKey);
-            var expiryString = await _localStorage.GetItemAsync<string>(TokenExpiryKey);
+            var token = await _sessionStorage.GetItemAsync<string>(AccessTokenKey);
+            var expiryString = await _sessionStorage.GetItemAsync<string>(TokenExpiryKey);
 
             if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(expiryString))
                 return null;
@@ -152,16 +152,16 @@ namespace FoodStreet.Client.Services
         private async Task StoreTokensAsync(AuthApiResponse response)
         {
             if (!string.IsNullOrEmpty(response.AccessToken))
-                await _localStorage.SetItemAsync(AccessTokenKey, response.AccessToken);
+                await _sessionStorage.SetItemAsync(AccessTokenKey, response.AccessToken);
 
             if (!string.IsNullOrEmpty(response.RefreshToken))
-                await _localStorage.SetItemAsync(RefreshTokenKey, response.RefreshToken);
+                await _sessionStorage.SetItemAsync(RefreshTokenKey, response.RefreshToken);
 
             if (response.ExpiresAt.HasValue)
-                await _localStorage.SetItemAsync(TokenExpiryKey, response.ExpiresAt.Value.ToString("O"));
+                await _sessionStorage.SetItemAsync(TokenExpiryKey, response.ExpiresAt.Value.ToString("O"));
 
             if (!string.IsNullOrEmpty(response.Email))
-                await _localStorage.SetItemAsync(UserEmailKey, response.Email);
+                await _sessionStorage.SetItemAsync(UserEmailKey, response.Email);
         }
     }
 

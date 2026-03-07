@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using FoodStreet.Server.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -79,10 +80,26 @@ builder.Services.AddAuthentication(options =>
         RoleClaimType = "role",
         NameClaimType = "name"
     };
+    
+    // Hỗ trợ JWT qua query string cho SignalR
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs/notification"))
+            {
+                context.Token = accessToken;
+            }
+            return Task.CompletedTask;
+        }
+    };
 });
 
 builder.Services.AddAuthorization();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddSignalR();
 
 // Claims Transformation: đọc JWT trực tiếp từ header, thêm role claims
 builder.Services.AddTransient<Microsoft.AspNetCore.Authentication.IClaimsTransformation, 
@@ -185,6 +202,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<NotificationHub>("/hubs/notification");
 
 // Seed sample data
 await SeedData.InitializeAsync(app.Services);

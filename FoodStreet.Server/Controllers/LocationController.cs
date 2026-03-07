@@ -1,10 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.SignalR;
 using PROJECT_C_.DTOs;
 using PROJECT_C_.Models;
+using PROJECT_C_.Data;
 using PROJECT_C_.Services.Interfaces;
 using FoodStreet.Server.Extensions;
+using FoodStreet.Server.Hubs;
 
 namespace PROJECT_C_.Controllers
 {
@@ -14,13 +17,19 @@ namespace PROJECT_C_.Controllers
     {
         private readonly ILocationService _locationService;
         private readonly UserManager<IdentityUser> _userManager;
+        private readonly IHubContext<NotificationHub> _hubContext;
+        private readonly AppDbContext _dbContext;
 
         public LocationController(
             ILocationService locationService,
-            UserManager<IdentityUser> userManager)
+            UserManager<IdentityUser> userManager,
+            IHubContext<NotificationHub> hubContext,
+            AppDbContext dbContext)
         {
             _locationService = locationService;
             _userManager = userManager;
+            _hubContext = hubContext;
+            _dbContext = dbContext;
         }
 
         // ========================================
@@ -134,6 +143,31 @@ namespace PROJECT_C_.Controllers
                 IsApproved = created.IsApproved
             };
 
+            // Gửi thông báo cho Admin
+            var senderName = User.Claims.FirstOrDefault(c => c.Type == "name" || c.Type == System.Security.Claims.ClaimTypes.Name)?.Value ?? "Seller";
+            var notification = new Notification
+            {
+                TargetRole = "Admin",
+                Title = "POI mới cần duyệt",
+                Message = $"{senderName} gửi yêu cầu tạo POI \"{created.Name}\"",
+                Type = NotificationType.POI_Created,
+                RelatedId = created.Id,
+                SenderName = senderName
+            };
+            _dbContext.Notifications.Add(notification);
+            await _dbContext.SaveChangesAsync();
+
+            await _hubContext.Clients.Group("role_Admin").SendAsync("ReceiveNotification", new
+            {
+                notification.Id,
+                notification.Title,
+                notification.Message,
+                Type = notification.Type.ToString(),
+                notification.CreatedAt,
+                notification.RelatedId,
+                notification.SenderName
+            });
+
             return CreatedAtAction(nameof(GetLocation), new { id = resultDto.Id }, resultDto);
         }
 
@@ -245,6 +279,33 @@ namespace PROJECT_C_.Controllers
             location.ApprovedAt = DateTime.UtcNow;
             await _locationService.UpdateLocationAsync(id, location);
 
+            // Gửi thông báo cho Seller (chủ POI)
+            if (!string.IsNullOrEmpty(location.OwnerId))
+            {
+                var notification = new Notification
+                {
+                    UserId = location.OwnerId,
+                    Title = "POI đã được duyệt ✅",
+                    Message = $"POI \"{location.Name}\" đã được Admin duyệt và hiển thị công khai.",
+                    Type = NotificationType.POI_Approved,
+                    RelatedId = id,
+                    SenderName = "Admin"
+                };
+                _dbContext.Notifications.Add(notification);
+                await _dbContext.SaveChangesAsync();
+
+                await _hubContext.Clients.Group($"user_{location.OwnerId}").SendAsync("ReceiveNotification", new
+                {
+                    notification.Id,
+                    notification.Title,
+                    notification.Message,
+                    Type = notification.Type.ToString(),
+                    notification.CreatedAt,
+                    notification.RelatedId,
+                    notification.SenderName
+                });
+            }
+
             return Ok(new { message = "Địa điểm đã được duyệt", locationId = id });
         }
 
@@ -258,6 +319,33 @@ namespace PROJECT_C_.Controllers
             if (!User.IsAdminRole()) return Forbid();
             var location = await _locationService.GetLocationByIdAsync(id);
             if (location == null) return NotFound();
+
+            // Gửi thông báo cho Seller trước khi xóa
+            if (!string.IsNullOrEmpty(location.OwnerId))
+            {
+                var notification = new Notification
+                {
+                    UserId = location.OwnerId,
+                    Title = "POI bị từ chối ❌",
+                    Message = $"POI \"{location.Name}\" đã bị Admin từ chối.",
+                    Type = NotificationType.POI_Rejected,
+                    RelatedId = id,
+                    SenderName = "Admin"
+                };
+                _dbContext.Notifications.Add(notification);
+                await _dbContext.SaveChangesAsync();
+
+                await _hubContext.Clients.Group($"user_{location.OwnerId}").SendAsync("ReceiveNotification", new
+                {
+                    notification.Id,
+                    notification.Title,
+                    notification.Message,
+                    Type = notification.Type.ToString(),
+                    notification.CreatedAt,
+                    notification.RelatedId,
+                    notification.SenderName
+                });
+            }
 
             await _locationService.DeleteLocationAsync(id);
 

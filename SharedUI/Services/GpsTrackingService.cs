@@ -17,6 +17,16 @@ namespace FoodStreet.Client.Services
         public string? LastError { get; private set; }
         public string SessionId { get; private set; }
 
+        // === THÊM MỚI: Anti-spam ===
+        // Lưu POI nào đã trigger + thời điểm trigger
+        private readonly Dictionary<int, DateTime> _triggeredPois = new();
+        
+        // Cooldown: 5 phút không phát lại cùng POI
+        private readonly TimeSpan _cooldownDuration = TimeSpan.FromMinutes(5);
+        
+        // Lưu danh sách POI đang ở trong (để detect Enter/Exit)
+        private readonly HashSet<int> _currentGeofencePois = new();
+
         // Events
         public event Action<double, double>? OnPositionUpdated;
         public event Action<List<NearbyPoiDto>>? OnGeofenceEntered;
@@ -92,9 +102,52 @@ namespace FoodStreet.Client.Services
                 {
                     var result = await response.Content.ReadFromJsonAsync<GpsUpdateResponse>();
                     
-                    if (result?.EnteredPois?.Count > 0)
+                    if (result?.EnteredPois != null)
                     {
-                        OnGeofenceEntered?.Invoke(result.EnteredPois);
+                        // Lọc ra những POI THỰC SỰ MỚI vào (chưa trigger hoặc đã hết cooldown)
+                        var newlyEntered = new List<NearbyPoiDto>();
+                        var now = DateTime.UtcNow;
+
+                        foreach (var poi in result.EnteredPois)
+                        {
+                            // Kiểm tra cooldown
+                            if (_triggeredPois.TryGetValue(poi.Id, out var lastTriggered))
+                            {
+                                // Đã trigger trước đó, check hết cooldown chưa
+                                if (now - lastTriggered < _cooldownDuration)
+                                {
+                                    // Còn trong cooldown → BỎ QUA
+                                    continue;
+                                }
+                            }
+
+                            // POI mới hoặc đã hết cooldown → cho phép trigger
+                            newlyEntered.Add(poi);
+                            _triggeredPois[poi.Id] = now; // Ghi nhận thời điểm trigger
+                        }
+
+                        // Chỉ invoke event nếu có POI mới thực sự
+                        if (newlyEntered.Count > 0)
+                        {
+                            OnGeofenceEntered?.Invoke(newlyEntered);
+                        }
+
+                        // Cập nhật danh sách POI hiện tại
+                        _currentGeofencePois.Clear();
+                        foreach (var poi in result.EnteredPois)
+                        {
+                            _currentGeofencePois.Add(poi.Id);
+                        }
+
+                        // Dọn dẹp: xóa cooldown cũ quá 30 phút (tránh leak memory)
+                        var expiredKeys = _triggeredPois
+                            .Where(kv => now - kv.Value > TimeSpan.FromMinutes(30))
+                            .Select(kv => kv.Key)
+                            .ToList();
+                        foreach (var key in expiredKeys)
+                        {
+                            _triggeredPois.Remove(key);
+                        }
                     }
                 }
             }

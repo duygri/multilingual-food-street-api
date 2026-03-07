@@ -64,6 +64,36 @@ namespace PROJECT_C_.Controllers
             return Ok(new { audioFile.Id, audioFile.FileName });
         }
 
+        [HttpPost("image/upload")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UploadImage([FromForm] IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest("No file uploaded.");
+
+            // Validate file type
+            if (!file.ContentType.StartsWith("image/"))
+                return BadRequest("Only image files are allowed.");
+
+            // Prepare directory
+            var uploadsFolder = Path.Combine(_environment.WebRootPath, "images");
+            if (!Directory.Exists(uploadsFolder))
+                Directory.CreateDirectory(uploadsFolder);
+
+            // Generate unique filename
+            var uniqueFileName = $"{Guid.NewGuid()}_{file.FileName}";
+            var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+            // Save file
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            var fileUrl = $"/images/{uniqueFileName}";
+            return Ok(new { url = fileUrl });
+        }
+
         [HttpGet("stats")]
         [AllowAnonymous] // Allow public access for now - dashboard needs this
         public async Task<IActionResult> GetStats()

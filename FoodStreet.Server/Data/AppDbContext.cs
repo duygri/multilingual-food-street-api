@@ -24,6 +24,7 @@ namespace PROJECT_C_.Data
         public DbSet<UserLocation> UserLocations => Set<UserLocation>();
         public DbSet<PushSubscription> PushSubscriptions => Set<PushSubscription>();
         public DbSet<Category> Categories => Set<Category>();
+        public DbSet<Notification> Notifications => Set<Notification>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

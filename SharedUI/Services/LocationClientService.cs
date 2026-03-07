@@ -20,6 +20,9 @@ namespace FoodStreet.Client.Services
         Task CreateLocation(LocationDto location);
         Task UpdateLocation(int id, LocationDto location);
         Task DeleteLocation(int id);
+        
+        // Helper
+        Task<string?> UploadImageAsync(MultipartFormDataContent content);
     }
 
     public class LocationClientService : ILocationClientService
@@ -83,6 +86,23 @@ namespace FoodStreet.Client.Services
         public async Task DeleteLocation(int id)
         {
             await _http.DeleteAsync($"api/location/{id}");
+        }
+        
+        // === Helper ===
+        public async Task<string?> UploadImageAsync(MultipartFormDataContent content)
+        {
+            var response = await _http.PostAsync("api/admin/image/upload", content);
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<UploadImageResult>();
+                return result?.Url;
+            }
+            return null;
+        }
+        
+        private class UploadImageResult
+        {
+            public string Url { get; set; } = "";
         }
     }
 }

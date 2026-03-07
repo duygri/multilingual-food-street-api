@@ -125,5 +125,88 @@ window.LeafletMap = {
             this.poiMarkers = [];
             this.geofenceCircles = [];
         }
+    },
+
+    // Initialize map for picking location
+    initPicker: function (elementId, lat, lng, zoom, dotNetRef) {
+        if (this.map) {
+            this.map.remove();
+        }
+
+        this.map = L.map(elementId).setView([lat, lng], zoom);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(this.map);
+
+        // Custom icon
+        const pickerIcon = L.divIcon({
+            className: 'picker-marker',
+            html: '<div style="font-size: 32px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); text-align: center;">📍</div>',
+            iconSize: [40, 40],
+            iconAnchor: [20, 40]
+        });
+
+        const marker = L.marker([lat, lng], {
+            icon: pickerIcon,
+            draggable: true
+        }).addTo(this.map);
+
+        // Update when dragged
+        marker.on('dragend', function (event) {
+            const position = marker.getLatLng();
+            dotNetRef.invokeMethodAsync('UpdateCoordinatesFromMap', position.lat, position.lng);
+        });
+
+        // Update when map clicked
+        this.map.on('click', function(e) {
+            marker.setLatLng(e.latlng);
+            dotNetRef.invokeMethodAsync('UpdateCoordinatesFromMap', e.latlng.lat, e.latlng.lng);
+        });
+
+        // Fix map size inside modal (wait for modal animation)
+        setTimeout(() => {
+            if (this.map) this.map.invalidateSize();
+        }, 100);
+        
+        setTimeout(() => {
+            if (this.map) this.map.invalidateSize();
+        }, 500);
+
+        setTimeout(() => {
+            if (this.map) this.map.invalidateSize();
+        }, 1000);
+
+        console.log('[Map] Picker initialized');
+        return true;
+    },
+    
+    // Update picker marker position (when user types in input manually)
+    updatePickerMarker: function(lat, lng) {
+        if (this.map) {
+            this.map.eachLayer(function(layer) {
+                if (layer instanceof L.Marker) {
+                    layer.setLatLng([lat, lng]);
+                }
+                if (layer instanceof L.Circle) {
+                    layer.setLatLng([lat, lng]);
+                }
+            });
+            this.map.setView([lat, lng], this.map.getZoom());
+        }
+    },
+
+    // Search address using Nominatim API
+    searchAddress: async function(query) {
+        try {
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`);
+            const data = await response.json();
+            if (data && data.length > 0) {
+                return { lat: data[0].lat, lng: data[0].lon, display_name: data[0].display_name };
+            }
+        } catch (e) {
+            console.error('[Map] Search error', e);
+        }
+        return null;
     }
 };
