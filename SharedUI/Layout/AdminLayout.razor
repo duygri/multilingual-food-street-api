@@ -592,6 +592,12 @@
     }
     
     /* ===== Notification Bell & Dropdown ===== */
+    .connection-emoji {
+        font-size: 14px;
+        cursor: help;
+        margin-right: 6px;
+    }
+
     .notification-btn {
         color: #475569;
     }
@@ -1117,6 +1123,8 @@
         if (diff.TotalDays < 7) return $"{(int)diff.TotalDays} ngày trước";
         return createdAt.ToString("dd/MM/yyyy");
     }
+
+
 
     public void Dispose()
     {

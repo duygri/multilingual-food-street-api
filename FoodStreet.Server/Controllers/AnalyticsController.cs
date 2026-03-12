@@ -296,6 +296,47 @@ namespace PROJECT_C_.Controllers
             var bytes = System.Text.Encoding.UTF8.GetBytes(csv.ToString());
             return File(bytes, "text/csv", $"usage-history-{DateTime.UtcNow:yyyyMMdd}.csv");
         }
+
+        /// <summary>
+        /// Get heatmap data from user locations (anonymized)
+        /// </summary>
+        [HttpGet("heatmap")]
+        public async Task<IActionResult> GetHeatmapData([FromQuery] int days = 30, [FromQuery] int limit = 500)
+        {
+            var since = DateTime.UtcNow.AddDays(-days);
+
+            // Lấy vị trí từ UserLocations (GPS tracking ẩn danh)
+            var userPoints = await _context.UserLocations
+                .Where(u => u.RecordedAt >= since)
+                .OrderByDescending(u => u.RecordedAt)
+                .Take(limit)
+                .Select(u => new { u.Latitude, u.Longitude, Intensity = 0.5 })
+                .ToListAsync();
+
+            // Lấy thêm vị trí từ PlayLogs (nơi nghe audio)
+            var playPoints = await _context.PlayLogs
+                .Where(p => p.PlayedAt >= since && p.Latitude.HasValue && p.Longitude.HasValue)
+                .OrderByDescending(p => p.PlayedAt)
+                .Take(limit)
+                .Select(p => new { Latitude = p.Latitude!.Value, Longitude = p.Longitude!.Value, Intensity = 1.0 })
+                .ToListAsync();
+
+            // Gộp cả 2 nguồn
+            var allPoints = userPoints
+                .Concat(playPoints)
+                .Select(p => new double[] { p.Latitude, p.Longitude, p.Intensity })
+                .ToList();
+
+            return Ok(new
+            {
+                points = allPoints,
+                totalUserLocations = userPoints.Count,
+                totalPlayLocations = playPoints.Count,
+                center = allPoints.Any()
+                    ? new { lat = allPoints.Average(p => p[0]), lng = allPoints.Average(p => p[1]) }
+                    : new { lat = 10.7580, lng = 106.7034 } // Default: Vĩnh Khánh, Q4
+            });
+        }
     }
 
     public class LogPlayRequest

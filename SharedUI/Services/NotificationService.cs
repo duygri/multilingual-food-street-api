@@ -22,6 +22,7 @@ namespace FoodStreet.Client.Services
         event Action? OnNotificationsChanged;
         List<NotificationDto> Notifications { get; }
         int UnreadCount { get; }
+        string ConnectionStatus { get; }
         Task InitializeAsync();
         Task LoadNotificationsAsync();
         Task MarkAsReadAsync(int id);
@@ -36,10 +37,13 @@ namespace FoodStreet.Client.Services
         private readonly IAuthService _authService;
         private HubConnection? _hubConnection;
         private bool _isInitialized;
+        private System.Threading.Timer? _pollingTimer;
+        private bool _signalRConnected;
 
         public event Action? OnNotificationsChanged;
         public List<NotificationDto> Notifications { get; private set; } = new();
         public int UnreadCount { get; private set; }
+        public string ConnectionStatus { get; private set; } = "⏳";
 
         public NotificationService(HttpClient httpClient, IAuthService authService)
         {
@@ -50,77 +54,122 @@ namespace FoodStreet.Client.Services
         public async Task InitializeAsync()
         {
             if (_isInitialized) return;
+            _isInitialized = true;
 
             var token = await _authService.GetTokenAsync();
             if (string.IsNullOrEmpty(token)) return;
 
-            // Lấy hub URL từ HttpClient.BaseAddress (cùng server với API)
-            var baseUrl = _httpClient.BaseAddress?.ToString().TrimEnd('/') ?? "https://localhost:7214";
-            var hubUrl = $"{baseUrl}/hubs/notification";
+            // Load thông báo có sẵn từ API ngay lập tức
+            await LoadNotificationsAsync();
 
-            _hubConnection = new HubConnectionBuilder()
-                .WithUrl(hubUrl, options =>
-                {
-                    options.AccessTokenProvider = () => Task.FromResult(token)!;
-                })
-                .WithAutomaticReconnect(new[] { TimeSpan.Zero, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(30) })
-                .ConfigureLogging(logging =>
-                {
-                    logging.SetMinimumLevel(LogLevel.Debug);
-                    logging.AddProvider(new CustomConsoleLoggerProvider());
-                })
-                .Build();
+            // Thử kết nối SignalR (không block nếu fail)
+            _ = TryConnectSignalR(token);
 
-            // Lắng nghe thông báo mới
-            _hubConnection.On<NotificationDto>("ReceiveNotification", notification =>
-            {
-                Notifications.Insert(0, notification);
-                UnreadCount++;
-                OnNotificationsChanged?.Invoke();
-            });
+            // Luôn bật polling fallback (mỗi 15 giây)
+            StartPolling();
+        }
 
-            // Xử lý reconnect: tải lại thông báo khi kết nối lại
-            _hubConnection.Reconnecting += (error) =>
-            {
-                Console.WriteLine($"[SignalR] Đang kết nối lại... {error?.Message}");
-                return Task.CompletedTask;
-            };
-
-            _hubConnection.Reconnected += async (connectionId) =>
-            {
-                Console.WriteLine($"[SignalR] Đã kết nối lại: {connectionId}");
-                // Reload notifications sau khi reconnect để không bỏ lỡ
-                await LoadNotificationsAsync();
-            };
-
-            _hubConnection.Closed += async (error) =>
-            {
-                Console.WriteLine($"[SignalR] Mất kết nối: {error?.Message}");
-                // Thử kết nối lại sau 5 giây nếu connection bị đóng hoàn toàn
-                await Task.Delay(5000);
-                try
-                {
-                    await _hubConnection.StartAsync();
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[SignalR] Kết nối lại thất bại: {ex.Message}");
-                }
-            };
-
+        private async Task TryConnectSignalR(string token)
+        {
             try
             {
+                var baseUrl = _httpClient.BaseAddress?.ToString().TrimEnd('/') ?? "https://localhost:7214";
+                var hubUrl = $"{baseUrl}/hubs/notification";
+
+                _hubConnection = new HubConnectionBuilder()
+                    .WithUrl(hubUrl, options =>
+                    {
+                        options.AccessTokenProvider = () => Task.FromResult(token)!;
+                    })
+                    .WithAutomaticReconnect(new[] { TimeSpan.Zero, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(30) })
+                    .Build();
+
+                // Lắng nghe thông báo mới realtime
+                _hubConnection.On<NotificationDto>("ReceiveNotification", notification =>
+                {
+                    // Tránh trùng lặp
+                    if (!Notifications.Any(n => n.Id == notification.Id))
+                    {
+                        Notifications.Insert(0, notification);
+                        UnreadCount++;
+                        OnNotificationsChanged?.Invoke();
+                    }
+                });
+
+                _hubConnection.Reconnecting += (_) =>
+                {
+                    _signalRConnected = false;
+                    ConnectionStatus = "🟡";
+                    OnNotificationsChanged?.Invoke();
+                    return Task.CompletedTask;
+                };
+
+                _hubConnection.Reconnected += async (_) =>
+                {
+                    _signalRConnected = true;
+                    ConnectionStatus = "🟢";
+                    OnNotificationsChanged?.Invoke();
+                    await LoadNotificationsAsync();
+                };
+
+                _hubConnection.Closed += (_) =>
+                {
+                    _signalRConnected = false;
+                    ConnectionStatus = "🔴";
+                    OnNotificationsChanged?.Invoke();
+                    return Task.CompletedTask;
+                };
+
                 await _hubConnection.StartAsync();
-                _isInitialized = true;
-                Console.WriteLine("[SignalR] Kết nối thành công");
+                _signalRConnected = true;
+                ConnectionStatus = "🟢";
+                Console.WriteLine("[Notification] SignalR connected OK");
+                OnNotificationsChanged?.Invoke();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[SignalR] Kết nối thất bại: {ex.Message}");
+                _signalRConnected = false;
+                ConnectionStatus = "🔴 Polling";
+                Console.WriteLine($"[Notification] SignalR failed, using polling: {ex.Message}");
+                OnNotificationsChanged?.Invoke();
             }
+        }
 
-            // Load thông báo có sẵn từ API
-            await LoadNotificationsAsync();
+        private void StartPolling()
+        {
+            _pollingTimer = new System.Threading.Timer(
+                async _ => await PollNotifications(),
+                null,
+                TimeSpan.FromSeconds(15),
+                TimeSpan.FromSeconds(15)
+            );
+        }
+
+        private async Task PollNotifications()
+        {
+            try
+            {
+                var notifications = await _httpClient.GetFromJsonAsync<List<NotificationDto>>("api/notification");
+                if (notifications != null)
+                {
+                    // Kiểm tra có thông báo mới không
+                    var oldCount = UnreadCount;
+                    Notifications = notifications;
+
+                    var countResponse = await _httpClient.GetFromJsonAsync<int>("api/notification/unread-count");
+                    UnreadCount = countResponse;
+
+                    // Chỉ notify UI nếu có thay đổi
+                    if (UnreadCount != oldCount || notifications.Count != Notifications.Count)
+                    {
+                        OnNotificationsChanged?.Invoke();
+                    }
+                }
+            }
+            catch
+            {
+                // Ignore polling errors silently
+            }
         }
 
         public async Task LoadNotificationsAsync()
@@ -140,7 +189,7 @@ namespace FoodStreet.Client.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[SignalR] Load notifications thất bại: {ex.Message}");
+                Console.WriteLine($"[Notification] Load failed: {ex.Message}");
             }
         }
 
@@ -201,29 +250,11 @@ namespace FoodStreet.Client.Services
 
         public async ValueTask DisposeAsync()
         {
+            _pollingTimer?.Dispose();
             if (_hubConnection != null)
             {
-                _hubConnection.Reconnecting -= null;
-                _hubConnection.Reconnected -= null;
-                _hubConnection.Closed -= null;
                 await _hubConnection.DisposeAsync();
             }
-        }
-    }
-
-    public class CustomConsoleLoggerProvider : ILoggerProvider
-    {
-        public ILogger CreateLogger(string categoryName) => new CustomConsoleLogger();
-        public void Dispose() { }
-    }
-
-    public class CustomConsoleLogger : ILogger
-    {
-        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
-        public bool IsEnabled(LogLevel logLevel) => true;
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
-        {
-            Console.WriteLine($"[SignalR Client] {logLevel}: {formatter(state, exception)}");
         }
     }
 }

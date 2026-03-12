@@ -15,6 +15,18 @@
     <!-- Leaflet Map -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+    <style>
+        .poi-marker.nearest .poi-marker-inner { font-size: 22px; }
+        .nearest-glow {
+            animation: nearestPulse 1.5s ease-in-out infinite;
+            filter: drop-shadow(0 0 6px rgba(255, 107, 53, 0.8));
+        }
+        @keyframes nearestPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+        }
+    </style>
     <script type="importmap"></script>
 </head>
 
@@ -36,6 +48,7 @@
     <script src="_content/FoodStreet.UI/js/leaflet-map.js"></script>
     <script src="_content/FoodStreet.UI/js/tts-service.js"></script>
     <script src="_content/FoodStreet.UI/js/push-notification.js"></script>
+    <script src="_content/FoodStreet.UI/js/heatmap-helper.js"></script>
     <script src="_framework/blazor.webassembly.js"></script>
 </body>
 

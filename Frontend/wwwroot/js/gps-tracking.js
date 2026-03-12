@@ -1,18 +1,28 @@
 // GPS Tracking với Battery Optimization
-// Adaptive Polling + Distance Threshold
+// Adaptive Polling + Distance Threshold + POI Cooldown
 
 window.GpsTracker = {
     watchId: null,
     lastPosition: null,
     dotNetRef: null,
     
+    // Cooldown: ngăn spam trigger cùng 1 POI liên tục
+    poiCooldowns: {},       // { poiId: lastTriggerTimestamp }
+    lastTriggeredPoiId: null,
+    
     // Config
     config: {
-        distanceThreshold: 10, // meters - chỉ gửi khi di chuyển > 10m
-        movingInterval: 10000, // 10s khi di chuyển
-        stationaryInterval: 30000, // 30s khi đứng yên
-        speedThreshold: 0.5 // m/s - dưới ngưỡng này = đứng yên
+        distanceThreshold: 10,      // meters - chỉ gửi khi di chuyển > 10m
+        movingInterval: 10000,      // 10s khi di chuyển
+        stationaryInterval: 30000,  // 30s khi đứng yên
+        speedThreshold: 0.5,        // m/s - dưới ngưỡng này = đứng yên
+        poiCooldownMs: 120000,      // 2 phút cooldown cho cùng 1 POI
+        debounceMs: 3000            // 3 giây debounce giữa các lần trigger
     },
+
+    // Debounce timer
+    _debounceTimer: null,
+    _lastTriggerTime: 0,
 
     // Start tracking
     start: function(dotNetRef) {
@@ -46,6 +56,10 @@ window.GpsTracker = {
             this.watchId = null;
             console.log('[GPS] Stopped tracking');
         }
+        if (this._debounceTimer) {
+            clearTimeout(this._debounceTimer);
+            this._debounceTimer = null;
+        }
     },
 
     // Position update handler
@@ -60,12 +74,19 @@ window.GpsTracker = {
 
         // Distance filtering - chỉ gửi khi di chuyển > threshold
         if (this.lastPosition && !this.shouldUpdate(newPos)) {
-            console.log('[GPS] Skipped - distance below threshold');
             return;
         }
 
         this.lastPosition = newPos;
         
+        // Debounce: không gửi quá nhanh
+        const now = Date.now();
+        if (now - this._lastTriggerTime < this.config.debounceMs) {
+            console.log('[GPS] Debounced - too fast');
+            return;
+        }
+        this._lastTriggerTime = now;
+
         // Notify .NET
         if (this.dotNetRef) {
             this.dotNetRef.invokeMethodAsync('OnPositionChanged', 
@@ -87,6 +108,36 @@ window.GpsTracker = {
         );
         
         return dist >= this.config.distanceThreshold;
+    },
+
+    // === COOLDOWN: Kiểm tra POI có đang trong cooldown không ===
+    canTriggerPoi: function(poiId) {
+        const now = Date.now();
+        const lastTrigger = this.poiCooldowns[poiId];
+        
+        if (lastTrigger && (now - lastTrigger) < this.config.poiCooldownMs) {
+            console.log(`[GPS] POI ${poiId} in cooldown (${Math.round((this.config.poiCooldownMs - (now - lastTrigger)) / 1000)}s remaining)`);
+            return false;
+        }
+        return true;
+    },
+
+    // Đánh dấu POI đã trigger
+    markPoiTriggered: function(poiId) {
+        this.poiCooldowns[poiId] = Date.now();
+        this.lastTriggeredPoiId = poiId;
+        console.log(`[GPS] POI ${poiId} triggered, cooldown ${this.config.poiCooldownMs / 1000}s`);
+    },
+
+    // Reset cooldown cho 1 POI (khi rời khỏi vùng)
+    resetPoiCooldown: function(poiId) {
+        delete this.poiCooldowns[poiId];
+    },
+
+    // Xóa tất cả cooldown
+    clearAllCooldowns: function() {
+        this.poiCooldowns = {};
+        this.lastTriggeredPoiId = null;
     },
 
     // Haversine distance (meters)

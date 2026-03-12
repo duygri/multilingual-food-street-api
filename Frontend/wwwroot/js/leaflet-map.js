@@ -1,9 +1,16 @@
-// Leaflet Map Helper for GPS Test
+// Leaflet Map Helper with Nearest POI Highlighting
 window.LeafletMap = {
     map: null,
     userMarker: null,
+    accuracyCircle: null,
     poiMarkers: [],
     geofenceCircles: [],
+    nearestPoiId: null,
+
+    // Custom icons
+    userIcon: null,
+    poiIcon: null,
+    nearestPoiIcon: null,
 
     // Initialize map
     init: function (elementId, lat, lng, zoom) {
@@ -32,6 +39,14 @@ window.LeafletMap = {
             iconAnchor: [18, 36]
         });
 
+        // Icon đặc biệt cho POI gần nhất
+        this.nearestPoiIcon = L.divIcon({
+            className: 'poi-marker nearest',
+            html: '<div class="poi-marker-inner nearest-glow">⭐</div>',
+            iconSize: [44, 44],
+            iconAnchor: [22, 44]
+        });
+
         console.log('[Map] Initialized');
         return true;
     },
@@ -48,7 +63,7 @@ window.LeafletMap = {
                 .bindPopup('📍 Vị trí của bạn');
         }
 
-        // Optional: add accuracy circle
+        // Accuracy circle
         if (this.accuracyCircle) {
             this.accuracyCircle.setLatLng([lat, lng]).setRadius(accuracy);
         } else if (accuracy) {
@@ -65,7 +80,7 @@ window.LeafletMap = {
         console.log('[Map] User location updated:', lat, lng);
     },
 
-    // Add POIs to map
+    // Add POIs to map with nearest highlight
     setPois: function (pois) {
         if (!this.map) return;
 
@@ -75,25 +90,56 @@ window.LeafletMap = {
         this.poiMarkers = [];
         this.geofenceCircles = [];
 
+        // Tìm POI gần nhất
+        let nearestPoi = null;
+        let minDist = Infinity;
         pois.forEach(poi => {
+            if (poi.distance < minDist) {
+                minDist = poi.distance;
+                nearestPoi = poi;
+            }
+        });
+
+        pois.forEach(poi => {
+            const isNearest = nearestPoi && poi.id === nearestPoi.id;
+            const icon = isNearest ? this.nearestPoiIcon : this.poiIcon;
+
             // Add marker
-            const marker = L.marker([poi.latitude, poi.longitude], { icon: this.poiIcon })
+            const marker = L.marker([poi.latitude, poi.longitude], { 
+                icon: icon,
+                zIndexOffset: isNearest ? 1000 : 0  // POI gần nhất hiện trên cùng
+            })
                 .addTo(this.map)
-                .bindPopup(`<strong>${poi.name}</strong><br>${poi.description || ''}<br><em>${poi.distance.toFixed(0)}m</em>`);
+                .bindPopup(`
+                    <div style="min-width:180px">
+                        <strong>${isNearest ? '⭐ ' : ''}${poi.name}</strong>
+                        <br>${poi.description || ''}
+                        <br><em style="color:#10b981;font-weight:600">${poi.distance.toFixed(0)}m</em>
+                        ${isNearest ? '<br><span style="color:#ff6b35;font-size:12px;font-weight:600">📍 Gần nhất</span>' : ''}
+                    </div>
+                `);
+            
+            // Tự động mở popup cho POI gần nhất
+            if (isNearest && poi.isInGeofence) {
+                marker.openPopup();
+            }
+
             this.poiMarkers.push(marker);
 
             // Add geofence circle
             const circle = L.circle([poi.latitude, poi.longitude], {
                 radius: poi.radius || 50,
-                color: poi.isInGeofence ? '#10b981' : '#f59e0b',
-                fillColor: poi.isInGeofence ? '#10b981' : '#f59e0b',
-                fillOpacity: 0.15,
-                weight: 2
+                color: isNearest ? '#ff6b35' : (poi.isInGeofence ? '#10b981' : '#f59e0b'),
+                fillColor: isNearest ? '#ff6b35' : (poi.isInGeofence ? '#10b981' : '#f59e0b'),
+                fillOpacity: isNearest ? 0.25 : 0.15,
+                weight: isNearest ? 3 : 2,
+                dashArray: isNearest ? null : '5, 5'
             }).addTo(this.map);
             this.geofenceCircles.push(circle);
         });
 
-        console.log('[Map] POIs updated:', pois.length);
+        this.nearestPoiId = nearestPoi?.id;
+        console.log('[Map] POIs updated:', pois.length, 'nearest:', nearestPoi?.name);
     },
 
     // Center map on location
@@ -122,8 +168,10 @@ window.LeafletMap = {
             this.map.remove();
             this.map = null;
             this.userMarker = null;
+            this.accuracyCircle = null;
             this.poiMarkers = [];
             this.geofenceCircles = [];
+            this.nearestPoiId = null;
         }
     }
 };
