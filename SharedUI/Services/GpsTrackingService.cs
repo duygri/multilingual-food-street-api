@@ -3,10 +3,11 @@ using System.Net.Http.Json;
 
 namespace FoodStreet.Client.Services
 {
-    public class GpsTrackingService : IAsyncDisposable
+    public class GpsTrackingService : IGpsTrackingService
     {
         private readonly IJSRuntime _jsRuntime;
         private readonly HttpClient _httpClient;
+        private readonly ITtsService _ttsService;
         private DotNetObjectReference<GpsTrackingService>? _dotNetRef;
         
         // State
@@ -32,10 +33,11 @@ namespace FoodStreet.Client.Services
         public event Action<List<NearbyPoiDto>>? OnGeofenceEntered;
         public event Action<string>? OnError;
 
-        public GpsTrackingService(IJSRuntime jsRuntime, HttpClient httpClient)
+        public GpsTrackingService(IJSRuntime jsRuntime, HttpClient httpClient, ITtsService ttsService)
         {
             _jsRuntime = jsRuntime;
             _httpClient = httpClient;
+            _ttsService = ttsService;
             SessionId = Guid.NewGuid().ToString();
         }
 
@@ -129,6 +131,15 @@ namespace FoodStreet.Client.Services
                         // Chỉ invoke event nếu có POI mới thực sự
                         if (newlyEntered.Count > 0)
                         {
+                            // Xem TTS
+                            foreach (var poi in newlyEntered)
+                            {
+                                if (!string.IsNullOrWhiteSpace(poi.Description))
+                                    _ = _ttsService.PlayTextAsync($"Bạn vừa đến {poi.Name}. {poi.Description}");
+                                else
+                                    _ = _ttsService.PlayTextAsync($"Bạn vừa đến {poi.Name}");
+                            }
+
                             OnGeofenceEntered?.Invoke(newlyEntered);
                         }
 

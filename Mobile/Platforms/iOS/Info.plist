@@ -30,5 +30,12 @@
     <string>Assets.xcassets/appicon.appiconset</string>
     <key>NSLocationWhenInUseUsageDescription</key>
     <string>FoodStreet needs access to your location to show nearby food spots.</string>
+    <key>NSLocationAlwaysUsageDescription</key>
+    <string>FoodStreet needs background location access to auto-play audio for nearby food spots even when the app is minimized.</string>
+    <key>UIBackgroundModes</key>
+    <array>
+        <string>location</string>
+        <string>audio</string>
+    </array>
 </dict>
 </plist>

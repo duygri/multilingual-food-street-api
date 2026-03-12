@@ -39,6 +39,8 @@ builder.Services.AddScoped<AuthenticationStateProvider>(sp =>
     sp.GetRequiredService<JwtAuthStateProvider>());
 builder.Services.AddAuthorizationCore();
 
+
+
 // ========================================
 // APPLICATION SERVICES
 // ========================================
@@ -46,7 +48,8 @@ builder.Services.AddScoped<IFoodClientService, FoodClientService>();
 builder.Services.AddScoped<ILocationClientService, LocationClientService>();
 builder.Services.AddScoped<IAudioService, AudioService>();
 builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<GpsTrackingService>();
+builder.Services.AddScoped<IGpsTrackingService, GpsTrackingService>();
+builder.Services.AddScoped<ITtsService, WebTtsService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddLocalization();
 builder.Services.AddSingleton<ILocalizationService, LocalizationService>();

@@ -72,7 +72,9 @@ public static class MauiProgram
         builder.Services.AddScoped<IFoodClientService, FoodClientService>();
         builder.Services.AddScoped<IAudioService, AudioService>();
         builder.Services.AddScoped<IUserService, UserService>();
-        builder.Services.AddScoped<GpsTrackingService>();
+        builder.Services.AddScoped<IGpsTrackingService, NativeGpsTrackingService>();
+        builder.Services.AddScoped<ITtsService, NativeTtsService>();
+        builder.Services.AddSingleton<NotificationService>();
         builder.Services.AddLocalization();
         builder.Services.AddSingleton<ILocalizationService, LocalizationService>();
 
