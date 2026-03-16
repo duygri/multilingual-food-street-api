@@ -68,7 +68,7 @@ namespace FoodStreet.Mobile.Services
 
 #if ANDROID
             var context = Platform.AppContext;
-            var intent = new Android.Content.Intent(context, typeof(FoodStreet.Mobile.Platforms.Android.GpsForegroundService));
+            var intent = new global::Android.Content.Intent(context, typeof(FoodStreet.Mobile.Platforms.Android.GpsForegroundService));
             context.StartForegroundService(intent);
 #else
             _ = TrackingLoopAsync(_cts.Token);
@@ -85,7 +85,7 @@ namespace FoodStreet.Mobile.Services
 
 #if ANDROID
             var context = Platform.AppContext;
-            var intent = new Android.Content.Intent(context, typeof(FoodStreet.Mobile.Platforms.Android.GpsForegroundService));
+            var intent = new global::Android.Content.Intent(context, typeof(FoodStreet.Mobile.Platforms.Android.GpsForegroundService));
             context.StopService(intent);
 #endif
 

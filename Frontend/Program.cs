@@ -53,5 +53,6 @@ builder.Services.AddScoped<ITtsService, WebTtsService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddLocalization();
 builder.Services.AddSingleton<ILocalizationService, LocalizationService>();
+builder.Services.AddSingleton<IPlatformDetector, WebPlatformDetector>();
 
 await builder.Build().RunAsync();

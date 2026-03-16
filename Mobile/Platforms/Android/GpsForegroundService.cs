@@ -1,14 +1,14 @@
-using Android.App;
-using Android.Content;
-using Android.OS;
+using global::Android.App;
+using global::Android.Content;
+using global::Android.OS;
 using AndroidX.Core.App;
 using FoodStreet.Mobile.Services;
 using Microsoft.Maui.Devices.Sensors;
-using Application = Android.App.Application;
+using Application = global::Android.App.Application;
 
 namespace FoodStreet.Mobile.Platforms.Android
 {
-    [Service(ForegroundServiceType = Android.Content.PM.ForegroundService.TypeLocation)]
+    [Service(ForegroundServiceType = global::Android.Content.PM.ForegroundService.TypeLocation)]
     public class GpsForegroundService : Service
     {
         private const int NOTIFICATION_ID = 10001;
