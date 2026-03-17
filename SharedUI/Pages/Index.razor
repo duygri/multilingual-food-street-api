@@ -4,7 +4,13 @@
 @code {
     protected override void OnInitialized()
     {
-        // Redirect root to admin login (soft redirect, no forceLoad for MAUI WebView compatibility)
-        Navigation.NavigateTo("/admin/login");
+        if (OperatingSystem.IsAndroid() || OperatingSystem.IsIOS())
+        {
+            Navigation.NavigateTo("explore");
+        }
+        else 
+        {
+            Navigation.NavigateTo("admin/login");
+        }
     }
 }

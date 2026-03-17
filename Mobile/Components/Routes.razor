@@ -1,6 +1,28 @@
-<Router AppAssembly="@typeof(MauiProgram).Assembly" AdditionalAssemblies="new[] { typeof(FoodStreet.Client.Layout.MainLayout).Assembly }">
-    <Found Context="routeData">
-        <RouteView RouteData="@routeData" DefaultLayout="@typeof(FoodStreet.Client.Layout.MobileLayout)" />
-        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
-    </Found>
-</Router>
+<CascadingAuthenticationState>
+    <Router AppAssembly="@typeof(MauiProgram).Assembly" AdditionalAssemblies="new[] { typeof(FoodStreet.Client.Layout.MainLayout).Assembly }">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(FoodStreet.Client.Layout.MobileLayout)">
+                <NotAuthorized>
+                    @if (context.User.Identity?.IsAuthenticated != true)
+                    {
+                        <FoodStreet.Client.Shared.RedirectToLogin />
+                    }
+                    else
+                    {
+                        <div class="p-4 text-center">
+                            <p>Bạn không có quyền truy cập trang này.</p>
+                            <a href="profile" class="btn-primary">Về trang cá nhân</a>
+                        </div>
+                    }
+                </NotAuthorized>
+            </AuthorizeRouteView>
+            <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+        </Found>
+        <NotFound>
+            <PageTitle>Không tìm thấy</PageTitle>
+            <LayoutView Layout="@typeof(FoodStreet.Client.Layout.MobileLayout)">
+                <p role="alert" class="p-4 text-center">Trang này không tồn tại.</p>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>

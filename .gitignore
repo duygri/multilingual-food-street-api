@@ -16,3 +16,9 @@ artifacts/
 ## Other ##
 thumbs.db
 .DS_Store
+build.log
+*.log
+pp.xml
+pp-android.xml
+pp-client.xml
+restore.log

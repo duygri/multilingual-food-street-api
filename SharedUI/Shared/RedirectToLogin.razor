@@ -3,8 +3,13 @@
 @code {
     protected override void OnInitialized()
     {
-        var uri = Navigation.ToAbsoluteUri(Navigation.Uri).AbsolutePath.ToLower();
-        var loginUrl = uri.Contains("/seller/") ? "seller/login" : "admin/login";
-        Navigation.NavigateTo(loginUrl);
+        if (OperatingSystem.IsAndroid() || OperatingSystem.IsIOS())
+        {
+            Navigation.NavigateTo("profile");
+        }
+        else
+        {
+            Navigation.NavigateTo("admin/login");
+        }
     }
 }

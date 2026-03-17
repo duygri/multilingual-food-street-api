@@ -7,63 +7,65 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @implements IDisposable
 
-<AuthorizeView>
-    <Authorized>
-        <div class="mobile-app">
-            @* ===== MOBILE HEADER ===== *@
-            <header class="mobile-header">
-                <div class="mobile-header-left">
-                    <span class="mobile-logo">🍜</span>
-                    <span class="mobile-title">FoodStreet</span>
-                </div>
-                <div class="mobile-header-right">
-                    <span class="mobile-user-greeting">Xin chào, @context.User.Identity?.Name</span>
-                </div>
-            </header>
+<CascadingAuthenticationState>
+    <AuthorizeView>
+        <Authorized>
+            <div class="mobile-app">
+                @* ===== MOBILE HEADER ===== *@
+                <header class="mobile-header">
+                    <div class="mobile-header-left">
+                        <span class="mobile-logo">🍜</span>
+                        <span class="mobile-title">FoodStreet</span>
+                    </div>
+                    <div class="mobile-header-right">
+                        <button class="icon-btn">
+                            <span class="icon">🔍</span>
+                        </button>
+                        <button class="icon-btn" @onclick="ToggleNotificationPanel">
+                            <span class="icon">
+                                🔔
+                                @if (NotificationSvc.UnreadCount > 0)
+                                {
+                                    <span class="badge">@(NotificationSvc.UnreadCount > 9 ? "9+" : NotificationSvc.UnreadCount.ToString())</span>
+                                }
+                            </span>
+                        </button>
+                    </div>
+                </header>
 
-            @* ===== CONTENT AREA ===== *@
-            <main class="mobile-content">
+                @* ===== CONTENT AREA ===== *@
+                <main class="mobile-content">
+                    @Body
+                </main>
+
+                @* ===== BOTTOM TAB BAR ===== *@
+                <nav class="mobile-tab-bar">
+                    <a href="explore" class="tab-item @IsActive("/explore")">
+                        <span class="tab-icon">🏠</span>
+                        <span class="tab-label">Khám phá</span>
+                    </a>
+                    <a href="map" class="tab-item @IsActive("/map")">
+                        <span class="tab-icon">🗺️</span>
+                        <span class="tab-label">Bản đồ</span>
+                    </a>
+                    <a href="favorites" class="tab-item @IsActive("/favorites")">
+                        <span class="tab-icon">❤️</span>
+                        <span class="tab-label">Đã lưu</span>
+                    </a>
+                    <a href="profile" class="tab-item @IsActive("/profile")">
+                        <span class="tab-icon">👤</span>
+                        <span class="tab-label">Cá nhân</span>
+                    </a>
+                </nav>
+            </div>
+        </Authorized>
+        <NotAuthorized>
+            <div class="mobile-auth-shell">
                 @Body
-            </main>
-
-            @* ===== BOTTOM TAB BAR ===== *@
-            <nav class="mobile-tab-bar">
-                <a href="explore" class="tab-item @IsActive("/explore")">
-                    <span class="tab-icon">🏠</span>
-                    <span class="tab-label">Khám phá</span>
-                </a>
-                <a href="@GetLocationsUrl()" class="tab-item @IsActive("/locations")">
-                    <span class="tab-icon">📍</span>
-                    <span class="tab-label">Địa điểm</span>
-                </a>
-                <a href="@GetFoodsUrl()" class="tab-item @IsActive("/foods")">
-                    <span class="tab-icon">🍲</span>
-                    <span class="tab-label">Món ăn</span>
-                </a>
-                <a href="@GetNotificationsUrl()" class="tab-item @IsActive("/notifications")">
-                    <span class="tab-icon">
-                        🔔
-                        @if (NotificationSvc.UnreadCount > 0)
-                        {
-                            <span class="tab-badge">@(NotificationSvc.UnreadCount > 9 ? "9+" : NotificationSvc.UnreadCount.ToString())</span>
-                        }
-                    </span>
-                    <span class="tab-label">Thông báo</span>
-                </a>
-                <button class="tab-item" @onclick="HandleLogout">
-                    <span class="tab-icon">👤</span>
-                    <span class="tab-label">Đăng xuất</span>
-                </button>
-            </nav>
-        </div>
-    </Authorized>
-
-    <NotAuthorized>
-        <div class="mobile-auth-wrapper">
-            @Body
-        </div>
-    </NotAuthorized>
-</AuthorizeView>
+            </div>
+        </NotAuthorized>
+    </AuthorizeView>
+</CascadingAuthenticationState>
 
 <style>
     /* ===== MOBILE APP SHELL ===== */
@@ -119,13 +121,32 @@
         gap: 8px;
     }
 
-    .mobile-user-greeting {
-        font-size: 12px;
-        opacity: 0.9;
-        max-width: 120px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+    .icon-btn {
+        background: transparent;
+        border: none;
+        color: white;
+        font-size: 20px;
+        padding: 4px;
+        margin-left: 8px;
+        position: relative;
+        cursor: pointer;
+    }
+
+    .icon-btn .badge {
+        position: absolute;
+        top: -2px;
+        right: -6px;
+        background: #ef4444;
+        color: white;
+        border-radius: 50%;
+        font-size: 10px;
+        height: 16px;
+        min-width: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        border: 2px solid #ff6b35;
     }
 
     /* ===== CONTENT ===== */
@@ -249,60 +270,40 @@
         border: 2px solid #fff;
     }
 
-    /* ===== AUTH WRAPPER (Login page) ===== */
-    .mobile-auth-wrapper {
+    /* ===== AUTH SHELL ===== */
+    .mobile-auth-shell {
         min-height: 100vh;
-        background: #f5f7fa;
+        background: #f8fafc;
     }
 </style>
 
 @code {
-    private string userRole = "Admin";
-
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         Navigation.LocationChanged += OnLocationChanged;
-        
-        // Detect user role
-        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        var user = authState?.User;
-        if (user?.Identity?.IsAuthenticated == true)
-        {
-            userRole = user.Claims
-                .FirstOrDefault(c => c.Type == "role" || c.Type == System.Security.Claims.ClaimTypes.Role)?.Value ?? "Admin";
-        }
     }
 
     private string IsActive(string path)
     {
         var currentUri = Navigation.ToAbsoluteUri(Navigation.Uri).AbsolutePath;
+        // Default to explore if at root
+        if (currentUri == "/" && path == "/explore") return "active";
         return currentUri.Contains(path, StringComparison.OrdinalIgnoreCase) ? "active" : "";
-    }
-
-    private string GetLocationsUrl()
-    {
-        return userRole == "Seller" ? "seller/locations" : "admin/locations";
-    }
-
-    private string GetFoodsUrl()
-    {
-        return userRole == "Seller" ? "seller/foods" : "admin/foods";
-    }
-
-    private string GetNotificationsUrl()
-    {
-        return userRole == "Seller" ? "seller/notifications" : "admin/notifications";
-    }
-
-    private async Task HandleLogout()
-    {
-        await AuthService.LogoutAsync();
-        Navigation.NavigateTo("/admin/login", forceLoad: true);
     }
 
     private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
     {
         InvokeAsync(StateHasChanged);
+    }
+
+    private bool showNotificationPanel = false;
+
+    private void ToggleNotificationPanel() => showNotificationPanel = !showNotificationPanel;
+
+    private async Task MarkAllRead()
+    {
+        await NotificationSvc.MarkAllAsReadAsync();
+        StateHasChanged();
     }
 
     public void Dispose()

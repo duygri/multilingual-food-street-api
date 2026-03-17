@@ -1,5 +1,4 @@
 @page "/admin/locations"
-@page "/seller/locations"
 @layout AdminLayout
 @inject FoodStreet.Client.Services.ILocationClientService LocationService
 @inject IJSRuntime JS
@@ -8,37 +7,11 @@
 @implements IDisposable
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="mb-0">📍 @(isAdmin ? "Quản lý tất cả POI" : "POI của tôi")</h3>
-    @if (!isAdmin)
-    {
-        <button class="btn btn-admin btn-admin-primary" @onclick="ShowCreateModal">
-            ➕ Gửi yêu cầu POI
-        </button>
-    }
+    <h3 class="mb-0">📍 Quản lý POI</h3>
+    <button class="btn btn-admin btn-admin-primary" @onclick="ShowCreateModal">
+        ➕ Thêm POI mới
+    </button>
 </div>
-
-@* Tabs: Admin thấy Tất cả + Chờ duyệt, Seller thấy POI của mình *@
-@if (isAdmin)
-{
-    <ul class="nav nav-tabs mb-3">
-        <li class="nav-item">
-            <button class="nav-link @(activeTab == "all" ? "active" : "")" @onclick='() => SwitchTab("all")'>
-                📋 Tất cả (@(allLocations?.Count ?? 0))
-            </button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link @(activeTab == "pending" ? "active" : "")" @onclick='() => SwitchTab("pending")'>
-                ⏳ Chờ duyệt (@(pendingLocations?.Count ?? 0))
-            </button>
-        </li>
-    </ul>
-}
-else
-{
-    <div class="alert alert-info mb-3">
-        💡 <strong>Lưu ý:</strong> POI bạn tạo sẽ ở trạng thái <span class="badge bg-warning text-dark">Chờ duyệt</span> cho đến khi Admin phê duyệt.
-    </div>
-}
 
 @if (errorMessage != null)
 {
@@ -70,16 +43,8 @@ else
     {
         <div class="text-center py-5">
             <div style="font-size: 4rem;">🗺️</div>
-            @if (isAdmin)
-            {
-                <h5 class="mt-3">@(activeTab == "pending" ? "Không có POI nào chờ duyệt" : "Chưa có POI nào")</h5>
-                <p class="text-muted">@(activeTab == "pending" ? "Tất cả đã được xử lý." : "Chờ Seller gửi yêu cầu tạo POI.")</p>
-            }
-            else
-            {
-                <h5 class="mt-3">Bạn chưa có POI nào</h5>
-                <p class="text-muted">Nhấn "Gửi yêu cầu POI" để tạo POI đầu tiên.</p>
-            }
+            <h5 class="mt-3">Chưa có POI nào</h5>
+            <p class="text-muted">Nhấn "Thêm POI mới" để bắt đầu.</p>
         </div>
     }
     else
@@ -91,9 +56,8 @@ else
                     <th>Địa chỉ</th>
                     <th>Tọa độ</th>
                     <th>Bán kính</th>
-                    <th>Trạng thái</th>
-                    @if (isAdmin) { <th>Món ăn</th> }
-                    <th style="width: 220px;">Thao tác</th>
+                    <th>Món ăn</th>
+                    <th style="width: 180px;">Thao tác</th>
                 </tr>
             </thead>
             <tbody>
@@ -110,45 +74,11 @@ else
                         <td class="text-muted">@(loc.Address ?? "—")</td>
                         <td><code>@loc.Latitude.ToString("F4"), @loc.Longitude.ToString("F4")</code></td>
                         <td><span class="badge bg-info">@loc.Radius m</span></td>
+                        <td><span class="badge bg-secondary">@loc.FoodCount món</span></td>
                         <td>
-                            @if (loc.IsApproved)
-                            {
-                                <span class="badge bg-success">✅ Đã duyệt</span>
-                            }
-                            else
-                            {
-                                <span class="badge bg-warning text-dark">⏳ Chờ duyệt</span>
-                            }
-                        </td>
-                        @if (isAdmin)
-                        {
-                            <td><span class="badge bg-secondary">@loc.FoodCount món</span></td>
-                        }
-                        <td>
-                            @if (isAdmin)
-                            {
-                                @* Admin: Chỉ có Duyệt/Từ chối và Xem chi tiết *@
-                                @if (!loc.IsApproved)
-                                {
-                                    <button class="btn btn-sm btn-success me-1" @onclick="() => ApproveLocation(loc.Id)" title="Duyệt">✅</button>
-                                    <button class="btn btn-sm btn-danger me-1" @onclick="() => RejectLocation(loc.Id)" title="Từ chối">❌</button>
-                                }
-                                <button class="btn btn-sm btn-outline-info me-1" @onclick="() => ShowDetailsModal(loc)" title="Xem chi tiết">👁️</button>
-                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteLocation(loc.Id)" title="Xóa">🗑️</button>
-                            }
-                            else
-                            {
-                                @* Seller: chỉ Sửa/Xóa nếu chưa duyệt *@
-                                @if (!loc.IsApproved)
-                                {
-                                    <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => ShowEditModal(loc)" title="Sửa">✏️ Sửa</button>
-                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteLocation(loc.Id)" title="Xóa">🗑️ Xóa</button>
-                                }
-                                else
-                                {
-                                    <span class="text-muted small">Đã duyệt — không thể sửa</span>
-                                }
-                            }
+                            <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => ShowEditModal(loc)" title="Sửa">✏️</button>
+                            <button class="btn btn-sm btn-outline-info me-1" @onclick="() => ShowDetailsModal(loc)" title="Xem">👁️</button>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteLocation(loc.Id)" title="Xóa">🗑️</button>
                         </td>
                     </tr>
                 }
@@ -168,12 +98,6 @@ else
                     <button type="button" class="btn-close" @onclick="CloseModal"></button>
                 </div>
                 <div class="modal-body">
-                    @if (!isAdmin)
-                    {
-                        <div class="alert alert-warning mb-3">
-                            📋 POI sẽ ở trạng thái <strong>Chờ duyệt</strong> cho đến khi Admin phê duyệt.
-                        </div>
-                    }
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">📍 Tên POI *</label>
@@ -333,10 +257,7 @@ else
 
 @code {
     private List<LocationDto>? allLocations;
-    private List<LocationDto>? pendingLocations;
     private List<LocationDto>? displayedLocations;
-    private string activeTab = "all";
-    private bool isAdmin = false;
 
     [CascadingParameter]
     private Task<AuthenticationState>? AuthState { get; set; }
@@ -370,27 +291,12 @@ else
     protected override async Task OnInitializedAsync()
     {
         objRef = DotNetObjectReference.Create(this);
-
-        // Xác định role từ URL path (đáng tin nhất — route đã quyết định view)
-        var uri = Navigation.ToBaseRelativePath(Navigation.Uri);
-        isAdmin = uri.StartsWith("admin", StringComparison.OrdinalIgnoreCase);
-
-        // Fallback: kiểm tra claims nếu URL không rõ ràng
-        if (!isAdmin && AuthState != null)
-        {
-            var authState = await AuthState;
-            isAdmin = authState.User.IsInRole("Admin")
-                || authState.User.Claims.Any(c =>
-                    (c.Type == "role" || c.Type == System.Security.Claims.ClaimTypes.Role)
-                    && c.Value == "Admin");
-        }
-
         await LoadData();
 
-        // Auto-refresh mỗi 15 giây (im lặng, không hiển thị lỗi)
+        // Auto-refresh mỗi 15 giây
         _pollingTimer = new System.Threading.Timer(async _ =>
         {
-            if (saving || showModal || _isPolling) return; // Không poll khi đang thao tác
+            if (saving || showModal || _isPolling) return;
             _isPolling = true;
             await InvokeAsync(async () =>
             {
@@ -412,64 +318,31 @@ else
     {
         try
         {
-            if (isAdmin)
-            {
-                allLocations = await LocationService.GetAllLocations();
-                pendingLocations = await LocationService.GetPendingLocations();
-            }
-            else
-            {
-                allLocations = await LocationService.GetMyLocations();
-                pendingLocations = allLocations?.Where(l => !l.IsApproved).ToList() ?? new();
-            }
-            UpdateDisplayedLocations();
+            allLocations = await LocationService.GetAllLocations();
+            displayedLocations = allLocations;
         }
-        catch { /* im lặng */ }
+        catch { }
     }
 
     private async Task LoadData()
     {
         try
         {
-            if (isAdmin)
-            {
-                // Admin: xem tất cả + pending
-                allLocations = await LocationService.GetAllLocations();
-                pendingLocations = await LocationService.GetPendingLocations();
-            }
-            else
-            {
-                // Seller: chỉ xem POI của mình
-                allLocations = await LocationService.GetMyLocations();
-                pendingLocations = allLocations?.Where(l => !l.IsApproved).ToList() ?? new();
-            }
-            UpdateDisplayedLocations();
+            allLocations = await LocationService.GetAllLocations();
+            displayedLocations = allLocations;
         }
         catch (Exception ex)
         {
             errorMessage = $"Không thể tải dữ liệu: {ex.Message}";
             allLocations = new();
-            pendingLocations = new();
             displayedLocations = new();
         }
     }
 
-    private void SwitchTab(string tab)
-    {
-        activeTab = tab;
-        UpdateDisplayedLocations();
-    }
-
-    private void UpdateDisplayedLocations()
-    {
-        displayedLocations = activeTab == "pending" ? pendingLocations : allLocations;
-    }
-
     private async Task ShowCreateModal()
     {
-        if (isAdmin) return; // Admin không tạo POI
         editingLocation = new LocationDto { Radius = 50, Latitude = 10.7680, Longitude = 106.7034 };
-        modalTitle = "📤 Gửi yêu cầu tạo POI";
+        modalTitle = "➕ Thêm POI mới";
         isEditing = false;
         showModal = true;
         await InitMapPicker();
@@ -520,7 +393,7 @@ else
             else
             {
                 await LocationService.CreateLocation(editingLocation);
-                successMessage = $"Đã gửi yêu cầu tạo \"{editingLocation.Name}\" — chờ Admin duyệt";
+                successMessage = $"Đã tạo POI \"{editingLocation.Name}\"";
             }
             showModal = false;
             await LoadData();
@@ -594,33 +467,7 @@ else
         }
     }
 
-    private async Task ApproveLocation(int id)
-    {
-        try
-        {
-            await LocationService.ApproveLocation(id);
-            successMessage = "✅ Đã duyệt POI";
-            await LoadData();
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Lỗi duyệt: {ex.Message}";
-        }
-    }
 
-    private async Task RejectLocation(int id)
-    {
-        try
-        {
-            await LocationService.RejectLocation(id);
-            successMessage = "❌ Đã từ chối POI";
-            await LoadData();
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Lỗi từ chối: {ex.Message}";
-        }
-    }
 
     public void Dispose()
     {

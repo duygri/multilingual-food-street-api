@@ -4,6 +4,8 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Workaround for restricted environments where WASM task host cannot start -->
+    <DisableWasmBuildAssets>true</DisableWasmBuildAssets>
   </PropertyGroup>
 
   <ItemGroup>

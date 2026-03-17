@@ -11,14 +11,14 @@
 @code {
     protected override void OnInitialized()
     {
-        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
-        
-        // If not in admin or seller section, redirect to admin login
-        if (!uri.AbsolutePath.StartsWith("/admin", StringComparison.OrdinalIgnoreCase) && 
-            !uri.AbsolutePath.StartsWith("/seller", StringComparison.OrdinalIgnoreCase) &&
-            !uri.AbsolutePath.StartsWith("/explore", StringComparison.OrdinalIgnoreCase))
+        // For Web (Admin CMS), force-redirect to admin login
+        if (!OperatingSystem.IsAndroid() && !OperatingSystem.IsIOS())
         {
-            Navigation.NavigateTo("/admin/login");
+            var uri = Navigation.ToAbsoluteUri(Navigation.Uri).AbsolutePath.ToLower();
+            if (!uri.Contains("/admin/login"))
+            {
+                 Navigation.NavigateTo("admin/login");
+            }
         }
     }
 }

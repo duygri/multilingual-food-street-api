@@ -64,8 +64,8 @@ namespace PROJECT_C_.Controllers
             }
 
             // Validate Role
-            var allowedRoles = new[] { "Seller" };
-            if (!allowedRoles.Contains(request.Role)) request.Role = "Seller";
+            var allowedRoles = new[] { "Seller", "User" };
+            if (!allowedRoles.Contains(request.Role)) request.Role = "User";
 
             var user = new IdentityUser
             {

@@ -1,0 +1,433 @@
+@page "/map"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject IJSRuntime JS
+@inject HttpClient Http
+@implements IDisposable
+
+<div class="map-page">
+    @if (showPermissionPrompt)
+    {
+        <div class="location-prompt">
+            <div class="prompt-card">
+                <div class="prompt-icon">📍</div>
+                <h3>Bật vị trí của bạn</h3>
+                <p>Ứng dụng cần quyền truy cập vị trí để hiển thị bạn trên bản đồ và tìm các điểm ăn uống gần bạn.</p>
+                <button class="btn-allow" @onclick="RequestLocation">
+                    ✅ Cho phép truy cập vị trí
+                </button>
+                <button class="btn-skip" @onclick="SkipLocation">
+                    Bỏ qua
+                </button>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="map-wrapper">
+            <div id="mobile-map" class="map-view"></div>
+
+            <div class="map-overlay-top">
+                @if (isLocating)
+                {
+                    <div class="status-badge loading">
+                        <span class="spinner-sm"></span> Đang định vị...
+                    </div>
+                }
+                else if (locationError != null)
+                {
+                    <div class="status-badge error">
+                        ⚠️ @locationError
+                    </div>
+                }
+                else if (hasLocation)
+                {
+                    <div class="status-badge live">
+                        <span class="dot"></span> Đã định vị
+                    </div>
+                }
+            </div>
+
+            @if (hasLocation)
+            {
+                <button class="btn-recenter" @onclick="RecenterMap" title="Về vị trí của tôi">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/>
+                    </svg>
+                </button>
+            }
+        </div>
+    }
+</div>
+
+<style>
+    .map-page {
+        height: calc(100vh - 60px);
+        display: flex;
+        flex-direction: column;
+        background: #f1f5f9;
+    }
+
+    /* Location Permission Prompt */
+    .location-prompt {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+    }
+
+    .prompt-card {
+        background: white;
+        border-radius: 24px;
+        padding: 40px 28px;
+        text-align: center;
+        max-width: 360px;
+        width: 100%;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+    }
+
+    .prompt-icon {
+        font-size: 56px;
+        margin-bottom: 16px;
+    }
+
+    .prompt-card h3 {
+        font-size: 22px;
+        font-weight: 700;
+        color: #1e293b;
+        margin: 0 0 12px;
+    }
+
+    .prompt-card p {
+        font-size: 14px;
+        color: #64748b;
+        margin: 0 0 28px;
+        line-height: 1.6;
+    }
+
+    .btn-allow {
+        width: 100%;
+        padding: 16px;
+        background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+        color: white;
+        border: none;
+        border-radius: 14px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        margin-bottom: 12px;
+    }
+
+    .btn-allow:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(255,107,53,0.35);
+    }
+
+    .btn-skip {
+        width: 100%;
+        padding: 12px;
+        background: transparent;
+        color: #94a3b8;
+        border: none;
+        font-size: 14px;
+        cursor: pointer;
+    }
+
+    .btn-skip:hover {
+        color: #64748b;
+    }
+
+    /* Map */
+    .map-wrapper {
+        flex: 1;
+        position: relative;
+        display: flex;
+    }
+
+    .map-view {
+        flex: 1;
+        z-index: 1;
+    }
+
+    .map-overlay-top {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        z-index: 1000;
+    }
+
+    .status-badge {
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+        backdrop-filter: blur(8px);
+    }
+
+    .status-badge.live {
+        background: rgba(255,255,255,0.95);
+        color: #10b981;
+    }
+
+    .status-badge.loading {
+        background: rgba(255,255,255,0.95);
+        color: #f59e0b;
+    }
+
+    .status-badge.error {
+        background: rgba(254,226,226,0.95);
+        color: #ef4444;
+        font-size: 11px;
+    }
+
+    .dot {
+        width: 8px;
+        height: 8px;
+        background: #10b981;
+        border-radius: 50%;
+        animation: pulse 1.5s infinite;
+    }
+
+    .spinner-sm {
+        width: 14px;
+        height: 14px;
+        border: 2px solid rgba(245,158,11,0.3);
+        border-top-color: #f59e0b;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+
+    @@keyframes pulse {
+        0% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.5); opacity: 0.5; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+
+    @@keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    .btn-recenter {
+        position: absolute;
+        bottom: 24px;
+        right: 16px;
+        z-index: 1000;
+        width: 48px;
+        height: 48px;
+        background: white;
+        border: none;
+        border-radius: 50%;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        color: #ff6b35;
+        transition: all 0.2s;
+    }
+
+    .btn-recenter:hover {
+        transform: scale(1.1);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+    }
+
+    .btn-recenter:active {
+        transform: scale(0.95);
+    }
+</style>
+
+@code {
+    private bool showPermissionPrompt = true;
+    private bool isLocating = false;
+    private bool hasLocation = false;
+    private string? locationError;
+    private double userLat = 10.7580;
+    private double userLng = 106.7034;
+    private bool mapInitialized = false;
+    private DotNetObjectReference<Map>? objRef;
+
+    protected override void OnInitialized()
+    {
+        objRef = DotNetObjectReference.Create(this);
+    }
+
+    private async Task RequestLocation()
+    {
+        showPermissionPrompt = false;
+        isLocating = true;
+        StateHasChanged();
+
+        // Wait for DOM to render the map div
+        await Task.Delay(100);
+
+        // Initialize map with default Vĩnh Khánh location
+        await JS.InvokeVoidAsync("LeafletMap.init", "mobile-map", userLat, userLng, 15);
+        mapInitialized = true;
+
+        // Fix map size
+        await Task.Delay(300);
+        try { await JS.InvokeVoidAsync("eval", "if(LeafletMap.map) LeafletMap.map.invalidateSize()"); } catch { }
+
+        // Request browser geolocation
+        await JS.InvokeVoidAsync("eval", @"
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    function(pos) {
+                        DotNet.invokeMethodAsync('FoodStreet.UI', 'OnLocationReceived', pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy || 50);
+                    },
+                    function(err) {
+                        DotNet.invokeMethodAsync('FoodStreet.UI', 'OnLocationError', err.message);
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
+            } else {
+                DotNet.invokeMethodAsync('FoodStreet.UI', 'OnLocationError', 'Trình duyệt không hỗ trợ GPS');
+            }
+        ");
+    }
+
+    private async Task SkipLocation()
+    {
+        showPermissionPrompt = false;
+        StateHasChanged();
+        await Task.Delay(100);
+
+        // Show map at default location without user marker
+        await JS.InvokeVoidAsync("LeafletMap.init", "mobile-map", userLat, userLng, 15);
+        mapInitialized = true;
+        await Task.Delay(300);
+        try { await JS.InvokeVoidAsync("eval", "if(LeafletMap.map) LeafletMap.map.invalidateSize()"); } catch { }
+        await LoadPois();
+    }
+
+    [JSInvokable("OnLocationReceived")]
+    public static async Task OnLocationReceivedStatic(double lat, double lng, double accuracy)
+    {
+        if (_instance != null)
+        {
+            await _instance.HandleLocationReceived(lat, lng, accuracy);
+        }
+    }
+
+    [JSInvokable("OnLocationError")]
+    public static async Task OnLocationErrorStatic(string error)
+    {
+        if (_instance != null)
+        {
+            await _instance.HandleLocationError(error);
+        }
+    }
+
+    private static Map? _instance;
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _instance = this;
+        }
+    }
+
+    private async Task HandleLocationReceived(double lat, double lng, double accuracy)
+    {
+        userLat = lat;
+        userLng = lng;
+        hasLocation = true;
+        isLocating = false;
+        locationError = null;
+
+        await InvokeAsync(async () =>
+        {
+            StateHasChanged();
+            try
+            {
+                await JS.InvokeVoidAsync("LeafletMap.setUserLocation", lat, lng, accuracy);
+                await LoadPois();
+            }
+            catch { }
+        });
+    }
+
+    private async Task HandleLocationError(string error)
+    {
+        isLocating = false;
+        locationError = "Không thể lấy vị trí. Hãy bật GPS.";
+        await InvokeAsync(async () =>
+        {
+            StateHasChanged();
+            await LoadPois();
+        });
+    }
+
+    private async Task LoadPois()
+    {
+        try
+        {
+            var locations = await Http.GetFromJsonAsync<List<PoiDto>>("api/location");
+            if (locations != null && locations.Any())
+            {
+                var poiData = locations.Select(l => new
+                {
+                    latitude = l.Latitude,
+                    longitude = l.Longitude,
+                    name = l.Name,
+                    description = l.Description ?? "",
+                    radius = l.Radius,
+                    distance = CalculateDistance(userLat, userLng, l.Latitude, l.Longitude),
+                    isInGeofence = CalculateDistance(userLat, userLng, l.Latitude, l.Longitude) <= l.Radius
+                }).ToList();
+
+                await JS.InvokeVoidAsync("LeafletMap.setPois", poiData);
+
+                if (hasLocation)
+                {
+                    await JS.InvokeVoidAsync("LeafletMap.fitBounds");
+                }
+            }
+        }
+        catch { }
+    }
+
+    private async Task RecenterMap()
+    {
+        if (hasLocation)
+        {
+            await JS.InvokeVoidAsync("LeafletMap.centerOn", userLat, userLng, 16);
+        }
+    }
+
+    private double CalculateDistance(double lat1, double lng1, double lat2, double lng2)
+    {
+        var R = 6371000.0;
+        var dLat = (lat2 - lat1) * Math.PI / 180;
+        var dLon = (lng2 - lng1) * Math.PI / 180;
+        var a = Math.Sin(dLat/2) * Math.Sin(dLat/2) +
+                Math.Cos(lat1 * Math.PI / 180) * Math.Cos(lat2 * Math.PI / 180) *
+                Math.Sin(dLon/2) * Math.Sin(dLon/2);
+        var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+        return R * c;
+    }
+
+    public void Dispose()
+    {
+        _instance = null;
+        try { JS.InvokeVoidAsync("LeafletMap.destroy"); } catch { }
+        objRef?.Dispose();
+    }
+
+    public class PoiDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+        public string? Description { get; set; }
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
+        public int Radius { get; set; } = 50;
+    }
+}

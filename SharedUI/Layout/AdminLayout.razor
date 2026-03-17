@@ -19,10 +19,7 @@
                         <span class="logo-icon">🍜</span>
                         <div class="logo-text">
                             <span class="logo-title">Vĩnh Khánh</span>
-                            <span class="logo-subtitle">
-                                <AuthorizeView Roles="Admin"><Authorized Context="ctx1">Admin CMS</Authorized></AuthorizeView>
-                                <AuthorizeView Roles="Seller"><Authorized Context="ctx2">Seller</Authorized></AuthorizeView>
-                            </span>
+                            <span class="logo-subtitle">Admin CMS</span>
                         </div>
                     </div>
                 </div>
@@ -36,69 +33,13 @@
                                     <span class="nav-icon">👥</span>
                                     <span class="nav-text">Quản lý Người dùng</span>
                                 </NavLink>
-                            </Authorized>
-                        </AuthorizeView>
-                        <AuthorizeView Roles="Admin">
-                            <Authorized Context="AuthContext">
-                                <NavLink class="nav-item" href="admin/dashboard" Match="NavLinkMatch.All">
-                                    <span class="nav-icon">📊</span>
-                                    <span class="nav-text">Thống kê</span>
-                                </NavLink>
-                            </Authorized>
-                        </AuthorizeView>
-                        <AuthorizeView Roles="Admin">
-                            <Authorized Context="AuthContext">
                                 <NavLink class="nav-item" href="admin/locations">
                                     <span class="nav-icon">📍</span>
                                     <span class="nav-text">Quản lý POI</span>
                                 </NavLink>
-                                <NavLink class="nav-item" href="admin/foods">
-                                    <span class="nav-icon">🍲</span>
-                                    <span class="nav-text">Món ăn</span>
-                                </NavLink>
-                            </Authorized>
-                        </AuthorizeView>
-                        <AuthorizeView Roles="Seller">
-                            <Authorized Context="AuthContext">
-                                <NavLink class="nav-item" href="seller/locations">
-                                    <span class="nav-icon">📍</span>
-                                    <span class="nav-text">POI của tôi</span>
-                                </NavLink>
-                                <NavLink class="nav-item" href="seller/foods">
-                                    <span class="nav-icon">🍲</span>
-                                    <span class="nav-text">Món ăn</span>
-                                </NavLink>
-                            </Authorized>
-                        </AuthorizeView>
-                        <AuthorizeView Roles="Admin">
-                            <Authorized Context="AuthContext">
                                 <NavLink class="nav-item" href="admin/tours">
                                     <span class="nav-icon">🗺️</span>
                                     <span class="nav-text">Quản lý Tour</span>
-                                </NavLink>
-                            </Authorized>
-                        </AuthorizeView>
-                        <AuthorizeView Roles="Admin">
-                            <Authorized Context="ctx_notif_admin">
-                                <NavLink class="nav-item" href="admin/notifications">
-                                    <span class="nav-icon">🔔</span>
-                                    <span class="nav-text">Thông báo</span>
-                                    @if (NotificationSvc.UnreadCount > 0)
-                                    {
-                                        <span class="nav-badge">@(NotificationSvc.UnreadCount > 9 ? "9+" : NotificationSvc.UnreadCount.ToString())</span>
-                                    }
-                                </NavLink>
-                            </Authorized>
-                        </AuthorizeView>
-                        <AuthorizeView Roles="Seller">
-                            <Authorized Context="ctx_notif_seller">
-                                <NavLink class="nav-item" href="seller/notifications">
-                                    <span class="nav-icon">🔔</span>
-                                    <span class="nav-text">Thông báo</span>
-                                    @if (NotificationSvc.UnreadCount > 0)
-                                    {
-                                        <span class="nav-badge">@(NotificationSvc.UnreadCount > 9 ? "9+" : NotificationSvc.UnreadCount.ToString())</span>
-                                    }
                                 </NavLink>
                             </Authorized>
                         </AuthorizeView>
@@ -116,10 +57,6 @@
                                     <span class="nav-icon">🌐</span>
                                     <span class="nav-text">Bản dịch</span>
                                 </NavLink>
-                                <NavLink class="nav-item" href="admin/qrcodes">
-                                    <span class="nav-icon">📱</span>
-                                    <span class="nav-text">Mã QR</span>
-                                </NavLink>
                             </div>
                         </Authorized>
                     </AuthorizeView>
@@ -128,14 +65,6 @@
                         <Authorized Context="AuthContext">
                             <div class="nav-section">
                                 <span class="nav-section-title">PHÂN TÍCH</span>
-                                <NavLink class="nav-item" href="admin/stats">
-                                    <span class="nav-icon">📈</span>
-                                    <span class="nav-text">Thống kê</span>
-                                </NavLink>
-                                <NavLink class="nav-item" href="admin/visitors">
-                                    <span class="nav-icon">👥</span>
-                                    <span class="nav-text">Lượt truy cập</span>
-                                </NavLink>
                                 <NavLink class="nav-item" href="admin/history">
                                     <span class="nav-icon">📜</span>
                                     <span class="nav-text">Lịch sử sử dụng</span>
@@ -167,10 +96,7 @@
                     <div class="header-left">
                         <h1 class="page-title">@GetPageTitle()</h1>
                         <nav class="breadcrumb-nav">
-                            <span class="breadcrumb-item">
-                                <AuthorizeView Roles="Admin"><Authorized Context="ctx3">Admin</Authorized></AuthorizeView>
-                                <AuthorizeView Roles="Seller"><Authorized Context="ctx4">Seller</Authorized></AuthorizeView>
-                            </span>
+                            <span class="breadcrumb-item">Admin</span>
                             <span class="breadcrumb-separator">/</span>
                             <span class="breadcrumb-item active">@GetPageName()</span>
                         </nav>
@@ -253,16 +179,7 @@
                                             }
                                         </div>
                                         <div class="notification-panel-footer">
-                                            <AuthorizeView Roles="Admin">
-                                                <Authorized Context="ctx_notif_footer_admin">
-                                                    <a href="admin/notifications" class="view-all-link" @onclick="CloseNotificationPanel">Xem tất cả thông báo →</a>
-                                                </Authorized>
-                                            </AuthorizeView>
-                                            <AuthorizeView Roles="Seller">
-                                                <Authorized Context="ctx_notif_footer_seller">
-                                                    <a href="seller/notifications" class="view-all-link" @onclick="CloseNotificationPanel">Xem tất cả thông báo →</a>
-                                                </Authorized>
-                                            </AuthorizeView>
+                                            <a href="admin/notifications" class="view-all-link" @onclick="CloseNotificationPanel">Xem tất cả thông báo →</a>
                                         </div>
                                     </div>
                                 }
