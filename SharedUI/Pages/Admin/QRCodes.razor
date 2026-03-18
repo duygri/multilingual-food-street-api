@@ -2,6 +2,8 @@
 @layout AdminLayout
 @inject HttpClient Http
 @inject FoodStreet.Client.Services.ILocationClientService LocationService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
 @using FoodStreet.Client.DTOs
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -90,7 +92,7 @@
                                    class="btn btn-outline-primary" title="Download PNG">
                                     📥 PNG
                                 </a>
-                                <button class="btn btn-outline-info" @onclick="() => CopyLink(loc.Id)" title="Copy Link">
+                                <button class="btn btn-outline-info" @onclick="async () => await CopyLink(loc.Id)" title="Copy Link">
                                     🔗 Copy
                                 </button>
                             </div>
@@ -141,7 +143,6 @@
     private List<LocationDto>? locations;
     private HashSet<int> selectedIds = new();
     private bool showPrintModal;
-    private string baseApiUrl = "https://localhost:7214";
 
     protected override async Task OnInitializedAsync()
     {
@@ -162,7 +163,10 @@
 
     private string GetQrCodeUrl(int locationId, int size = 200)
     {
-        return $"{baseApiUrl}/api/qrcode/{locationId}?size={size}";
+        // Derive base URL from the current NavigationManager instead of hardcoding
+        var baseUri = Http.BaseAddress ?? new Uri(NavigationManager.BaseUri);
+        var apiBase = $"{baseUri.Scheme}://{baseUri.Host}:{baseUri.Port}";
+        return $"{apiBase}/api/qrcode/{locationId}?size={size}";
     }
 
     private void ToggleSelection(int id)
@@ -197,10 +201,10 @@
 
     private void ClosePrintModal() => showPrintModal = false;
 
-    private void CopyLink(int foodId)
+    private async Task CopyLink(int locationId)
     {
-        // Would use JS interop to copy to clipboard
-        // For now, shows the URL pattern
+        var url = GetQrCodeUrl(locationId);
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", url);
     }
 }
 

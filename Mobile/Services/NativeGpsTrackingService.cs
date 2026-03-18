@@ -55,7 +55,7 @@ namespace FoodStreet.Mobile.Services
                     return;
                 }
             }
-            
+
             var alwaysPermission = await Permissions.CheckStatusAsync<Permissions.LocationAlways>();
             if (alwaysPermission != PermissionStatus.Granted)
             {
@@ -67,11 +67,19 @@ namespace FoodStreet.Mobile.Services
             _cts = new CancellationTokenSource();
 
 #if ANDROID
+            // On Android: delegate to ForegroundService which calls RunTrackingLoopAsync directly
             var context = Platform.AppContext;
             var intent = new global::Android.Content.Intent(context, typeof(FoodStreet.Mobile.Platforms.Android.GpsForegroundService));
-            context.StartForegroundService(intent);
+            if (OperatingSystem.IsAndroidVersionAtLeast(26))
+            {
+                context.StartForegroundService(intent);
+            }
+            else
+            {
+                context.StartService(intent);
+            }
 #else
-            _ = TrackingLoopAsync(_cts.Token);
+            _ = RunTrackingLoopAsync(_cts.Token);
 #endif
         }
 
@@ -95,6 +103,15 @@ namespace FoodStreet.Mobile.Services
         public async Task GetCurrentPositionAsync()
         {
             await GetLocationAndUpdateAsync(CancellationToken.None);
+        }
+
+        /// <summary>
+        /// Called by GpsForegroundService on Android to run the loop directly,
+        /// avoiding recursive StartTrackingAsync call.
+        /// </summary>
+        public async Task RunTrackingLoopAsync(CancellationToken token)
+        {
+            await TrackingLoopAsync(token);
         }
 
         private async Task TrackingLoopAsync(CancellationToken token)
@@ -221,10 +238,10 @@ namespace FoodStreet.Mobile.Services
             }
         }
 
+        // FIX Bug 3: return new ValueTask(StopTrackingAsync()) so the Task is properly awaited
         public ValueTask DisposeAsync()
         {
-            StopTrackingAsync();
-            return ValueTask.CompletedTask;
+            return new ValueTask(StopTrackingAsync());
         }
     }
 }

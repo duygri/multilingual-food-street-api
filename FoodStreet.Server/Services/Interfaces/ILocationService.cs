@@ -20,5 +20,11 @@ namespace PROJECT_C_.Services.Interfaces
         // === Admin-specific ===
         Task<IEnumerable<Location>> GetAllLocationsAsync();
         Task<IEnumerable<Location>> GetPendingLocationsAsync();
+
+        /// <summary>
+        /// Approve một location: set IsApproved = true, ApprovedAt = UtcNow.
+        /// Không dùng UpdateLocationAsync vì method đó không update IsApproved.
+        /// </summary>
+        Task<bool> ApproveLocationAsync(int id);
     }
 }

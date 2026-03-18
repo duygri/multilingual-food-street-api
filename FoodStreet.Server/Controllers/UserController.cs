@@ -80,17 +80,20 @@ namespace PROJECT_C_.Controllers
         [HttpPost("{id}/approve")]
         public async Task<IActionResult> ApproveSeller(string id)
         {
+            if (!User.IsAdminRole()) return Forbid();
+
             var user = await _userManager.FindByIdAsync(id);
             if (user == null) return NotFound();
 
-            if (await _userManager.IsInRoleAsync(user, "Seller"))
-            {
-                user.LockoutEnd = null;
-                await _userManager.UpdateAsync(user);
-                return Ok(new { message = "Seller approved successfully" });
-            }
-            
-            return BadRequest("User is not a seller or already active");
+            if (!await _userManager.IsInRoleAsync(user, "Seller"))
+                return BadRequest(new { message = "User is not a seller" });
+
+            if (user.LockoutEnd == null || user.LockoutEnd <= DateTimeOffset.UtcNow)
+                return BadRequest(new { message = "Seller is already active" });
+
+            user.LockoutEnd = null;
+            await _userManager.UpdateAsync(user);
+            return Ok(new { message = "Seller approved successfully" });
         }
 
         [HttpPost("{id}/toggle-lock")]
@@ -103,7 +106,9 @@ namespace PROJECT_C_.Controllers
             if (await _userManager.IsInRoleAsync(user, "Admin"))
                 return BadRequest("Cannot lock Admin account");
 
-            if (user.LockoutEnd.HasValue && user.LockoutEnd > DateTimeOffset.UtcNow)
+            bool wasLocked = user.LockoutEnd.HasValue && user.LockoutEnd > DateTimeOffset.UtcNow;
+
+            if (wasLocked)
             {
                 user.LockoutEnd = null; // Unlock
             }
@@ -113,7 +118,8 @@ namespace PROJECT_C_.Controllers
             }
 
             await _userManager.UpdateAsync(user);
-            return Ok(new { message = "Lock status updated", isLocked = user.LockoutEnd.HasValue });
+            // isLocked = !wasLocked because we toggled the state above
+            return Ok(new { message = "Lock status updated", isLocked = !wasLocked });
         }
 
         [HttpDelete("{id}")]
@@ -130,19 +136,7 @@ namespace PROJECT_C_.Controllers
         }
     }
 
-    public class UserDto
-    {
-        public string Id { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
-        public List<string> Roles { get; set; } = new();
-        public bool IsLocked { get; set; }
-    }
-
-    public class CreateUserRequest
-    {
-        public string Email { get; set; } = string.Empty;
-        public string Password { get; set; } = string.Empty;
-        public string Role { get; set; } = "Seller";
-    }
 }
+// NOTE: UserDto and CreateUserRequest have been moved to their own files:
+// DTOs/UserDto.cs and DTOs/CreateUserRequest.cs
 

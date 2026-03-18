@@ -210,3 +210,30 @@ window.LeafletMap = {
         return null;
     }
 };
+
+// FIX Bug 2: MapInterop uses DotNetObjectReference (instance method) instead of
+// static Assembly invoke — safe for multi-tab and proper garbage collection.
+window.MapInterop = {
+    requestLocation: function (dotNetRef) {
+        if (!navigator.geolocation) {
+            dotNetRef.invokeMethodAsync('OnLocationError', 'Trình duyệt không hỗ trợ GPS');
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            function (pos) {
+                dotNetRef.invokeMethodAsync(
+                    'OnLocationReceived',
+                    pos.coords.latitude,
+                    pos.coords.longitude,
+                    pos.coords.accuracy || 50
+                );
+            },
+            function (err) {
+                dotNetRef.invokeMethodAsync('OnLocationError', err.message || 'Không thể lấy vị trí');
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    }
+};
+

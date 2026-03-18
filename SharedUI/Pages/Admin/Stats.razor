@@ -7,11 +7,11 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h3 class="mb-0">📊 Analytics Dashboard</h3>
     <div class="btn-group">
-        <button class="btn @(selectedPeriod == 7 ? "btn-admin btn-admin-primary" : "btn-outline-secondary")" 
+        <button class="btn @(selectedPeriod == 7 ? "btn-admin btn-admin-primary" : "btn-outline-secondary")"
                 @onclick="() => LoadData(7)">7 ngày</button>
-        <button class="btn @(selectedPeriod == 30 ? "btn-admin btn-admin-primary" : "btn-outline-secondary")" 
+        <button class="btn @(selectedPeriod == 30 ? "btn-admin btn-admin-primary" : "btn-outline-secondary")"
                 @onclick="() => LoadData(30)">30 ngày</button>
-        <button class="btn @(selectedPeriod == 90 ? "btn-admin btn-admin-primary" : "btn-outline-secondary")" 
+        <button class="btn @(selectedPeriod == 90 ? "btn-admin btn-admin-primary" : "btn-outline-secondary")"
                 @onclick="() => LoadData(90)">90 ngày</button>
     </div>
 </div>
@@ -20,28 +20,28 @@
 @if (stats != null)
 {
     <div class="row mb-4">
-        <div class="col-md-3">
+        <div class="col-6 col-md-3 mb-3">
             <div class="admin-card text-center py-4">
                 <div style="font-size: 2.5rem;">▶️</div>
                 <div class="fw-bold fs-2 text-primary">@stats.TotalPlays</div>
                 <small class="text-muted">Tổng lượt nghe</small>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-6 col-md-3 mb-3">
             <div class="admin-card text-center py-4">
                 <div style="font-size: 2.5rem;">📅</div>
                 <div class="fw-bold fs-2 text-success">@stats.TodayPlays</div>
                 <small class="text-muted">Hôm nay</small>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-6 col-md-3 mb-3">
             <div class="admin-card text-center py-4">
                 <div style="font-size: 2.5rem;">📆</div>
                 <div class="fw-bold fs-2 text-info">@stats.WeekPlays</div>
                 <small class="text-muted">Tuần này</small>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-6 col-md-3 mb-3">
             <div class="admin-card text-center py-4">
                 <div style="font-size: 2.5rem;">👥</div>
                 <div class="fw-bold fs-2 text-warning">@stats.UniqueSessions</div>
@@ -49,7 +49,65 @@
             </div>
         </div>
     </div>
+
+    <!-- Extra info row -->
+    <div class="row mb-4">
+        <div class="col-6 col-md-3 mb-3">
+            <div class="admin-card text-center py-3">
+                <div style="font-size: 2rem;">🍜</div>
+                <div class="fw-bold fs-3">@stats.TotalPOIs</div>
+                <small class="text-muted">Tổng POIs</small>
+            </div>
+        </div>
+        <div class="col-6 col-md-3 mb-3">
+            <div class="admin-card text-center py-3">
+                <div style="font-size: 2rem;">🔊</div>
+                <div class="fw-bold fs-3">@stats.POIsWithAudio</div>
+                <small class="text-muted">POIs có audio</small>
+            </div>
+        </div>
+        <div class="col-6 col-md-3 mb-3">
+            <div class="admin-card text-center py-3">
+                <div style="font-size: 2rem;">📈</div>
+                <div class="fw-bold fs-3 text-success">@stats.MonthPlays</div>
+                <small class="text-muted">Tháng này</small>
+            </div>
+        </div>
+        <div class="col-6 col-md-3 mb-3">
+            <div class="admin-card text-center py-3">
+                <div style="font-size: 2rem;">🎧</div>
+                <div class="fw-bold fs-3 text-secondary">
+                    @(stats.TotalPlays > 0 && stats.UniqueSessions > 0
+                        ? (stats.TotalPlays / stats.UniqueSessions).ToString("F1")
+                        : "0")
+                </div>
+                <small class="text-muted">Nghe/session TB</small>
+            </div>
+        </div>
+    </div>
 }
+
+<!-- Timeline Chart -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="admin-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">📈 Lượt nghe theo ngày (@selectedPeriod ngày qua)</h5>
+                @if (isLoadingTimeline)
+                {
+                    <span class="spinner-border spinner-border-sm text-secondary" role="status"></span>
+                }
+            </div>
+            <div style="height: 260px; position: relative;">
+                <canvas id="timeline-chart"></canvas>
+            </div>
+            @if (!isLoadingTimeline && (timeline == null || !timeline.Any()))
+            {
+                <p class="text-muted text-center mt-2 mb-0"><em>Chưa có dữ liệu</em></p>
+            }
+        </div>
+    </div>
+</div>
 
 <div class="row">
     <!-- Top POIs -->
@@ -96,83 +154,6 @@
         </div>
     </div>
 
-    <!-- Source Breakdown -->
-    <div class="col-md-6 mb-4">
-        <div class="admin-card h-100">
-            <h5 class="mb-3">📱 Nguồn Phát</h5>
-            @if (sources != null && sources.Any())
-            {
-                @foreach (var source in sources)
-                {
-                    var percentage = stats?.TotalPlays > 0 ? (source.Count * 100.0 / stats.TotalPlays) : 0;
-                    var icon = source.Source switch
-                    {
-                        "qr_scan" => "📱",
-                        "geofence" => "📍",
-                        "manual" => "👆",
-                        _ => "❓"
-                    };
-                    var label = source.Source switch
-                    {
-                        "qr_scan" => "QR Code Scan",
-                        "geofence" => "Geofence Auto",
-                        "manual" => "Manual Play",
-                        _ => source.Source
-                    };
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between mb-1">
-                            <span>@icon @label</span>
-                            <span class="fw-bold">@source.Count (@percentage.ToString("F1")%)</span>
-                        </div>
-                        <div class="progress" style="height: 8px;">
-                            <div class="progress-bar bg-success" style="width: @percentage%"></div>
-                        </div>
-                    </div>
-                }
-            }
-            else
-            {
-                <p class="text-muted text-center py-4">Chưa có dữ liệu</p>
-            }
-        </div>
-    </div>
-</div>
-
-<div class="row">
-    <!-- Device Breakdown -->
-    <div class="col-md-6 mb-4">
-        <div class="admin-card h-100">
-            <h5 class="mb-3">💻 Thiết bị</h5>
-            @if (devices != null && devices.Any())
-            {
-                @foreach (var device in devices)
-                {
-                    var percentage = stats?.TotalPlays > 0 ? (device.Count * 100.0 / stats.TotalPlays) : 0;
-                    var icon = device.Device?.ToLower() switch
-                    {
-                        "mobile" => "📱",
-                        "desktop" => "💻",
-                        "tablet" => "📟",
-                        _ => "❓"
-                    };
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between mb-1">
-                            <span>@icon @device.Device</span>
-                            <span class="fw-bold">@device.Count</span>
-                        </div>
-                        <div class="progress" style="height: 8px;">
-                            <div class="progress-bar bg-info" style="width: @percentage%"></div>
-                        </div>
-                    </div>
-                }
-            }
-            else
-            {
-                <p class="text-muted text-center py-4">Chưa có dữ liệu</p>
-            }
-        </div>
-    </div>
-
     <!-- Recent Plays -->
     <div class="col-md-6 mb-4">
         <div class="admin-card h-100">
@@ -200,8 +181,72 @@
     </div>
 </div>
 
+<!-- Doughnut charts: Sources & Devices -->
+<div class="row">
+    <!-- Source Breakdown -->
+    <div class="col-md-6 mb-4">
+        <div class="admin-card h-100">
+            <h5 class="mb-3">📱 Nguồn Phát</h5>
+            @if (sources != null && sources.Any())
+            {
+                <div style="height: 220px; position: relative;">
+                    <canvas id="sources-chart"></canvas>
+                </div>
+                <div class="mt-3">
+                    @foreach (var source in sources)
+                    {
+                        var percentage = stats?.TotalPlays > 0 ? (source.Count * 100.0 / stats.TotalPlays) : 0;
+                        var label = source.Source switch
+                        {
+                            "qr_scan" => "QR Code Scan",
+                            "geofence" => "Geofence Auto",
+                            "manual" => "Manual Play",
+                            _ => source.Source
+                        };
+                        <div class="d-flex justify-content-between small text-muted mb-1">
+                            <span>@label</span>
+                            <span class="fw-semibold text-dark">@source.Count (@percentage.ToString("F1")%)</span>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <p class="text-muted text-center py-4">Chưa có dữ liệu</p>
+            }
+        </div>
+    </div>
+
+    <!-- Device Breakdown -->
+    <div class="col-md-6 mb-4">
+        <div class="admin-card h-100">
+            <h5 class="mb-3">💻 Thiết bị</h5>
+            @if (devices != null && devices.Any())
+            {
+                <div style="height: 220px; position: relative;">
+                    <canvas id="devices-chart"></canvas>
+                </div>
+                <div class="mt-3">
+                    @foreach (var device in devices)
+                    {
+                        var percentage = stats?.TotalPlays > 0 ? (device.Count * 100.0 / stats.TotalPlays) : 0;
+                        <div class="d-flex justify-content-between small text-muted mb-1">
+                            <span>@device.Device</span>
+                            <span class="fw-semibold text-dark">@device.Count (@percentage.ToString("F1")%)</span>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <p class="text-muted text-center py-4">Chưa có dữ liệu</p>
+            }
+        </div>
+    </div>
+</div>
+
 <!-- Heatmap Section -->
-<div class="row mt-4">
+<div class="row mt-2">
     <div class="col-12">
         <div class="admin-card">
             <div class="d-flex justify-content-between align-items-center mb-3">
@@ -228,10 +273,12 @@
     private List<SourceDto>? sources;
     private List<DeviceDto>? devices;
     private List<RecentPlayDto>? recentPlays;
+    private List<TimelineDto>? timeline;
     private int selectedPeriod = 30;
     private int heatmapUserCount = 0;
     private int heatmapPlayCount = 0;
     private bool heatmapRendered = false;
+    private bool isLoadingTimeline = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -245,29 +292,71 @@
             await LoadHeatmap();
             heatmapRendered = true;
         }
+
+        // Render charts after DOM is ready
+        await RenderCharts();
     }
 
     private async Task LoadData(int days)
     {
         selectedPeriod = days;
-        
+        isLoadingTimeline = true;
+        StateHasChanged();
+
         try
         {
-            stats = await Http.GetFromJsonAsync<StatsDto>("api/analytics/stats");
-            topPois = await Http.GetFromJsonAsync<List<TopPoiDto>>($"api/analytics/top-pois?days={days}");
-            sources = await Http.GetFromJsonAsync<List<SourceDto>>("api/analytics/sources");
-            devices = await Http.GetFromJsonAsync<List<DeviceDto>>("api/analytics/devices");
-            recentPlays = await Http.GetFromJsonAsync<List<RecentPlayDto>>("api/analytics/recent");
+            stats        = await Http.GetFromJsonAsync<StatsDto>("api/analytics/stats");
+            topPois      = await Http.GetFromJsonAsync<List<TopPoiDto>>($"api/analytics/top-pois?days={days}");
+            sources      = await Http.GetFromJsonAsync<List<SourceDto>>("api/analytics/sources");
+            devices      = await Http.GetFromJsonAsync<List<DeviceDto>>("api/analytics/devices");
+            recentPlays  = await Http.GetFromJsonAsync<List<RecentPlayDto>>("api/analytics/recent");
+            timeline     = await Http.GetFromJsonAsync<List<TimelineDto>>($"api/analytics/timeline?days={days}");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error loading analytics: {ex.Message}");
         }
-        
+
+        isLoadingTimeline = false;
         StateHasChanged();
 
-        // Reload heatmap when period changes
         await LoadHeatmap();
+        await RenderCharts();
+    }
+
+    private async Task RenderCharts()
+    {
+        // Timeline line chart
+        if (timeline != null && timeline.Any())
+        {
+            var labels = timeline.Select(t => t.Date.ToString("dd/MM")).ToArray();
+            var data   = timeline.Select(t => t.Count).ToArray();
+            await JS.InvokeVoidAsync("ChartHelper.renderTimeline", "timeline-chart", labels, data);
+        }
+
+        // Sources doughnut
+        if (sources != null && sources.Any())
+        {
+            var srcLabels = sources.Select(s => s.Source switch
+            {
+                "qr_scan"  => "QR Scan",
+                "geofence" => "Geofence",
+                "manual"   => "Manual",
+                _          => s.Source
+            }).ToArray();
+            var srcData   = sources.Select(s => s.Count).ToArray();
+            string[] srcColors = ["#6366f1", "#10b981", "#f59e0b", "#ef4444"];
+            await JS.InvokeVoidAsync("ChartHelper.renderDoughnut", "sources-chart", srcLabels, srcData, srcColors);
+        }
+
+        // Devices doughnut
+        if (devices != null && devices.Any())
+        {
+            var devLabels = devices.Select(d => d.Device ?? "Unknown").ToArray();
+            var devData   = devices.Select(d => d.Count).ToArray();
+            string[] devColors = ["#3b82f6", "#8b5cf6", "#ec4899", "#14b8a6"];
+            await JS.InvokeVoidAsync("ChartHelper.renderDoughnut", "devices-chart", devLabels, devData, devColors);
+        }
     }
 
     private async Task LoadHeatmap()
@@ -299,53 +388,59 @@
     // DTOs
     public class StatsDto
     {
-        public int TotalPlays { get; set; }
-        public int TodayPlays { get; set; }
-        public int WeekPlays { get; set; }
-        public int MonthPlays { get; set; }
-        public int UniqueSessions { get; set; }
-        public int TotalPOIs { get; set; }
-        public int POIsWithAudio { get; set; }
+        public int TotalPlays      { get; set; }
+        public int TodayPlays      { get; set; }
+        public int WeekPlays       { get; set; }
+        public int MonthPlays      { get; set; }
+        public int UniqueSessions  { get; set; }
+        public int TotalPOIs       { get; set; }
+        public int POIsWithAudio   { get; set; }
     }
 
     public class TopPoiDto
     {
-        public int FoodId { get; set; }
-        public string FoodName { get; set; } = "";
-        public int PlayCount { get; set; }
-        public double TotalDuration { get; set; }
-        public double AvgDuration { get; set; }
+        public int    FoodId       { get; set; }
+        public string FoodName     { get; set; } = "";
+        public int    PlayCount    { get; set; }
+        public double TotalDuration{ get; set; }
+        public double AvgDuration  { get; set; }
     }
 
     public class SourceDto
     {
         public string Source { get; set; } = "";
-        public int Count { get; set; }
+        public int    Count  { get; set; }
     }
 
     public class DeviceDto
     {
         public string? Device { get; set; }
-        public int Count { get; set; }
+        public int     Count  { get; set; }
     }
 
     public class RecentPlayDto
     {
-        public int Id { get; set; }
-        public int FoodId { get; set; }
-        public string FoodName { get; set; } = "";
-        public DateTime PlayedAt { get; set; }
-        public double DurationSeconds { get; set; }
-        public string Source { get; set; } = "";
-        public string? DeviceType { get; set; }
+        public int      Id              { get; set; }
+        public int      FoodId          { get; set; }
+        public string   FoodName        { get; set; } = "";
+        public DateTime PlayedAt        { get; set; }
+        public double   DurationSeconds { get; set; }
+        public string   Source          { get; set; } = "";
+        public string?  DeviceType      { get; set; }
+    }
+
+    public class TimelineDto
+    {
+        public DateTime Date  { get; set; }
+        public int      Count { get; set; }
     }
 
     public class HeatmapResponse
     {
-        public double[][] Points { get; set; } = Array.Empty<double[]>();
-        public int TotalUserLocations { get; set; }
-        public int TotalPlayLocations { get; set; }
-        public HeatmapCenter Center { get; set; } = new();
+        public double[][]    Points             { get; set; } = Array.Empty<double[]>();
+        public int           TotalUserLocations  { get; set; }
+        public int           TotalPlayLocations  { get; set; }
+        public HeatmapCenter Center             { get; set; } = new();
     }
 
     public class HeatmapCenter

@@ -1,4 +1,4 @@
-@page "/map"
+@page "/mobile-map"
 @using Microsoft.AspNetCore.Authorization
 @using FoodStreet.Client.DTOs
 @attribute [Authorize]
@@ -67,6 +67,7 @@
         display: flex;
         flex-direction: column;
         background: #f1f5f9;
+        /* Bạn có thể thoải mái sửa CSS ở đây cho Mobile mà không ảnh hưởng Web */
     }
 
     /* Location Permission Prompt */
@@ -250,7 +251,7 @@
     private string? locationError;
     private double userLat = 10.7580;
     private double userLng = 106.7034;
-    private DotNetObjectReference<Map>? objRef;
+    private DotNetObjectReference<MobileMap>? objRef;
 
     protected override void OnInitialized()
     {
@@ -269,7 +270,6 @@
         await Task.Delay(300);
         try { await JS.InvokeVoidAsync("eval", "if(LeafletMap.map) LeafletMap.map.invalidateSize()"); } catch { }
 
-        // FIX Bug 2: dùng objRef thay vì static Assembly invoke
         await JS.InvokeVoidAsync("MapInterop.requestLocation", objRef);
     }
 
@@ -287,7 +287,6 @@
         await LoadPois();
     }
 
-    // FIX Bug 2: instance methods thay vì static — gọi qua DotNetObjectReference
     [JSInvokable]
     public async Task OnLocationReceived(double lat, double lng, double accuracy)
     {
@@ -335,7 +334,6 @@
     {
         try
         {
-            // FIX Bug 1: dùng đúng endpoint /near với toạ độ (api/location không tồn tại)
             var result = await Http.GetFromJsonAsync<PagedResult<LocationDto>>(
                 $"api/location/near?lat={userLat}&lng={userLng}&page=1&pageSize=50");
 
@@ -377,18 +375,6 @@
         {
             await JS.InvokeVoidAsync("LeafletMap.centerOn", userLat, userLng, 16);
         }
-    }
-
-    private double CalculateDistance(double lat1, double lng1, double lat2, double lng2)
-    {
-        var R = 6371000.0;
-        var dLat = (lat2 - lat1) * Math.PI / 180;
-        var dLon = (lng2 - lng1) * Math.PI / 180;
-        var a = Math.Sin(dLat/2) * Math.Sin(dLat/2) +
-                Math.Cos(lat1 * Math.PI / 180) * Math.Cos(lat2 * Math.PI / 180) *
-                Math.Sin(dLon/2) * Math.Sin(dLon/2);
-        var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
-        return R * c;
     }
 
     public async ValueTask DisposeAsync()

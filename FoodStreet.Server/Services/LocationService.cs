@@ -140,6 +140,20 @@ namespace PROJECT_C_.Services
             return existing;
         }
 
+        /// <summary>
+        /// Chỉ dùng để Admin approve — không dùng UpdateLocationAsync vì method đó không persist IsApproved.
+        /// </summary>
+        public async Task<bool> ApproveLocationAsync(int id)
+        {
+            var location = await _context.Locations.FindAsync(id);
+            if (location == null) return false;
+
+            location.IsApproved = true;
+            location.ApprovedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
         public async Task<bool> DeleteLocationAsync(int id)
         {
             var location = await _context.Locations.FindAsync(id);

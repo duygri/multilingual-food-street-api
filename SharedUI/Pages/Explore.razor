@@ -2,7 +2,9 @@
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
 @using FoodStreet.Client.Services
+@using FoodStreet.Client.DTOs
 @inject IGpsTrackingService GpsService
+@inject IFavoritesService FavoritesService
 @inject HttpClient Http
 
 <div class="explore-page">
@@ -21,6 +23,7 @@
                 <div class="poi-grid">
                     @foreach (var food in allFoods)
                     {
+                        var isFav = favoriteIds.Contains(food.Id);
                         <div class="poi-card">
                             <div class="poi-image-wrapper">
                                 @if (!string.IsNullOrEmpty(food.ImageUrl))
@@ -38,7 +41,11 @@
                                 <p>@food.Description</p>
                                 <div class="poi-footer">
                                     <span class="poi-price">@food.Price.ToString("N0") đ</span>
-                                    <button class="save-btn">❤️</button>
+                                    <button class="save-btn @(isFav ? "saved" : "")" 
+                                            @onclick="() => ToggleFavorite(food)"
+                                            title="@(isFav ? "Bỏ lưu" : "Lưu lại")">
+                                        @(isFav ? "❤️" : "🤍")
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -199,21 +206,44 @@
 
 @code {
     private List<FoodDto> allFoods = new();
+    private HashSet<int> favoriteIds = new();
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
             var response = await Http.GetFromJsonAsync<List<FoodDto>>("api/food");
-            if (response != null)
-            {
-                allFoods = response;
-            }
+            if (response != null) allFoods = response;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error loading foods: {ex.Message}");
         }
+
+        // Load saved favorites to show correct heart state
+        var favs = await FavoritesService.GetFavoritesAsync();
+        favoriteIds = favs.Select(f => f.Id).ToHashSet();
+    }
+
+    private async Task ToggleFavorite(FoodDto food)
+    {
+        // Map FoodDto to LocationDto for favorites storage
+        var dto = new LocationDto
+        {
+            Id = food.Id,
+            Name = food.Name,
+            Description = food.Description ?? "",
+            ImageUrl = food.ImageUrl,
+            Latitude = food.Latitude,
+            Longitude = food.Longitude
+        };
+
+        await FavoritesService.ToggleFavoriteAsync(dto);
+
+        if (favoriteIds.Contains(food.Id))
+            favoriteIds.Remove(food.Id);
+        else
+            favoriteIds.Add(food.Id);
     }
 
     public class FoodDto

@@ -44,7 +44,7 @@ namespace FoodStreet.Mobile.Platforms.Android
 
         private void CreateNotificationChannel()
         {
-            if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
+            if (OperatingSystem.IsAndroidVersionAtLeast(26))
             {
                 var channel = new NotificationChannel(
                     CHANNEL_ID,
@@ -76,26 +76,26 @@ namespace FoodStreet.Mobile.Platforms.Android
 
         private void StartTracking()
         {
-            // Resolve the GPS service from DI container
             var services = IPlatformApplication.Current?.Services;
             if (services == null) return;
-            
+
             var gpsService = services.GetService<FoodStreet.Client.Services.IGpsTrackingService>() as NativeGpsTrackingService;
             if (gpsService == null) return;
 
             _gpsService = gpsService;
             _cts = new CancellationTokenSource();
 
-            // Run the loop asynchronously
+            // FIX Bug 4: call RunTrackingLoopAsync directly instead of StartTrackingAsync
+            // to avoid the recursive StartForegroundService → StartTracking → StartTrackingAsync loop
             _ = Task.Run(async () =>
             {
-                try 
+                try
                 {
-                    await _gpsService.StartTrackingAsync();
+                    await _gpsService.RunTrackingLoopAsync(_cts.Token);
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Error starting foreground GPS tracking: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"[ForegroundService] GPS loop error: {ex.Message}");
                 }
             }, _cts.Token);
         }

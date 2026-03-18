@@ -38,7 +38,7 @@ namespace FoodStreet.Client.Services
         private HubConnection? _hubConnection;
         private bool _isInitialized;
         private System.Threading.Timer? _pollingTimer;
-        private bool _signalRConnected;
+
 
         public event Action? OnNotificationsChanged;
         public List<NotificationDto> Notifications { get; private set; } = new();
@@ -98,7 +98,7 @@ namespace FoodStreet.Client.Services
 
                 _hubConnection.Reconnecting += (_) =>
                 {
-                    _signalRConnected = false;
+
                     ConnectionStatus = "🟡";
                     OnNotificationsChanged?.Invoke();
                     return Task.CompletedTask;
@@ -106,7 +106,7 @@ namespace FoodStreet.Client.Services
 
                 _hubConnection.Reconnected += async (_) =>
                 {
-                    _signalRConnected = true;
+
                     ConnectionStatus = "🟢";
                     OnNotificationsChanged?.Invoke();
                     await LoadNotificationsAsync();
@@ -114,21 +114,21 @@ namespace FoodStreet.Client.Services
 
                 _hubConnection.Closed += (_) =>
                 {
-                    _signalRConnected = false;
+
                     ConnectionStatus = "🔴";
                     OnNotificationsChanged?.Invoke();
                     return Task.CompletedTask;
                 };
 
                 await _hubConnection.StartAsync();
-                _signalRConnected = true;
+
                 ConnectionStatus = "🟢";
                 Console.WriteLine("[Notification] SignalR connected OK");
                 OnNotificationsChanged?.Invoke();
             }
             catch (Exception ex)
             {
-                _signalRConnected = false;
+
                 ConnectionStatus = "🔴 Polling";
                 Console.WriteLine($"[Notification] SignalR failed, using polling: {ex.Message}");
                 OnNotificationsChanged?.Invoke();

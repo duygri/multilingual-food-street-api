@@ -275,9 +275,13 @@ namespace PROJECT_C_.Controllers
             var location = await _locationService.GetLocationByIdAsync(id);
             if (location == null) return NotFound();
 
-            location.IsApproved = true;
-            location.ApprovedAt = DateTime.UtcNow;
-            await _locationService.UpdateLocationAsync(id, location);
+            if (location.IsApproved)
+                return BadRequest(new { message = "Địa điểm đã được duyệt trước đó" });
+
+            // FIX: dùng ApproveLocationAsync thay vì UpdateLocationAsync
+            // vì UpdateLocationAsync không persist IsApproved và ApprovedAt
+            var approved = await _locationService.ApproveLocationAsync(id);
+            if (!approved) return NotFound();
 
             // Gửi thông báo cho Seller (chủ POI)
             if (!string.IsNullOrEmpty(location.OwnerId))

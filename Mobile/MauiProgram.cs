@@ -4,6 +4,7 @@ using FoodStreet.Client;
 using FoodStreet.Client.Services;
 using FoodStreet.Client.Layout;
 using FoodStreet.Mobile.Services;
+using Plugin.Maui.Audio;
 
 namespace FoodStreet.Mobile;
 
@@ -46,12 +47,14 @@ public static class MauiProgram
         builder.Services.AddScoped(sp =>
         {
             var handler = sp.GetRequiredService<AuthorizingMessageHandler>();
-            // Bypass SSL certificate check for dev (self-signed certs)
-            handler.InnerHandler = new HttpClientHandler 
-            { 
-                ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true 
+#if DEBUG
+            // SECURITY: Bypass SSL only in DEBUG (self-signed dev certs).
+            // In Release/Production, remove this so real cert validation applies.
+            handler.InnerHandler = new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
             };
-            
+#endif
             return new HttpClient(handler)
             {
                 BaseAddress = new Uri(baseAddress)
@@ -77,6 +80,11 @@ public static class MauiProgram
         builder.Services.AddScoped<IGpsTrackingService, NativeGpsTrackingService>();
         builder.Services.AddScoped<ITtsService, NativeTtsService>();
         builder.Services.AddScoped<INotificationService, NotificationService>();
+        builder.Services.AddScoped<IFavoritesService, FavoritesService>();
+        
+        // Audio Plugin
+        builder.Services.AddSingleton(AudioManager.Current);
+
         builder.Services.AddLocalization();
         builder.Services.AddSingleton<ILocalizationService, LocalizationService>();
         builder.Services.AddSingleton<IPlatformDetector, MobilePlatformDetector>();
