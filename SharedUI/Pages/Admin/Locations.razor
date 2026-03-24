@@ -1,6 +1,8 @@
 @page "/admin/locations"
 @layout AdminLayout
 @inject FoodStreet.Client.Services.ILocationClientService LocationService
+@inject IAudioService AudioService
+@inject TourPlayerService TourService
 @inject IJSRuntime JS
 @using FoodStreet.Client.DTOs
 @inject NavigationManager Navigation
@@ -52,12 +54,12 @@
         <table class="admin-table">
             <thead>
                 <tr>
+                    <th style="width: 80px;">Ảnh</th>
                     <th>Tên POI</th>
                     <th>Địa chỉ</th>
-                    <th>Tọa độ</th>
-                    <th>Bán kính</th>
-                    <th>Món ăn</th>
-                    <th style="width: 180px;">Thao tác</th>
+                    <th>Tọa độ & Bán kính</th>
+                    <th>Audio</th>
+                    <th style="width: 140px;">Thao tác</th>
                 </tr>
             </thead>
             <tbody>
@@ -65,20 +67,75 @@
                 {
                     <tr>
                         <td>
-                            <strong>@loc.Name</strong>
-                            @if (!string.IsNullOrEmpty(loc.Description))
+                            @if (!string.IsNullOrEmpty(loc.ImageUrl))
                             {
-                                <br /><small class="text-muted">@(loc.Description.Length > 40 ? loc.Description.Substring(0, 40) + "..." : loc.Description)</small>
+                                <img src="@loc.ImageUrl" alt="@loc.Name" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 1px solid #ddd;" />
+                            }
+                            else
+                            {
+                                <div style="width: 60px; height: 60px; border-radius: 8px; background-color: #f8f9fa; display: flex; align-items: center; justify-content: center; border: 1px dashed #ccc;">
+                                    <span style="font-size: 1.5rem; color: #adb5bd;">🖼️</span>
+                                </div>
                             }
                         </td>
-                        <td class="text-muted">@(loc.Address ?? "—")</td>
-                        <td><code>@loc.Latitude.ToString("F4"), @loc.Longitude.ToString("F4")</code></td>
-                        <td><span class="badge bg-info">@loc.Radius m</span></td>
-                        <td><span class="badge bg-secondary">@loc.FoodCount món</span></td>
                         <td>
-                            <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => ShowEditModal(loc)" title="Sửa">✏️</button>
-                            <button class="btn btn-sm btn-outline-info me-1" @onclick="() => ShowDetailsModal(loc)" title="Xem">👁️</button>
-                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteLocation(loc.Id)" title="Xóa">🗑️</button>
+                            <strong style="font-size: 1.1rem; color: #2c3e50;">@loc.Name</strong>
+                            @{
+                                switch (loc.Priority)
+                                {
+                                    case 3:
+                                        <span class="badge bg-danger rounded-pill fw-normal ms-2" title="Ưu tiên phát đè mọi audio">🔴 Cảnh báo / Chỉ đường</span>
+                                        break;
+                                    case 2:
+                                        <span class="badge bg-warning text-dark rounded-pill fw-normal ms-2" title="Trạm nên ghé qua">⭐ Điểm nhấn nổi bật</span>
+                                        break;
+                                    case 1:
+                                        <span class="badge bg-primary bg-opacity-75 rounded-pill fw-normal ms-2">🔵 Trạm tiêu chuẩn</span>
+                                        break;
+                                    case 0:
+                                    default:
+                                        <span class="badge bg-secondary bg-opacity-50 text-dark rounded-pill fw-normal ms-2">⚪ Trạm tùy chọn</span>
+                                        break;
+                                }
+                            }
+                            @if (!string.IsNullOrEmpty(loc.Description))
+                            {
+                                <br /><small class="text-muted">@(loc.Description.Length > 50 ? loc.Description.Substring(0, 50) + "..." : loc.Description)</small>
+                            }
+                        </td>
+                        <td class="text-muted">
+                            <div class="d-flex flex-column gap-1">
+                                <span>@(string.IsNullOrEmpty(loc.Address) ? "—" : loc.Address)</span>
+                                @if (!string.IsNullOrEmpty(loc.MapLink))
+                                {
+                                    <a href="@loc.MapLink" target="_blank" class="small text-decoration-none">📍 Xem bản đồ</a>
+                                }
+                            </div>
+                        </td>
+                        <td>
+                            <div class="small text-secondary mb-1"><code>@loc.Latitude.ToString("F4"), @loc.Longitude.ToString("F4")</code></div>
+                            <span class="badge bg-info bg-opacity-10 text-info border border-info rounded-pill px-2">Kích hoạt: @loc.Radius m</span>
+                        </td>
+                        <td>
+                            @if (loc.HasAudio)
+                            {
+                                <span class="badge bg-success rounded-pill"><i class="bi bi-music-note-beamed"></i> 🎵 Có audio</span>
+                            }
+                            else if (!string.IsNullOrEmpty(loc.TtsScript))
+                            {
+                                <span class="badge bg-secondary rounded-pill">🔊 TTS</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">—</span>
+                            }
+                        </td>
+                        <td>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-outline-primary shadow-sm" style="border-radius: 6px;" @onclick="() => ShowEditModal(loc)" title="Sửa">✏️</button>
+                                <button class="btn btn-sm btn-outline-info shadow-sm" style="border-radius: 6px;" @onclick="() => ShowDetailsModal(loc)" title="Xem">👁️</button>
+                                <button class="btn btn-sm btn-outline-danger shadow-sm" style="border-radius: 6px;" @onclick="() => DeleteLocation(loc.Id)" title="Xóa">🗑️</button>
+                            </div>
                         </td>
                     </tr>
                 }
@@ -114,11 +171,25 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">🗺️ Chọn vị trí trên bản đồ</label>
-                        <div class="input-group mb-2">
-                            <input type="text" class="form-control" placeholder="Nhập địa chỉ cần tìm (VD: Chợ Bến Thành)..." @bind="mapSearchQuery" @bind:event="oninput" @onkeydown="@(e => { if (e.Key == "Enter") SearchLocationMap(); })" />
-                            <button class="btn btn-outline-secondary" type="button" @onclick="SearchLocationMap" disabled="@isSearchingMap">
-                                @if (isSearchingMap) { <span class="spinner-border spinner-border-sm"></span> } else { <span>🔍 Tìm</span> }
-                            </button>
+                        <div class="position-relative">
+                            <div class="input-group mb-2">
+                                <input type="text" class="form-control" placeholder="Nhập địa chỉ cần tìm (VD: Chợ Bến Thành)..." @bind="mapSearchQuery" @bind:event="oninput" @onkeydown="@(async e => { if (e.Key == "Enter") await SearchLocationMap(); })" />
+                                <button class="btn btn-outline-secondary" type="button" @onclick="SearchLocationMap" disabled="@isSearchingMap">
+                                    @if (isSearchingMap) { <span class="spinner-border spinner-border-sm"></span> } else { <span>🔍 Tìm</span> }
+                                </button>
+                            </div>
+                            @if (mapSearchResults != null && mapSearchResults.Any())
+                            {
+                                <ul class="list-group shadow-sm" style="position: absolute; z-index: 1050; width: 100%; max-height: 250px; overflow-y: auto; top: 100%; left: 0;">
+                                    @foreach (var res in mapSearchResults)
+                                    {
+                                        <li class="list-group-item list-group-item-action" style="cursor: pointer;" @onclick="() => SelectSearchResult(res)">
+                                            <div class="fw-bold">@res.text</div>
+                                            <small class="text-muted">@res.place_name</small>
+                                        </li>
+                                    }
+                                </ul>
+                            }
                         </div>
                         <div id="poi-map-picker" style="height: 250px; width: 100%; border-radius: 8px; border: 1px solid #e2e8f0; z-index: 1;"></div>
                         <small class="text-muted">Kéo thả icon 📍 hoặc click điểm trên bản đồ để cập nhật tọa độ</small>
@@ -140,31 +211,58 @@
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">⭐ Độ ưu tiên</label>
-                            <input type="number" class="form-control" @bind="editingLocation.Priority" />
-                            <small class="text-muted">Số cao hơn = ưu tiên hơn</small>
+                            <label class="form-label">⭐ Phân cấp điểm đến (Mức độ ưu tiên)</label>
+                            <select class="form-select" @bind="editingLocation.Priority">
+                                <option value="0">⚪ Trạm tùy chọn (Mức 0)</option>
+                                <option value="1">🔵 Trạm tiêu chuẩn (Mức 1)</option>
+                                <option value="2">⭐ Điểm nhấn nổi bật (Mức 2)</option>
+                                <option value="3">🔴 Cảnh báo / Chỉ đường (Mức 3)</option>
+                            </select>
+                            <small class="text-muted">Audio của cấp cao hơn sẽ luôn phát đè cấp thấp.</small>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">🖼️ Link hình ảnh</label>
-                            <div class="input-group mb-2">
-                                <input type="text" class="form-control" @bind="editingLocation.ImageUrl" placeholder="https://example.com/image.jpg" />
-                            </div>
-                            <div class="d-flex align-items-center mt-2">
-                                <label class="btn btn-sm btn-outline-secondary mb-0 me-2" style="cursor: pointer;">
-                                    📸 Chọn từ máy
-                                    <InputFile OnChange="UploadImage" accept="image/*" style="display: none;" />
-                                </label>
-                                @if (isUploadingImage)
-                                {
-                                    <span class="spinner-border spinner-border-sm text-primary me-2"></span>
-                                    <small class="text-muted">Đang tải ảnh lên...</small>
-                                }
+                            <label class="form-label">🔗 Link Google Map (Tùy chọn)</label>
+                            <input type="text" class="form-control" @bind="editingLocation.MapLink" placeholder="https://maps.google.com/..." />
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">🖼️ Hình ảnh minh họa</label>
+                        <div class="card p-3 bg-light border-0 shadow-sm">
+                            <div class="row align-items-center">
+                                <div class="col-md-3 text-center mb-3 mb-md-0">
+                                    @if (!string.IsNullOrEmpty(editingLocation.ImageUrl))
+                                    {
+                                        <img src="@editingLocation.ImageUrl" class="img-fluid rounded shadow-sm" style="max-height: 100px; object-fit: cover;" />
+                                    }
+                                    else
+                                    {
+                                        <div class="d-flex align-items-center justify-content-center bg-white rounded border border-dashed" style="height: 100px; color: #ccc;">
+                                            <span style="font-size: 2rem;">🖼️</span>
+                                        </div>
+                                    }
+                                </div>
+                                <div class="col-md-9">
+                                    <div class="input-group mb-2">
+                                        <input type="text" class="form-control" @bind="editingLocation.ImageUrl" placeholder="Nhập link ảnh (https://...)" />
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        <label class="btn btn-sm btn-outline-primary mb-0 me-2" style="cursor: pointer; border-radius: 6px;">
+                                            📸 Tải ảnh lên từ máy
+                                            <InputFile OnChange="UploadImage" accept="image/*" style="display: none;" />
+                                        </label>
+                                        @if (isUploadingImage)
+                                        {
+                                            <span class="spinner-border spinner-border-sm text-primary me-2"></span>
+                                            <small class="text-muted">Đang xử lý...</small>
+                                        }
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">🔊 TTS Script (tùy chọn)</label>
-                        <textarea class="form-control" rows="2" @bind="editingLocation.TtsScript" placeholder="Nội dung đọc tự động khi vào vùng geofence..."></textarea>
+                        <label class="form-label">🔊 Nội dung đọc tự động (TTS Script)</label>
+                        <textarea class="form-control" rows="3" @bind="editingLocation.TtsScript" placeholder="Nội dung sẽ được đọc lên khi du khách đi vào vùng Geofence (nếu không có sẵn Audio file)..."></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -221,18 +319,35 @@
                             <p><span class="badge bg-info">@viewLocation.Radius m</span></p>
                         </div>
                     </div>
-                    <div class="row">
+                    <div class="row px-2">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label text-muted">⭐ Độ ưu tiên</label>
-                            <p>@viewLocation.Priority</p>
+                            <label class="form-label text-muted mb-1"><small>⭐ Phân cấp điểm đến</small></label>
+                            <div>
+                                @switch (viewLocation.Priority)
+                                {
+                                    case 3:
+                                        <span class="badge bg-danger rounded-pill fw-medium fs-6">🔴 Cảnh báo / Chỉ đường khẩn</span>
+                                        break;
+                                    case 2:
+                                        <span class="badge bg-warning text-dark rounded-pill fw-medium fs-6">⭐ Điểm nhấn nổi bật</span>
+                                        break;
+                                    case 1:
+                                        <span class="badge bg-primary bg-opacity-75 rounded-pill fw-medium fs-6">🔵 Trạm tiêu chuẩn</span>
+                                        break;
+                                    case 0:
+                                    default:
+                                        <span class="badge bg-secondary bg-opacity-50 text-dark rounded-pill fw-medium fs-6">⚪ Trạm tùy chọn</span>
+                                        break;
+                                }
+                            </div>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label text-muted">🖼️ Hình ảnh</label>
-                            <div class="mt-1">
-                                @if (!string.IsNullOrEmpty(viewLocation.ImageUrl))
+                            <label class="form-label text-muted mb-1"><small>🔗 Bản đồ</small></label>
+                            <div>
+                                @if (!string.IsNullOrEmpty(viewLocation.MapLink))
                                 {
-                                    <a href="@viewLocation.ImageUrl" target="_blank" class="btn btn-sm btn-outline-primary">
-                                        👁️ Xem hình ảnh
+                                    <a href="@viewLocation.MapLink" target="_blank" class="btn btn-sm btn-outline-info shadow-sm rounded-pill px-3">
+                                        📍 Mở Google Map
                                     </a>
                                 }
                                 else
@@ -242,9 +357,42 @@
                             </div>
                         </div>
                     </div>
+
+                    @if (!string.IsNullOrEmpty(viewLocation.ImageUrl))
+                    {
+                        <div class="mb-4 text-center bg-light p-3 rounded border shadow-sm">
+                            <img src="@viewLocation.ImageUrl" alt="@viewLocation.Name" class="img-fluid rounded" style="max-height: 250px; object-fit: contain;" />
+                        </div>
+                    }
+
+                    <div class="mb-3 p-3 bg-light rounded shadow-sm">
+                        <label class="form-label text-muted mb-2 fw-bold">🔊 TTS Script (Kịch bản đọc máy)</label>
+                        <p class="mb-0 text-dark" style="font-style: italic;">
+                            "@(string.IsNullOrEmpty(viewLocation.TtsScript) ? "Chưa có kịch bản Text-to-speech." : viewLocation.TtsScript)"
+                        </p>
+                    </div>
                     <div class="mb-3">
-                        <label class="form-label text-muted">🔊 TTS Script (Đọc tự động)</label>
-                        <p class="border p-2 rounded bg-light">@(string.IsNullOrEmpty(viewLocation.TtsScript) ? "—" : viewLocation.TtsScript)</p>
+                        <label class="form-label text-muted">🎵 Audio Files</label>
+                        @if (viewLocationAudios != null && viewLocationAudios.Any())
+                        {
+                            <div class="list-group">
+                                @foreach (var audio in viewLocationAudios)
+                                {
+                                    <div class="list-group-item d-flex align-items-center gap-2">
+                                        <span>🎵</span>
+                                        <div class="flex-grow-1">
+                                            <div class="fw-bold small">@(audio.OriginalName ?? audio.FileName)</div>
+                                            <small class="text-muted">@FormatSize(audio.Size)</small>
+                                        </div>
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => PlayAudioInDetail(audio)" title="Play">▶️ Nghe thử</button>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted">Chưa có audio. Gán audio trong trang <a href="/admin/audio">Audio Management</a>.</p>
+                    }
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -271,6 +419,7 @@
     
     private bool showDetailsModal = false;
     private LocationDto viewLocation = new();
+    private List<AudioFileDto>? viewLocationAudios;
 
     private System.Threading.Timer? _pollingTimer;
     private bool _isPolling = false;
@@ -281,11 +430,13 @@
 
     private string mapSearchQuery = "";
     private bool isSearchingMap = false;
+    private List<MapSearchResult> mapSearchResults = new();
 
     public class MapSearchResult {
-        public string lat { get; set; } = "";
-        public string lng { get; set; } = "";
-        public string display_name { get; set; } = "";
+        public double lat { get; set; }
+        public double lng { get; set; }
+        public string text { get; set; } = "";
+        public string place_name { get; set; } = "";
     }
 
     protected override async Task OnInitializedAsync()
@@ -361,6 +512,7 @@
             Radius = loc.Radius,
             Priority = loc.Priority,
             ImageUrl = loc.ImageUrl,
+            MapLink = loc.MapLink,
             TtsScript = loc.TtsScript,
             CategoryId = loc.CategoryId
         };
@@ -372,13 +524,29 @@
 
     private void CloseModal() => showModal = false;
 
-    private void ShowDetailsModal(LocationDto loc)
+    private async Task ShowDetailsModal(LocationDto loc)
     {
         viewLocation = loc;
+        viewLocationAudios = await AudioService.GetAllAudioAsync(loc.Id);
         showDetailsModal = true;
     }
 
-    private void CloseDetailsModal() => showDetailsModal = false;
+    private void CloseDetailsModal()
+    {
+        showDetailsModal = false;
+    }
+
+    private async Task PlayAudioInDetail(AudioFileDto audio)
+    {
+        await TourService.PlayAudio(audio.OriginalName ?? audio.FileName, audio.Url, viewLocation.Name);
+    }
+
+    private string FormatSize(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
+        return $"{bytes / 1024.0 / 1024.0:F1} MB";
+    }
 
     private async Task SaveLocation()
     {
@@ -485,35 +653,42 @@
 
     private async Task SyncMapToInputs()
     {
-        try { await JS.InvokeVoidAsync("LeafletMap.updatePickerMarker", editingLocation.Latitude, editingLocation.Longitude); } catch { }
+        try { await JS.InvokeVoidAsync("AppMapHelper.updatePickerMarker", editingLocation.Latitude, editingLocation.Longitude); } catch { }
     }
     
     private async Task SearchLocationMap()
     {
         if (string.IsNullOrWhiteSpace(mapSearchQuery)) return;
         isSearchingMap = true;
+        mapSearchResults.Clear();
         try 
         {
-            var result = await JS.InvokeAsync<MapSearchResult>("LeafletMap.searchAddress", mapSearchQuery);
-            if (result != null)
+            var results = await JS.InvokeAsync<List<MapSearchResult>>("AppMapHelper.searchAddress", mapSearchQuery);
+            if (results != null && results.Any())
             {
-                if (double.TryParse(result.lat, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var lat) &&
-                    double.TryParse(result.lng, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var lng))
-                {
-                    editingLocation.Latitude = lat;
-                    editingLocation.Longitude = lng;
-                    await SyncMapToInputs();
-                    
-                    if (string.IsNullOrWhiteSpace(editingLocation.Address)) {
-                        editingLocation.Address = result.display_name;
-                    }
-                }
+                mapSearchResults = results;
+                StateHasChanged();
             }
         }
         catch { }
         finally {
             isSearchingMap = false;
         }
+    }
+
+    private async Task SelectSearchResult(MapSearchResult res)
+    {
+        editingLocation.Latitude = res.lat;
+        editingLocation.Longitude = res.lng;
+        if (string.IsNullOrWhiteSpace(editingLocation.Address)) {
+            editingLocation.Address = res.place_name;
+        }
+        if (string.IsNullOrWhiteSpace(editingLocation.Name)) {
+            editingLocation.Name = res.text;
+        }
+        mapSearchResults.Clear();
+        mapSearchQuery = res.text;
+        await SyncMapToInputs();
     }
 
     private async Task InitMapPicker()
@@ -525,7 +700,7 @@
             double lng = editingLocation.Longitude != 0 ? editingLocation.Longitude : 106.7034;
             editingLocation.Latitude = lat;
             editingLocation.Longitude = lng;
-            await JS.InvokeVoidAsync("LeafletMap.initPicker", "poi-map-picker", lat, lng, 16, objRef); 
+            await JS.InvokeVoidAsync("AppMapHelper.initPicker", "poi-map-picker", lat, lng, 16, objRef); 
             StateHasChanged();
         } 
         catch { }
