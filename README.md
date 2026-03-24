@@ -1,56 +1,76 @@
-# Vĩnh Khánh Food Street (FoodStreet)
+# Vinh Khanh Food Street
 
-Hệ thống quản lý và hướng dẫn du lịch ẩm thực Phố Vĩnh Khánh (Quận 4).
+He thong quan ly va huong dan du lich am thuc Pho Vinh Khanh (Quan 4, TP.HCM).
 
-## 🚀 Giới thiệu
-Dự án cung cấp giải pháp chuyển đổi số cho phố ẩm thực, bao gồm:
-- **Web Portal**: Dành cho Quản trị viên (Admin) và Đối tác (Seller).
-- **Mobile App (Future)**: Dành cho Khách du lịch (User).
-- **Tính năng chính**: Quản lý món ăn, Thuyết minh âm thanh (TTS), Bản đồ GPS, Đa ngôn ngữ.
+## Gioi thieu
 
-## 🛠️ Công nghệ
+Du an cung cap giai phap chuyen doi so cho pho am thuc, bao gom:
+
+- **Web Portal**: Danh cho Quan tri vien (Admin) va Doi tac (Seller).
+- **Mobile App**: Danh cho Khach du lich (User), ho tro GPS va thuyet minh tu dong.
+- **Tinh nang chinh**: Quan ly dia diem (POI), Thuyet minh am thanh (TTS), Ban do GPS, Geofencing, Da ngon ngu.
+
+## Cong nghe
+
 - **Backend**: ASP.NET Core 8 Web API
 - **Frontend**: Blazor WebAssembly
-- **Cơ sở dữ liệu**: PostgreSQL
+- **Mobile**: .NET MAUI Blazor Hybrid
+- **Co so du lieu**: PostgreSQL
+- **Shared UI**: Razor Class Library
 
+## Cau truc Solution
 
-## 📦 Cấu trúc Solution
-- `FoodStreet.Server`: Backend API & Auth Server.
-- `FoodStreet.Client`: Frontend Client (Web).
-- `FoodStreet.UI`: Thư viện giao diện dùng chung (Shared UI).
+- `FoodStreet.Server` - Backend API va Auth Server.
+- `FoodStreet.Client` - Frontend Client (Blazor WebAssembly).
+- `SharedUI` (FoodStreet.UI) - Thu vien giao dien dung chung.
 
-## 🔧 Cài đặt & Chạy (Local Development)
+## Cai dat va Chay
 
-### 1. Yêu cầu
+### Yeu cau
+
 - .NET 8 SDK
-- PostgreSQL & pgAdmin 4
+- PostgreSQL va pgAdmin 4
+- Visual Studio 2022 (khuyen nghi)
 
-### 2. Cấu hình Database
-1.  Mở **pgAdmin**, tạo một Database mới tên là `FoodStreetDB`.
-2.  Mở file `FoodStreet.Server/appsettings.json` (và `appsettings.Development.json`).
-3.  Cập nhật dòng `DefaultConnection` với mật khẩu PostgreSQL của bạn:
-    ```json
-    "DefaultConnection": "Host=localhost;Port=5432;Database=FoodStreetDB;Username=postgres;Password=YOUR_PASSWORD"
-    ```
+### Cau hinh Database
 
-### 3. Cài đặt & Chạy
-1.  Clone dự án:
-    ```bash
-    git clone https://github.com/duygri/multilingual-food-street-api.git
-    cd multilingual-food-street-api
-    ```
-2.  Khôi phục packages:
-    ```bash
-    dotnet restore
-    ```
-3.  Cập nhật Database (Chạy lệnh này để tạo bảng):
-    ```bash
-    dotnet ef database update --project FoodStreet.Server
-    ```
-4.  Chạy dự án bằng Visual Studio (F5) hoặc lệnh:
-    ```bash
-    dotnet run --project FoodStreet.Server
-    ```
+1. Mo pgAdmin, tao Database moi ten la `FoodStreetDB`.
+2. Mo file `FoodStreet.Server/appsettings.json`.
+3. Cap nhat dong `DefaultConnection` voi mat khau PostgreSQL cua ban:
 
-## 📄 License
+```json
+"DefaultConnection": "Host=localhost;Port=5432;Database=FoodStreetDB;Username=postgres;Password=YOUR_PASSWORD"
+```
+
+### Chay du an
+
+1. Clone du an:
+
+```bash
+git clone https://github.com/duygri/multilingual-food-street-api.git
+cd multilingual-food-street-api
+```
+
+2. Khoi phuc packages:
+
+```bash
+dotnet restore
+```
+
+3. Cap nhat Database:
+
+```bash
+dotnet ef database update --project FoodStreet.Server
+```
+
+4. Chay du an:
+
+```bash
+dotnet run --project FoodStreet.Server
+```
+
+Hoac mo bang Visual Studio va nhan F5.
+
+## License
+
 Internal Project.
