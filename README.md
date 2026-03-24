@@ -1,76 +1,54 @@
-# Vinh Khanh Food Street
+# 🍜 Food Street System
 
-He thong quan ly va huong dan du lich am thuc Pho Vinh Khanh (Quan 4, TP.HCM).
+![version](https://img.shields.io/badge/version-1.0.0-blue) ![build](https://img.shields.io/badge/build-passing-success)
 
-## Gioi thieu
+Hệ thống quản lý và hướng dẫn du lịch ẩm thực Phố Vĩnh Khánh (Quận 4, TP.HCM), cung cấp giải pháp chuyển đổi số toàn diện cho trải nghiệm ẩm thực đường phố. Vui lòng xem [Tài liệu Server](FoodStreet.Server/README.md) để biết thêm chi tiết về các tính năng Backend.
 
-Du an cung cap giai phap chuyen doi so cho pho am thuc, bao gom:
+## Các dự án thành phần (Packages)
 
-- **Web Portal**: Danh cho Quan tri vien (Admin) va Doi tac (Seller).
-- **Mobile App**: Danh cho Khach du lich (User), ho tro GPS va thuyet minh tu dong.
-- **Tinh nang chinh**: Quan ly dia diem (POI), Thuyet minh am thanh (TTS), Ban do GPS, Geofencing, Da ngon ngu.
+Hệ thống được thiết kế theo cấu trúc Modular và gồm ba dự án (packages) chính:
 
-## Cong nghe
+- [**FoodStreet.Server**](./FoodStreet.Server/) ![version](https://img.shields.io/badge/version-1.0.0-blue) - Server Backend API và dịch vụ xác thực. Đây là dự án lõi xử lý dữ liệu, dành cho các truy vấn HTTP REST API, kết nối cơ sở dữ liệu PostgreSQL. Phù hợp làm nền tảng cho mọi Client.
+- [**FoodStreet.Client**](./FoodStreet.Client/) ![version](https://img.shields.io/badge/version-1.0.0-blue) - Frontend dành cho Quản trị viên (Admin) và Đối tác kinh doanh (Seller), chạy trên trình duyệt sử dụng Blazor WebAssembly.
+- [**SharedUI (FoodStreet.UI)**](./SharedUI/) ![version](https://img.shields.io/badge/version-1.0.0-blue) - Thư viện giao diện (Razor Class Library). Chứa logic và UI dùng chung để tiết kiệm code khi phát triển cả nền tảng Web lẫn thiết bị di động (Mobile App - MAUI Blazor Hybrid).
 
-- **Backend**: ASP.NET Core 8 Web API
-- **Frontend**: Blazor WebAssembly
-- **Mobile**: .NET MAUI Blazor Hybrid
-- **Co so du lieu**: PostgreSQL
-- **Shared UI**: Razor Class Library
+## Bắt đầu nhanh (Getting Started)
 
-## Cau truc Solution
+Để bắt đầu, hãy làm theo hướng dẫn trong phần Tài liệu Cấu hình Dữ liệu bên dưới, với các lệnh trực tiếp để cài đặt.
 
-- `FoodStreet.Server` - Backend API va Auth Server.
-- `FoodStreet.Client` - Frontend Client (Blazor WebAssembly).
-- `SharedUI` (FoodStreet.UI) - Thu vien giao dien dung chung.
+Bạn cũng có thể xem qua mã nguồn tại thư mục [SharedUI](./SharedUI/) và các controller trong [Tài liệu API](./FoodStreet.Server/) để kiểm tra tiến trình hoạt động.
 
-## Cai dat va Chay
-
-### Yeu cau
+### Yêu cầu cấu hình
 
 - .NET 8 SDK
-- PostgreSQL va pgAdmin 4
-- Visual Studio 2022 (khuyen nghi)
+- PostgreSQL và pgAdmin 4
+- Visual Studio 2022 (khuyến nghị)
 
-### Cau hinh Database
+### Thiết lập CSDL và Chạy
 
-1. Mo pgAdmin, tao Database moi ten la `FoodStreetDB`.
-2. Mo file `FoodStreet.Server/appsettings.json`.
-3. Cap nhat dong `DefaultConnection` voi mat khau PostgreSQL cua ban:
+1. Tạo Database `FoodStreetDB` trên PostgreSQL (qua pgAdmin).
+2. Cập nhật chuỗi kết nối trong `FoodStreet.Server/appsettings.json`:
+   ```json
+   "DefaultConnection": "Host=localhost;Port=5432;Database=FoodStreetDB;Username=postgres;Password=YOUR_PASSWORD"
+   ```
+3. Chạy lần lượt các lệnh sau trên terminal:
+   ```bash
+   dotnet restore
+   dotnet ef database update --project FoodStreet.Server
+   dotnet run --project FoodStreet.Server
+   ```
 
-```json
-"DefaultConnection": "Host=localhost;Port=5432;Database=FoodStreetDB;Username=postgres;Password=YOUR_PASSWORD"
-```
+## Về Dự án Food Street (About Project)
 
-### Chay du an
+Dự án Phố Ẩm Thực Vĩnh Khánh là một sản phẩm thực tế nhằm chuẩn hóa việc khám phá văn hóa ẩm thực địa phương (POI - Point of Interest). Nó cung cấp cho các ứng dụng cơ chế an toàn để thu thập vị trí GPS, thông báo tự động cho khách du lịch trong bán kính (Geofencing) và thay đổi ngôn ngữ động cho mọi đối tượng.
 
-1. Clone du an:
+Để biết thêm thông tin về dự án:
 
-```bash
-git clone https://github.com/duygri/multilingual-food-street-api.git
-cd multilingual-food-street-api
-```
+- [Tài liệu Kiến trúc hệ thống](#)
+- [Cơ chế Thuyết minh giọng nói (TTS)](#)
+- [Đặc tả GPS và Geofencing](#)
+- [Trang GitHub của Tổ chức](https://github.com/duygri)
 
-2. Khoi phuc packages:
+## Bản quyền và Giấy phép (License)
 
-```bash
-dotnet restore
-```
-
-3. Cap nhat Database:
-
-```bash
-dotnet ef database update --project FoodStreet.Server
-```
-
-4. Chay du an:
-
-```bash
-dotnet run --project FoodStreet.Server
-```
-
-Hoac mo bang Visual Studio va nhan F5.
-
-## License
-
-Internal Project.
+Dự án này được bảo vệ bản quyền và cấp phép theo [Internal Project License](#).
