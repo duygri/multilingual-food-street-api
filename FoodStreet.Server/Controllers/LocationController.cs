@@ -56,6 +56,18 @@ namespace PROJECT_C_.Controllers
         }
 
         /// <summary>
+        /// Public: Lấy tất cả địa điểm đã duyệt (cho app mobile/user)
+        /// </summary>
+        [HttpGet("approved")]
+        [Authorize]
+        public async Task<ActionResult<IEnumerable<LocationDto>>> GetApprovedLocations()
+        {
+            var locations = await _locationService.GetAllLocationsAsync();
+            var approved = locations.Where(l => l.IsApproved).Select(MapToDto);
+            return Ok(approved);
+        }
+
+        /// <summary>
         /// Lấy thông tin chi tiết 1 địa điểm (public)
         /// </summary>
         [HttpGet("{id}")]
