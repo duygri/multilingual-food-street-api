@@ -8,6 +8,7 @@ namespace FoodStreet.Client.Services
         // Public
         Task<PagedResult<LocationDto>?> GetNearestLocations(double lat, double lng, int page, int pageSize);
         Task<LocationDto?> GetLocation(int id);
+        Task<List<LocationDto>> GetApprovedLocations();
 
         // Admin
         Task<List<LocationDto>> GetAllLocations();
@@ -44,6 +45,11 @@ namespace FoodStreet.Client.Services
         public async Task<LocationDto?> GetLocation(int id)
         {
             return await _http.GetFromJsonAsync<LocationDto>($"api/location/{id}");
+        }
+
+        public async Task<List<LocationDto>> GetApprovedLocations()
+        {
+            return await _http.GetFromJsonAsync<List<LocationDto>>("api/location/approved") ?? new();
         }
 
         // === Admin ===
