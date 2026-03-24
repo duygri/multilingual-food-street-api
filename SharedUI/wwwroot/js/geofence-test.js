@@ -16,7 +16,7 @@ window.GeofenceTestMap = {
             this.map.remove();
         }
 
-        mapboxgl.accessToken = 'YOUR_MAPBOX_TOKEN';
+        mapboxgl.accessToken = 'YOUR_MAPBOX_TOKEN_HERE';
 
         this.map = new mapboxgl.Map({
             container: elementId,
