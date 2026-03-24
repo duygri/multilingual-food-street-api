@@ -1,6 +1,6 @@
 // MapBox GL JS Helper cho FoodStreet
 // Chú ý: Đang sử dụng Public Token demo của MapBox. Hãy thay bằng token thật của bạn khi lên production.
-mapboxgl.accessToken = 'YOUR_MAPBOX_TOKEN';
+mapboxgl.accessToken = 'YOUR_MAPBOX_TOKEN_HERE';
 
 window.AppMapHelper = {
     map: null,
