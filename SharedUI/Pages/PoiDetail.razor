@@ -1,0 +1,653 @@
+@page "/poi/{Id:int}"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@using FoodStreet.Client.Services
+@using FoodStreet.Client.DTOs
+@inject ILocationClientService LocationClient
+@inject IFavoritesService FavoritesService
+@inject ITtsService TtsService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<div class="poi-detail-page">
+    @if (isLoading)
+    {
+        <div class="detail-loading">
+            <div class="detail-spinner"></div>
+            <p>Đang tải...</p>
+        </div>
+    }
+    else if (location == null)
+    {
+        <div class="detail-not-found">
+            <span class="nf-icon">📍</span>
+            <h2>Không tìm thấy địa điểm</h2>
+            <p>Địa điểm này có thể đã bị xóa hoặc chưa được duyệt.</p>
+            <button class="btn-back-home" @onclick="GoBack">← Quay lại Khám phá</button>
+        </div>
+    }
+    else
+    {
+        @* ===== HERO IMAGE ===== *@
+        <div class="hero-section">
+            @if (!string.IsNullOrEmpty(location.ImageUrl))
+            {
+                <img src="@location.ImageUrl" alt="@location.Name" class="hero-image" />
+            }
+            else
+            {
+                <div class="hero-placeholder">
+                    <span>📍</span>
+                </div>
+            }
+            <div class="hero-overlay"></div>
+
+            @* Back button *@
+            <button class="btn-floating-back" @onclick="GoBack">
+                <span>←</span>
+            </button>
+
+            @* Favorite button *@
+            <button class="btn-floating-fav @(isFavorite ? "is-fav" : "")" @onclick="ToggleFavorite">
+                @(isFavorite ? "❤️" : "🤍")
+            </button>
+
+            @* Category badge *@
+            @if (!string.IsNullOrEmpty(location.CategoryName))
+            {
+                <div class="hero-category">@location.CategoryName</div>
+            }
+        </div>
+
+        @* ===== MAIN INFO ===== *@
+        <div class="detail-body">
+            <div class="info-section">
+                <h1 class="poi-title">@location.Name</h1>
+
+                @if (!string.IsNullOrEmpty(location.Address))
+                {
+                    <div class="info-row">
+                        <span class="info-icon">📍</span>
+                        <span class="info-text">@location.Address</span>
+                    </div>
+                }
+
+                <div class="info-row">
+                    <span class="info-icon">🌐</span>
+                    <span class="info-text">@($"{location.Latitude:F6}, {location.Longitude:F6}")</span>
+                </div>
+
+                @if (location.HasAudio)
+                {
+                    <div class="info-row">
+                        <span class="info-icon">🎵</span>
+                        <span class="info-text audio-available">Có audio thuyết minh</span>
+                    </div>
+                }
+                else if (!string.IsNullOrEmpty(location.TtsScript))
+                {
+                    <div class="info-row">
+                        <span class="info-icon">🔊</span>
+                        <span class="info-text audio-available">Có thuyết minh TTS</span>
+                    </div>
+                }
+            </div>
+
+            @* ===== ACTION BAR (Google Maps style) ===== *@
+            <div class="action-bar">
+                <button class="action-item" @onclick="OpenDirections">
+                    <span class="action-icon directions">🧭</span>
+                    <span class="action-label">Chỉ đường</span>
+                </button>
+
+                <button class="action-item" @onclick="PlayAudio" disabled="@(!location.HasAudio && string.IsNullOrEmpty(location.TtsScript))">
+                    <span class="action-icon audio">@(isPlaying ? "⏸️" : "🎧")</span>
+                    <span class="action-label">@(isPlaying ? "Dừng" : "Nghe")</span>
+                </button>
+
+                <button class="action-item" @onclick="ShareLocation">
+                    <span class="action-icon share">📤</span>
+                    <span class="action-label">Chia sẻ</span>
+                </button>
+
+                <button class="action-item" @onclick="ToggleFavorite">
+                    <span class="action-icon fav">@(isFavorite ? "❤️" : "🤍")</span>
+                    <span class="action-label">@(isFavorite ? "Đã lưu" : "Lưu")</span>
+                </button>
+            </div>
+
+            @* ===== DESCRIPTION ===== *@
+            @if (!string.IsNullOrEmpty(location.Description))
+            {
+                <div class="description-section">
+                    <h3>Giới thiệu</h3>
+                    <p>@location.Description</p>
+                </div>
+            }
+
+            @* ===== DETAIL INFO CARDS ===== *@
+            <div class="detail-cards">
+                <div class="detail-card">
+                    <span class="dc-icon">📏</span>
+                    <div class="dc-info">
+                        <span class="dc-label">Bán kính geofence</span>
+                        <span class="dc-value">@(location.Radius)m</span>
+                    </div>
+                </div>
+
+                @if (location.Distance > 0)
+                {
+                    <div class="detail-card">
+                        <span class="dc-icon">🚶</span>
+                        <div class="dc-info">
+                            <span class="dc-label">Khoảng cách</span>
+                            <span class="dc-value">
+                                @if (location.Distance >= 1000)
+                                {
+                                    @($"{location.Distance / 1000:F1} km")
+                                }
+                                else
+                                {
+                                    @($"{location.Distance:F0} m")
+                                }
+                            </span>
+                        </div>
+                    </div>
+                }
+
+                <div class="detail-card">
+                    <span class="dc-icon">✅</span>
+                    <div class="dc-info">
+                        <span class="dc-label">Trạng thái</span>
+                        <span class="dc-value @(location.IsApproved ? "approved" : "pending")">
+                            @(location.IsApproved ? "Đã duyệt" : "Chờ duyệt")
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            @* ===== MAP BUTTON ===== *@
+            <button class="btn-view-map" @onclick="ViewOnMap">
+                🗺️ Xem trên bản đồ
+            </button>
+        </div>
+    }
+</div>
+
+<style>
+    .poi-detail-page {
+        min-height: calc(100vh - 112px);
+        background: #f8fafc;
+    }
+
+    /* Loading & Not Found */
+    .detail-loading, .detail-not-found {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 60vh;
+        color: #64748b;
+        text-align: center;
+        padding: 40px 20px;
+    }
+
+    .detail-spinner {
+        width: 44px;
+        height: 44px;
+        border: 3px solid #f1f5f9;
+        border-top-color: #ff6b35;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        margin-bottom: 16px;
+    }
+
+    @@keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    .nf-icon { font-size: 56px; margin-bottom: 16px; }
+
+    .detail-not-found h2 {
+        font-size: 20px;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 8px;
+    }
+
+    .btn-back-home {
+        margin-top: 20px;
+        padding: 12px 24px;
+        background: linear-gradient(135deg, #ff6b35, #f7931e);
+        color: #fff;
+        border: none;
+        border-radius: 12px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    /* === HERO === */
+    .hero-section {
+        position: relative;
+        width: 100%;
+        height: 280px;
+        overflow: hidden;
+    }
+
+    .hero-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .hero-placeholder {
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 72px;
+    }
+
+    .hero-overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 120px;
+        background: linear-gradient(transparent, rgba(0,0,0,0.5));
+        pointer-events: none;
+    }
+
+    .btn-floating-back {
+        position: absolute;
+        top: 16px;
+        left: 16px;
+        width: 40px;
+        height: 40px;
+        background: rgba(255,255,255,0.92);
+        backdrop-filter: blur(8px);
+        border: none;
+        border-radius: 50%;
+        font-size: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+        z-index: 2;
+        transition: transform 0.2s;
+    }
+
+    .btn-floating-back:active { transform: scale(0.9); }
+
+    .btn-floating-fav {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        width: 40px;
+        height: 40px;
+        background: rgba(255,255,255,0.92);
+        backdrop-filter: blur(8px);
+        border: none;
+        border-radius: 50%;
+        font-size: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+        z-index: 2;
+        transition: transform 0.2s;
+    }
+
+    .btn-floating-fav:active { transform: scale(0.9); }
+    .btn-floating-fav.is-fav { background: #fff0ed; }
+
+    .hero-category {
+        position: absolute;
+        bottom: 16px;
+        left: 16px;
+        padding: 6px 14px;
+        background: rgba(255,255,255,0.92);
+        backdrop-filter: blur(8px);
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #ff6b35;
+        z-index: 2;
+    }
+
+    /* === BODY === */
+    .detail-body {
+        padding: 20px;
+        margin-top: -24px;
+        position: relative;
+        z-index: 1;
+        background: #f8fafc;
+        border-radius: 24px 24px 0 0;
+    }
+
+    .info-section {
+        background: #fff;
+        border-radius: 20px;
+        padding: 20px;
+        margin-bottom: 16px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    }
+
+    .poi-title {
+        font-size: 22px;
+        font-weight: 800;
+        color: #1e293b;
+        margin: 0 0 14px;
+        line-height: 1.3;
+    }
+
+    .info-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 0;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    .info-row:last-child { border-bottom: none; }
+
+    .info-icon { font-size: 18px; flex-shrink: 0; }
+
+    .info-text {
+        font-size: 14px;
+        color: #475569;
+        line-height: 1.4;
+    }
+
+    .audio-available {
+        color: #10b981;
+        font-weight: 500;
+    }
+
+    /* === ACTION BAR === */
+    .action-bar {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+        background: #fff;
+        border-radius: 20px;
+        padding: 16px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    }
+
+    .action-item {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        padding: 12px 4px;
+        background: #f8fafc;
+        border: none;
+        border-radius: 14px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .action-item:active:not(:disabled) {
+        transform: scale(0.95);
+        background: #f1f5f9;
+    }
+
+    .action-item:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+
+    .action-icon {
+        font-size: 24px;
+        width: 44px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+    }
+
+    .action-icon.directions { background: rgba(59, 130, 246, 0.1); }
+    .action-icon.audio { background: rgba(16, 185, 129, 0.1); }
+    .action-icon.share { background: rgba(139, 92, 246, 0.1); }
+    .action-icon.fav { background: rgba(239, 68, 68, 0.1); }
+
+    .action-label {
+        font-size: 11px;
+        font-weight: 600;
+        color: #475569;
+    }
+
+    /* === DESCRIPTION === */
+    .description-section {
+        background: #fff;
+        border-radius: 20px;
+        padding: 20px;
+        margin-bottom: 16px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    }
+
+    .description-section h3 {
+        font-size: 16px;
+        font-weight: 700;
+        color: #1e293b;
+        margin: 0 0 10px;
+    }
+
+    .description-section p {
+        font-size: 14px;
+        color: #475569;
+        line-height: 1.7;
+        margin: 0;
+        white-space: pre-line;
+    }
+
+    /* === DETAIL CARDS === */
+    .detail-cards {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-bottom: 16px;
+    }
+
+    .detail-card {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        background: #fff;
+        border-radius: 16px;
+        padding: 14px 16px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    }
+
+    .dc-icon {
+        font-size: 22px;
+        width: 44px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f8fafc;
+        border-radius: 12px;
+        flex-shrink: 0;
+    }
+
+    .dc-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .dc-label {
+        font-size: 12px;
+        color: #94a3b8;
+        font-weight: 500;
+    }
+
+    .dc-value {
+        font-size: 15px;
+        font-weight: 600;
+        color: #1e293b;
+    }
+
+    .dc-value.approved { color: #10b981; }
+    .dc-value.pending { color: #f59e0b; }
+
+    /* === MAP BUTTON === */
+    .btn-view-map {
+        width: 100%;
+        padding: 16px;
+        background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+        color: #fff;
+        border: none;
+        border-radius: 16px;
+        font-size: 16px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 4px 16px rgba(255, 107, 53, 0.3);
+        margin-bottom: 20px;
+    }
+
+    .btn-view-map:active {
+        transform: scale(0.98);
+    }
+</style>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private LocationDto? location;
+    private bool isLoading = true;
+    private bool isFavorite = false;
+    private bool isPlaying = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadLocation();
+    }
+
+    private async Task LoadLocation()
+    {
+        isLoading = true;
+        try
+        {
+            location = await LocationClient.GetLocation(Id);
+
+            if (location != null)
+            {
+                // Check favorite status
+                var favs = await FavoritesService.GetFavoritesAsync();
+                isFavorite = favs.Any(f => f.Id == location.Id);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading POI: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/explore");
+    }
+
+    private async Task OpenDirections()
+    {
+        if (location == null) return;
+
+        // Open Google Maps directions via JS
+        var uri = $"https://www.google.com/maps/dir/?api=1&destination={location.Latitude},{location.Longitude}";
+        await JS.InvokeVoidAsync("open", uri, "_blank");
+    }
+
+    private async Task PlayAudio()
+    {
+        if (location == null) return;
+
+        if (isPlaying)
+        {
+            // Stop playing
+            isPlaying = false;
+            return;
+        }
+
+        isPlaying = true;
+
+        try
+        {
+            if (location.HasAudio && !string.IsNullOrEmpty(location.AudioUrl))
+            {
+                // Play audio file from server
+                await TtsService.PlayAudioFileAsync(location.AudioUrl);
+            }
+            else if (!string.IsNullOrEmpty(location.TtsScript))
+            {
+                // Use TTS
+                await TtsService.PlayTextAsync(location.TtsScript);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error playing audio: {ex.Message}");
+        }
+        finally
+        {
+            isPlaying = false;
+        }
+    }
+
+    private async Task ShareLocation()
+    {
+        if (location == null) return;
+
+        var shareText = $"📍 {location.Name}\n{location.Description}\n\n🗺️ https://www.google.com/maps?q={location.Latitude},{location.Longitude}";
+
+        try
+        {
+            // Use Web Share API via JS interop
+            await JS.InvokeVoidAsync("eval", $"navigator.share({{ title: '{EscapeJs(location.Name)}', text: '{EscapeJs(shareText)}' }}).catch(()=>{{}})");
+        }
+        catch
+        {
+            // Fallback: copy to clipboard
+            try
+            {
+                await JS.InvokeVoidAsync("eval", $"navigator.clipboard.writeText('{EscapeJs(shareText)}')");
+            }
+            catch { }
+        }
+    }
+
+    private string EscapeJs(string input)
+    {
+        return input.Replace("'", "\\'")
+                    .Replace("\n", "\\n")
+                    .Replace("\r", "");
+    }
+
+    private async Task ToggleFavorite()
+    {
+        if (location == null) return;
+
+        await FavoritesService.ToggleFavoriteAsync(location);
+        isFavorite = !isFavorite;
+    }
+
+    private void ViewOnMap()
+    {
+        if (location == null) return;
+        Navigation.NavigateTo($"/mobile-map?focusId={location.Id}");
+    }
+}
