@@ -3,54 +3,108 @@
 @attribute [Authorize]
 @using FoodStreet.Client.Services
 @using FoodStreet.Client.DTOs
-@inject IGpsTrackingService GpsService
 @inject IFavoritesService FavoritesService
 @inject ILocationClientService LocationClient
+@inject NavigationManager Navigation
 
 <div class="explore-page">
     <header class="explore-header">
-        <h1>🍜 Khám phá Ẩm thực</h1>
-        <p>Bật GPS để tìm các địa điểm ẩm thực gần bạn</p>
+        <h1>📍 Khám phá</h1>
+        <p>Các địa điểm nổi bật quanh bạn</p>
+        @* Search bar *@
+        <div class="search-bar">
+            <span class="search-icon">🔍</span>
+            <input type="text" placeholder="Tìm kiếm địa điểm..." @bind="searchQuery" @bind:event="oninput" />
+            @if (!string.IsNullOrEmpty(searchQuery))
+            {
+                <button class="search-clear" @onclick="ClearSearch">✕</button>
+            }
+        </div>
     </header>
 
     <div class="explore-content">
-        <GpsTracker />
 
-        @if (allLocations.Count > 0)
+        @if (isLoading)
         {
-            <div class="all-pois">
-                <h3>📍 Gần bạn</h3>
-                <div class="poi-grid">
-                    @foreach (var loc in allLocations)
+            <div class="explore-loading">
+                <div class="explore-spinner"></div>
+                <p>Đang tải địa điểm...</p>
+            </div>
+        }
+        else if (filteredLocations.Count == 0)
+        {
+            <div class="explore-empty">
+                <span class="empty-icon">🗺️</span>
+                <h3>Không có địa điểm nào</h3>
+                <p>@(string.IsNullOrEmpty(searchQuery) ? "Chưa có địa điểm nào được tạo." : "Không tìm thấy kết quả phù hợp.")</p>
+            </div>
+        }
+        else
+        {
+            @* Category filter chips *@
+            @if (categories.Count > 0)
+            {
+                <div class="category-chips">
+                    <button class="chip @(selectedCategory == null ? "active" : "")"
+                            @onclick="() => FilterByCategory(null)">
+                        Tất cả
+                    </button>
+                    @foreach (var cat in categories)
                     {
-                        var isFav = favoriteIds.Contains(loc.Id);
-                        <div class="poi-card">
-                            <div class="poi-image-wrapper">
-                                @if (!string.IsNullOrEmpty(loc.ImageUrl))
-                                {
-                                    <img src="@loc.ImageUrl" alt="@loc.Name" class="poi-image" />
-                                }
-                                else
-                                {
-                                    <div class="poi-image-placeholder">🍜</div>
-                                }
-                                <div class="poi-badge">Mới ✨</div>
-                            </div>
-                            <div class="poi-info">
-                                <h4>@loc.Name</h4>
-                                <p>@loc.Description</p>
-                                <div class="poi-footer">
-                                    <span class="poi-address">📍 @(loc.Address ?? "Vĩnh Khánh, Q.4")</span>
-                                    <button class="save-btn @(isFav ? "saved" : "")" 
-                                            @onclick="() => ToggleFavorite(loc)"
-                                            title="@(isFav ? "Bỏ lưu" : "Lưu lại")">
-                                        @(isFav ? "❤️" : "🤍")
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
+                        <button class="chip @(selectedCategory == cat ? "active" : "")"
+                                @onclick="() => FilterByCategory(cat)">
+                            @cat
+                        </button>
                     }
                 </div>
+            }
+
+            @* POI count *@
+            <div class="section-header">
+                <h3>📍 @filteredLocations.Count địa điểm</h3>
+            </div>
+
+            @* POI list *@
+            <div class="poi-list">
+                @foreach (var loc in filteredLocations)
+                {
+                    var isFav = favoriteIds.Contains(loc.Id);
+                    <div class="poi-card" @onclick="() => NavigateToPoi(loc.Id)">
+                        <div class="poi-thumb">
+                            @if (!string.IsNullOrEmpty(loc.ImageUrl))
+                            {
+                                <img src="@loc.ImageUrl" alt="@loc.Name" />
+                            }
+                            else
+                            {
+                                <div class="poi-thumb-placeholder">📍</div>
+                            }
+                        </div>
+                        <div class="poi-info">
+                            <h4>@loc.Name</h4>
+                            @if (!string.IsNullOrEmpty(loc.CategoryName))
+                            {
+                                <span class="poi-cat">@loc.CategoryName</span>
+                            }
+                            <p class="poi-desc">@loc.Description</p>
+                            <div class="poi-meta">
+                                <span class="poi-address">📍 @(loc.Address ?? "Vĩnh Khánh, Q.4")</span>
+                                @if (loc.HasAudio)
+                                {
+                                    <span class="poi-audio-tag">🎧</span>
+                                }
+                            </div>
+                        </div>
+                        <div class="poi-actions-col">
+                            <button class="fav-btn @(isFav ? "saved" : "")"
+                                    @onclick:stopPropagation="true"
+                                    @onclick="() => ToggleFavorite(loc)">
+                                @(isFav ? "❤️" : "🤍")
+                            </button>
+                            <span class="poi-arrow">›</span>
+                        </div>
+                    </div>
+                }
             </div>
         }
     </div>
@@ -58,13 +112,13 @@
 
 <style>
     .explore-page {
-        min-height: calc(100vh - 110px);
-        background: #f8fafc;
-        padding: 0;
+        min-height: calc(100vh - 112px);
+        background: #f5f7fa;
     }
 
+    /* === HEADER === */
     .explore-header {
-        padding: 32px 20px;
+        padding: 28px 20px 20px;
         background: linear-gradient(135deg, #1e293b, #0f172a);
         color: white;
     }
@@ -72,155 +126,336 @@
     .explore-header h1 {
         font-size: 24px;
         font-weight: 800;
-        margin-bottom: 8px;
-        background: white;
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        margin: 0 0 4px;
     }
 
     .explore-header p {
         color: #94a3b8;
         font-size: 14px;
+        margin: 0 0 16px;
+    }
+
+    /* Search */
+    .search-bar {
+        display: flex;
+        align-items: center;
+        background: rgba(255,255,255,0.1);
+        backdrop-filter: blur(8px);
+        border-radius: 14px;
+        padding: 0 14px;
+        gap: 10px;
+        border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .search-icon { font-size: 16px; flex-shrink: 0; }
+
+    .search-bar input {
+        flex: 1;
+        background: transparent;
+        border: none;
+        outline: none;
+        color: #fff;
+        font-size: 14px;
+        padding: 12px 0;
+    }
+
+    .search-bar input::placeholder { color: #64748b; }
+
+    .search-clear {
+        background: rgba(255,255,255,0.15);
+        border: none;
+        color: #94a3b8;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        font-size: 12px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* === CONTENT === */
+    .explore-content { padding: 16px 16px 20px; }
+
+    /* Loading */
+    .explore-loading {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 60px 20px;
+        color: #64748b;
+    }
+
+    .explore-spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid #f1f5f9;
+        border-top-color: #ff6b35;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        margin-bottom: 12px;
+    }
+
+    @@keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Empty */
+    .explore-empty {
+        text-align: center;
+        padding: 60px 20px;
+    }
+
+    .empty-icon { font-size: 52px; display: block; margin-bottom: 16px; }
+
+    .explore-empty h3 {
+        font-size: 18px;
+        color: #1e293b;
+        margin-bottom: 6px;
+    }
+
+    .explore-empty p {
+        color: #94a3b8;
+        font-size: 14px;
+    }
+
+    /* === CATEGORY CHIPS === */
+    .category-chips {
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        padding-bottom: 4px;
+        margin-bottom: 16px;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+
+    .category-chips::-webkit-scrollbar { display: none; }
+
+    .chip {
+        padding: 8px 16px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+        background: #fff;
+        color: #475569;
+        font-size: 13px;
+        font-weight: 500;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: all 0.2s;
+        flex-shrink: 0;
+    }
+
+    .chip.active {
+        background: linear-gradient(135deg, #ff6b35, #f7931e);
+        color: #fff;
+        border-color: transparent;
+        box-shadow: 0 2px 8px rgba(255,107,53,0.3);
+    }
+
+    /* Section header */
+    .section-header {
+        margin-bottom: 12px;
+    }
+
+    .section-header h3 {
+        font-size: 16px;
+        font-weight: 700;
+        color: #1e293b;
         margin: 0;
     }
 
-    .explore-content {
-        padding: 20px;
-    }
-
-    .all-pois {
-        margin-top: 12px;
-    }
-
-    .all-pois h3 {
-        margin-bottom: 16px;
-        font-size: 18px;
-        font-weight: 700;
-        color: #1e293b;
-    }
-
-    .poi-grid {
+    /* === POI LIST === */
+    .poi-list {
         display: flex;
         flex-direction: column;
-        gap: 16px;
+        gap: 12px;
     }
 
     .poi-card {
-        background: white;
-        border-radius: 20px;
-        overflow: hidden;
-        transition: all 0.2s ease;
-        border: 1px solid #f1f5f9;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
         display: flex;
-        flex-direction: column;
+        align-items: stretch;
+        background: #fff;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        border: 1px solid #f1f5f9;
+        cursor: pointer;
+        transition: all 0.2s;
     }
 
     .poi-card:active {
         transform: scale(0.98);
+        box-shadow: 0 1px 4px rgba(0,0,0,0.08);
     }
 
-    .poi-image-wrapper {
-        position: relative;
-        width: 100%;
-        height: 180px;
+    /* Thumbnail */
+    .poi-thumb {
+        width: 100px;
+        min-height: 100px;
+        flex-shrink: 0;
+        overflow: hidden;
     }
 
-    .poi-image {
+    .poi-thumb img {
         width: 100%;
         height: 100%;
         object-fit: cover;
     }
 
-    .poi-image-placeholder {
+    .poi-thumb-placeholder {
         width: 100%;
         height: 100%;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 48px;
         background: #f1f5f9;
-        color: #cbd5e1;
+        font-size: 32px;
     }
 
-    .poi-badge {
-        position: absolute;
-        top: 12px;
-        right: 12px;
-        background: rgba(255,255,255,0.9);
-        backdrop-filter: blur(4px);
-        padding: 4px 8px;
-        border-radius: 8px;
-        font-size: 12px;
-        font-weight: 700;
-        color: #ff6b35;
-    }
-
+    /* Info */
     .poi-info {
-        padding: 16px;
+        flex: 1;
+        padding: 12px 14px;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
     }
 
     .poi-info h4 {
-        margin: 0 0 6px;
-        font-size: 17px;
+        font-size: 15px;
         font-weight: 700;
         color: #1e293b;
+        margin: 0 0 3px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
-    .poi-info p {
+    .poi-cat {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 600;
+        color: #ff6b35;
+        background: #fff5f2;
+        padding: 2px 8px;
+        border-radius: 6px;
+        margin-bottom: 4px;
+    }
+
+    .poi-desc {
+        font-size: 13px;
         color: #64748b;
-        font-size: 14px;
-        margin: 0 0 16px;
-        line-height: 1.5;
+        margin: 0 0 6px;
         display: -webkit-box;
-        -webkit-line-clamp: 2;
+        -webkit-line-clamp: 1;
         -webkit-box-orient: vertical;
         overflow: hidden;
     }
 
-    .poi-footer {
+    .poi-meta {
         display: flex;
         align-items: center;
-        justify-content: space-between;
+        gap: 8px;
     }
 
     .poi-address {
-        font-size: 13px;
-        color: #64748b;
+        font-size: 11px;
+        color: #94a3b8;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
-    .save-btn {
-        width: 36px;
-        height: 36px;
+    .poi-audio-tag {
+        font-size: 14px;
+        flex-shrink: 0;
+    }
+
+    /* Right column */
+    .poi-actions-col {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 12px;
+        gap: 8px;
+        flex-shrink: 0;
+    }
+
+    .fav-btn {
+        width: 32px;
+        height: 32px;
+        border: none;
+        background: #f8fafc;
         border-radius: 50%;
-        background: #fff5f2;
+        font-size: 16px;
         display: flex;
         align-items: center;
         justify-content: center;
-        color: #ff6b35;
-        border: none;
-        font-size: 18px;
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+
+    .fav-btn:active { transform: scale(0.85); }
+    .fav-btn.saved { background: #fff0ed; }
+
+    .poi-arrow {
+        font-size: 22px;
+        color: #cbd5e1;
+        font-weight: 300;
     }
 </style>
 
 @code {
     private List<LocationDto> allLocations = new();
     private HashSet<int> favoriteIds = new();
+    private string searchQuery = "";
+    private string? selectedCategory = null;
+    private List<string> categories = new();
+    private bool isLoading = true;
+
+    private List<LocationDto> filteredLocations =>
+        allLocations
+            .Where(l =>
+                (string.IsNullOrEmpty(searchQuery) ||
+                 l.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                 (l.Description?.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                 (l.Address?.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ?? false))
+                &&
+                (selectedCategory == null || l.CategoryName == selectedCategory))
+            .ToList();
 
     protected override async Task OnInitializedAsync()
     {
+        isLoading = true;
         try
         {
-            allLocations = await LocationClient.GetAllLocations();
+            allLocations = await LocationClient.GetApprovedLocations();
+            categories = allLocations
+                .Where(l => !string.IsNullOrEmpty(l.CategoryName))
+                .Select(l => l.CategoryName!)
+                .Distinct()
+                .OrderBy(c => c)
+                .ToList();
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error loading locations: {ex.Message}");
         }
+        finally
+        {
+            isLoading = false;
+        }
 
-        // Load saved favorites to show correct heart state
+        // Load saved favorites
         var favs = await FavoritesService.GetFavoritesAsync();
         favoriteIds = favs.Select(f => f.Id).ToHashSet();
+    }
+
+    private void NavigateToPoi(int id)
+    {
+        Navigation.NavigateTo($"/poi/{id}");
     }
 
     private async Task ToggleFavorite(LocationDto loc)
@@ -231,5 +466,15 @@
             favoriteIds.Remove(loc.Id);
         else
             favoriteIds.Add(loc.Id);
+    }
+
+    private void FilterByCategory(string? category)
+    {
+        selectedCategory = category;
+    }
+
+    private void ClearSearch()
+    {
+        searchQuery = "";
     }
 }
