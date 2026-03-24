@@ -1,0 +1,800 @@
+@page "/geofence-guide"
+@layout MobileLayout
+@using FoodStreet.Client.Services
+@using FoodStreet.Client.DTOs
+@inject IGpsTrackingService GpsService
+@inject ITtsService TtsService
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+@implements IDisposable
+
+<div class="geofence-page">
+    @* ===== HERO SECTION ===== *@
+    <div class="geo-hero">
+        <div class="geo-hero-icon">🎧</div>
+        <h1 class="geo-hero-title">Thuyết Minh Tự Động</h1>
+        <p class="geo-hero-desc">Tự động phát nội dung khi bạn đến gần điểm ẩm thực</p>
+
+        <button class="geo-toggle-btn @(isTracking ? "active" : "")" @onclick="ToggleTracking">
+            @if (isTracking)
+            {
+                <span class="pulse-dot"></span>
+                <span>Đang theo dõi...</span>
+            }
+            else
+            {
+                <span>▶ Bắt đầu khám phá</span>
+            }
+        </button>
+    </div>
+
+    @* ===== STATUS BAR ===== *@
+    @if (isTracking)
+    {
+        <div class="geo-status-bar">
+            <div class="status-item">
+                <span class="status-icon">📍</span>
+                <span class="status-text">
+                    @if (GpsService.CurrentLatitude.HasValue)
+                    {
+                        @($"{GpsService.CurrentLatitude:F5}, {GpsService.CurrentLongitude:F5}")
+                    }
+                    else
+                    {
+                        <text>Đang tìm vị trí...</text>
+                    }
+                </span>
+            </div>
+            <div class="status-item">
+                <span class="status-icon">🔔</span>
+                <span class="status-text">@enteredPois.Count điểm gần đây</span>
+            </div>
+        </div>
+    }
+
+    @* ===== TRIGGERED POI LIST ===== *@
+    @if (enteredPois.Count > 0)
+    {
+        <div class="geo-section">
+            <h2 class="geo-section-title">📢 Điểm đã phát hiện</h2>
+
+            @foreach (var poi in enteredPois)
+            {
+                <div class="poi-card @(activePoi?.Id == poi.Id ? "playing" : "")">
+                    @if (!string.IsNullOrWhiteSpace(poi.ImageUrl))
+                    {
+                        <div class="poi-card-image">
+                            <img src="@poi.ImageUrl" alt="@poi.Name" loading="lazy" />
+                        </div>
+                    }
+
+                    <div class="poi-card-body">
+                        <div class="poi-card-header">
+                            <h3 class="poi-name">@poi.Name</h3>
+                            <span class="poi-distance">@FormatDistance(poi.Distance)</span>
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(poi.Description))
+                        {
+                            <p class="poi-description">@poi.Description</p>
+                        }
+
+                        <div class="poi-actions">
+                            @if (poi.HasAudio)
+                            {
+                                <button class="poi-btn poi-btn-tts" @onclick="() => PlayPoiAudio(poi)">
+                                    @if (activePoi?.Id == poi.Id && isSpeaking)
+                                    {
+                                        <span>⏹ Dừng</span>
+                                    }
+                                    else
+                                    {
+                                        <span>🎵 Nghe Audio</span>
+                                    }
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="poi-btn poi-btn-tts" @onclick="() => PlayTts(poi)">
+                                    @if (activePoi?.Id == poi.Id && isSpeaking)
+                                    {
+                                        <span>⏹ Dừng</span>
+                                    }
+                                    else
+                                    {
+                                        <span>🔊 Nghe TTS</span>
+                                    }
+                                </button>
+                            }
+
+                            @if (poi.Latitude != 0 && poi.Longitude != 0)
+                            {
+                                <button class="poi-btn poi-btn-map" @onclick="() => OpenMap(poi)">
+                                    🗺️ Chỉ đường
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    @* ===== VIEW OPTIONS TOGGLE ===== *@
+    <div class="geo-view-controls">
+        <button class="view-btn @(!isShowingMap ? "active" : "")" @onclick="ShowList">📑 Danh Sách</button>
+        <button class="view-btn @(isShowingMap ? "active" : "")" @onclick="ShowMap">🗺️ Bản Đồ</button>
+    </div>
+
+    @* ===== ALL POIs SECTION / MAP VIEW ===== *@
+    <div class="geo-section" style="padding-top: 0;">
+        @if (isShowingMap)
+        {
+            <div class="geo-map-container">
+                <div id="geofence-map" style="width: 100%; height: 100%;"></div>
+            </div>
+        }
+        else
+        {
+            <h2 class="geo-section-title">📍 Danh sách điểm thuyết minh</h2>
+
+            @if (isLoadingPois)
+            {
+                <div class="geo-loading">
+                    <div class="spinner"></div>
+                    <span>Đang tải điểm...</span>
+                </div>
+            }
+            else if (allPois.Count == 0)
+            {
+                <div class="geo-empty">
+                    <span class="empty-icon">🍜</span>
+                    <p>Chưa có điểm thuyết minh nào</p>
+                </div>
+            }
+            else
+            {
+                @foreach (var poi in allPois)
+                {
+                    <div class="poi-card-mini">
+                        <div class="poi-mini-left">
+                            <span class="poi-mini-icon">
+                                @(poi.HasAudio ? "🎵" : "📝")
+                            </span>
+                            <div>
+                                <span class="poi-mini-name">@poi.Name</span>
+                                @if (poi.Distance > 0)
+                                {
+                                    <span class="poi-mini-distance">@FormatDistance(poi.Distance)</span>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="poi-mini-right">
+                            @if (!string.IsNullOrWhiteSpace(poi.TtsScript))
+                            {
+                                <button class="poi-mini-btn" @onclick="() => PlayTtsFromDto(poi)">
+                                    🔊
+                                </button>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(poi.AudioUrl))
+                            {
+                                <button class="poi-mini-btn" @onclick="() => PlayAudio(poi.AudioUrl)">
+                                    🎵
+                                </button>
+                            }
+                        </div>
+                    </div>
+                }
+            }
+        }
+    </div>
+</div>
+
+@* ===== STYLES ===== *@
+<style>
+    .geofence-page {
+        padding-bottom: 20px;
+        background: #f5f7fa;
+        min-height: 100%;
+    }
+
+    /* === HERO === */
+    .geo-hero {
+        background: linear-gradient(135deg, #ff6b35 0%, #f7931e 50%, #ffb347 100%);
+        padding: 28px 20px 32px;
+        text-align: center;
+        color: #fff;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .geo-hero::before {
+        content: '';
+        position: absolute;
+        top: -40%;
+        right: -20%;
+        width: 200px;
+        height: 200px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 50%;
+    }
+
+    .geo-hero-icon {
+        font-size: 48px;
+        margin-bottom: 8px;
+        animation: float 3s ease-in-out infinite;
+    }
+
+    @@keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-8px); }
+    }
+
+    .geo-hero-title {
+        font-size: 22px;
+        font-weight: 700;
+        margin: 0 0 6px;
+    }
+
+    .geo-hero-desc {
+        font-size: 13px;
+        opacity: 0.9;
+        margin: 0 0 18px;
+    }
+
+    .geo-toggle-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 28px;
+        border-radius: 50px;
+        font-size: 15px;
+        font-weight: 600;
+        border: 2px solid rgba(255, 255, 255, 0.5);
+        background: rgba(255, 255, 255, 0.15);
+        color: #fff;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(10px);
+    }
+
+    .geo-toggle-btn:hover {
+        background: rgba(255, 255, 255, 0.25);
+        transform: scale(1.02);
+    }
+
+    .geo-toggle-btn.active {
+        background: #fff;
+        color: #ff6b35;
+        border-color: #fff;
+        box-shadow: 0 4px 16px rgba(255, 107, 53, 0.3);
+    }
+
+    .pulse-dot {
+        width: 10px;
+        height: 10px;
+        background: #22c55e;
+        border-radius: 50%;
+        animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @@keyframes pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.5; transform: scale(1.3); }
+    }
+
+    /* === STATUS BAR === */
+    .geo-status-bar {
+        display: flex;
+        gap: 12px;
+        padding: 10px 16px;
+        background: #1e293b;
+        color: #94a3b8;
+        font-size: 12px;
+    }
+
+    .status-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .status-icon { font-size: 14px; }
+    .status-text { color: #cbd5e1; }
+
+    /* === VIEW OPTIONS TOGGLE === */
+    .geo-view-controls {
+        display: flex;
+        background: #e2e8f0;
+        border-radius: 8px;
+        padding: 4px;
+        margin: 0 16px 12px;
+    }
+
+    .view-btn {
+        flex: 1;
+        border: none;
+        background: transparent;
+        padding: 10px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 14px;
+        color: #64748b;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .view-btn.active {
+        background: #fff;
+        color: #ff6b35;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .geo-map-container {
+        height: 50vh;
+        width: 100%;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    }
+
+    /* === SECTION === */
+    .geo-section {
+        padding: 16px;
+    }
+
+    .geo-section-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #1e293b;
+        margin: 0 0 12px;
+    }
+
+    /* === POI CARD (triggered) === */
+    .poi-card {
+        background: #fff;
+        border-radius: 14px;
+        overflow: hidden;
+        margin-bottom: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+    }
+
+    .poi-card.playing {
+        border-color: #ff6b35;
+        box-shadow: 0 4px 16px rgba(255, 107, 53, 0.15);
+    }
+
+    .poi-card-image {
+        width: 100%;
+        height: 140px;
+        overflow: hidden;
+    }
+
+    .poi-card-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .poi-card-body {
+        padding: 14px;
+    }
+
+    .poi-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 6px;
+    }
+
+    .poi-name {
+        font-size: 16px;
+        font-weight: 600;
+        color: #1e293b;
+        margin: 0;
+        flex: 1;
+    }
+
+    .poi-distance {
+        font-size: 12px;
+        color: #ff6b35;
+        font-weight: 600;
+        background: #fff7ed;
+        padding: 2px 8px;
+        border-radius: 12px;
+        white-space: nowrap;
+        margin-left: 8px;
+    }
+
+    .poi-description {
+        font-size: 13px;
+        color: #64748b;
+        margin: 0 0 12px;
+        line-height: 1.5;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .poi-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    .poi-btn {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 8px 14px;
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .poi-btn-tts {
+        background: #ff6b35;
+        color: #fff;
+    }
+
+    .poi-btn-tts:hover {
+        background: #e85d2c;
+    }
+
+    .poi-btn-map {
+        background: #f1f5f9;
+        color: #475569;
+    }
+
+    .poi-btn-map:hover {
+        background: #e2e8f0;
+    }
+
+    /* === POI MINI CARD (all list) === */
+    .poi-card-mini {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 14px;
+        background: #fff;
+        border-radius: 12px;
+        margin-bottom: 8px;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+    }
+
+    .poi-mini-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .poi-mini-icon {
+        font-size: 22px;
+        flex-shrink: 0;
+    }
+
+    .poi-mini-name {
+        font-size: 14px;
+        font-weight: 600;
+        color: #1e293b;
+        display: block;
+    }
+
+    .poi-mini-distance {
+        font-size: 11px;
+        color: #94a3b8;
+        display: block;
+        margin-top: 2px;
+    }
+
+    .poi-mini-right {
+        display: flex;
+        gap: 6px;
+    }
+
+    .poi-mini-btn {
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        border-radius: 10px;
+        background: #f8fafc;
+        font-size: 18px;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .poi-mini-btn:hover {
+        background: #fff7ed;
+    }
+
+    /* === LOADING & EMPTY === */
+    .geo-loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 32px;
+        color: #94a3b8;
+    }
+
+    .spinner {
+        width: 20px;
+        height: 20px;
+        border: 3px solid #e2e8f0;
+        border-top-color: #ff6b35;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+
+    @@keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    .geo-empty {
+        text-align: center;
+        padding: 40px 20px;
+        color: #94a3b8;
+    }
+
+    .empty-icon {
+        font-size: 48px;
+        display: block;
+        margin-bottom: 8px;
+    }
+</style>
+
+@code {
+    // State
+    private bool isTracking;
+    private bool isSpeaking;
+    private bool isLoadingPois = true;
+    private bool isShowingMap = false;
+    private NearbyPoiDto? activePoi;
+
+    private List<NearbyPoiDto> enteredPois = new();
+    private List<LocationDto> allPois = new();
+
+    private void ShowList()
+    {
+        isShowingMap = false;
+    }
+
+    private async Task ShowMap()
+    {
+        isShowingMap = true;
+        StateHasChanged();
+        await Task.Delay(50);
+        await InitMapInterop();
+    }
+
+    private async Task InitMapInterop()
+    {
+        var lat = GpsService.CurrentLatitude ?? 10.7605;
+        var lng = GpsService.CurrentLongitude ?? 106.6942;
+
+        try
+        {
+            await JS.InvokeVoidAsync("AppMapHelper.init", "geofence-map", lat, lng, 16);
+            
+            var mapPois = allPois.Select(p => new
+            {
+                name = p.Name,
+                description = p.Description,
+                latitude = p.Latitude,
+                longitude = p.Longitude,
+                distance = p.Distance
+            }).ToList();
+
+            await JS.InvokeVoidAsync("AppMapHelper.setPois", mapPois);
+
+            if (GpsService.CurrentLatitude.HasValue)
+            {
+                await JS.InvokeVoidAsync("AppMapHelper.setUserLocation", lat, lng, 50);
+            }
+
+            await JS.InvokeVoidAsync("AppMapHelper.fitBounds");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[InitMapInterop] Error: {ex.Message}");
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Subscribe to geofence events
+        GpsService.OnGeofenceEntered += HandleGeofenceEntered;
+        GpsService.OnPositionUpdated += HandlePositionUpdated;
+
+        // Load all POIs from server
+        await LoadAllPoisAsync();
+
+        // Sync tracking state
+        isTracking = GpsService.IsTracking;
+    }
+
+    private async Task LoadAllPoisAsync()
+    {
+        isLoadingPois = true;
+        try
+        {
+            var lat = GpsService.CurrentLatitude ?? 10.7605;  // Default: Vĩnh Khánh center
+            var lng = GpsService.CurrentLongitude ?? 106.6942;
+            var result = await Http.GetFromJsonAsync<PagedResult<LocationDto>>(
+                $"api/locations/nearby?latitude={lat}&longitude={lng}&radiusKm=5&page=1&size=20");
+            allPois = result?.Items?.ToList() ?? new();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[GeofenceGuide] Load POIs failed: {ex.Message}");
+        }
+        finally
+        {
+            isLoadingPois = false;
+        }
+    }
+
+    private async Task ToggleTracking()
+    {
+        if (isTracking)
+        {
+            await GpsService.StopTrackingAsync();
+            await TtsService.StopAllAsync();
+            isTracking = false;
+            isSpeaking = false;
+            activePoi = null;
+        }
+        else
+        {
+            await GpsService.StartTrackingAsync();
+            isTracking = GpsService.IsTracking;
+        }
+    }
+
+    private async void HandleGeofenceEntered(List<NearbyPoiDto> pois)
+    {
+        await InvokeAsync(async () =>
+        {
+            foreach (var poi in pois)
+            {
+                if (!enteredPois.Any(p => p.Id == poi.Id))
+                {
+                    enteredPois.Insert(0, poi);
+                    
+                    // Auto-play: priority Audio > TTS
+                    if (poi.HasAudio && !string.IsNullOrWhiteSpace(poi.AudioUrl))
+                    {
+                        await PlayPoiAudio(poi);
+                    }
+                    else if (!string.IsNullOrWhiteSpace(poi.TtsScript) || !string.IsNullOrWhiteSpace(poi.Description))
+                    {
+                        await PlayTts(poi);
+                    }
+                }
+            }
+            StateHasChanged();
+        });
+    }
+
+    private async void HandlePositionUpdated(double lat, double lng)
+    {
+        await InvokeAsync(async () =>
+        {
+            if (isShowingMap)
+            {
+                try
+                {
+                    await JS.InvokeVoidAsync("AppMapHelper.setUserLocation", lat, lng, 50);
+                }
+                catch { }
+            }
+            StateHasChanged();
+        });
+    }
+
+    private async Task PlayTts(NearbyPoiDto poi)
+    {
+        if (activePoi?.Id == poi.Id && isSpeaking)
+        {
+            // Stop current
+            await TtsService.StopAllAsync();
+            isSpeaking = false;
+            activePoi = null;
+            return;
+        }
+
+        // Stop any previous playback
+        await TtsService.StopAllAsync();
+
+        activePoi = poi;
+        isSpeaking = true;
+
+        var text = !string.IsNullOrWhiteSpace(poi.Description)
+            ? $"Bạn đang ở gần {poi.Name}. {poi.Description}"
+            : $"Bạn đang ở gần {poi.Name}.";
+
+        await TtsService.PlayTextAsync(text);
+        isSpeaking = false;
+        activePoi = null;
+        StateHasChanged();
+    }
+
+    private async Task PlayTtsFromDto(LocationDto poi)
+    {
+        await TtsService.StopAllAsync();
+        isSpeaking = true;
+
+        var text = !string.IsNullOrWhiteSpace(poi.TtsScript)
+            ? poi.TtsScript
+            : $"Chào mừng bạn đến {poi.Name}. {poi.Description}";
+
+        await TtsService.PlayTextAsync(text);
+        isSpeaking = false;
+        StateHasChanged();
+    }
+
+    private async Task PlayAudio(string url)
+    {
+        await TtsService.StopAllAsync();
+        await TtsService.PlayAudioFileAsync(url);
+    }
+
+    /// <summary>
+    /// Play audio file for a NearbyPoiDto (triggered POI)
+    /// </summary>
+    private async Task PlayPoiAudio(NearbyPoiDto poi)
+    {
+        if (activePoi?.Id == poi.Id && isSpeaking)
+        {
+            await TtsService.StopAllAsync();
+            isSpeaking = false;
+            activePoi = null;
+            return;
+        }
+
+        await TtsService.StopAllAsync();
+        activePoi = poi;
+        isSpeaking = true;
+
+        if (!string.IsNullOrWhiteSpace(poi.AudioUrl))
+        {
+            await TtsService.PlayAudioFileAsync(poi.AudioUrl);
+        }
+
+        isSpeaking = false;
+        activePoi = null;
+        StateHasChanged();
+    }
+
+    private void OpenMap(NearbyPoiDto poi)
+    {
+        // Open Google Maps directions
+        var url = $"https://www.google.com/maps/dir/?api=1&destination={poi.Latitude},{poi.Longitude}";
+        Navigation.NavigateTo(url, forceLoad: true);
+    }
+
+    private string FormatDistance(double meters)
+    {
+        if (meters >= 1000)
+            return $"{meters / 1000:F1} km";
+        return $"{meters:F0} m";
+    }
+
+    public void Dispose()
+    {
+        GpsService.OnGeofenceEntered -= HandleGeofenceEntered;
+        GpsService.OnPositionUpdated -= HandlePositionUpdated;
+    }
+}

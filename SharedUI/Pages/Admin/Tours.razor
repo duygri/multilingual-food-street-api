@@ -78,7 +78,7 @@
                                     {
                                         <div class="stop-item">
                                             <span class="stop-number">@item.Order</span>
-                                            <span class="stop-name">@item.FoodName</span>
+                                            <span class="stop-name">@item.PlaceName</span>
                                         </div>
                                     }
                                     @if (tour.Items.Count > 5)
@@ -167,7 +167,7 @@
                             {
                                 <div class="item-row">
                                     <span class="item-order">@item.Order</span>
-                                    <span class="item-name">🍜 @item.FoodName</span>
+                                    <span class="item-name">📍 @item.PlaceName</span>
                                     <div class="item-actions">
                                         <button class="btn-sm" @onclick="() => MoveItemUp(item)" disabled="@(item.Order <= 1)">⬆️</button>
                                         <button class="btn-sm" @onclick="() => MoveItemDown(item)" disabled="@(item.Order >= selectedTour.Items.Count)">⬇️</button>
@@ -187,14 +187,14 @@
                 <div class="add-item-section">
                     <h4>Thêm điểm dừng mới</h4>
                     <div class="add-item-form">
-                        <select @bind="selectedFoodId">
-                            <option value="0">-- Chọn món ăn --</option>
-                            @foreach (var food in availableFoods.Where(f => !selectedTour.Items.Any(i => i.FoodId == f.Id)))
+                        <select @bind="selectedPlaceId">
+                            <option value="0">-- Chọn địa điểm --</option>
+                            @foreach (var place in availablePlaces.Where(p => !selectedTour.Items.Any(i => i.PlaceId == p.Id)))
                             {
-                                <option value="@food.Id">@food.Name</option>
+                                <option value="@place.Id">@place.Name</option>
                             }
                         </select>
-                        <button class="btn-primary" @onclick="AddItemToTour" disabled="@(selectedFoodId == 0)">
+                        <button class="btn-primary" @onclick="AddItemToTour" disabled="@(selectedPlaceId == 0)">
                             Thêm
                         </button>
                     </div>
@@ -708,7 +708,7 @@
 
 @code {
     private List<TourDto> tours = new();
-    private List<FoodSimpleDto> availableFoods = new();
+    private List<PlaceSimpleDto> availablePlaces = new();
     private bool isLoading = true;
     private bool showModal = false;
     private bool showItemsModal = false;
@@ -716,12 +716,12 @@
     private bool isSaving = false;
     private TourEditDto editingTour = new();
     private TourDto? selectedTour;
-    private int selectedFoodId = 0;
+    private int selectedPlaceId = 0;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadTours();
-        await LoadFoods();
+        await LoadPlaces();
     }
 
     private async Task LoadTours()
@@ -742,12 +742,12 @@
         }
     }
 
-    private async Task LoadFoods()
+    private async Task LoadPlaces()
     {
         try
         {
-            var result = await Http.GetFromJsonAsync<List<FoodSimpleDto>>("api/food");
-            availableFoods = result ?? new();
+            var result = await Http.GetFromJsonAsync<List<PlaceSimpleDto>>("api/places");
+            availablePlaces = result ?? new();
         }
         catch { }
     }
@@ -836,7 +836,7 @@
     private async Task ManageTourItems(TourDto tour)
     {
         selectedTour = tour;
-        selectedFoodId = 0;
+        selectedPlaceId = 0;
         showItemsModal = true;
     }
 
@@ -848,17 +848,17 @@
 
     private async Task AddItemToTour()
     {
-        if (selectedTour == null || selectedFoodId == 0) return;
+        if (selectedTour == null || selectedPlaceId == 0) return;
 
         try
         {
-            var request = new { FoodId = selectedFoodId, EstimatedStopMinutes = 15 };
+            var request = new { PlaceId = selectedPlaceId, EstimatedStopMinutes = 15 };
             var response = await Http.PostAsJsonAsync($"api/tour/{selectedTour.Id}/items", request);
             if (response.IsSuccessStatusCode)
             {
                 await LoadTours();
                 selectedTour = tours.FirstOrDefault(t => t.Id == selectedTour.Id);
-                selectedFoodId = 0;
+                selectedPlaceId = 0;
             }
         }
         catch { }
@@ -933,8 +933,8 @@
     class TourItemDto
     {
         public int Id { get; set; }
-        public int FoodId { get; set; }
-        public string FoodName { get; set; } = "";
+        public int PlaceId { get; set; }
+        public string PlaceName { get; set; } = "";
         public int Order { get; set; }
         public string? Note { get; set; }
         public int EstimatedStopMinutes { get; set; }
@@ -950,7 +950,7 @@
         public bool IsActive { get; set; } = true;
     }
 
-    class FoodSimpleDto
+    class PlaceSimpleDto
     {
         public int Id { get; set; }
         public string Name { get; set; } = "";

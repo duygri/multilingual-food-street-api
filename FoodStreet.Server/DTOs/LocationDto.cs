@@ -37,7 +37,6 @@ namespace PROJECT_C_.DTOs
         public bool HasAudio { get; set; }
         public string? AudioUrl { get; set; }
 
-        // Foods count
-        public int FoodCount { get; set; }
+
     }
 }

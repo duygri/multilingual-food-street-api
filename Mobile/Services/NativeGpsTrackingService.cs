@@ -56,10 +56,21 @@ namespace FoodStreet.Mobile.Services
                 }
             }
 
+            // Step 2: Location Always (Background)
             var alwaysPermission = await Permissions.CheckStatusAsync<Permissions.LocationAlways>();
             if (alwaysPermission != PermissionStatus.Granted)
             {
                 await Permissions.RequestAsync<Permissions.LocationAlways>();
+            }
+
+            // Step 3: Notifications (Required for Foreground Service feedback on API 33+)
+            if (OperatingSystem.IsAndroidVersionAtLeast(33))
+            {
+                var notificationPermission = await Permissions.CheckStatusAsync<Permissions.PostNotifications>();
+                if (notificationPermission != PermissionStatus.Granted)
+                {
+                    await Permissions.RequestAsync<Permissions.PostNotifications>();
+                }
             }
 
             IsTracking = true;
@@ -161,8 +172,16 @@ namespace FoodStreet.Mobile.Services
             }
         }
 
+        private DateTime _lastUpdateSent = DateTime.MinValue;
+
         private async Task SendLocationToServerAsync(double latitude, double longitude, double accuracy, double speed)
         {
+            if ((DateTime.UtcNow - _lastUpdateSent).TotalSeconds < 3)
+            {
+                return;
+            }
+            _lastUpdateSent = DateTime.UtcNow;
+
             try
             {
                 var response = await _httpClient.PostAsJsonAsync("api/gps/update", new

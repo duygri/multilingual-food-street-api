@@ -1,8 +1,8 @@
 // MapBox GL JS Helper cho FoodStreet
-// Chú ý: Cần điền MapBox Access Token của bạn tại đây
-mapboxgl.accessToken = 'YOUR_MAPBOX_TOKEN_HERE'; // TODO: Thay bằng token thật của bạn
+// Chú ý: Đang sử dụng Public Token demo của MapBox. Hãy thay bằng token thật của bạn khi lên production.
+mapboxgl.accessToken = 'YOUR_MAPBOX_TOKEN';
 
-window.LeafletMap = {
+window.AppMapHelper = {
     map: null,
     userMarker: null,
     poiMarkers: [],
@@ -177,16 +177,21 @@ window.LeafletMap = {
     // Search address using MapBox Geocoding API
     searchAddress: async function(query) {
         try {
-            const response = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${mapboxgl.accessToken}&limit=1`);
+            // Thêm country=vn để ưu tiên Việt Nam và lấy tối đa 5 kết quả
+            const response = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${mapboxgl.accessToken}&country=vn&limit=5`);
             const data = await response.json();
             if (data.features && data.features.length > 0) {
-                const feature = data.features[0];
-                return { lat: feature.center[1], lng: feature.center[0], display_name: feature.place_name };
+                return data.features.map(f => ({
+                    lat: f.center[1],
+                    lng: f.center[0],
+                    text: f.text || '',
+                    place_name: f.place_name || ''
+                }));
             }
         } catch (e) {
             console.error('[MapBox] Search error', e);
         }
-        return null;
+        return [];
     }
 };
 

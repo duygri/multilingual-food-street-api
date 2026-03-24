@@ -25,7 +25,7 @@ namespace PROJECT_C_.Controllers
         {
             var playLog = new PlayLog
             {
-                FoodId = request.FoodId,
+                LocationId = request.LocationId,
                 DurationSeconds = request.DurationSeconds,
                 SessionId = request.SessionId,
                 DeviceType = request.DeviceType ?? "unknown",
@@ -59,8 +59,8 @@ namespace PROJECT_C_.Controllers
                 WeekPlays = await _context.PlayLogs.CountAsync(p => p.PlayedAt >= thisWeek),
                 MonthPlays = await _context.PlayLogs.CountAsync(p => p.PlayedAt >= thisMonth),
                 UniqueSessions = await _context.PlayLogs.Select(p => p.SessionId).Distinct().CountAsync(),
-                TotalPOIs = await _context.Foods.CountAsync(),
-                POIsWithAudio = await _context.Foods.CountAsync(f => f.AudioFiles.Any())
+                TotalPOIs = await _context.Locations.CountAsync(),
+                POIsWithAudio = await _context.Locations.CountAsync(f => f.AudioFiles.Any())
             };
 
             return Ok(stats);
@@ -76,10 +76,10 @@ namespace PROJECT_C_.Controllers
 
             var topPOIs = await _context.PlayLogs
                 .Where(p => p.PlayedAt >= since)
-                .GroupBy(p => p.FoodId)
+                .GroupBy(p => p.LocationId)
                 .Select(g => new
                 {
-                    FoodId = g.Key,
+                    LocationId = g.Key,
                     PlayCount = g.Count(),
                     TotalDuration = g.Sum(p => p.DurationSeconds),
                     AvgDuration = g.Average(p => p.DurationSeconds)
@@ -89,15 +89,15 @@ namespace PROJECT_C_.Controllers
                 .ToListAsync();
 
             // Get food details
-            var foodIds = topPOIs.Select(t => t.FoodId).ToList();
-            var foods = await _context.Foods
-                .Where(f => foodIds.Contains(f.Id))
+            var locationIds = topPOIs.Select(t => t.LocationId).ToList();
+            var locations = await _context.Locations
+                .Where(f => locationIds.Contains(f.Id))
                 .ToDictionaryAsync(f => f.Id);
 
             var result = topPOIs.Select(t => new
             {
-                t.FoodId,
-                FoodName = foods.ContainsKey(t.FoodId) ? foods[t.FoodId].Name : "Unknown",
+                t.LocationId,
+                LocationName = locations.ContainsKey(t.LocationId) ? locations[t.LocationId].Name : "Unknown",
                 t.PlayCount,
                 t.TotalDuration,
                 t.AvgDuration
@@ -172,14 +172,14 @@ namespace PROJECT_C_.Controllers
         public async Task<IActionResult> GetRecentPlays([FromQuery] int limit = 50)
         {
             var recentPlays = await _context.PlayLogs
-                .Include(p => p.Food)
+                .Include(p => p.Location)
                 .OrderByDescending(p => p.PlayedAt)
                 .Take(limit)
                 .Select(p => new
                 {
                     p.Id,
-                    p.FoodId,
-                    FoodName = p.Food != null ? p.Food.Name : "Unknown",
+                    p.LocationId,
+                    LocationName = p.Location != null ? p.Location.Name : "Unknown",
                     p.PlayedAt,
                     p.DurationSeconds,
                     p.Source,
@@ -202,9 +202,9 @@ namespace PROJECT_C_.Controllers
             [FromQuery] DateTime? toDate = null,
             [FromQuery] string? deviceType = null,
             [FromQuery] string? source = null,
-            [FromQuery] int? foodId = null)
+            [FromQuery] int? locationId = null)
         {
-            var query = _context.PlayLogs.Include(p => p.Food).AsQueryable();
+            var query = _context.PlayLogs.Include(p => p.Location).AsQueryable();
 
             // Apply filters
             if (fromDate.HasValue)
@@ -215,8 +215,8 @@ namespace PROJECT_C_.Controllers
                 query = query.Where(p => p.DeviceType == deviceType);
             if (!string.IsNullOrEmpty(source))
                 query = query.Where(p => p.Source == source);
-            if (foodId.HasValue)
-                query = query.Where(p => p.FoodId == foodId.Value);
+            if (locationId.HasValue)
+                query = query.Where(p => p.LocationId == locationId.Value);
 
             var totalCount = await query.CountAsync();
             var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
@@ -228,8 +228,8 @@ namespace PROJECT_C_.Controllers
                 .Select(p => new
                 {
                     p.Id,
-                    p.FoodId,
-                    FoodName = p.Food != null ? p.Food.Name : "Unknown",
+                    p.LocationId,
+                    LocationName = p.Location != null ? p.Location.Name : "Unknown",
                     p.PlayedAt,
                     p.DurationSeconds,
                     p.Source,
@@ -263,7 +263,7 @@ namespace PROJECT_C_.Controllers
             [FromQuery] DateTime? fromDate = null,
             [FromQuery] DateTime? toDate = null)
         {
-            var query = _context.PlayLogs.Include(p => p.Food).AsQueryable();
+            var query = _context.PlayLogs.Include(p => p.Location).AsQueryable();
 
             if (fromDate.HasValue)
                 query = query.Where(p => p.PlayedAt >= fromDate.Value);
@@ -275,7 +275,7 @@ namespace PROJECT_C_.Controllers
                 .Select(p => new
                 {
                     p.Id,
-                    FoodName = p.Food != null ? p.Food.Name : "Unknown",
+                    LocationName = p.Location != null ? p.Location.Name : "Unknown",
                     PlayedAt = p.PlayedAt.ToString("yyyy-MM-dd HH:mm:ss"),
                     p.DurationSeconds,
                     p.Source,
@@ -287,10 +287,10 @@ namespace PROJECT_C_.Controllers
 
             // Build CSV
             var csv = new System.Text.StringBuilder();
-            csv.AppendLine("ID,Món ăn,Thời gian,Thời lượng (s),Nguồn,Thiết bị,Ngôn ngữ,Session");
+            csv.AppendLine("ID,Địa điểm,Thời gian,Thời lượng (s),Nguồn,Thiết bị,Ngôn ngữ,Session");
             foreach (var row in data)
             {
-                csv.AppendLine($"{row.Id},\"{row.FoodName}\",{row.PlayedAt},{row.DurationSeconds},{row.Source},{row.DeviceType},{row.Language},{row.SessionId}");
+                csv.AppendLine($"{row.Id},\"{row.LocationName}\",{row.PlayedAt},{row.DurationSeconds},{row.Source},{row.DeviceType},{row.Language},{row.SessionId}");
             }
 
             var bytes = System.Text.Encoding.UTF8.GetBytes(csv.ToString());
@@ -341,7 +341,7 @@ namespace PROJECT_C_.Controllers
 
     public class LogPlayRequest
     {
-        public int FoodId { get; set; }
+        public int LocationId { get; set; }
         public double DurationSeconds { get; set; }
         public string? SessionId { get; set; }
         public string? DeviceType { get; set; }

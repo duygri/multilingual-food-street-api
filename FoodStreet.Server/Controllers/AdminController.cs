@@ -23,7 +23,7 @@ namespace PROJECT_C_.Controllers
 
         [HttpPost("audio/upload")]
         [Consumes("multipart/form-data")]
-        public async Task<IActionResult> UploadAudio([FromForm] IFormFile file, [FromForm] int? foodId)
+        public async Task<IActionResult> UploadAudio([FromForm] IFormFile file, [FromForm] int? locationId)
         {
             if (file == null || file.Length == 0)
                 return BadRequest("No file uploaded.");
@@ -55,7 +55,7 @@ namespace PROJECT_C_.Controllers
                 ContentType = file.ContentType,
                 Size = file.Length,
                 DurationSeconds = 0, // Placeholder, usually requires FFmpeg or lib to parse
-                FoodId = foodId
+                LocationId = locationId
             };
 
             _context.AudioFiles.Add(audioFile);
@@ -100,7 +100,7 @@ namespace PROJECT_C_.Controllers
         {
             var stats = new
             {
-                TotalFoods = await _context.Foods.CountAsync(),
+                TotalLocations = await _context.Locations.CountAsync(),
                 TotalAudios = await _context.AudioFiles.CountAsync(),
                 TotalUsers = await _context.Users.CountAsync()
             };

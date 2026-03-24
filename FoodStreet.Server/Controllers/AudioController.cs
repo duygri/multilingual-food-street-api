@@ -21,15 +21,15 @@ namespace PROJECT_C_.Controllers
         }
 
         /// <summary>
-        /// Get all audio files with optional filtering
+        /// Get all audio files with optional filtering by location (POI)
         /// </summary>
         [HttpGet]
-        public async Task<ActionResult<List<AudioFileDto>>> GetAllAudio([FromQuery] int? foodId = null)
+        public async Task<ActionResult<List<AudioFileDto>>> GetAllAudio([FromQuery] int? locationId = null)
         {
-            var query = _context.AudioFiles.Include(a => a.Food).AsQueryable();
+            var query = _context.AudioFiles.Include(a => a.Location).AsQueryable();
             
-            if (foodId.HasValue)
-                query = query.Where(a => a.FoodId == foodId);
+            if (locationId.HasValue)
+                query = query.Where(a => a.LocationId == locationId);
 
             var audioFiles = await query.OrderByDescending(a => a.UploadedAt).ToListAsync();
 
@@ -41,8 +41,8 @@ namespace PROJECT_C_.Controllers
                 ContentType = a.ContentType,
                 Size = a.Size,
                 DurationSeconds = a.DurationSeconds,
-                FoodId = a.FoodId,
-                FoodName = a.Food?.Name,
+                LocationId = a.LocationId,
+                LocationName = a.Location?.Name,
                 UploadedAt = a.UploadedAt,
                 Url = $"/api/audio/{a.Id}/stream"
             }).ToList();
@@ -54,7 +54,7 @@ namespace PROJECT_C_.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<AudioFileDto>> GetAudio(int id)
         {
-            var audio = await _context.AudioFiles.Include(a => a.Food).FirstOrDefaultAsync(a => a.Id == id);
+            var audio = await _context.AudioFiles.Include(a => a.Location).FirstOrDefaultAsync(a => a.Id == id);
             if (audio == null) return NotFound();
 
             return new AudioFileDto
@@ -65,8 +65,8 @@ namespace PROJECT_C_.Controllers
                 ContentType = audio.ContentType,
                 Size = audio.Size,
                 DurationSeconds = audio.DurationSeconds,
-                FoodId = audio.FoodId,
-                FoodName = audio.Food?.Name,
+                LocationId = audio.LocationId,
+                LocationName = audio.Location?.Name,
                 UploadedAt = audio.UploadedAt,
                 Url = $"/api/audio/{audio.Id}/stream"
             };
@@ -90,13 +90,13 @@ namespace PROJECT_C_.Controllers
         }
 
         /// <summary>
-        /// Upload new audio file
+        /// Upload new audio file, optionally assign to a location (POI)
         /// </summary>
         [HttpPost]
         [Authorize]
         public async Task<ActionResult<AudioFileDto>> UploadAudio(
             IFormFile file, 
-            [FromQuery] int? foodId = null)
+            [FromQuery] int? locationId = null)
         {
             if (file == null || file.Length == 0)
                 return BadRequest("No file uploaded");
@@ -105,6 +105,13 @@ namespace PROJECT_C_.Controllers
             var allowedTypes = new[] { "audio/mpeg", "audio/wav", "audio/mp3", "audio/ogg" };
             if (!allowedTypes.Contains(file.ContentType.ToLower()))
                 return BadRequest("Invalid file type. Allowed: MP3, WAV, OGG");
+
+            // Validate location exists if provided
+            if (locationId.HasValue)
+            {
+                var locationExists = await _context.Locations.AnyAsync(l => l.Id == locationId);
+                if (!locationExists) return BadRequest("Location not found");
+            }
 
             // Create upload directory if not exists
             var uploadDir = Path.Combine(_env.ContentRootPath, "Uploads", "Audio");
@@ -127,13 +134,23 @@ namespace PROJECT_C_.Controllers
                 OriginalName = file.FileName,
                 ContentType = file.ContentType,
                 Size = file.Length,
-                DurationSeconds = 0, // TODO: Calculate duration using NAudio or similar
-                FoodId = foodId,
+                DurationSeconds = 0,
+                LocationId = locationId,
                 UploadedAt = DateTime.UtcNow
             };
 
             _context.AudioFiles.Add(audioFile);
             await _context.SaveChangesAsync();
+
+            // Load location name for response
+            string? locationName = null;
+            if (locationId.HasValue)
+            {
+                locationName = await _context.Locations
+                    .Where(l => l.Id == locationId)
+                    .Select(l => l.Name)
+                    .FirstOrDefaultAsync();
+            }
 
             return CreatedAtAction(nameof(GetAudio), new { id = audioFile.Id }, new AudioFileDto
             {
@@ -143,23 +160,30 @@ namespace PROJECT_C_.Controllers
                 ContentType = audioFile.ContentType,
                 Size = audioFile.Size,
                 DurationSeconds = audioFile.DurationSeconds,
-                FoodId = audioFile.FoodId,
+                LocationId = audioFile.LocationId,
+                LocationName = locationName,
                 UploadedAt = audioFile.UploadedAt,
                 Url = $"/api/audio/{audioFile.Id}/stream"
             });
         }
 
         /// <summary>
-        /// Assign audio to a POI/Food
+        /// Assign audio to a Location (POI)
         /// </summary>
         [HttpPut("{id}/assign")]
         [Authorize]
-        public async Task<IActionResult> AssignToFood(int id, [FromQuery] int? foodId)
+        public async Task<IActionResult> AssignToLocation(int id, [FromQuery] int? locationId)
         {
             var audio = await _context.AudioFiles.FindAsync(id);
             if (audio == null) return NotFound();
 
-            audio.FoodId = foodId;
+            if (locationId.HasValue)
+            {
+                var locationExists = await _context.Locations.AnyAsync(l => l.Id == locationId);
+                if (!locationExists) return BadRequest("Location not found");
+            }
+
+            audio.LocationId = locationId;
             await _context.SaveChangesAsync();
 
             return NoContent();
@@ -194,7 +218,7 @@ namespace PROJECT_C_.Controllers
         public async Task<ActionResult<object>> GetAudioStats()
         {
             var total = await _context.AudioFiles.CountAsync();
-            var assigned = await _context.AudioFiles.CountAsync(a => a.FoodId != null);
+            var assigned = await _context.AudioFiles.CountAsync(a => a.LocationId != null);
             var unassigned = total - assigned;
             var totalSize = await _context.AudioFiles.SumAsync(a => a.Size);
 

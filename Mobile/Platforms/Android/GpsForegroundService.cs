@@ -27,8 +27,15 @@ namespace FoodStreet.Mobile.Platforms.Android
             CreateNotificationChannel();
             var notification = CreateNotification();
             
-            // Start the foreground service with the notification
-            StartForeground(NOTIFICATION_ID, notification);
+            // Start the foreground service with the notification and type (Required for Android 14+ / API 34+)
+            if (OperatingSystem.IsAndroidVersionAtLeast(34))
+            {
+                StartForeground(NOTIFICATION_ID, notification, global::Android.Content.PM.ForegroundService.TypeLocation);
+            }
+            else
+            {
+                StartForeground(NOTIFICATION_ID, notification);
+            }
 
             // Run the actual tracking
             StartTracking();
@@ -61,17 +68,20 @@ namespace FoodStreet.Mobile.Platforms.Android
 
         private Notification CreateNotification()
         {
+#pragma warning disable CS8602
             var intent = new Intent(this, typeof(MainActivity));
             var pendingIntent = PendingIntent.GetActivity(this, 0, intent, PendingIntentFlags.Immutable);
-
-            var notificationBuilder = new NotificationCompat.Builder(this, CHANNEL_ID)
+            var appContext = Application.Context;
+            var appInfo = appContext.ApplicationInfo;
+            var icon = appInfo.Icon;
+            var notificationBuilder = new NotificationCompat.Builder(appContext, CHANNEL_ID)
                 .SetContentTitle("FoodStreet")
                 .SetContentText("Đang theo dõi vị trí để phát thuyết minh...")
-                .SetSmallIcon(Application.Context.ApplicationInfo!.Icon)
-                .SetOngoing(true) // Sticky
+                .SetSmallIcon(icon)
+                .SetOngoing(true)
                 .SetContentIntent(pendingIntent);
-
-            return notificationBuilder.Build();
+            return notificationBuilder.Build()!;
+#pragma warning restore CS8602
         }
 
         private void StartTracking()

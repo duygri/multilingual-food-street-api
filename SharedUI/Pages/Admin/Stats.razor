@@ -137,7 +137,7 @@
                                         else if (rank == 3) { <span>🥉</span> }
                                         else { @rank }
                                     </td>
-                                    <td class="fw-bold">@poi.FoodName</td>
+                                    <td class="fw-bold">@poi.PlaceName</td>
                                     <td>@poi.PlayCount</td>
                                     <td>@poi.AvgDuration.ToString("F1")</td>
                                 </tr>
@@ -165,7 +165,7 @@
                     {
                         <div class="list-group-item d-flex justify-content-between align-items-center px-0">
                             <div>
-                                <div class="fw-bold">@play.FoodName</div>
+                                <div class="fw-bold">@play.PlaceName</div>
                                 <small class="text-muted">@play.PlayedAt.ToString("dd/MM HH:mm") • @play.Source</small>
                             </div>
                             <span class="badge bg-secondary">@play.DurationSeconds.ToString("F0")s</span>
@@ -399,8 +399,8 @@
 
     public class TopPoiDto
     {
-        public int    FoodId       { get; set; }
-        public string FoodName     { get; set; } = "";
+        public int    PlaceId      { get; set; }
+        public string PlaceName    { get; set; } = "";
         public int    PlayCount    { get; set; }
         public double TotalDuration{ get; set; }
         public double AvgDuration  { get; set; }
@@ -421,8 +421,8 @@
     public class RecentPlayDto
     {
         public int      Id              { get; set; }
-        public int      FoodId          { get; set; }
-        public string   FoodName        { get; set; } = "";
+        public int      PlaceId         { get; set; }
+        public string   PlaceName       { get; set; } = "";
         public DateTime PlayedAt        { get; set; }
         public double   DurationSeconds { get; set; }
         public string   Source          { get; set; } = "";

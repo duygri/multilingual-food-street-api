@@ -29,7 +29,7 @@ namespace PROJECT_C_.Controllers
                     Name = c.Name,
                     Icon = c.Icon,
                     Description = c.Description,
-                    FoodCount = c.Foods.Count
+                    LocationCount = c.Locations.Count
                 })
                 .ToListAsync();
 
@@ -48,7 +48,7 @@ namespace PROJECT_C_.Controllers
                     Name = c.Name,
                     Icon = c.Icon,
                     Description = c.Description,
-                    FoodCount = c.Foods.Count
+                    LocationCount = c.Locations.Count
                 })
                 .FirstOrDefaultAsync();
 
@@ -118,7 +118,7 @@ namespace PROJECT_C_.Controllers
         public string Name { get; set; } = "";
         public string? Icon { get; set; }
         public string? Description { get; set; }
-        public int FoodCount { get; set; }
+        public int LocationCount { get; set; }
     }
 
     public class CreateCategoryDto

@@ -20,6 +20,9 @@ namespace PROJECT_C_.DTOs
         public double Radius { get; set; }
         public bool IsInGeofence { get; set; }
         public string? ImageUrl { get; set; }
+        public bool HasAudio { get; set; }
+        public string? AudioUrl { get; set; }
+        public string? TtsScript { get; set; }
     }
 
     public class GeofenceCheckResponse

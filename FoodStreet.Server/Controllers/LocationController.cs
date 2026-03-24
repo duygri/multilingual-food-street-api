@@ -79,8 +79,7 @@ namespace PROJECT_C_.Controllers
                 TtsScript = location.TtsScript,
                 CategoryId = location.CategoryId,
                 CategoryName = location.Category?.Name,
-                IsApproved = location.IsApproved,
-                FoodCount = location.Foods.Count
+                IsApproved = location.IsApproved
             };
         }
 
@@ -374,8 +373,7 @@ namespace PROJECT_C_.Controllers
             TtsScript = l.TtsScript,
             CategoryId = l.CategoryId,
             CategoryName = l.Category?.Name,
-            IsApproved = l.IsApproved,
-            FoodCount = l.Foods?.Count ?? 0
+            IsApproved = l.IsApproved
         };
     }
 }

@@ -36,7 +36,6 @@ namespace PROJECT_C_.Services
                 .Where(l => l.IsApproved) // Chỉ hiển thị địa điểm đã duyệt
                 .Include(l => l.Translations)
                 .Include(l => l.AudioFiles)
-                .Include(l => l.Foods)
                 .Include(l => l.Category)
                 .Select(l => new
                 {
@@ -55,8 +54,7 @@ namespace PROJECT_C_.Services
                     Transl = l.Translations.FirstOrDefault(t => t.LanguageCode == lang)
                              ?? l.Translations.FirstOrDefault(t => t.LanguageCode == "vi-VN"),
                     DefaultName = l.Name,
-                    DefaultDesc = l.Description,
-                    FoodCount = l.Foods.Count
+                    DefaultDesc = l.Description
                 })
                 .ToList();
 
@@ -94,7 +92,6 @@ namespace PROJECT_C_.Services
                     HasAudio = x.Location.Audio != null,
                     AudioUrl = x.Location.Audio != null ? $"/api/audio/{x.Location.Audio.Id}" : null,
                     IsApproved = true,
-                    FoodCount = x.Location.FoodCount,
                     Distance = x.Km < 1
                         ? Math.Round(x.Km * 1000.0, 0)
                         : Math.Round(x.Km, 2),
@@ -169,7 +166,6 @@ namespace PROJECT_C_.Services
             return await _context.Locations
                 .Include(l => l.Translations)
                 .Include(l => l.AudioFiles)
-                .Include(l => l.Foods)
                 .Include(l => l.Category)
                 .FirstOrDefaultAsync(l => l.Id == id);
         }
@@ -181,7 +177,6 @@ namespace PROJECT_C_.Services
         {
             return await _context.Locations
                 .Include(l => l.Category)
-                .Include(l => l.Foods)
                 .Where(l => l.OwnerId == ownerId)
                 .OrderByDescending(l => l.Id)
                 .ToListAsync();
@@ -194,7 +189,6 @@ namespace PROJECT_C_.Services
         {
             return await _context.Locations
                 .Include(l => l.Category)
-                .Include(l => l.Foods)
                 .OrderByDescending(l => l.Id)
                 .ToListAsync();
         }

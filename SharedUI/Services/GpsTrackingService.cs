@@ -78,6 +78,8 @@ namespace FoodStreet.Client.Services
             await _jsRuntime.InvokeVoidAsync("GpsTracker.getCurrentPosition", _dotNetRef);
         }
 
+        private DateTime _lastUpdateSent = DateTime.MinValue;
+
         /// <summary>
         /// Callback từ JavaScript khi vị trí thay đổi
         /// </summary>
@@ -87,6 +89,15 @@ namespace FoodStreet.Client.Services
             CurrentLatitude = latitude;
             CurrentLongitude = longitude;
             Accuracy = accuracy;
+
+            // Throttle 3 giây để tránh spam API
+            if ((DateTime.UtcNow - _lastUpdateSent).TotalSeconds < 3)
+            {
+                OnPositionUpdated?.Invoke(latitude, longitude); // Vẫn update UI
+                return;
+            }
+            
+            _lastUpdateSent = DateTime.UtcNow;
 
             // Gửi lên server
             try
@@ -207,5 +218,8 @@ namespace FoodStreet.Client.Services
         public double Radius { get; set; }
         public bool IsInGeofence { get; set; }
         public string? ImageUrl { get; set; }
+        public bool HasAudio { get; set; }
+        public string? AudioUrl { get; set; }
+        public string? TtsScript { get; set; }
     }
 }

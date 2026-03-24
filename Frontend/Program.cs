@@ -44,13 +44,13 @@ builder.Services.AddAuthorizationCore();
 // ========================================
 // APPLICATION SERVICES
 // ========================================
-builder.Services.AddScoped<IFoodClientService, FoodClientService>();
 builder.Services.AddScoped<ILocationClientService, LocationClientService>();
 builder.Services.AddScoped<IAudioService, AudioService>();
 builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<IGpsTrackingService, GpsTrackingService>();
-builder.Services.AddScoped<ITtsService, WebTtsService>();
-builder.Services.AddScoped<INotificationService, NotificationService>();
+    builder.Services.AddScoped<IGpsTrackingService, GpsTrackingService>();
+    builder.Services.AddScoped<ITtsService, WebTtsService>();
+    builder.Services.AddScoped<TourPlayerService>();
+    builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddLocalization();
 builder.Services.AddSingleton<ILocalizationService, LocalizationService>();
 builder.Services.AddSingleton<IPlatformDetector, WebPlatformDetector>();

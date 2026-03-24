@@ -5,12 +5,12 @@ namespace FoodStreet.Client.Services
 {
     public interface IAudioService
     {
-        Task<List<AudioFileDto>> GetAllAudioAsync(int? foodId = null);
+        Task<List<AudioFileDto>> GetAllAudioAsync(int? locationId = null);
         Task<AudioFileDto?> GetAudioAsync(int id);
         Task<AudioStatsDto?> GetStatsAsync();
         Task<bool> DeleteAudioAsync(int id);
-        Task<bool> AssignToFoodAsync(int audioId, int? foodId);
-        Task<AudioFileDto?> UploadAudioAsync(HttpContent content, string fileName, Action<double> onProgress);
+        Task<bool> AssignToLocationAsync(int audioId, int? locationId);
+        Task<AudioFileDto?> UploadAudioAsync(HttpContent content, string fileName, Action<double> onProgress, int? locationId = null);
     }
 
     public class AudioService : IAudioService
@@ -22,11 +22,11 @@ namespace FoodStreet.Client.Services
             _http = http;
         }
 
-        public async Task<List<AudioFileDto>> GetAllAudioAsync(int? foodId = null)
+        public async Task<List<AudioFileDto>> GetAllAudioAsync(int? locationId = null)
         {
             try
             {
-                var url = foodId.HasValue ? $"api/audio?foodId={foodId}" : "api/audio";
+                var url = locationId.HasValue ? $"api/audio?locationId={locationId}" : "api/audio";
                 return await _http.GetFromJsonAsync<List<AudioFileDto>>(url) ?? new();
             }
             catch
@@ -72,11 +72,13 @@ namespace FoodStreet.Client.Services
             }
         }
 
-        public async Task<bool> AssignToFoodAsync(int audioId, int? foodId)
+        public async Task<bool> AssignToLocationAsync(int audioId, int? locationId)
         {
             try
             {
-                var url = foodId.HasValue ? $"api/audio/{audioId}/assign?foodId={foodId}" : $"api/audio/{audioId}/assign";
+                var url = locationId.HasValue 
+                    ? $"api/audio/{audioId}/assign?locationId={locationId}" 
+                    : $"api/audio/{audioId}/assign";
                 var response = await _http.PutAsync(url, null);
                 return response.IsSuccessStatusCode;
             }
@@ -86,7 +88,7 @@ namespace FoodStreet.Client.Services
             }
         }
 
-        public async Task<AudioFileDto?> UploadAudioAsync(HttpContent content, string fileName, Action<double> onProgress)
+        public async Task<AudioFileDto?> UploadAudioAsync(HttpContent content, string fileName, Action<double> onProgress, int? locationId = null)
         {
             try
             {
@@ -102,7 +104,10 @@ namespace FoodStreet.Client.Services
                 using var formData = new MultipartFormDataContent();
                 formData.Add(progressContent, "file", fileName);
 
-                var response = await _http.PostAsync("api/audio", formData);
+                var uploadUrl = locationId.HasValue 
+                    ? $"api/audio?locationId={locationId}" 
+                    : "api/audio";
+                var response = await _http.PostAsync(uploadUrl, formData);
                 
                 if (response.IsSuccessStatusCode)
                 {

@@ -14,12 +14,6 @@ namespace PROJECT_C_.Models
         public long Size { get; set; }
         public double DurationSeconds { get; set; }
 
-        // Relationship to Food
-        public int? FoodId { get; set; }
-        [ForeignKey("FoodId")]
-        [System.Text.Json.Serialization.JsonIgnore]
-        public Food? Food { get; set; }
-
         // Relationship to Location (POI)
         public int? LocationId { get; set; }
         [ForeignKey("LocationId")]

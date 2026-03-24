@@ -32,7 +32,7 @@ namespace PROJECT_C_.Controllers
                 userDtos.Add(new UserDto
                 {
                     Id = user.Id,
-                    Email = user.Email,
+                    Email = user.Email ?? string.Empty,
                     Roles = roles.ToList(),
                     IsLocked = user.LockoutEnd.HasValue && user.LockoutEnd > DateTimeOffset.UtcNow
                 });

@@ -1,7 +1,7 @@
 @page "/admin/audio"
 @layout AdminLayout
 @inject IAudioService AudioService
-@inject IFoodClientService FoodService
+@inject ILocationClientService LocationService
 @using FoodStreet.Client.DTOs
 @using System.Threading
 
@@ -47,19 +47,19 @@
     </div>
 }
 
-<!-- Filter -->
+<!-- Filter by Location -->
 <div class="admin-card mb-4">
     <div class="row align-items-center">
         <div class="col-md-4">
-            <label class="form-label">Filter by POI</label>
+            <label class="form-label">Filter by POI Location</label>
             <select class="form-select" @onchange="OnFilterChanged">
                 <option value="">All Audio Files</option>
                 <option value="-1">Unassigned Only</option>
-                @if (foods != null)
+                @if (locations != null)
                 {
-                    @foreach (var food in foods)
+                    @foreach (var loc in locations)
                     {
-                        <option value="@food.Id">@food.Name</option>
+                        <option value="@loc.Id">📍 @loc.Name</option>
                     }
                 }
             </select>
@@ -93,7 +93,7 @@
                 <thead>
                     <tr>
                         <th>File</th>
-                        <th>Assigned To</th>
+                        <th>Assigned To (POI)</th>
                         <th>Size</th>
                         <th>Uploaded</th>
                         <th>Actions</th>
@@ -113,9 +113,9 @@
                                 </div>
                             </td>
                             <td>
-                                @if (audio.FoodId.HasValue)
+                                @if (audio.LocationId.HasValue)
                                 {
-                                    <span class="badge bg-success">@audio.FoodName</span>
+                                    <span class="badge bg-success">📍 @audio.LocationName</span>
                                 }
                                 else
                                 {
@@ -129,7 +129,7 @@
                                     <button class="btn btn-outline-primary" @onclick="() => PlayAudio(audio)" title="Play">
                                         ▶️
                                     </button>
-                                    <button class="btn btn-outline-info" @onclick="() => ShowAssignModal(audio)" title="Assign">
+                                    <button class="btn btn-outline-info" @onclick="() => ShowAssignModal(audio)" title="Assign to POI">
                                         🔗
                                     </button>
                                     <button class="btn btn-outline-danger" @onclick="() => DeleteAudio(audio.Id)" title="Delete">
@@ -170,14 +170,14 @@
                 <div class="modal-body">
                     <p><strong>Audio:</strong> @selectedAudio.OriginalName</p>
                     <div class="mb-3">
-                        <label class="form-label">Select POI</label>
-                        <select class="form-select" @bind="assignToFoodId">
-                            <option value="">-- No Assignment --</option>
-                            @if (foods != null)
+                        <label class="form-label">Select POI Location</label>
+                        <select class="form-select" @bind="assignToLocationId">
+                            <option value="">-- No Assignment (Unassign) --</option>
+                            @if (locations != null)
                             {
-                                @foreach (var food in foods)
+                                @foreach (var loc in locations)
                                 {
-                                    <option value="@food.Id">@food.Name</option>
+                                    <option value="@loc.Id">📍 @loc.Name</option>
                                 }
                             }
                         </select>
@@ -222,14 +222,14 @@
                         }
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Assign to POI (optional)</label>
-                        <select class="form-select" @bind="uploadToFoodId">
+                        <label class="form-label">Assign to POI Location (optional)</label>
+                        <select class="form-select" @bind="uploadToLocationId">
                             <option value="">-- Upload without assignment --</option>
-                            @if (foods != null)
+                            @if (locations != null)
                             {
-                                @foreach (var food in foods)
+                                @foreach (var loc in locations)
                                 {
-                                    <option value="@food.Id">@food.Name</option>
+                                    <option value="@loc.Id">📍 @loc.Name</option>
                                 }
                             }
                         </select>
@@ -242,7 +242,7 @@
 
 @code {
     private List<AudioFileDto>? audioFiles;
-    private List<FoodDto>? foods;
+    private List<LocationDto>? locations;
     private AudioStatsDto? stats;
     
     private AudioFileDto? selectedAudio;
@@ -251,8 +251,8 @@
     private bool uploading;
     private int uploadProgress;
     
-    private string? assignToFoodId;
-    private string? uploadToFoodId;
+    private string? assignToLocationId;
+    private string? uploadToLocationId;
     private int? currentFilter;
     
     private string? playingUrl;
@@ -267,8 +267,7 @@
     {
         audioFiles = await AudioService.GetAllAudioAsync(currentFilter);
         stats = await AudioService.GetStatsAsync();
-        
-        foods = await FoodService.GetAllFoods();
+        locations = await LocationService.GetAllLocations();
     }
 
     private async Task OnFilterChanged(ChangeEventArgs e)
@@ -277,7 +276,7 @@
         if (string.IsNullOrEmpty(value))
             currentFilter = null;
         else if (value == "-1")
-            currentFilter = null; // Will need custom handling for unassigned
+            currentFilter = null; // Server will handle unassigned filter
         else
             currentFilter = int.Parse(value);
             
@@ -290,7 +289,7 @@
     private void ShowAssignModal(AudioFileDto audio)
     {
         selectedAudio = audio;
-        assignToFoodId = audio.FoodId?.ToString() ?? "";
+        assignToLocationId = audio.LocationId?.ToString() ?? "";
         showAssignModal = true;
     }
     private void CloseAssignModal() => showAssignModal = false;
@@ -301,19 +300,15 @@
         uploadProgress = 0;
         StateHasChanged();
 
-        var files = e.GetMultipleFiles(20); // Limit to 20 files
-        int? uploadFoodId = string.IsNullOrEmpty(uploadToFoodId) ? null : int.Parse(uploadToFoodId);
+        var files = e.GetMultipleFiles(20);
+        int? uploadLocId = string.IsNullOrEmpty(uploadToLocationId) ? null : int.Parse(uploadToLocationId);
 
-        // Calculate total size for global progress
         long totalBytes = files.Sum(f => f.Size);
         long totalUploaded = 0;
         
-        // Semaphore to limit concurrent uploads (e.g. 5)
         using var semaphore = new SemaphoreSlim(5);
         var tasks = new List<Task>();
         var lockObj = new object();
-        
-        // Throttle UI updates (limit to 10fps or so)
         var lastUpdate = DateTime.MinValue;
 
         foreach (var file in files)
@@ -325,18 +320,15 @@
                 {
                     long lastFileUploaded = 0;
                     
-                    // Max 50MB per file
                     using var stream = file.OpenReadStream(50 * 1024 * 1024);
                     using var content = new StreamContent(stream);
                     content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
 
                     await AudioService.UploadAudioAsync(content, file.Name, (filePercentage) =>
                     {
-                        // Calculate how many bytes of THIS file have been uploaded
                         long currentFileUploaded = (long)(file.Size * (filePercentage / 100.0));
                         long diff = currentFileUploaded - lastFileUploaded;
                         
-                        // Update global total
                         if (diff > 0)
                         {
                             lock(lockObj)
@@ -344,7 +336,6 @@
                                 totalUploaded += diff;
                                 lastFileUploaded = currentFileUploaded;
                                 
-                                // Update UI if enough time passed (throttle)
                                 var now = DateTime.Now;
                                 if ((now - lastUpdate).TotalMilliseconds > 100)
                                 {
@@ -354,7 +345,7 @@
                                 }
                             }
                         }
-                    });
+                    }, uploadLocId);
                 }
                 finally
                 {
@@ -375,8 +366,8 @@
     {
         if (selectedAudio == null) return;
         
-        int? foodId = string.IsNullOrEmpty(assignToFoodId) ? null : int.Parse(assignToFoodId);
-        await AudioService.AssignToFoodAsync(selectedAudio.Id, foodId);
+        int? locationId = string.IsNullOrEmpty(assignToLocationId) ? null : int.Parse(assignToLocationId);
+        await AudioService.AssignToLocationAsync(selectedAudio.Id, locationId);
         
         CloseAssignModal();
         await LoadData();

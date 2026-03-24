@@ -88,7 +88,7 @@
                     <thead>
                         <tr>
                             <th>Thời gian</th>
-                            <th>Món ăn</th>
+                            <th>Địa điểm</th>
                             <th>Thiết bị</th>
                             <th>Nguồn</th>
                             <th>Thời lượng</th>
@@ -105,7 +105,7 @@
                                 </td>
                                 <td class="food-cell">
                                     <span class="food-icon">🍜</span>
-                                    @item.FoodName
+                                    @item.PlaceName
                                 </td>
                                 <td>
                                     <span class="device-badge @GetDeviceClass(item.DeviceType)">
@@ -634,8 +634,8 @@
     class HistoryItem
     {
         public int Id { get; set; }
-        public int FoodId { get; set; }
-        public string FoodName { get; set; } = "";
+        public int PlaceId { get; set; }
+        public string PlaceName { get; set; } = "";
         public DateTime PlayedAt { get; set; }
         public double DurationSeconds { get; set; }
         public string? Source { get; set; }

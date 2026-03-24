@@ -12,14 +12,14 @@
 <div class="admin-card mb-4">
     <div class="row align-items-center">
         <div class="col-md-4">
-            <label class="form-label">Select Food</label>
-            <select class="form-select" @onchange="OnFoodSelected">
-                <option value="">-- Select a food --</option>
-                @if (foods != null)
+            <label class="form-label">Select Place</label>
+            <select class="form-select" @onchange="OnPlaceSelected">
+                <option value="">-- Select a place --</option>
+                @if (places != null)
                 {
-                    @foreach (var food in foods)
+                    @foreach (var place in places)
                     {
-                        <option value="@food.Id">@food.Name</option>
+                        <option value="@place.Id">@place.Name</option>
                     }
                 }
             </select>
@@ -56,7 +56,7 @@
         <div class="text-center py-5">
             <div style="font-size: 4rem;">🌍</div>
             <h5 class="mt-3">No translations found</h5>
-            <p class="text-muted">Select a food and click "Add Translation" to add content in different languages.</p>
+            <p class="text-muted">Select a place and click "Add Translation" to add content in different languages.</p>
         </div>
     }
     else
@@ -65,7 +65,7 @@
             <thead>
                 <tr>
                     <th>Language</th>
-                    <th>Food</th>
+                    <th>Place</th>
                     <th>Translated Name</th>
                     <th>Description</th>
                     <th style="width: 150px;">Actions</th>
@@ -78,7 +78,7 @@
                         <td>
                             <span class="badge bg-info">@GetLanguageFlag(trans.LanguageCode) @trans.LanguageCode</span>
                         </td>
-                        <td>@trans.FoodName</td>
+                        <td>@trans.PlaceName</td>
                         <td><strong>@trans.Name</strong></td>
                         <td class="text-muted">@(trans.Description?.Length > 40 ? trans.Description.Substring(0, 40) + "..." : trans.Description)</td>
                         <td>
@@ -104,14 +104,14 @@
                 <div class="modal-body">
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Food *</label>
-                            <select class="form-select" @bind="editingTranslation.FoodId">
+                            <label class="form-label">Place *</label>
+                            <select class="form-select" @bind="editingTranslation.PlaceId">
                                 <option value="0">-- Select --</option>
-                                @if (foods != null)
+                                @if (places != null)
                                 {
-                                    @foreach (var food in foods)
+                                    @foreach (var place in places)
                                     {
-                                        <option value="@food.Id">@food.Name</option>
+                                        <option value="@place.Id">@place.Name</option>
                                     }
                                 }
                             </select>
@@ -147,9 +147,9 @@
 }
 
 @code {
-    private List<FoodItem>? foods;
+    private List<PlaceItem>? places;
     private List<TranslationItem>? translations;
-    private int selectedFoodId;
+    private int selectedPlaceId;
     private string selectedLanguage = "";
     private bool isLoading = false;
     private bool showModal = false;
@@ -158,33 +158,33 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadFoods();
+        await LoadPlaces();
     }
 
-    private async Task LoadFoods()
+    private async Task LoadPlaces()
     {
         try
         {
-            foods = await Http.GetFromJsonAsync<List<FoodItem>>("api/food");
+            places = await Http.GetFromJsonAsync<List<PlaceItem>>("api/places");
         }
         catch
         {
-            foods = new List<FoodItem>();
+            places = new List<PlaceItem>();
         }
     }
 
-    private async Task OnFoodSelected(ChangeEventArgs e)
+    private async Task OnPlaceSelected(ChangeEventArgs e)
     {
-        if (int.TryParse(e.Value?.ToString(), out int foodId))
+        if (int.TryParse(e.Value?.ToString(), out int placeId))
         {
-            selectedFoodId = foodId;
+            selectedPlaceId = placeId;
             await LoadTranslations();
         }
     }
 
     private async Task LoadTranslations()
     {
-        if (selectedFoodId == 0)
+        if (selectedPlaceId == 0)
         {
             translations = new List<TranslationItem>();
             return;
@@ -194,7 +194,7 @@
         try
         {
             // Note: This endpoint needs to be created in the backend
-            var url = $"api/food/{selectedFoodId}/translations";
+            var url = $"api/places/{selectedPlaceId}/translations";
             if (!string.IsNullOrEmpty(selectedLanguage))
             {
                 url += $"?lang={selectedLanguage}";
@@ -211,7 +211,7 @@
 
     private void ShowAddModal()
     {
-        editingTranslation = new TranslationItem { FoodId = selectedFoodId };
+        editingTranslation = new TranslationItem { PlaceId = selectedPlaceId };
         modalTitle = "➕ Add Translation";
         showModal = true;
     }
@@ -221,7 +221,7 @@
         editingTranslation = new TranslationItem
         {
             Id = trans.Id,
-            FoodId = trans.FoodId,
+            PlaceId = trans.PlaceId,
             LanguageCode = trans.LanguageCode,
             Name = trans.Name,
             Description = trans.Description
@@ -236,11 +236,11 @@
         {
             if (editingTranslation.Id == 0)
             {
-                await Http.PostAsJsonAsync("api/food/translations", editingTranslation);
+                await Http.PostAsJsonAsync("api/places/translations", editingTranslation);
             }
             else
             {
-                await Http.PutAsJsonAsync($"api/food/translations/{editingTranslation.Id}", editingTranslation);
+                await Http.PutAsJsonAsync($"api/places/translations/{editingTranslation.Id}", editingTranslation);
             }
             showModal = false;
             await LoadTranslations();
@@ -255,7 +255,7 @@
     {
         try
         {
-            await Http.DeleteAsync($"api/food/translations/{id}");
+            await Http.DeleteAsync($"api/places/translations/{id}");
             await LoadTranslations();
         }
         catch (Exception ex)
@@ -276,7 +276,7 @@
         _ => "🌐"
     };
 
-    class FoodItem
+    class PlaceItem
     {
         public int Id { get; set; }
         public string Name { get; set; } = "";
@@ -285,8 +285,8 @@
     class TranslationItem
     {
         public int Id { get; set; }
-        public int FoodId { get; set; }
-        public string FoodName { get; set; } = "";
+        public int PlaceId { get; set; }
+        public string PlaceName { get; set; } = "";
         public string LanguageCode { get; set; } = "";
         public string Name { get; set; } = "";
         public string? Description { get; set; }

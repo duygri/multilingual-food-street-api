@@ -5,7 +5,7 @@
 @using FoodStreet.Client.DTOs
 @inject IGpsTrackingService GpsService
 @inject IFavoritesService FavoritesService
-@inject HttpClient Http
+@inject ILocationClientService LocationClient
 
 <div class="explore-page">
     <header class="explore-header">
@@ -16,19 +16,19 @@
     <div class="explore-content">
         <GpsTracker />
 
-        @if (allFoods.Count > 0)
+        @if (allLocations.Count > 0)
         {
             <div class="all-pois">
                 <h3>📍 Gần bạn</h3>
                 <div class="poi-grid">
-                    @foreach (var food in allFoods)
+                    @foreach (var loc in allLocations)
                     {
-                        var isFav = favoriteIds.Contains(food.Id);
+                        var isFav = favoriteIds.Contains(loc.Id);
                         <div class="poi-card">
                             <div class="poi-image-wrapper">
-                                @if (!string.IsNullOrEmpty(food.ImageUrl))
+                                @if (!string.IsNullOrEmpty(loc.ImageUrl))
                                 {
-                                    <img src="@food.ImageUrl" alt="@food.Name" class="poi-image" />
+                                    <img src="@loc.ImageUrl" alt="@loc.Name" class="poi-image" />
                                 }
                                 else
                                 {
@@ -37,12 +37,12 @@
                                 <div class="poi-badge">Mới ✨</div>
                             </div>
                             <div class="poi-info">
-                                <h4>@food.Name</h4>
-                                <p>@food.Description</p>
+                                <h4>@loc.Name</h4>
+                                <p>@loc.Description</p>
                                 <div class="poi-footer">
-                                    <span class="poi-price">@food.Price.ToString("N0") đ</span>
+                                    <span class="poi-address">📍 @(loc.Address ?? "Vĩnh Khánh, Q.4")</span>
                                     <button class="save-btn @(isFav ? "saved" : "")" 
-                                            @onclick="() => ToggleFavorite(food)"
+                                            @onclick="() => ToggleFavorite(loc)"
                                             title="@(isFav ? "Bỏ lưu" : "Lưu lại")">
                                         @(isFav ? "❤️" : "🤍")
                                     </button>
@@ -184,10 +184,9 @@
         justify-content: space-between;
     }
 
-    .poi-price {
-        font-weight: 700;
-        color: #ff6b35;
-        font-size: 16px;
+    .poi-address {
+        font-size: 13px;
+        color: #64748b;
     }
 
     .save-btn {
@@ -205,19 +204,18 @@
 </style>
 
 @code {
-    private List<FoodDto> allFoods = new();
+    private List<LocationDto> allLocations = new();
     private HashSet<int> favoriteIds = new();
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            var response = await Http.GetFromJsonAsync<List<FoodDto>>("api/food");
-            if (response != null) allFoods = response;
+            allLocations = await LocationClient.GetAllLocations();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading foods: {ex.Message}");
+            Console.WriteLine($"Error loading locations: {ex.Message}");
         }
 
         // Load saved favorites to show correct heart state
@@ -225,35 +223,13 @@
         favoriteIds = favs.Select(f => f.Id).ToHashSet();
     }
 
-    private async Task ToggleFavorite(FoodDto food)
+    private async Task ToggleFavorite(LocationDto loc)
     {
-        // Map FoodDto to LocationDto for favorites storage
-        var dto = new LocationDto
-        {
-            Id = food.Id,
-            Name = food.Name,
-            Description = food.Description ?? "",
-            ImageUrl = food.ImageUrl,
-            Latitude = food.Latitude,
-            Longitude = food.Longitude
-        };
+        await FavoritesService.ToggleFavoriteAsync(loc);
 
-        await FavoritesService.ToggleFavoriteAsync(dto);
-
-        if (favoriteIds.Contains(food.Id))
-            favoriteIds.Remove(food.Id);
+        if (favoriteIds.Contains(loc.Id))
+            favoriteIds.Remove(loc.Id);
         else
-            favoriteIds.Add(food.Id);
-    }
-
-    public class FoodDto
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = string.Empty;
-        public string? Description { get; set; }
-        public decimal Price { get; set; }
-        public string? ImageUrl { get; set; }
-        public double Latitude { get; set; }
-        public double Longitude { get; set; }
+            favoriteIds.Add(loc.Id);
     }
 }

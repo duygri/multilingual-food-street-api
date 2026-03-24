@@ -3,6 +3,12 @@
     "Windows Machine": {
       "commandName": "Project",
       "nativeDebugging": false
+    },
+    "Android Emulator": {
+      "commandName": "Project",
+      "commandLineArgs": "",
+      "dotnetRunMessages": true,
+      "launchBrowser": false
     }
   }
 }

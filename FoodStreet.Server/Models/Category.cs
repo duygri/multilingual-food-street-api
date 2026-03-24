@@ -7,8 +7,7 @@ namespace PROJECT_C_.Models
         public string? Icon { get; set; } // Emoji hoặc URL icon
         public string? Description { get; set; }
         
-        [System.Text.Json.Serialization.JsonIgnore]
-        public ICollection<Food> Foods { get; set; } = new List<Food>();
+        
         [System.Text.Json.Serialization.JsonIgnore]
         public ICollection<Location> Locations { get; set; } = new List<Location>();
     }

@@ -2,7 +2,6 @@ namespace PROJECT_C_.Models
 {
     /// <summary>
     /// Địa điểm / POI - do Seller tạo, Admin duyệt.
-    /// Mỗi Location có thể chứa nhiều Food.
     /// </summary>
     public class Location
     {
@@ -38,8 +37,6 @@ namespace PROJECT_C_.Models
         public Category? Category { get; set; }
 
         // Navigation properties
-        [System.Text.Json.Serialization.JsonIgnore]
-        public ICollection<Food> Foods { get; set; } = new List<Food>();
 
         [System.Text.Json.Serialization.JsonIgnore]
         public ICollection<LocationTranslation> Translations { get; set; } = new List<LocationTranslation>();

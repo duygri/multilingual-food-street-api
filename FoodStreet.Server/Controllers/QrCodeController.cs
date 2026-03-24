@@ -24,15 +24,15 @@ namespace PROJECT_C_.Controllers
         /// <summary>
         /// Generate QR code for a specific POI
         /// </summary>
-        [HttpGet("{foodId}")]
-        public async Task<IActionResult> GetQrCode(int foodId, [FromQuery] int size = 300)
+        [HttpGet("{locationId}")]
+        public async Task<IActionResult> GetQrCode(int locationId, [FromQuery] int size = 300)
         {
-            var food = await _context.Foods.FindAsync(foodId);
-            if (food == null) return NotFound("POI not found");
+            var location = await _context.Locations.FindAsync(locationId);
+            if (location == null) return NotFound("POI not found");
 
             // Generate deep link URL - this URL will play audio when scanned
             var baseUrl = _configuration["App:BaseUrl"] ?? "https://vinhkhanh.app";
-            var qrUrl = $"{baseUrl}/poi/{foodId}";
+            var qrUrl = $"{baseUrl}/poi/{locationId}";
 
             // Generate QR code
             using var qrGenerator = new QRCodeGenerator();
@@ -40,27 +40,27 @@ namespace PROJECT_C_.Controllers
             using var qrCode = new PngByteQRCode(qrCodeData);
             var qrCodeBytes = qrCode.GetGraphic(size / 33); // pixels per module
 
-            return File(qrCodeBytes, "image/png", $"qr-poi-{foodId}.png");
+            return File(qrCodeBytes, "image/png", $"qr-poi-{locationId}.png");
         }
 
         /// <summary>
         /// Generate QR code with custom label
         /// </summary>
-        [HttpGet("{foodId}/labeled")]
-        public async Task<IActionResult> GetLabeledQrCode(int foodId, [FromQuery] int size = 400)
+        [HttpGet("{locationId}/labeled")]
+        public async Task<IActionResult> GetLabeledQrCode(int locationId, [FromQuery] int size = 400)
         {
-            var food = await _context.Foods.FindAsync(foodId);
-            if (food == null) return NotFound("POI not found");
+            var location = await _context.Locations.FindAsync(locationId);
+            if (location == null) return NotFound("POI not found");
 
             var baseUrl = _configuration["App:BaseUrl"] ?? "https://vinhkhanh.app";
-            var qrUrl = $"{baseUrl}/poi/{foodId}";
+            var qrUrl = $"{baseUrl}/poi/{locationId}";
 
             using var qrGenerator = new QRCodeGenerator();
             var qrCodeData = qrGenerator.CreateQrCode(qrUrl, QRCodeGenerator.ECCLevel.Q);
             using var qrCode = new PngByteQRCode(qrCodeData);
             var qrCodeBytes = qrCode.GetGraphic(size / 33);
 
-            return File(qrCodeBytes, "image/png", $"qr-{food.Name.Replace(" ", "-")}.png");
+            return File(qrCodeBytes, "image/png", $"qr-{location.Name.Replace(" ", "-")}.png");
         }
 
         /// <summary>

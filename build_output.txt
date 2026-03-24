@@ -1,12 +1,12 @@
   Determining projects to restore...
   All projects are up-to-date for restore.
   FoodStreet.Server -> C:\Users\letro\source\repos\PROJECT C#\FoodStreet.Server\bin\Debug\net8.0\FoodStreet.Server.dll
-  FoodStreet.UI -> C:\Users\letro\source\repos\PROJECT C#\SharedUI\bin\Debug\net8.0\FoodStreet.UI.dll
-  FoodStreet.Client -> C:\Users\letro\source\repos\PROJECT C#\Frontend\bin\Debug\net8.0\FoodStreet.Client.dll
-  FoodStreet.Client (Blazor output) -> C:\Users\letro\source\repos\PROJECT C#\Frontend\bin\Debug\net8.0\wwwroot
+C:\Users\letro\source\repos\PROJECT C#\SharedUI\Pages\Admin\Tours.razor(711,18): error CS0246: The type or namespace name 'PlaceSimpleDto' could not be found (are you missing a using directive or an assembly reference?) [C:\Users\letro\source\repos\PROJECT C#\SharedUI\FoodStreet.UI.csproj]
 
-Build succeeded.
+Build FAILED.
+
+C:\Users\letro\source\repos\PROJECT C#\SharedUI\Pages\Admin\Tours.razor(711,18): error CS0246: The type or namespace name 'PlaceSimpleDto' could not be found (are you missing a using directive or an assembly reference?) [C:\Users\letro\source\repos\PROJECT C#\SharedUI\FoodStreet.UI.csproj]
     0 Warning(s)
-    0 Error(s)
+    1 Error(s)
 
-Time Elapsed 00:00:06.32
+Time Elapsed 00:00:03.37

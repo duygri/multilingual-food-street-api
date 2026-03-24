@@ -86,6 +86,7 @@ namespace PROJECT_C_.Controllers
         private async Task<List<NearbyPoiResponse>> GetNearbyPoisInternal(double lat, double lng, double radius)
         {
             var locations = await _context.Locations
+                .Include(l => l.AudioFiles)
                 .Where(l => l.IsApproved)
                 .ToListAsync();
 
@@ -99,6 +100,9 @@ namespace PROJECT_C_.Controllers
                     Longitude = l.Longitude,
                     Radius = l.Radius,
                     ImageUrl = l.ImageUrl,
+                    TtsScript = l.TtsScript,
+                    HasAudio = l.AudioFiles != null && l.AudioFiles.Any(),
+                    AudioUrl = l.AudioFiles != null && l.AudioFiles.Any() ? $"/api/audio/{l.AudioFiles.First().Id}" : null,
                     Distance = CalculateHaversineDistance(lat, lng, l.Latitude, l.Longitude),
                     IsInGeofence = CalculateHaversineDistance(lat, lng, l.Latitude, l.Longitude) <= l.Radius
                 })

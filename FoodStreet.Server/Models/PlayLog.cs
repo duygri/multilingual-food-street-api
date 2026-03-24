@@ -12,9 +12,9 @@ namespace PROJECT_C_.Models
         public int Id { get; set; }
 
         // POI được nghe
-        public int FoodId { get; set; }
-        [ForeignKey("FoodId")]
-        public Food? Food { get; set; }
+        public int LocationId { get; set; }
+        [ForeignKey("LocationId")]
+        public Location? Location { get; set; }
 
         // Thời gian
         public DateTime PlayedAt { get; set; } = DateTime.UtcNow;

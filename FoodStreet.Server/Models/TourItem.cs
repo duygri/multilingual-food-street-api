@@ -16,10 +16,10 @@ namespace PROJECT_C_.Models
         [ForeignKey("TourId")]
         public Tour? Tour { get; set; }
 
-        // Món ăn/POI tại điểm dừng
-        public int FoodId { get; set; }
-        [ForeignKey("FoodId")]
-        public Food? Food { get; set; }
+        // POI tại điểm dừng
+        public int LocationId { get; set; }
+        [ForeignKey("LocationId")]
+        public Location? Location { get; set; }
 
         // Thứ tự trong tour (1, 2, 3...)
         public int Order { get; set; }

@@ -32,7 +32,7 @@ namespace PROJECT_C_.Controllers
 
             var tours = await query
                 .Include(t => t.Items)
-                    .ThenInclude(i => i.Food)
+                    .ThenInclude(i => i.Location)
                 .OrderByDescending(t => t.CreatedAt)
                 .Select(t => new
                 {
@@ -47,8 +47,8 @@ namespace PROJECT_C_.Controllers
                     Items = t.Items.OrderBy(i => i.Order).Select(i => new
                     {
                         i.Id,
-                        i.FoodId,
-                        FoodName = i.Food != null ? i.Food.Name : "Unknown",
+                        i.LocationId,
+                        LocationName = i.Location != null ? i.Location.Name : "Unknown",
                         i.Order,
                         i.Note,
                         i.EstimatedStopMinutes
@@ -67,7 +67,7 @@ namespace PROJECT_C_.Controllers
         {
             var tour = await _context.Tours
                 .Include(t => t.Items)
-                    .ThenInclude(i => i.Food)
+                    .ThenInclude(i => i.Location)
                 .FirstOrDefaultAsync(t => t.Id == id);
 
             if (tour == null)
@@ -86,11 +86,11 @@ namespace PROJECT_C_.Controllers
                 Items = tour.Items.OrderBy(i => i.Order).Select(i => new
                 {
                     i.Id,
-                    i.FoodId,
-                    FoodName = i.Food?.Name,
-                    FoodImageUrl = i.Food?.ImageUrl,
-                    FoodLatitude = i.Food != null && i.Food.Location != null ? i.Food.Location.Latitude : (double?)null,
-                    FoodLongitude = i.Food != null && i.Food.Location != null ? i.Food.Location.Longitude : (double?)null,
+                    i.LocationId,
+                    LocationName = i.Location?.Name,
+                    LocationImageUrl = i.Location?.ImageUrl,
+                    LocationLatitude = i.Location != null ? i.Location.Latitude : (double?)null,
+                    LocationLongitude = i.Location != null ? i.Location.Longitude : (double?)null,
                     i.Order,
                     i.Note,
                     i.EstimatedStopMinutes
@@ -121,15 +121,15 @@ namespace PROJECT_C_.Controllers
             await _context.SaveChangesAsync();
 
             // Thêm các items nếu có
-            if (request.FoodIds != null && request.FoodIds.Any())
+            if (request.LocationIds != null && request.LocationIds.Any())
             {
                 int order = 1;
-                foreach (var foodId in request.FoodIds)
+                foreach (var locationId in request.LocationIds)
                 {
                     var item = new TourItem
                     {
                         TourId = tour.Id,
-                        FoodId = foodId,
+                        LocationId = locationId,
                         Order = order++,
                         EstimatedStopMinutes = 15
                     };
@@ -203,16 +203,16 @@ namespace PROJECT_C_.Controllers
             if (tour == null)
                 return NotFound(new { message = "Tour không tồn tại" });
 
-            var food = await _context.Foods.FindAsync(request.FoodId);
-            if (food == null)
-                return NotFound(new { message = "Món ăn không tồn tại" });
+            var location = await _context.Locations.FindAsync(request.LocationId);
+            if (location == null)
+                return NotFound(new { message = "Địa điểm không tồn tại" });
 
             var maxOrder = tour.Items.Any() ? tour.Items.Max(i => i.Order) : 0;
 
             var item = new TourItem
             {
                 TourId = id,
-                FoodId = request.FoodId,
+                LocationId = request.LocationId,
                 Order = maxOrder + 1,
                 Note = request.Note,
                 EstimatedStopMinutes = request.EstimatedStopMinutes
@@ -313,7 +313,7 @@ namespace PROJECT_C_.Controllers
         public int EstimatedDurationMinutes { get; set; } = 60;
         public double EstimatedDistanceKm { get; set; } = 1.0;
         public bool IsActive { get; set; } = true;
-        public List<int>? FoodIds { get; set; }
+        public List<int>? LocationIds { get; set; }
     }
 
     public class UpdateTourRequest
@@ -327,7 +327,7 @@ namespace PROJECT_C_.Controllers
 
     public class AddTourItemRequest
     {
-        public int FoodId { get; set; }
+        public int LocationId { get; set; }
         public string? Note { get; set; }
         public int EstimatedStopMinutes { get; set; } = 15;
     }
