@@ -2,7 +2,6 @@
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
 @inject ILocalizationService L
-@inject IFoodClientService FoodClient
 @inject IJSRuntime JS
 @inject AuthenticationStateProvider AuthStateProvider
 @inject INotificationService NotificationSvc
@@ -38,7 +37,7 @@
                                     <span class="nav-text">Quản lý POI</span>
                                 </NavLink>
                                 <NavLink class="nav-item" href="admin/tours">
-                                    <span class="nav-icon">🗺️</span>
+                                    <span class="nav-icon">🧳</span>
                                     <span class="nav-text">Quản lý Tour</span>
                                 </NavLink>
                             </Authorized>
@@ -68,6 +67,10 @@
                                 <NavLink class="nav-item" href="admin/history">
                                     <span class="nav-icon">📜</span>
                                     <span class="nav-text">Lịch sử sử dụng</span>
+                                </NavLink>
+                                <NavLink class="nav-item" href="admin/geofence-test">
+                                    <span class="nav-icon">🎯</span>
+                                    <span class="nav-text">Test Geofence</span>
                                 </NavLink>
                             </div>
                         </Authorized>
@@ -201,6 +204,7 @@
                 </footer>
             </main>
         </div>
+        <GlobalTourPlayer />
     </Authorized>
     
     <NotAuthorized>
@@ -915,8 +919,6 @@
                 var savedLang = await JS.InvokeAsync<string>("localStorage.getItem", "admin_language");
                 if (!string.IsNullOrEmpty(savedLang) && savedLang != L.CurrentLanguage)
                 {
-                    L.SetLanguage(savedLang);
-                    FoodClient.SetLanguage(savedLang);
                 }
             }
             catch { }
@@ -978,7 +980,6 @@
     private async Task SwitchLanguageAsync(string langCode)
     {
         L.SetLanguage(langCode);
-        FoodClient.SetLanguage(langCode);
         // Save to localStorage
         await JS.InvokeVoidAsync("localStorage.setItem", "admin_language", langCode);
         // Update UI instantly without page reload
