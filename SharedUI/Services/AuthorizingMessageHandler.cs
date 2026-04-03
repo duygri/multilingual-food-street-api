@@ -23,7 +23,7 @@ namespace FoodStreet.Client.Services
         {
             // Skip auth header for login/register endpoints
             var path = request.RequestUri?.PathAndQuery ?? "";
-            if (!path.Contains("/api/auth/login") && !path.Contains("/api/auth/register"))
+            if (!path.Contains("/api/content/auth/login") && !path.Contains("/api/content/auth/register"))
             {
                 var token = await _sessionStorage.GetItemAsync<string>(AccessTokenKey);
                 
