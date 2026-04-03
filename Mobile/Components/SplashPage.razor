@@ -1,0 +1,195 @@
+@page "/splash"
+@using FoodStreet.Client.Services
+@using FoodStreet.Mobile.Services
+@using Microsoft.Extensions.Logging
+@inject ILocalizationService Localization
+@inject ILocationClientService LocationService
+@inject IGpsTrackingService GpsService
+@inject AppStartupFlow Flow
+@inject HttpClient Http
+@inject ILogger<SplashPage> Logger
+@inject NavigationManager Navigation
+
+<div class="splash-container">
+    <div class="splash-logo">
+        <img src="images/app_icon.png" alt="FoodStreet" />
+    </div>
+
+    <h1 class="splash-title">Vĩnh Khánh</h1>
+    <p class="splash-subtitle">Thiên đường ẩm thực</p>
+
+    <div class="splash-steps">
+        @foreach (var step in _steps)
+        {
+            <div class="step @(step.Status)">
+                <span class="step-icon">@step.Icon</span>
+                <span class="step-label">@step.Label</span>
+                @if (step.Status == "running")
+                {
+                    <span class="spinner"></span>
+                }
+                else if (step.Status == "done")
+                {
+                    <span class="check">✓</span>
+                }
+                else if (step.Status == "warn")
+                {
+                    <span class="warn">⚠</span>
+                }
+            </div>
+        }
+    </div>
+
+    <p class="splash-elapsed">@(_result?.ElapsedMs > 0 ? $"{_result.ElapsedMs}ms" : "")</p>
+</div>
+
+<style>
+    .splash-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+        color: white;
+        padding: 32px 20px;
+        font-family: 'Inter', sans-serif;
+    }
+
+    .splash-logo img {
+        width: 96px;
+        height: 96px;
+        border-radius: 24px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        margin-bottom: 20px;
+    }
+
+    .splash-title {
+        font-size: 32px;
+        font-weight: 800;
+        margin: 0 0 4px;
+        letter-spacing: -0.5px;
+    }
+
+    .splash-subtitle {
+        font-size: 16px;
+        opacity: 0.85;
+        margin: 0 0 36px;
+    }
+
+    .splash-steps {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        width: 100%;
+        max-width: 320px;
+    }
+
+    .step {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 16px;
+        border-radius: 12px;
+        background: rgba(255,255,255,0.12);
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .step.done    { background: rgba(255,255,255,0.22); }
+    .step.running { background: rgba(255,255,255,0.18); }
+    .step.warn    { background: rgba(255,200,50,0.25); }
+    .step.pending { opacity: 0.5; }
+
+    .step-icon  { font-size: 18px; }
+    .step-label { flex: 1; }
+
+    .check { color: #a8ff78; font-weight: 700; }
+    .warn  { color: #ffe066; }
+
+    .spinner {
+        width: 16px; height: 16px;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+    }
+
+    @@keyframes spin { to { transform: rotate(360deg); } }
+
+    .splash-elapsed {
+        margin-top: 24px;
+        font-size: 12px;
+        opacity: 0.6;
+        height: 18px;
+    }
+</style>
+
+@code {
+    // ── Step descriptors (mirrors the 5 branches in AppStartupFlow) ──
+    private record StepInfo(string Icon, string Label, string Status);
+
+    private List<StepInfo> _steps = new()
+    {
+        new("📱", "App Init",         "pending"),
+        new("🗺️", "Navigation ready", "pending"),
+        new("🌐", "Ngôn ngữ",         "pending"),
+        new("📍", "GPS",              "pending"),
+        new("💾", "Offline Data",     "pending"),
+        new("🌐", "Online Data",      "pending"),
+        new("🔥", "Hotset",           "pending"),
+        new("☀️", "Warmup",           "pending"),
+    };
+
+    private StartupResult? _result;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        // ── Step 1: App Init ────────────────────────────────────────
+        SetStatus(0, "running");
+        var initOk = await AppStartupFlow.InitAppAsync(Logger);
+        SetStatus(0, initOk ? "done" : "warn");
+
+        // ── Step 2: Navigation ──────────────────────────────────────
+        SetStatus(1, "running");
+        AppStartupFlow.EnsureRouterReady(Logger);
+        SetStatus(1, "done");
+
+        // ── Step 3: Language ────────────────────────────────────────
+        SetStatus(2, "running");
+        var lang = await AppStartupFlow.ResolveLangAsync(Localization, Logger);
+        SetStatus(2, "done");
+
+        // ── Step 4-8: Parallel Load — all 5 branches run at once ────
+        SetStatus(3, "running");   // GPS
+        SetStatus(4, "running");   // Offline
+        SetStatus(5, "running");   // Online
+        SetStatus(6, "running");   // Hotset
+        SetStatus(7, "running");   // Warmup
+
+        // Flow is injected via DI (registered in MauiProgram.cs)
+        _result = await Flow.RunParallelLoadAsync(lang);
+
+        SetStatus(3, _result.GpsReady    ? "done" : "warn");
+        SetStatus(4, _result.OfflinePois > 0 ? "done" : "warn");
+        SetStatus(5, _result.OnlinePois  > 0 ? "done" : "warn");
+        SetStatus(6, _result.HotsetReady ? "done" : "warn");
+        SetStatus(7, _result.WarmupReady ? "done" : "warn");
+
+        // ── Navigate to main UI ─────────────────────────────────────
+        await Task.Delay(400);   // let user see all green checkmarks
+        Navigation.NavigateTo(
+            _result.IsReady ? "/geofence-guide" : "/offline-notice",
+            replace: true);
+    }
+
+    private void SetStatus(int index, string status)
+    {
+        var old   = _steps[index];
+        _steps[index] = old with { Status = status };
+        StateHasChanged();
+    }
+}
