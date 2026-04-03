@@ -7,21 +7,21 @@
 @using FoodStreet.Client.DTOs
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="mb-0">📱 QR Code Generator</h3>
+    <h3 class="mb-0">QR Code Generator</h3>
     <div class="btn-group">
         <button class="btn btn-admin btn-admin-primary" @onclick="DownloadSelected" disabled="@(!selectedIds.Any())">
-            📥 Download Selected (@selectedIds.Count)
+            Download Selected (@selectedIds.Count)
         </button>
         <button class="btn btn-outline-secondary" @onclick="PrintSelected" disabled="@(!selectedIds.Any())">
-            🖨️ Print Sheet
+            Print Sheet
         </button>
     </div>
 </div>
 
 <!-- Info Card -->
 <div class="alert alert-info mb-4">
-    <strong>💡 Hướng dẫn:</strong> QR codes này khi quét sẽ mở trang nghe audio của món ăn. 
-    Dán tại các điểm dừng xe buýt Khánh Hội, Vĩnh Hội, Xóm Chiếu để du khách quét và nghe ngay!
+    <strong>Hướng dẫn:</strong> QR code này khi quét sẽ mở đúng trang POI và ghi nhận nguồn vào từ QR.
+    Bạn có thể dán tại từng quán hoặc điểm giới thiệu để du khách đăng nhập rồi nghe thuyết minh ngay.
 </div>
 
 <!-- QR Code Grid -->
@@ -36,7 +36,7 @@
     else if (!locations.Any())
     {
         <div class="text-center py-5">
-            <div style="font-size: 4rem;">📱</div>
+            <div class="text-muted" style="font-size: 1.5rem;">QR</div>
             <p class="text-muted">Chưa có địa điểm. Tạo địa điểm trước!</p>
         </div>
     }
@@ -74,26 +74,26 @@
                                  style="max-width: 200px;" />
                             
                             <p class="small text-muted mb-2">
-                                📍 @loc.Latitude.ToString("F4"), @loc.Longitude.ToString("F4")
+                                @loc.Latitude.ToString("F4"), @loc.Longitude.ToString("F4")
                             </p>
                             
                             @if (loc.HasAudio)
                             {
-                                <span class="badge bg-success">🎵 Có audio</span>
+                                <span class="badge bg-success">Có audio</span>
                             }
                             else
                             {
-                                <span class="badge bg-warning text-dark">⚠️ Chưa có audio</span>
+                                <span class="badge bg-warning text-dark">Chưa có audio</span>
                             }
                         </div>
                         <div class="card-footer">
                             <div class="btn-group btn-group-sm w-100">
                                 <a href="@GetQrCodeUrl(loc.Id)" download="@($"qr-loc-{loc.Id}.png")" 
                                    class="btn btn-outline-primary" title="Download PNG">
-                                    📥 PNG
+                                    PNG
                                 </a>
                                 <button class="btn btn-outline-info" @onclick="async () => await CopyLink(loc.Id)" title="Copy Link">
-                                    🔗 Copy
+                                    Copy
                                 </button>
                             </div>
                         </div>
@@ -111,7 +111,7 @@
         <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content admin-modal">
                 <div class="modal-header">
-                    <h5 class="modal-title">🖨️ Print Sheet Preview</h5>
+                    <h5 class="modal-title">Print Sheet Preview</h5>
                     <button type="button" class="btn-close" @onclick="ClosePrintModal"></button>
                 </div>
                 <div class="modal-body" id="printArea">
@@ -132,7 +132,7 @@
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-outline-secondary" @onclick="ClosePrintModal">Close</button>
-                    <button class="btn btn-admin btn-admin-primary" onclick="window.print()">🖨️ Print</button>
+                    <button class="btn btn-admin btn-admin-primary" onclick="window.print()">Print</button>
                 </div>
             </div>
         </div>
@@ -169,6 +169,13 @@
         return $"{apiBase}/api/qrcode/{locationId}?size={size}";
     }
 
+    private string GetPoiEntryUrl(int locationId)
+    {
+        var baseUri = Http.BaseAddress ?? new Uri(NavigationManager.BaseUri);
+        var appBase = $"{baseUri.Scheme}://{baseUri.Host}:{baseUri.Port}";
+        return $"{appBase}/poi/{locationId}?entry=qr_scan";
+    }
+
     private void ToggleSelection(int id)
     {
         if (selectedIds.Contains(id))
@@ -203,7 +210,7 @@
 
     private async Task CopyLink(int locationId)
     {
-        var url = GetQrCodeUrl(locationId);
+        var url = GetPoiEntryUrl(locationId);
         await JS.InvokeVoidAsync("navigator.clipboard.writeText", url);
     }
 }
