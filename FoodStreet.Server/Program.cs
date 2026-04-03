@@ -5,9 +5,11 @@ using PROJECT_C_.Services.Interfaces;
 using PROJECT_C_.Configuration;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using FoodStreet.Server.Hubs;
+using FoodStreet.Server.Services.GoogleCloud;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,6 +18,8 @@ var builder = WebApplication.CreateBuilder(args);
 // ========================================
 builder.Services.Configure<JwtSettings>(
     builder.Configuration.GetSection(JwtSettings.SectionName));
+builder.Services.Configure<GoogleCloudOptions>(
+    builder.Configuration.GetSection(GoogleCloudOptions.SectionName));
 
 var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>()
     ?? throw new InvalidOperationException("JwtSettings not configured in appsettings.json");
@@ -100,6 +104,8 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSignalR();
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "App_Data", "DataProtection-Keys")));
 
 // Claims Transformation: đọc JWT trực tiếp từ header, thêm role claims
 builder.Services.AddTransient<Microsoft.AspNetCore.Authentication.IClaimsTransformation, 
@@ -137,6 +143,13 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // ========================================
 builder.Services.AddScoped<ILocationService, LocationService>();
 builder.Services.AddScoped<IDistanceCalculator, DistanceCalculator>();
+builder.Services.AddSingleton<IGoogleCloudAccessTokenProvider, GoogleCloudAccessTokenProvider>();
+builder.Services.AddHttpClient<FoodStreet.Server.Services.Audio.GoogleTranslator>();
+builder.Services.AddHttpClient<FoodStreet.Server.Services.Interfaces.ITtsService, FoodStreet.Server.Services.Audio.GoogleTtsService>();
+
+// ========================================
+builder.Services.AddSingleton<FoodStreet.Server.Services.Audio.AudioTaskManager>();
+builder.Services.AddHostedService<FoodStreet.Server.Services.Audio.AudioTaskManager>(p => p.GetRequiredService<FoodStreet.Server.Services.Audio.AudioTaskManager>());
 
 // ========================================
 // SWAGGER / OPENAPI
@@ -146,9 +159,9 @@ builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo 
     { 
-        Title = "FoodStreet API", 
+        Title = "Vinh Khanh Narration API", 
         Version = "v1",
-        Description = "Multilingual Food Street Guide API with JWT Authentication"
+        Description = "Multilingual narration platform API for Vinh Khanh food street, built with JWT authentication."
     });
     
     options.CustomSchemaIds(type => (type.FullName ?? type.Name).Replace("+", "."));
@@ -181,18 +194,58 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
+// ============================================================
+// TIER 1 — Security Config Check (runs at build time)
+// ============================================================
+var bootstrapLogger = LoggerFactory.Create(b => b.AddConsole()).CreateLogger("Startup");
+FoodStreet.Server.Infrastructure.StartupValidator.ValidateSecurityConfig(builder, bootstrapLogger);
+
 // ========================================
 // BUILD & CONFIGURE MIDDLEWARE
 // ========================================
 var app = builder.Build();
 
+var logger = app.Services.GetRequiredService<ILogger<Program>>();
+var applicationUrls =
+    builder.Configuration["ASPNETCORE_URLS"]
+    ?? builder.Configuration["urls"]
+    ?? string.Empty;
+var hasHttpsListener =
+    applicationUrls.Contains("https://", StringComparison.OrdinalIgnoreCase);
+
+// ============================================================
+// TIER 2 — Database Connection & Migrations
+// ============================================================
+await FoodStreet.Server.Infrastructure.StartupValidator.EnsureDatabaseAsync(app.Services, logger);
+
+// ============================================================
+// TIER 3 — Data Seeding
+// ============================================================
+await FoodStreet.Server.Infrastructure.StartupValidator.SeedDataAsync(app.Services, logger);
+
+// ============================================================
+// TIER 4 — Index Validation & Warm-up
+// ============================================================
+await FoodStreet.Server.Infrastructure.StartupValidator.EnsureIndexesAsync(app.Services, logger);
+
+logger.LogInformation("=================================================");
+logger.LogInformation("  🟢 SERVER READY — All startup tiers passed.");
+logger.LogInformation("  Router groups: content | audio | admin | owner | localization | maps");
+logger.LogInformation("=================================================");
+
+// ========================================
+// HTTP MIDDLEWARE PIPELINE
+// ========================================
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment() || hasHttpsListener)
+{
+    app.UseHttpsRedirection();
+}
 app.UseCors("AllowBlazor");
 app.UseStaticFiles();
 
@@ -202,8 +255,5 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<NotificationHub>("/hubs/notification");
-
-// Seed sample data
-await SeedData.InitializeAsync(app.Services);
 
 app.Run();
