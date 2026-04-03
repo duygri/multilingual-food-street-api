@@ -2,21 +2,34 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using FoodStreet.Server.Constants;
 using PROJECT_C_.DTOs;
 using FoodStreet.Server.Extensions;
+using Microsoft.AspNetCore.SignalR;
+using PROJECT_C_.Data;
+using PROJECT_C_.Models;
+using FoodStreet.Server.Hubs;
 
 namespace PROJECT_C_.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/admin/users")]
+    [Route("api/user")]
     [ApiController]
     [Authorize]
     public class UserController : ControllerBase
     {
         private readonly UserManager<IdentityUser> _userManager;
+        private readonly AppDbContext _context;
+        private readonly IHubContext<NotificationHub> _hubContext;
 
-        public UserController(UserManager<IdentityUser> userManager)
+        public UserController(
+            UserManager<IdentityUser> userManager,
+            AppDbContext context,
+            IHubContext<NotificationHub> hubContext)
         {
             _userManager = userManager;
+            _context = context;
+            _hubContext = hubContext;
         }
 
         [HttpGet]
@@ -42,7 +55,7 @@ namespace PROJECT_C_.Controllers
         }
 
         /// <summary>
-        /// Admin tạo user mới (gán role Admin hoặc Seller)
+        /// Admin tạo user mới (gán role Admin hoặc POI Owner)
         /// </summary>
         [HttpPost("create")]
         public async Task<IActionResult> CreateUser([FromBody] CreateUserRequest request)
@@ -51,9 +64,11 @@ namespace PROJECT_C_.Controllers
             if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
                 return BadRequest(new { message = "Email và mật khẩu không được để trống" });
 
-            var allowedRoles = new[] { "Admin", "Seller" };
-            if (!allowedRoles.Contains(request.Role))
-                return BadRequest(new { message = "Role không hợp lệ. Chỉ chấp nhận: Admin, Seller" });
+            request.Role = AppRoles.NormalizeForPersistence(request.Role);
+            if (request.Role == AppRoles.Tourist)
+            {
+                return BadRequest(new { message = "Role không hợp lệ. Chỉ chấp nhận: Admin, POI Owner" });
+            }
 
             var user = new IdentityUser
             {
@@ -74,26 +89,63 @@ namespace PROJECT_C_.Controllers
 
             await _userManager.AddToRoleAsync(user, request.Role);
 
-            return Ok(new { message = $"Tạo tài khoản {request.Role} thành công" });
+            return Ok(new { message = $"Tạo tài khoản {AppRoles.ToDisplayName(request.Role)} thành công" });
         }
 
         [HttpPost("{id}/approve")]
-        public async Task<IActionResult> ApproveSeller(string id)
+        public async Task<IActionResult> ApprovePoiOwner(string id)
         {
             if (!User.IsAdminRole()) return Forbid();
 
             var user = await _userManager.FindByIdAsync(id);
             if (user == null) return NotFound();
 
-            if (!await _userManager.IsInRoleAsync(user, "Seller"))
-                return BadRequest(new { message = "User is not a seller" });
+            if (!await _userManager.IsInRoleAsync(user, AppRoles.PoiOwner))
+                return BadRequest(new { message = "User is not a POI Owner" });
 
             if (user.LockoutEnd == null || user.LockoutEnd <= DateTimeOffset.UtcNow)
-                return BadRequest(new { message = "Seller is already active" });
+                return BadRequest(new { message = "POI Owner is already active" });
 
             user.LockoutEnd = null;
             await _userManager.UpdateAsync(user);
-            return Ok(new { message = "Seller approved successfully" });
+
+            var actorName = User.Identity?.Name ?? "Admin";
+            var notification = new Notification
+            {
+                UserId = user.Id,
+                Title = "Tài khoản POI Owner đã được duyệt ✅",
+                Message = "Tài khoản của bạn đã được kích hoạt. Bạn có thể đăng nhập và quản lý nội dung POI.",
+                Type = NotificationType.System,
+                SenderName = actorName
+            };
+            _context.Notifications.Add(notification);
+            await _context.SaveChangesAsync();
+
+            await _hubContext.Clients.Group(NotificationHubGroups.User(user.Id)).SendAsync("ReceiveNotification", new
+            {
+                notification.Id,
+                notification.Title,
+                notification.Message,
+                Type = notification.Type.ToString(),
+                notification.CreatedAt,
+                notification.RelatedId,
+                notification.SenderName
+            });
+
+            await _hubContext.SendRealtimeToUserAsync(
+                user.Id,
+                NotificationHubEvents.ModerationChanged,
+                new RealtimeActivityMessage
+                {
+                    EntityType = "owner_account",
+                    EntityId = null,
+                    Status = "approved",
+                    Title = "Tài khoản POI Owner đã được duyệt",
+                    Message = $"Tài khoản {user.Email} đã được kích hoạt.",
+                    TriggeredBy = actorName
+                });
+
+            return Ok(new { message = "POI Owner approved successfully" });
         }
 
         [HttpPost("{id}/toggle-lock")]
@@ -103,7 +155,7 @@ namespace PROJECT_C_.Controllers
             if (user == null) return NotFound();
 
             // Cannot lock Admin to prevent lockout
-            if (await _userManager.IsInRoleAsync(user, "Admin"))
+            if (await _userManager.IsInRoleAsync(user, AppRoles.Admin))
                 return BadRequest("Cannot lock Admin account");
 
             bool wasLocked = user.LockoutEnd.HasValue && user.LockoutEnd > DateTimeOffset.UtcNow;
@@ -128,7 +180,7 @@ namespace PROJECT_C_.Controllers
             var user = await _userManager.FindByIdAsync(id);
             if (user == null) return NotFound();
 
-            if (await _userManager.IsInRoleAsync(user, "Admin"))
+            if (await _userManager.IsInRoleAsync(user, AppRoles.Admin))
                 return BadRequest("Cannot delete Admin account");
 
             await _userManager.DeleteAsync(user);
