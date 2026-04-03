@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PRD & UML - Thuyết Minh Đa Ngôn Ngữ Vĩnh Khánh</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#08111f;--surface:#0f1b2e;--card:#13233b;--card-2:#172b48;--border:#28405e;
+  --accent:#f59e0b;--accent-2:#38bdf8;--good:#22c55e;--warn:#fb7185;
+  --text:#e2e8f0;--muted:#94a3b8;--dim:#64748b;
+}
+html{scroll-behavior:smooth}
+body{font-family:"Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+a{color:var(--accent-2);text-decoration:none}
+code{font-family:"Cascadia Code","Consolas",monospace;background:rgba(148,163,184,.12);padding:2px 6px;border-radius:6px}
+.sidebar{position:fixed;top:0;left:0;width:290px;height:100vh;overflow-y:auto;background:linear-gradient(180deg,#0c1728,#0a1424);border-right:1px solid var(--border);padding:22px 0;z-index:20}
+.brand{padding:0 22px 18px;font-size:18px;font-weight:800;line-height:1.35}
+.brand small{display:block;color:var(--muted);font-size:12px;font-weight:600;margin-top:6px}
+.nav-group{margin-bottom:12px}
+.nav-title{padding:8px 22px;color:var(--dim);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.4px}
+.nav-link{display:block;padding:8px 22px 8px 34px;color:var(--muted);font-size:13px;border-left:3px solid transparent;transition:.2s}
+.nav-link:hover,.nav-link.active{background:rgba(245,158,11,.08);color:var(--text);border-left-color:var(--accent)}
+.main{margin-left:290px;padding:42px 48px 80px}
+section{margin-bottom:54px}
+h1{font-size:34px;font-weight:900;line-height:1.2;margin-bottom:10px;background:linear-gradient(135deg,var(--accent),#fda4af 70%,var(--accent-2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+h2{font-size:24px;font-weight:800;margin:28px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+h3{font-size:17px;font-weight:700;margin:20px 0 10px;color:var(--accent)}
+h4{font-size:14px;font-weight:700;margin:10px 0 6px;color:var(--accent-2)}
+p,li{font-size:14px;color:var(--muted)}
+ul{padding-left:18px}
+.subtitle{font-size:14px;color:var(--muted);margin-bottom:28px}
+.hero{background:radial-gradient(circle at top right,rgba(56,189,248,.14),transparent 35%),linear-gradient(135deg,#0d1626,#152845);border:1px solid var(--border);border-radius:18px;padding:28px 30px;margin-bottom:28px}
+.stats{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-top:20px}
+.stat{background:rgba(19,35,59,.72);border:1px solid var(--border);border-radius:14px;padding:18px 14px;text-align:center}
+.stat .num{font-size:24px;font-weight:900;color:var(--accent)}
+.stat .label{font-size:12px;color:var(--muted);margin-top:4px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:16px}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px;margin:10px 0 18px}
+th{text-align:left;padding:10px 14px;background:var(--card-2);color:var(--accent);font-weight:700;border-bottom:1px solid var(--border)}
+td{padding:9px 14px;border-bottom:1px solid rgba(40,64,94,.7);color:var(--muted);vertical-align:top}
+tr:hover td{background:rgba(19,35,59,.32)}
+.badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700}
+.badge-blue{background:rgba(56,189,248,.15);color:var(--accent-2)}
+.badge-accent{background:rgba(245,158,11,.15);color:var(--accent)}
+.badge-red{background:rgba(251,113,133,.15);color:var(--warn)}
+.alert{border-left:4px solid var(--accent);background:rgba(245,158,11,.08);padding:14px 16px;border-radius:0 10px 10px 0;margin:14px 0}
+.alert.info{border-color:var(--accent-2);background:rgba(56,189,248,.08)}
+.module-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:14px 0}
+.module{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;min-height:150px}
+.module .icon{font-size:24px;margin-bottom:6px}
+.module .name{font-size:14px;font-weight:800;color:var(--text)}
+.module .desc{font-size:12px;color:var(--muted);margin-top:4px}
+.code-block{background:#0b1220;border:1px solid var(--border);border-radius:12px;padding:16px;font-family:"Cascadia Code","Consolas",monospace;font-size:12.5px;white-space:pre;overflow-x:auto;color:#dbe4ee;margin:14px 0}
+.diagram{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;margin:16px 0;overflow-x:auto}
+.diagram .mermaid{display:flex;justify-content:center}
+.timeline{position:relative;padding-left:28px;margin:16px 0}
+.timeline::before{content:"";position:absolute;left:8px;top:0;bottom:0;width:2px;background:var(--accent)}
+.timeline-item{position:relative;margin-bottom:18px}
+.timeline-item::before{content:"";position:absolute;left:-28px;top:7px;width:12px;height:12px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px rgba(245,158,11,.14)}
+.timeline-item h4{margin:0 0 4px;color:var(--text)}
+.timeline-item p{margin:0}
+.footer{text-align:center;color:var(--dim);font-size:12px;padding-top:28px;border-top:1px solid var(--border)}
+@media(max-width:1100px){.stats{grid-template-columns:repeat(3,1fr)}.module-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:900px){.sidebar{display:none}.main{margin-left:0;padding:20px}.grid-2,.grid-3,.module-grid,.stats{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<nav class="sidebar">
+  <div class="brand">
+    PRD & UML
+    <small>Thuyết minh đa ngôn ngữ Vĩnh Khánh</small>
+  </div>
+  <div class="nav-group">
+    <div class="nav-title">PRD</div>
+    <a class="nav-link" href="#overview">Tổng quan</a>
+    <a class="nav-link" href="#vision">Định vị & Mục tiêu</a>
+    <a class="nav-link" href="#scope">Phạm vi & Tác nhân</a>
+    <a class="nav-link" href="#capabilities">Năng lực cốt lõi</a>
+    <a class="nav-link" href="#architecture">Kiến trúc</a>
+    <a class="nav-link" href="#data-model">Mô hình dữ liệu</a>
+    <a class="nav-link" href="#requirements">Yêu cầu chức năng</a>
+    <a class="nav-link" href="#nfr">Yêu cầu phi chức năng</a>
+    <a class="nav-link" href="#api">Module API</a>
+    <a class="nav-link" href="#flows">Luồng vận hành</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-title">UML</div>
+    <a class="nav-link" href="#uml-usecase">Use Case (Ca sử dụng)</a>
+    <a class="nav-link" href="#uml-class">Sơ đồ lớp</a>
+    <a class="nav-link" href="#uml-sequence">Sơ đồ tuần tự</a>
+    <a class="nav-link" href="#uml-activity">Sơ đồ hoạt động</a>
+    <a class="nav-link" href="#uml-state">Sơ đồ trạng thái</a>
+  </div>
+</nav>
+
+<main class="main">
+  <section id="overview">
+    <div class="hero">
+      <h1>PRD & UML - Nền tảng thuyết minh đa ngôn ngữ khu ẩm thực Vĩnh Khánh</h1>
+      <p class="subtitle">Tài liệu đặc tả sản phẩm và UML theo hướng C# / ASP.NET Core / Blazor / .NET MAUI / PostgreSQL / SignalR, tập trung vào trải nghiệm thuyết minh đa ngôn ngữ cho khu ẩm thực Vĩnh Khánh, Quận 4.</p>
+      <div class="alert">
+        Tài liệu này sử dụng thuật ngữ chuẩn cho sản phẩm: <strong>POI</strong>, <strong>POI Owner</strong>, <strong>Tourist</strong>, <strong>POI Content</strong>, <strong>Audio TTS</strong>, <strong>GPS / Geofence</strong>, <strong>Tour</strong>, <strong>QR Code</strong>.
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="num">3</div><div class="label">Tác nhân chính</div></div>
+        <div class="stat"><div class="num">8</div><div class="label">Module cốt lõi</div></div>
+        <div class="stat"><div class="num">10</div><div class="label">Bảng dữ liệu chính</div></div>
+        <div class="stat"><div class="num">Login</div><div class="label">Du khách bắt buộc</div></div>
+        <div class="stat"><div class="num">RT</div><div class="label">SignalR Realtime</div></div>
+        <div class="stat"><div class="num">.NET</div><div class="label">Stack định hướng</div></div>
+      </div>
+    </div>
+
+    <div class="grid-3">
+      <div class="card">
+        <h3>Du khách</h3>
+        <p>Đăng nhập, chọn ngôn ngữ, khám phá bản đồ, quét QR, nghe thuyết minh audio và tham gia tour trải nghiệm tại khu ẩm thực Vĩnh Khánh.</p>
+      </div>
+      <div class="card">
+        <h3>POI Owner</h3>
+        <p>Quản lý thông tin điểm ăn uống, menu, nội dung giới thiệu, hình ảnh, bản dịch và audio narration cho điểm mình được gán.</p>
+      </div>
+      <div class="card">
+        <h3>Admin</h3>
+        <p>Quản trị vai trò, duyệt nội dung, giám sát hoạt động, điều phối dữ liệu POI, tour, QR code và sự kiện realtime của toàn hệ thống.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="vision">
+    <h2>1. Định vị sản phẩm & Mục tiêu</h2>
+    <div class="card">
+      <h3>Tuyên bố sản phẩm</h3>
+      <p>Hệ thống là nền tảng thuyết minh đa ngôn ngữ cho khu ẩm thực Vĩnh Khánh, Quận 4, cho phép du khách tiếp cận nội dung số hóa của từng POI thông qua bản đồ, QR code, tour trải nghiệm và audio narration, trong khi POI Owner và Admin có thể vận hành nội dung trên một nền tảng C# / .NET thống nhất.</p>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Mục tiêu chính</h3>
+        <ul>
+          <li>Số hóa POI ẩm thực thành các hồ sơ nội dung có cấu trúc và đa ngôn ngữ.</li>
+          <li>Tạo trải nghiệm nghe thuyết minh theo ngôn ngữ và bối cảnh vị trí.</li>
+          <li>Kết nối trải nghiệm tại chỗ qua GPS, geofence, QR code và tour.</li>
+          <li>Hỗ trợ quản trị nội dung tập trung cho Admin và POI Owner.</li>
+          <li>Tạo một sản phẩm có tính demo, tính vận hành và tính bảo vệ đề tài tốt hơn.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Vấn đề cần giải quyết</h3>
+        <ul>
+          <li>Nội dung giới thiệu điểm ăn uống hiện đang rời rạc và thiếu chuẩn hóa.</li>
+          <li>Du khách quốc tế cần một kênh tiếp cận đa ngôn ngữ nhanh, rõ và dễ sử dụng.</li>
+          <li>Trải nghiệm khám phá khu ẩm thực chưa được dẫn dắt bằng dữ liệu số.</li>
+          <li>Chủ điểm ăn uống chưa có công cụ cập nhật nội dung theo một chuẩn chung.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="alert info">
+      Định hướng này <strong>không đổi sản phẩm</strong> sang hướng khác; nó giữ nguyên bản sắc hiện tại của dự án, nhưng nâng cấp cách mô tả để sản phẩm rõ ràng, tập trung và chuyên nghiệp hơn.
+    </div>
+  </section>
+
+  <section id="scope">
+    <h2>2. Phạm vi, Tác nhân & Quy ước tên gọi</h2>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Tác nhân</th><th>Mô tả</th><th>Trách nhiệm chính</th><th>Trạng thái đăng nhập</th></tr>
+        <tr><td><span class="badge badge-blue">Tourist</span></td><td>Du khách sử dụng hệ thống để khám phá Vĩnh Khánh</td><td>Xem bản đồ, nghe TTS, quét QR, tham gia tour, nhận realtime update</td><td>Bắt buộc đăng nhập</td></tr>
+        <tr><td><span class="badge badge-accent">POI Owner</span></td><td>Chủ điểm ăn uống hoặc đối tác quản lý điểm được gán</td><td>Cập nhật POI, menu, nội dung đa ngôn ngữ, media</td><td>Đăng nhập + được phân quyền</td></tr>
+        <tr><td><span class="badge badge-red">Admin</span></td><td>Quản trị viên hệ thống</td><td>Duyệt nội dung, quản lý users, role, QR, tour, dashboard</td><td>Đăng nhập + full access</td></tr>
+      </table>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Phạm vi MVP</h3>
+        <ul>
+          <li>Đăng nhập và phân quyền.</li>
+          <li>POI content đa ngôn ngữ.</li>
+          <li>Map discovery và chi tiết POI.</li>
+          <li>Audio TTS cho POI.</li>
+          <li>QR code mở đúng nội dung.</li>
+          <li>Tour với nhiều điểm dừng.</li>
+          <li>SignalR thông báo và refresh nội dung.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Quy ước tên gọi chuẩn</h3>
+        <div class="table-wrap">
+          <table>
+            <tr><th>Tên trong code cũ</th><th>Tên PRD chuẩn</th></tr>
+            <tr><td><code>Seller</code></td><td><code>POI Owner</code></td></tr>
+            <tr><td><code>Location</code></td><td><code>POI</code></td></tr>
+            <tr><td><code>LocationTranslation</code></td><td><code>POITranslation</code></td></tr>
+            <tr><td><code>PlayLog</code></td><td><code>VisitEvent / AudioPlayEvent</code></td></tr>
+            <tr><td><code>User</code></td><td><code>Tourist</code> nếu nhìn theo nghiệp vụ trải nghiệm</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="capabilities">
+    <h2>3. Năng lực cốt lõi</h2>
+    <div class="module-grid">
+      <div class="module">
+        <div class="icon">📍</div>
+        <div class="name">GPS / Geofence</div>
+        <div class="desc">Xác định vị trí hiện tại, tính khoảng cách tới POI và kích hoạt gợi ý nội dung theo khu vực.</div>
+      </div>
+      <div class="module">
+        <div class="icon">📝</div>
+        <div class="name">POI Content</div>
+        <div class="desc">Hồ sơ số hóa cho từng điểm ẩm thực gồm mô tả, câu chuyện, menu, hình ảnh, thời gian mở cửa và nội dung đa ngôn ngữ.</div>
+      </div>
+      <div class="module">
+        <div class="icon">🔊</div>
+        <div class="name">Audio TTS</div>
+        <div class="desc">Phát thuyết minh bằng nhiều ngôn ngữ; có fallback về nội dung text nếu audio chưa sẵn sàng.</div>
+      </div>
+      <div class="module">
+        <div class="icon">🗺️</div>
+        <div class="name">Tour</div>
+        <div class="desc">Gom nhiều POI thành hành trình có thứ tự, thời lượng, nội dung dẫn dắt và tiến trình khám phá.</div>
+      </div>
+      <div class="module">
+        <div class="icon">🔳</div>
+        <div class="name">QR Code</div>
+        <div class="desc">Mỗi POI hoặc Tour có thể được mở nhanh bằng QR, tạo entry point đơn giản tại chỗ.</div>
+      </div>
+      <div class="module">
+        <div class="icon">🌐</div>
+        <div class="name">Localization</div>
+        <div class="desc">Hỗ trợ nội dung theo <code>vi</code>, <code>en</code>, <code>ja</code>, <code>ko</code>, <code>zh</code> và fallback ngôn ngữ mặc định.</div>
+      </div>
+      <div class="module">
+        <div class="icon">📡</div>
+        <div class="name">SignalR Realtime</div>
+        <div class="desc">Thông báo cập nhật nội dung, quét QR, xuất bản tour, trạng thái kiểm duyệt và refresh giao diện đang online.</div>
+      </div>
+      <div class="module">
+        <div class="icon">📊</div>
+        <div class="name">Analytics</div>
+        <div class="desc">Ghi nhận lượt xem POI, lượt nghe audio, lượt quét QR, lượt tham gia tour để phục vụ dashboard.</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="architecture">
+    <h2>4. Kiến trúc hệ thống</h2>
+    <p>Hệ thống được định hướng theo <strong>modular monolith</strong> trên <code>ASP.NET Core Web API</code>, kết hợp <code>Blazor WebAssembly</code> cho web, <code>.NET MAUI Blazor Hybrid</code> cho mobile, và <code>SharedUI</code> để tái sử dụng component và logic hiển thị được chia sẻ hợp lý.</p>
+
+    <div class="code-block">Định hướng solution
+FoodStreet.Server      -> ASP.NET Core Web API, EF Core, Identity, JWT, SignalR
+Frontend               -> Blazor WebAssembly cho web portal và tourist web
+Mobile                 -> .NET MAUI Blazor Hybrid cho trải nghiệm di động
+SharedUI               -> Razor Class Library chia sẻ component, DTO, auth state, API client
+PostgreSQL             -> Nguồn dữ liệu trung tâm</div>
+
+    <div class="module-grid">
+      <div class="module"><div class="icon">🔐</div><div class="name">Auth Module</div><div class="desc">Identity, JWT, kiểm tra role, khôi phục session, gate bắt buộc đăng nhập cho Tourist.</div></div>
+      <div class="module"><div class="icon">📍</div><div class="name">POI Module</div><div class="desc">CRUD POI, dữ liệu map, gán owner, trạng thái xuất bản, tìm POI gần.</div></div>
+      <div class="module"><div class="icon">🌍</div><div class="name">Localization Module</div><div class="desc">Nội dung đa ngôn ngữ, chiến lược fallback, preferred language.</div></div>
+      <div class="module"><div class="icon">🔊</div><div class="name">Audio Module</div><div class="desc">Sinh audio TTS, lưu metadata, phát lại và thống kê lượt nghe.</div></div>
+      <div class="module"><div class="icon">🗺️</div><div class="name">Tour Module</div><div class="desc">Quản lý tour, tour stop, estimated time, autoplay options.</div></div>
+      <div class="module"><div class="icon">🔳</div><div class="name">QR Module</div><div class="desc">Generate, resolve, scan logging, entry flow vào POI, Tour, Menu.</div></div>
+      <div class="module"><div class="icon">📡</div><div class="name">Realtime Module</div><div class="desc">SignalR hub thông báo và push event cho owner, admin, tourist.</div></div>
+      <div class="module"><div class="icon">📈</div><div class="name">Analytics Module</div><div class="desc">Event log, dashboard tổng hợp, báo cáo tần suất sử dụng.</div></div>
+    </div>
+
+    <div class="diagram">
+      <pre class="mermaid">
+graph TB
+  subgraph Clients["Bề mặt client"]
+    WEB["Blazor WebAssembly"]
+    MOBILE[".NET MAUI Blazor Hybrid"]
+    SHARED["SharedUI (RCL)"]
+  end
+
+  subgraph Server["FoodStreet.Server (.NET)"]
+    AUTH["Auth"]
+    POI["POI Content"]
+    LOC["Localization"]
+    AUDIO["Audio TTS"]
+    TOUR["Tour"]
+    QR["QR"]
+    HUB["SignalR Hub"]
+    ANALYTICS["Analytics"]
+  end
+
+  subgraph Data["Lưu trữ"]
+    DB[("PostgreSQL")]
+    FILES["Media / Audio / QR Assets"]
+  end
+
+  WEB --> SHARED
+  MOBILE --> SHARED
+  SHARED --> AUTH
+  SHARED --> POI
+  SHARED --> LOC
+  SHARED --> AUDIO
+  SHARED --> TOUR
+  SHARED --> QR
+  SHARED --> HUB
+  AUTH --> DB
+  POI --> DB
+  LOC --> DB
+  AUDIO --> DB
+  TOUR --> DB
+  QR --> DB
+  ANALYTICS --> DB
+  AUDIO --> FILES
+  QR --> FILES
+      </pre>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <tr><th>Tầng</th><th>Công nghệ đề xuất</th><th>Lý do</th></tr>
+        <tr><td>Backend</td><td>ASP.NET Core Web API (.NET 8)</td><td>Phù hợp với codebase hiện tại, dễ mở rộng auth, API, SignalR.</td></tr>
+        <tr><td>ORM</td><td>Entity Framework Core + Npgsql</td><td>Quản lý dữ liệu PostgreSQL có migration rõ ràng.</td></tr>
+        <tr><td>Database</td><td>PostgreSQL</td><td>Tốt cho structured relational data, search, analytics.</td></tr>
+        <tr><td>Web</td><td>Blazor WebAssembly</td><td>Đồng bộ stack C#, tái sử dụng SharedUI.</td></tr>
+        <tr><td>Mobile</td><td>.NET MAUI Blazor Hybrid</td><td>Tận dụng native GPS/TTS và giao diện Razor chia sẻ.</td></tr>
+        <tr><td>Realtime</td><td>SignalR</td><td>Cập nhật trạng thái và nội dung online theo thời gian thực.</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section id="data-model">
+    <h2>5. Mô hình dữ liệu</h2>
+
+    <div class="grid-2">
+      <div class="card"><h3>app_users</h3><p>Người dùng hệ thống gồm admin, POI owner và tourist. Lưu thông tin đăng nhập, ngôn ngữ ưu tiên, vai trò, trạng thái.</p></div>
+      <div class="card"><h3>roles</h3><p>Định nghĩa các role chuẩn: <code>admin</code>, <code>poi_owner</code>, <code>tourist</code>.</p></div>
+      <div class="card"><h3>pois</h3><p>Bản ghi trung tâm của từng điểm ẩm thực: tên, địa chỉ, tọa độ, hình ảnh, trạng thái xuất bản, owner chính.</p></div>
+      <div class="card"><h3>poi_translations</h3><p>Nội dung đa ngôn ngữ cho từng POI: tiêu đề, mô tả ngắn, câu chuyện, điểm nhấn ẩm thực, metadata fallback.</p></div>
+      <div class="card"><h3>menu_items</h3><p>Danh sách món của mỗi POI, có giá, mô tả, ảnh, có phải món signature hay không.</p></div>
+      <div class="card"><h3>audio_assets</h3><p>Lưu metadata audio TTS theo ngôn ngữ, provider, file URL, trạng thái sinh audio.</p></div>
+      <div class="card"><h3>tours</h3><p>Thực thể tour tổng, gồm tên tour, mô tả, thời lượng ước tính, cover image, status.</p></div>
+      <div class="card"><h3>tour_stops</h3><p>Các điểm dừng trong tour, có thứ tự, poi_id, radius kích hoạt, auto-play narration.</p></div>
+      <div class="card"><h3>qr_codes</h3><p>Mã QR trỏ vào <code>poi</code>, <code>tour</code> hoặc <code>menu</code>, có hạn sử dụng và thông tin tạo mã.</p></div>
+      <div class="card"><h3>visit_events</h3><p>Ghi nhận lượt xem, quét QR, nghe audio, vào geofence, bắt đầu tour để phục vụ thống kê và dashboard.</p></div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <tr><th>Bảng</th><th>Key Fields</th><th>Quan hệ chính</th></tr>
+        <tr><td><code>app_users</code></td><td>id, email, preferred_language, role_id</td><td>1 user có thể tạo QR, tạo event, sở hữu POI.</td></tr>
+        <tr><td><code>pois</code></td><td>id, slug, owner_id, lat, lng, status</td><td>1 POI có nhiều translation, menu item, audio, QR.</td></tr>
+        <tr><td><code>poi_translations</code></td><td>poi_id, language_code, title, story</td><td>Thuộc 1 POI.</td></tr>
+        <tr><td><code>menu_items</code></td><td>poi_id, name, price, is_signature</td><td>Thuộc 1 POI.</td></tr>
+        <tr><td><code>audio_assets</code></td><td>poi_id, language_code, provider, status</td><td>Gắn với POI hoặc bản dịch nội dung.</td></tr>
+        <tr><td><code>tours</code></td><td>id, title, language_scope, status</td><td>1 tour có nhiều stop.</td></tr>
+        <tr><td><code>tour_stops</code></td><td>tour_id, poi_id, sequence, radius_meters</td><td>Thuộc 1 tour, trỏ tới 1 POI.</td></tr>
+        <tr><td><code>qr_codes</code></td><td>code, target_type, target_id, expires_at</td><td>Trỏ tới POI, Tour hoặc Menu.</td></tr>
+        <tr><td><code>visit_events</code></td><td>user_id, poi_id, event_type, source</td><td>Nhiều event phát sinh bởi 1 user.</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section id="requirements">
+    <h2>6. Yêu cầu chức năng</h2>
+    <div class="table-wrap">
+      <table>
+        <tr><th>ID</th><th>Yêu cầu</th><th>Mô tả</th></tr>
+        <tr><td>FR-01</td><td>Authentication</td><td>Hệ thống hỗ trợ đăng nhập và phân quyền cho <code>admin</code>, <code>poi_owner</code>, <code>tourist</code>.</td></tr>
+        <tr><td>FR-02</td><td>Tourist Login Required</td><td>Du khách phải đăng nhập để sử dụng map, QR, tour, lịch sử, thông báo.</td></tr>
+        <tr><td>FR-03</td><td>POI CRUD</td><td>Admin và POI Owner được cấp quyền có thể tạo, sửa, cập nhật thông tin POI.</td></tr>
+        <tr><td>FR-04</td><td>POI Translation</td><td>Mỗi POI hỗ trợ nội dung theo nhiều ngôn ngữ và fallback về ngôn ngữ mặc định.</td></tr>
+        <tr><td>FR-05</td><td>Menu Management</td><td>Mỗi POI có thể quản lý danh sách món, giá, mô tả, ảnh và trạng thái còn phục vụ.</td></tr>
+        <tr><td>FR-06</td><td>Audio TTS</td><td>Hệ thống tạo, lưu và phát audio narration theo ngôn ngữ cho từng POI.</td></tr>
+        <tr><td>FR-07</td><td>Map Discovery</td><td>Du khách xem POI trên bản đồ, lọc gần vị trí và mở chi tiết POI.</td></tr>
+        <tr><td>FR-08</td><td>GPS / Geofence</td><td>Hệ thống có thể gợi ý hoặc kích hoạt nội dung dựa theo vị trí du khách.</td></tr>
+        <tr><td>FR-09</td><td>Tour Experience</td><td>Du khách có thể chọn tour, xem các stop, nghe nội dung và theo dõi tiến trình.</td></tr>
+        <tr><td>FR-10</td><td>QR Entry</td><td>QR code mở đúng nội dung POI, menu hoặc tour tại chỗ.</td></tr>
+        <tr><td>FR-11</td><td>Realtime Update</td><td>SignalR thông báo thay đổi nội dung, xuất bản tour, trạng thái kiểm duyệt, scan event.</td></tr>
+        <tr><td>FR-12</td><td>Moderation</td><td>Admin có thể duyệt, ẩn, publish hoặc archive nội dung POI/Tour.</td></tr>
+        <tr><td>FR-13</td><td>Analytics</td><td>Ghi nhận sự kiện sử dụng phục vụ dashboard và báo cáo.</td></tr>
+        <tr><td>FR-14</td><td>Role-based UI</td><td>Web/mobile hiển thị giao diện phù hợp với tourist, owner và admin.</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section id="nfr">
+    <h2>7. Yêu cầu phi chức năng</h2>
+    <div class="table-wrap">
+      <table>
+        <tr><th>ID</th><th>Yêu cầu</th><th>Mô tả</th></tr>
+        <tr><td>NFR-01</td><td>Performance</td><td>Các thao tác đọc dữ liệu phổ biến nên phản hồi nhanh, mục tiêu dưới 2 giây trong điều kiện bình thường.</td></tr>
+        <tr><td>NFR-02</td><td>Security</td><td>Sử dụng JWT/Identity, route protection và owner-scoped access.</td></tr>
+        <tr><td>NFR-03</td><td>Reliability</td><td>Khi TTS hoặc translation lỗi, hệ thống vẫn phải hiển text fallback.</td></tr>
+        <tr><td>NFR-04</td><td>Maintainability</td><td>Tách rõ server, web, mobile, shared UI và domain để dễ refactor.</td></tr>
+        <tr><td>NFR-05</td><td>Extensibility</td><td>Dễ mở rộng thêm ngôn ngữ, POI, tour và analytics.</td></tr>
+        <tr><td>NFR-06</td><td>Cross-Platform</td><td>Trải nghiệm cốt lõi phải nhất quán trên web và mobile.</td></tr>
+        <tr><td>NFR-07</td><td>Observability</td><td>Cần có logging và event history cho các hành động quan trọng.</td></tr>
+        <tr><td>NFR-08</td><td>Data Integrity</td><td>Ràng buộc dữ liệu giữa POI, translation, audio, tour, QR phải nhất quán.</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section id="api">
+    <h2>8. Module API</h2>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Auth</h3>
+        <div class="code-block">POST   /api/auth/register
+POST   /api/auth/login
+POST   /api/auth/logout
+GET    /api/auth/me
+GET    /api/auth/roles</div>
+      </div>
+      <div class="card">
+        <h3>POI & Nội dung</h3>
+        <div class="code-block">GET    /api/pois
+GET    /api/pois/{id}
+POST   /api/pois
+PUT    /api/pois/{id}
+GET    /api/pois/{id}/translations
+PUT    /api/pois/{id}/translations/{lang}
+GET    /api/pois/nearby</div>
+      </div>
+      <div class="card">
+        <h3>Menu & Audio</h3>
+        <div class="code-block">GET    /api/pois/{id}/menu
+POST   /api/pois/{id}/menu-items
+PUT    /api/menu-items/{id}
+GET    /api/audio/poi/{id}?lang=vi
+POST   /api/audio/poi/{id}/generate</div>
+      </div>
+      <div class="card">
+        <h3>Tour & QR</h3>
+        <div class="code-block">GET    /api/tours
+GET    /api/tours/{id}
+POST   /api/tours
+PUT    /api/tours/{id}
+POST   /api/qr
+GET    /api/qr/{code}
+POST   /api/qr/{code}/scan</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Sự kiện SignalR</h3>
+      <div class="code-block">Hub: /hubs/notification
+
+Events:
+- poiUpdated(poiId)
+- translationUpdated(poiId, language)
+- audioReady(poiId, language)
+- tourPublished(tourId)
+- qrScanned(code, targetType)
+- moderationChanged(entityType, entityId, status)</div>
+    </div>
+  </section>
+
+  <section id="flows">
+    <h2>9. Luồng vận hành</h2>
+    <div class="timeline">
+      <div class="timeline-item">
+        <h4>Hành trình du khách</h4>
+        <p>Đăng nhập -> chọn ngôn ngữ -> mở bản đồ -> xem POI -> quét QR hoặc đến gần POI -> nghe thuyết minh -> tiếp tục tour -> lưu event sử dụng.</p>
+      </div>
+      <div class="timeline-item">
+        <h4>Luồng POI Owner</h4>
+        <p>Đăng nhập owner portal -> cập nhật POI/menu/nội dung đa ngôn ngữ -> yêu cầu tạo audio -> gửi lên hệ thống -> nhận thông báo trạng thái.</p>
+      </div>
+      <div class="timeline-item">
+        <h4>Luồng Admin</h4>
+        <p>Duyệt nội dung -> publish/archive -> tạo hoặc cập nhật tour -> giám sát scan, audio play, user activity và thông báo realtime.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="uml-usecase">
+    <h2>10. UML - Use Case (Ca sử dụng)</h2>
+    <div class="diagram">
+      <pre class="mermaid">
+flowchart LR
+  T["Du khách (Tourist)"]
+  O["POI Owner"]
+  A["Admin"]
+
+  UC1(("Đăng nhập"))
+  UC2(("Xem bản đồ POI"))
+  UC3(("Xem chi tiết POI"))
+  UC4(("Nghe audio TTS"))
+  UC5(("Quét QR"))
+  UC6(("Tham gia tour"))
+  UC7(("Quản lý POI"))
+  UC8(("Quản lý menu"))
+  UC9(("Cập nhật translation"))
+  UC10(("Duyệt nội dung"))
+  UC11(("Quản lý tour và QR"))
+  UC12(("Xem dashboard"))
+
+  T --- UC1
+  T --- UC2
+  T --- UC3
+  T --- UC4
+  T --- UC5
+  T --- UC6
+  O --- UC1
+  O --- UC7
+  O --- UC8
+  O --- UC9
+  A --- UC1
+  A --- UC10
+  A --- UC11
+  A --- UC12
+      </pre>
+    </div>
+  </section>
+
+  <section id="uml-class">
+    <h2>11. UML - Class Diagram (Sơ đồ lớp)</h2>
+    <div class="diagram">
+      <pre class="mermaid">
+classDiagram
+  class AppUser {
+    +Guid Id
+    +string Email
+    +string PreferredLanguage
+    +string Role
+    +bool IsActive
+  }
+
+  class Role {
+    +Guid Id
+    +string Name
+  }
+
+  class POI {
+    +int Id
+    +string Name
+    +string Slug
+    +double Latitude
+    +double Longitude
+    +string Status
+  }
+
+  class POITranslation {
+    +int Id
+    +int PoiId
+    +string LanguageCode
+    +string Title
+    +string Story
+    +bool FallbackUsed
+  }
+
+  class MenuItem {
+    +int Id
+    +int PoiId
+    +string Name
+    +decimal Price
+    +bool IsSignature
+    +bool IsAvailable
+  }
+
+  class AudioAsset {
+    +int Id
+    +int PoiId
+    +string LanguageCode
+    +string Provider
+    +string Url
+    +string Status
+  }
+
+  class Tour {
+    +int Id
+    +string Title
+    +string Status
+    +int EstimatedMinutes
+  }
+
+  class TourStop {
+    +int Id
+    +int TourId
+    +int PoiId
+    +int Sequence
+    +int RadiusMeters
+  }
+
+  class QRCode {
+    +int Id
+    +string Code
+    +string TargetType
+    +int TargetId
+    +bool IsActive
+  }
+
+  class VisitEvent {
+    +long Id
+    +Guid UserId
+    +string EventType
+    +string Source
+    +DateTime CreatedAt
+  }
+
+  Role "1" --> "*" AppUser : assigns
+  AppUser "1" --> "*" POI : owns
+  POI "1" --> "*" POITranslation : has
+  POI "1" --> "*" MenuItem : offers
+  POI "1" --> "*" AudioAsset : narrates
+  Tour "1" --> "*" TourStop : includes
+  TourStop "*" --> "1" POI : points_to
+  AppUser "1" --> "*" QRCode : creates
+  AppUser "1" --> "*" VisitEvent : generates
+  POI "1" --> "*" VisitEvent : receives
+      </pre>
+    </div>
+  </section>
+
+  <section id="uml-sequence">
+    <h2>12. UML - Sơ đồ tuần tự</h2>
+
+    <h3>12.1 Du khách mở POI và nghe thuyết minh</h3>
+    <div class="diagram">
+      <pre class="mermaid">
+sequenceDiagram
+  actor Tourist
+  participant UI as Blazor Client
+  participant API as POI API
+  participant LOC as Localization API
+  participant AUDIO as Audio API
+  participant DB as PostgreSQL
+
+  Tourist->>UI: Đăng nhập và chọn ngôn ngữ
+  UI->>API: GET /api/pois/{id}
+  API->>DB: Lấy POI cơ bản
+  DB-->>API: POI
+  UI->>LOC: GET /api/pois/{id}/translations?lang=en
+  LOC->>DB: Tìm translation theo ngôn ngữ
+  alt Có bản dịch
+    DB-->>LOC: translation en
+  else Không có bản dịch
+    DB-->>LOC: fallback vi
+  end
+  UI->>AUDIO: GET /api/audio/poi/{id}?lang=en
+  AUDIO->>DB: Lấy audio asset
+  AUDIO-->>UI: audio url hoặc fallback text
+  UI-->>Tourist: Hiển thị nội dung và phát narration
+      </pre>
+    </div>
+
+    <h3>12.2 Geofence gợi ý nội dung theo vị trí</h3>
+    <div class="diagram">
+      <pre class="mermaid">
+sequenceDiagram
+  actor Tourist
+  participant APP as Mobile App
+  participant GPS as Native GPS Service
+  participant API as Nearby API
+  participant DB as PostgreSQL
+
+  Tourist->>APP: Mở app khi đang ở Vĩnh Khánh
+  APP->>GPS: Lấy vị trí hiện tại
+  GPS-->>APP: lat/lng
+  APP->>API: GET /api/pois/nearby?lat=...&lng=...
+  API->>DB: Tìm POI trong bán kính
+  DB-->>API: DS POI gần nhất
+  API-->>APP: Gợi ý nội dung
+  APP-->>Tourist: Hiển prompt vào POI / phát audio
+      </pre>
+    </div>
+
+    <h3>12.3 Owner cập nhật nội dung và SignalR đồng bộ</h3>
+    <div class="diagram">
+      <pre class="mermaid">
+sequenceDiagram
+  actor Owner
+  participant OP as Owner Portal
+  participant API as Content API
+  participant DB as PostgreSQL
+  participant HUB as SignalR Hub
+  participant CLIENTS as Online Clients
+
+  Owner->>OP: Sửa thông tin POI / menu / translation
+  OP->>API: PUT /api/pois/{id}
+  API->>DB: Save thay đổi
+  API->>HUB: Broadcast poiUpdated(poiId)
+  HUB-->>CLIENTS: Event realtime
+  CLIENTS->>API: Reload dữ liệu mới
+  API-->>OP: 200 OK
+      </pre>
+    </div>
+  </section>
+
+  <section id="uml-activity">
+    <h2>13. UML - Sơ đồ hoạt động</h2>
+    <div class="diagram">
+      <pre class="mermaid">
+flowchart TD
+  A[Mở ứng dụng] --> B{Đã đăng nhập?}
+  B -->|No| C[Đăng nhập]
+  B -->|Yes| D[Chọn ngôn ngữ]
+  C --> D
+  D --> E[Load bản đồ và POI]
+  E --> F{Người dùng thao tác gì?}
+  F -->|Xem POI| G[Mở chi tiết POI]
+  F -->|Quét QR| H[Resolve target]
+  F -->|Mở tour| I[Bắt đầu tour]
+  F -->|Đi vào geofence| J[Gợi ý thuyết minh]
+  G --> K[Lấy translation + audio]
+  H --> K
+  I --> K
+  J --> K
+  K --> L[Phát audio / hiển thị text]
+  L --> M[Ghi visit event]
+  M --> F
+      </pre>
+    </div>
+  </section>
+
+  <section id="uml-state">
+    <h2>14. UML - Sơ đồ trạng thái</h2>
+
+    <h3>14.1 Vòng đời nội dung POI</h3>
+    <div class="diagram">
+      <pre class="mermaid">
+stateDiagram-v2
+  [*] --> Draft
+  Draft --> PendingReview: Owner gửi duyệt
+  PendingReview --> Published: Admin duyệt
+  PendingReview --> Rejected: Admin từ chối
+  Rejected --> Draft: Owner sửa lại
+  Published --> Updated: Owner/Admin chỉnh sửa
+  Updated --> PendingReview
+  Published --> Archived: Admin ẩn khỏi hệ thống
+  Archived --> [*]
+      </pre>
+    </div>
+
+    <h3>14.2 Vòng đời audio asset</h3>
+    <div class="diagram">
+      <pre class="mermaid">
+stateDiagram-v2
+  [*] --> Requested
+  Requested --> Generating
+  Generating --> Ready: File sinh thành công
+  Generating --> Failed: Lỗi provider / network
+  Failed --> Requested: Retry
+  Ready --> Replaced: Nội dung thay đổi
+  Replaced --> Requested
+      </pre>
+    </div>
+
+    <h3>14.3 Vòng đời phiên du khách</h3>
+    <div class="diagram">
+      <pre class="mermaid">
+stateDiagram-v2
+  [*] --> Guest
+  Guest --> LoggedIn: Login thành công
+  LoggedIn --> ExploringMap
+  ExploringMap --> ViewingPOI
+  ViewingPOI --> ListeningNarration
+  ViewingPOI --> Touring
+  Touring --> ViewingPOI
+  ListeningNarration --> ExploringMap
+  LoggedIn --> LoggedOut: Logout / token hết hạn
+  LoggedOut --> Guest
+      </pre>
+    </div>
+  </section>
+
+  <div class="footer">
+    <p>PRD & UML - Nền tảng thuyết minh đa ngôn ngữ khu ẩm thực Vĩnh Khánh, Quận 4</p>
+    <p>C# / ASP.NET Core / Blazor / .NET MAUI / PostgreSQL / SignalR</p>
+    <p style="margin-top:6px">Bản nháp để đồng bộ triển khai</p>
+  </div>
+</main>
+
+<script>
+mermaid.initialize({
+  startOnLoad:true,
+  theme:"dark",
+  themeVariables:{
+    primaryColor:"#13233b",
+    primaryTextColor:"#e2e8f0",
+    primaryBorderColor:"#f59e0b",
+    lineColor:"#94a3b8",
+    secondaryColor:"#172b48",
+    tertiaryColor:"#0f1b2e",
+    fontFamily:"Segoe UI"
+  }
+});
+
+const links=[...document.querySelectorAll('.nav-link')];
+const sections=[...document.querySelectorAll('section[id]')];
+window.addEventListener('scroll',()=>{
+  const y=window.scrollY+120;
+  let current='';
+  sections.forEach(section=>{if(section.offsetTop<=y){current=section.id;}});
+  links.forEach(link=>link.classList.toggle('active',link.getAttribute('href')==='#'+current));
+});
+</script>
+</body>
+</html>
