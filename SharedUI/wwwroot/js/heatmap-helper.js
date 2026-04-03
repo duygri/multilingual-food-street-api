@@ -43,7 +43,7 @@ window.HeatmapHelper = {
                         type: 'Feature',
                         geometry: {
                             type: 'Point',
-                            coordinates: [p[1], p[0]] // Mapbox uses [lng, lat]
+                            coordinates: [p[1], p[0]] // GeoJSON uses [lng, lat]
                         },
                         properties: {
                             // If your points have intensity at p[2], use it, otherwise 1
