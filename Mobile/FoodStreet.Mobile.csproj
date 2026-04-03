@@ -28,7 +28,7 @@
         <ApplicationTitle>FoodStreet.Mobile</ApplicationTitle>
 
         <!-- App Identifier -->
-        <ApplicationId>com.companyname.foodstreet.mobile</ApplicationId>
+        <ApplicationId>com.letro.foodstreet.mobile</ApplicationId>
 
         <!-- Versions -->
         <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
@@ -63,16 +63,48 @@
         <MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
     </ItemGroup>
 
+    <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+        <AndroidResource Include="Resources\layout\activity_native_map.xml" />
+    </ItemGroup>
+
     <ItemGroup>
         <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
         <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="$(MauiVersion)" />
         <PackageReference Include="Microsoft.Extensions.Localization" Version="9.0.0" />
         <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.8" />
         <PackageReference Include="Plugin.Maui.Audio" Version="4.0.0" />
+        <PackageReference Include="Xamarin.AndroidX.Activity" Version="1.12.4.1" />
+        <PackageReference Include="Xamarin.AndroidX.Activity.Ktx" Version="1.12.4.1" />
+        <PackageReference Include="Xamarin.AndroidX.Fragment.Ktx" Version="1.8.9.1" />
+        <PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData" Version="2.10.0.2" />
+        <PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData.Core.Ktx" Version="2.10.0.2" />
+        <PackageReference Include="Xamarin.AndroidX.Lifecycle.Process" Version="2.10.0.2" />
+        <PackageReference Include="Xamarin.AndroidX.Lifecycle.Runtime.Ktx" Version="2.10.0.2" />
+        <PackageReference Include="Xamarin.AndroidX.Lifecycle.Runtime.Ktx.Android" Version="2.10.0.2" />
+        <PackageReference Include="Xamarin.AndroidX.Lifecycle.ViewModel.Ktx" Version="2.10.0.2" />
+        <PackageReference Include="Xamarin.AndroidX.SavedState.SavedState.Ktx" Version="1.4.0.2" />
+        <PackageReference Include="Xamarin.GoogleAndroid.Libraries.Places" Version="5.1.1.2" />
+        <PackageReference Include="Xamarin.GooglePlayServices.Maps" Version="120.0.0.1" />
     </ItemGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\SharedUI\FoodStreet.UI.csproj" />
     </ItemGroup>
+
+    <Target Name="RemoveDuplicateComposeRuntimeAnnotationJvm"
+            Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'"
+            BeforeTargets="_ResolveLibraryProjectImports;_CompileToDalvik;_BuildApkEmbed;_BuildApkFastDev">
+        <ItemGroup>
+            <_DuplicateComposeRuntimeAnnotationJvm Include="@(AndroidJavaLibrary)"
+                                                  Condition="'%(AndroidJavaLibrary.DefiningProjectName)' == 'Xamarin.AndroidX.Compose.Runtime.Annotation.Jvm' or '%(AndroidJavaLibrary.Filename)%(AndroidJavaLibrary.Extension)' == 'runtime-annotation-jvm.jar'" />
+            <_DuplicateComposeRuntimeAnnotationJvmForCompile Include="@(_JavaLibrariesToCompile)"
+                                                            Condition="'%(_JavaLibrariesToCompile.Filename)%(_JavaLibrariesToCompile.Extension)' == 'runtime-annotation-jvm.jar'" />
+            <_DuplicateComposeRuntimeAnnotationJvmForApp Include="@(_JavaLibrariesToCompileForApp)"
+                                                        Condition="'%(_JavaLibrariesToCompileForApp.Filename)%(_JavaLibrariesToCompileForApp.Extension)' == 'runtime-annotation-jvm.jar'" />
+            <AndroidJavaLibrary Remove="@(_DuplicateComposeRuntimeAnnotationJvm)" />
+            <_JavaLibrariesToCompile Remove="@(_DuplicateComposeRuntimeAnnotationJvmForCompile)" />
+            <_JavaLibrariesToCompileForApp Remove="@(_DuplicateComposeRuntimeAnnotationJvmForApp)" />
+        </ItemGroup>
+    </Target>
 
 </Project>
