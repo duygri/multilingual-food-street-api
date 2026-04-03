@@ -137,9 +137,9 @@
 
 <style>
     .category-card {
-        background: #fff;
-        border-radius: 16px;
-        border: 1px solid #e2e8f0;
+        background: var(--surface-card);
+        border-radius: var(--radius-xl);
+        border: 1px solid var(--color-neutral-200);
         overflow: hidden;
         transition: all 0.2s ease;
         box-shadow: 0 2px 8px rgba(0,0,0,0.04);
@@ -147,26 +147,26 @@
     
     .category-card:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(0,0,0,0.08);
-        border-color: #ff6b35;
+        box-shadow: var(--shadow-md);
+        border-color: var(--color-accent);
     }
     
     .category-card-header {
         display: flex;
         align-items: center;
-        gap: 16px;
-        padding: 20px;
+        gap: var(--space-4);
+        padding: var(--space-5);
     }
     
     .category-icon {
         width: 56px;
         height: 56px;
-        background: linear-gradient(135deg, #fff5f2 0%, #ffeee8 100%);
-        border-radius: 14px;
+        background: linear-gradient(135deg, var(--color-primary-50) 0%, var(--surface-inset) 100%);
+        border-radius: var(--radius-lg);
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 28px;
+        font-size: var(--text-3xl);
         flex-shrink: 0;
     }
     
@@ -176,15 +176,15 @@
     }
     
     .category-name {
-        font-size: 16px;
-        font-weight: 700;
-        color: #1e293b;
-        margin: 0 0 4px;
+        font-size: var(--text-base);
+        font-weight: var(--weight-bold);
+        color: var(--color-neutral-900);
+        margin: 0 0 var(--space-1);
     }
     
     .category-desc {
-        font-size: 13px;
-        color: #64748b;
+        font-size: var(--text-sm);
+        color: var(--text-secondary);
         margin: 0;
         display: -webkit-box;
         -webkit-line-clamp: 2;
@@ -196,35 +196,35 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 12px 20px;
-        background: #f8fafc;
-        border-top: 1px solid #f1f5f9;
+        padding: var(--space-3) var(--space-5);
+        background: var(--surface-inset);
+        border-top: 1px solid var(--color-neutral-100);
     }
     
     .category-count {
-        font-size: 13px;
-        color: #64748b;
-        font-weight: 500;
+        font-size: var(--text-sm);
+        color: var(--text-secondary);
+        font-weight: var(--weight-medium);
     }
     
     .category-actions {
         display: flex;
-        gap: 6px;
+        gap: var(--space-1-5);
     }
     
     .emoji-suggestions {
         display: flex;
         flex-wrap: wrap;
-        gap: 4px;
+        gap: var(--space-1);
     }
     
     .emoji-btn {
         width: 36px;
         height: 36px;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        background: #fff;
-        font-size: 18px;
+        border: 1px solid var(--color-neutral-200);
+        border-radius: var(--radius-md);
+        background: var(--surface-card);
+        font-size: var(--text-lg);
         cursor: pointer;
         display: flex;
         align-items: center;
@@ -233,8 +233,8 @@
     }
     
     .emoji-btn:hover {
-        background: #fff5f2;
-        border-color: #ff6b35;
+        background: var(--color-primary-50);
+        border-color: var(--color-accent);
         transform: scale(1.1);
     }
 </style>
