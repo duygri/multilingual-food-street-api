@@ -1,15 +1,19 @@
 @inject NavigationManager Navigation
+@inject IPlatformDetector PlatformDetector
+@using FoodStreet.Client.Services
 
 @code {
-    protected override void OnInitialized()
+    private bool _redirected;
+
+    protected override void OnAfterRender(bool firstRender)
     {
-        if (OperatingSystem.IsAndroid() || OperatingSystem.IsIOS())
+        if (!firstRender || _redirected)
         {
-            Navigation.NavigateTo("profile");
+            return;
         }
-        else
-        {
-            Navigation.NavigateTo("admin/login");
-        }
+
+        _redirected = true;
+        var target = PlatformDetector.IsMobile ? "/profile" : "/admin/login";
+        Navigation.NavigateTo(target, replace: true);
     }
 }
