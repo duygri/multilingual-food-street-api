@@ -4,13 +4,32 @@
 @attribute [Authorize(Roles = "Admin")]
 @inject HttpClient Http
 @inject IJSRuntime JS
+@inject IPlatformDetector PlatformDetector
 @implements IAsyncDisposable
 
+@if (PlatformDetector.IsMobile)
+{
+    <div class="geotest-page">
+        <div class="panel-card">
+            <h2 class="geotest-title">Công cụ kiểm tra Geofence</h2>
+            <p class="geotest-desc">
+                Trang này được giữ như công cụ debug dành cho admin trên trình duyệt.
+            </p>
+            <div class="check-summary" style="margin-top: 16px;">
+                Trên mobile Android, geofence đã được hiển thị trực tiếp trên native map ở flow
+                <strong>browse map</strong>. Nếu cần kiểm tra runtime thực tế, hãy mở <strong>/mobile-map</strong>
+                hoặc vào các flow owner/admin có native picker.
+            </div>
+        </div>
+    </div>
+}
+else
+{
 <div class="geotest-page">
     @* ===== HEADER ===== *@
     <div class="geotest-header">
         <div class="geotest-header-info">
-            <h2 class="geotest-title">🎯 Geofence Test Tool</h2>
+            <h2 class="geotest-title">Công cụ kiểm tra Geofence</h2>
             <p class="geotest-desc">Kiểm tra POI gần tọa độ bất kỳ – không cần mở app mobile</p>
         </div>
     </div>
@@ -19,7 +38,7 @@
         @* ===== INPUT PANEL ===== *@
         <div class="geotest-panel">
             <div class="panel-card">
-                <h3 class="panel-title">📍 Tọa độ Test</h3>
+                <h3 class="panel-title">Tọa độ Test</h3>
 
                 <div class="coord-inputs">
                     <div class="coord-field">
@@ -49,18 +68,18 @@
                         }
                         else
                         {
-                            <span>🔍 Kiểm tra Geofence</span>
+                            <span>Kiểm tra Geofence</span>
                         }
                     </button>
 
                     <button class="btn-locate" @onclick="GetBrowserLocation">
-                        📡 Lấy vị trí trình duyệt
+                        Lấy vị trí trình duyệt
                     </button>
                 </div>
 
                 @* Quick presets *@
                 <div class="preset-section">
-                    <span class="preset-label">⚡ Preset nhanh:</span>
+                    <span class="preset-label">Preset nhanh:</span>
                     <div class="preset-buttons">
                         <button class="preset-btn" @onclick='() => SetPreset(10.7524, 106.6958, "Cháo Lòng VK")'>
                             Cháo Lòng
@@ -72,7 +91,7 @@
                             Bò Kho
                         </button>
                         <button class="preset-btn" @onclick='() => SetPreset(10.7600, 106.7100, "Xa tất cả POI")'>
-                            Xa POI ❌
+                            Xa POI
                         </button>
                     </div>
                 </div>
@@ -81,7 +100,7 @@
             @* ===== RESULTS TABLE ===== *@
             <div class="panel-card">
                 <h3 class="panel-title">
-                    📊 Kết quả
+                    Kết quả
                     @if (results.Count > 0)
                     {
                         <span class="result-count">@results.Count POI</span>
@@ -125,11 +144,11 @@
                                         <td>
                                             @if (r.IsInGeofence)
                                             {
-                                                <span class="badge-inside">✅ Trong</span>
+                                                <span class="badge-inside">Trong Geofence</span>
                                             }
                                             else
                                             {
-                                                <span class="badge-outside">⚪ Ngoài</span>
+                                                <span class="badge-outside">Ngoài Geofence</span>
                                             }
                                         </td>
                                     </tr>
@@ -141,7 +160,7 @@
                 else if (!isChecking && lastCheckMessage == null)
                 {
                     <div class="empty-result">
-                        <span>🗺️</span>
+                        <span class="text-muted" style="font-size: 36px;">Info</span>
                         <p>Nhập tọa độ và nhấn "Kiểm tra Geofence" để bắt đầu</p>
                     </div>
                 }
@@ -152,23 +171,24 @@
         <div class="geotest-map-panel">
             <div class="panel-card map-card">
                 <div class="map-header">
-                    <h3 class="panel-title">🗺️ Bản đồ</h3>
+                    <h3 class="panel-title">Bản đồ</h3>
                     <button class="btn-fit" @onclick="FitMapToAll" title="Fit tất cả">
-                        ⊞ Fit All
+                        Fit All
                     </button>
                 </div>
-                <div id="geofence-test-map" class="test-map" style="width:100%; height:520px; border-radius:12px; overflow:hidden; border:1px solid #e2e8f0;">
+                <div style="position:relative;">
+                    <div id="geofence-test-map" class="test-map" style="width:100%; height:520px; border-radius:12px; overflow:hidden; border:1px solid #e2e8f0;"></div>
                     @if (!mapInitialized)
                     {
-                        <div style="display:flex; align-items:center; justify-content:center; height:100%; color:#94a3b8; flex-direction:column; gap:8px;">
+                        <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#94a3b8; flex-direction:column; gap:8px; background:rgba(255,255,255,0.95); border-radius:12px; z-index:10;">
                             @if (string.IsNullOrEmpty(mapError))
                             {
-                                <span style="font-size:24px;">⏳</span>
-                                <span>Đang tải bản đồ Mapbox...</span>
+                                <span class="spinner-border spinner-border-sm"></span>
+                                <span>Đang tải bản đồ Google Maps...</span>
                             }
                             else
                             {
-                                <span style="font-size:24px;">❌</span>
+                                <span class="text-danger">Lỗi:</span>
                                 <span style="color:#ef4444; font-size:13px; max-width:400px; text-align:center;">@mapError</span>
                             }
                         </div>
@@ -182,13 +202,14 @@
                         <span class="legend-dot outside"></span> Ngoài geofence
                     </span>
                     <span class="legend-item">
-                        🧑 Vị trí test (kéo/click)
+                        <span class="legend-dot" style="background: red;"></span> Vị trí test (kéo/click)
                     </span>
                 </div>
             </div>
         </div>
     </div>
 </div>
+}
 
 <style>
     .geotest-page {
@@ -614,11 +635,24 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (PlatformDetector.IsMobile)
+        {
+            return;
+        }
+
         if (firstRender)
         {
             await Task.Delay(500); // Wait for DOM + JS to be ready
             try
             {
+                var hasConfiguredApiKey = await JS.InvokeAsync<bool>("AppMapHelper.hasConfiguredApiKey");
+                if (!hasConfiguredApiKey)
+                {
+                    mapError = "Chưa cấu hình Google Maps browser key trong Frontend/Mobile runtime-config.js.";
+                    StateHasChanged();
+                    return;
+                }
+
                 // Check if GeofenceTestMap JS object exists
                 var jsExists = await JS.InvokeAsync<bool>("eval", "typeof window.GeofenceTestMap !== 'undefined'");
                 if (!jsExists)
@@ -628,11 +662,11 @@
                     return;
                 }
 
-                var result = await JS.InvokeAsync<bool>("GeofenceTestMap.init", "geofence-test-map", testLat, testLng, 16, objRef);
+                var result = await JS.InvokeAsync<bool>("GeofenceTestMap.init", "geofence-test-map", testLat, testLng, 16, objRef, string.Empty);
                 mapInitialized = result;
                 if (!result)
                 {
-                    mapError = "Map init trả về false. Kiểm tra console browser (F12).";
+                    mapError = "Google Maps init trả về false. Kiểm tra console browser (F12).";
                 }
                 StateHasChanged();
             }
@@ -666,7 +700,7 @@
         {
             // API nearby already returns IsInGeofence for each POI
             var nearbyResponse = await Http.GetFromJsonAsync<List<NearbyPoiResult>>(
-                $"api/gps/nearby?lat={testLat}&lng={testLng}&radius={searchRadius}");
+                $"api/maps/gps/nearby?lat={testLat}&lng={testLng}&radius={searchRadius}");
 
             results = (nearbyResponse ?? new())
                 .OrderByDescending(r => r.IsInGeofence)
@@ -676,8 +710,8 @@
             enteredCount = results.Count(r => r.IsInGeofence);
 
             lastCheckMessage = enteredCount > 0
-                ? $"🎯 Tìm thấy <strong>{enteredCount}</strong> POI đang trong geofence! Tổng: {results.Count} POI trong bán kính {searchRadius}m."
-                : $"📍 Tìm thấy {results.Count} POI trong bán kính {searchRadius}m. <em>Không có POI nào trong geofence.</em>";
+                ? $"Tìm thấy <strong>{enteredCount}</strong> POI đang trong geofence! Tổng: {results.Count} POI trong bán kính {searchRadius}m."
+                : $"Tìm thấy {results.Count} POI trong bán kính {searchRadius}m. <em>Không có POI nào trong geofence.</em>";
 
             // Update map markers + geofence circles
             if (mapInitialized)
@@ -700,7 +734,7 @@
         }
         catch (Exception ex)
         {
-            lastCheckMessage = $"❌ Lỗi: {ex.Message}";
+            lastCheckMessage = $"Lỗi: {ex.Message}";
             Console.WriteLine($"[GeofenceTest] Error: {ex.Message}");
         }
         finally
@@ -751,7 +785,7 @@
     {
         await InvokeAsync(() =>
         {
-            lastCheckMessage = $"⚠️ Không thể lấy vị trí trình duyệt: {error}";
+            lastCheckMessage = $"Không thể lấy vị trí trình duyệt: {error}";
             StateHasChanged();
         });
     }
