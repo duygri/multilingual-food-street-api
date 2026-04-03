@@ -4,6 +4,7 @@
 @attribute [Authorize]
 @inject IJSRuntime JS
 @inject HttpClient Http
+@inject NavigationManager Navigation
 @implements IAsyncDisposable
 
 <div class="map-page">
@@ -26,7 +27,7 @@
     else
     {
         <div class="map-wrapper">
-            <div id="mobile-map" class="map-view"></div>
+            <div id="@MapElementId" class="map-view"></div>
 
             <div class="map-overlay-top">
                 @if (isLocating)
@@ -45,6 +46,26 @@
                 {
                     <div class="status-badge live">
                         <span class="dot"></span> Đã định vị
+                    </div>
+                }
+
+                @if (focusedPoi != null)
+                {
+                    <div class="focus-poi-card">
+                        <div class="focus-poi-label">Đang xem POI</div>
+                        <strong>@focusedPoi.Name</strong>
+                        @if (!string.IsNullOrWhiteSpace(focusedPoi.Address))
+                        {
+                            <span>@focusedPoi.Address</span>
+                        }
+                        @if (hasLocation)
+                        {
+                            <div class="focus-poi-distance">@FormatDistance(focusedPoi.Distance)</div>
+                        }
+                        <div class="focus-poi-actions">
+                            <button class="focus-poi-btn primary" @onclick="OpenFocusedPoiDirections">🧭 Chỉ đường</button>
+                            <button class="focus-poi-btn" @onclick="ClearFocusedPoi">Đóng</button>
+                        </div>
                     </div>
                 }
             </div>
@@ -241,9 +262,77 @@
     .btn-recenter:active {
         transform: scale(0.95);
     }
+
+    .focus-poi-card {
+        margin-top: 10px;
+        background: rgba(255,255,255,0.96);
+        border-radius: 16px;
+        padding: 12px 14px;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-width: 240px;
+        max-width: min(320px, calc(100vw - 24px));
+    }
+
+    .focus-poi-label {
+        font-size: 11px;
+        font-weight: 700;
+        color: #f97316;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+    }
+
+    .focus-poi-card strong {
+        color: #1e293b;
+        font-size: 15px;
+        line-height: 1.3;
+    }
+
+    .focus-poi-card span {
+        color: #64748b;
+        font-size: 12px;
+        line-height: 1.4;
+    }
+
+    .focus-poi-distance {
+        display: inline-flex;
+        align-items: center;
+        align-self: flex-start;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: #eff6ff;
+        color: #1d4ed8;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .focus-poi-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 4px;
+    }
+
+    .focus-poi-btn {
+        border: none;
+        border-radius: 999px;
+        padding: 8px 12px;
+        font-size: 12px;
+        font-weight: 700;
+        color: #475569;
+        background: #f1f5f9;
+        cursor: pointer;
+    }
+
+    .focus-poi-btn.primary {
+        background: #ffedd5;
+        color: #c2410c;
+    }
 </style>
 
 @code {
+    private const string MapElementId = "web-map";
     private bool showPermissionPrompt = true;
     private bool isLocating = false;
     private bool hasLocation = false;
@@ -251,6 +340,9 @@
     private double userLat = 10.7580;
     private double userLng = 106.7034;
     private DotNetObjectReference<Map>? objRef;
+    private LocationDto? focusedPoi;
+    [SupplyParameterFromQuery(Name = "focusId")]
+    public int? FocusId { get; set; }
 
     protected override void OnInitialized()
     {
@@ -261,13 +353,23 @@
     {
         showPermissionPrompt = false;
         isLocating = true;
+        locationError = null;
         StateHasChanged();
 
-        await Task.Delay(100);
-        await JS.InvokeVoidAsync("AppMapHelper.init", "mobile-map", userLat, userLng, 15);
+        if (!await HasGoogleMapsKeyAsync())
+        {
+            isLocating = false;
+            locationError = await GetMapHelperErrorAsync("Chưa cấu hình Google Maps browser key trong runtime-config.js.");
+            StateHasChanged();
+            return;
+        }
 
-        await Task.Delay(300);
-        try { await JS.InvokeVoidAsync("eval", "if(AppMapHelper.map) AppMapHelper.map.invalidateSize()"); } catch { }
+        if (!await InitializeMapAsync())
+        {
+            isLocating = false;
+            StateHasChanged();
+            return;
+        }
 
         // FIX Bug 2: dùng objRef thay vì static Assembly invoke
         await JS.InvokeVoidAsync("MapInterop.requestLocation", objRef);
@@ -276,14 +378,22 @@
     private async Task SkipLocation()
     {
         showPermissionPrompt = false;
+        locationError = null;
         StateHasChanged();
-        await Task.Delay(100);
 
-        // Show map at default location without user marker
-        await JS.InvokeVoidAsync("AppMapHelper.init", "mobile-map", userLat, userLng, 15);
+        if (!await HasGoogleMapsKeyAsync())
+        {
+            locationError = await GetMapHelperErrorAsync("Chưa cấu hình Google Maps browser key trong runtime-config.js.");
+            StateHasChanged();
+            return;
+        }
 
-        await Task.Delay(300);
-        try { await JS.InvokeVoidAsync("eval", "if(AppMapHelper.map) AppMapHelper.map.invalidateSize()"); } catch { }
+        if (!await InitializeMapAsync())
+        {
+            StateHasChanged();
+            return;
+        }
+
         await LoadPois();
     }
 
@@ -323,7 +433,7 @@
     private async Task HandleLocationError(string error)
     {
         isLocating = false;
-        locationError = "Không thể lấy vị trí. Hãy bật GPS.";
+        locationError = "Không thể lấy vị trí. Hãy bật GPS hoặc cho phép truy cập vị trí.";
         await InvokeAsync(async () =>
         {
             StateHasChanged();
@@ -337,9 +447,18 @@
         {
             // FIX Bug 1: dùng đúng endpoint /near với toạ độ (api/location không tồn tại)
             var result = await Http.GetFromJsonAsync<PagedResult<LocationDto>>(
-                $"api/location/near?lat={userLat}&lng={userLng}&page=1&pageSize=50");
+                $"api/maps/locations/near?lat={userLat}&lng={userLng}&page=1&pageSize=50");
 
-            var locations = result?.Items;
+            var locations = result?.Items?.ToList() ?? new List<LocationDto>();
+            var requestedFocusedPoi = await GetRequestedFocusedPoiAsync();
+
+            if (requestedFocusedPoi != null && locations.All(l => l.Id != requestedFocusedPoi.Id))
+            {
+                locations.Add(requestedFocusedPoi);
+            }
+
+            focusedPoi = requestedFocusedPoi ?? focusedPoi;
+            UpdateFocusedPoiDistance();
             if (locations != null && locations.Any())
             {
                 var poiData = locations.Select(l => new
@@ -363,10 +482,13 @@
                 {
                     await JS.InvokeVoidAsync("AppMapHelper.fitBounds");
                 }
+
+                await FocusPoiIfRequestedAsync();
             }
         }
         catch (Exception ex)
         {
+            locationError = "Không thể tải dữ liệu POI trên bản đồ.";
             Console.WriteLine($"[Map] LoadPois error: {ex.Message}");
         }
     }
@@ -377,6 +499,131 @@
         {
             await JS.InvokeVoidAsync("AppMapHelper.centerOn", userLat, userLng, 16);
         }
+    }
+
+    private async Task FocusPoiIfRequestedAsync()
+    {
+        var poiId = FocusId ?? focusedPoi?.Id;
+        if (poiId is not > 0)
+        {
+            return;
+        }
+
+        try
+        {
+            if (hasLocation)
+            {
+                await JS.InvokeAsync<bool>("AppMapHelper.fitUserAndPoi", poiId.Value, 90);
+            }
+
+            await JS.InvokeAsync<bool>("AppMapHelper.focusPoi", poiId.Value, hasLocation ? 16 : 17);
+            if (FocusId is > 0)
+            {
+                Navigation.NavigateTo("/map", replace: true);
+            }
+        }
+        catch
+        {
+        }
+    }
+
+    private async Task<bool> HasGoogleMapsKeyAsync()
+    {
+        try
+        {
+            return await JS.InvokeAsync<bool>("AppMapHelper.hasConfiguredApiKey");
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private async Task<bool> InitializeMapAsync()
+    {
+        await Task.Delay(100);
+        var initialized = await JS.InvokeAsync<bool>("AppMapHelper.init", MapElementId, userLat, userLng, 15, string.Empty);
+        if (!initialized)
+        {
+            locationError = await GetMapHelperErrorAsync("Không thể khởi tạo Google Maps.");
+            return false;
+        }
+
+        await Task.Delay(200);
+        try { await JS.InvokeVoidAsync("AppMapHelper.resize"); } catch { }
+        return true;
+    }
+
+    private async Task<string> GetMapHelperErrorAsync(string fallbackMessage)
+    {
+        try
+        {
+            var helperError = await JS.InvokeAsync<string>("AppMapHelper.getLastError", fallbackMessage);
+            return string.IsNullOrWhiteSpace(helperError) ? fallbackMessage : helperError;
+        }
+        catch
+        {
+            return fallbackMessage;
+        }
+    }
+
+    private async Task<LocationDto?> GetRequestedFocusedPoiAsync()
+    {
+        if (FocusId is not > 0)
+        {
+            return null;
+        }
+
+        try
+        {
+            return await Http.GetFromJsonAsync<LocationDto>($"api/maps/locations/{FocusId.Value}");
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private async Task OpenFocusedPoiDirections()
+    {
+        if (focusedPoi == null)
+        {
+            return;
+        }
+
+        var url = BuildDirectionsUrl(focusedPoi);
+        await JS.InvokeVoidAsync("open", url, "_blank");
+    }
+
+    private void ClearFocusedPoi()
+    {
+        focusedPoi = null;
+        Navigation.NavigateTo("/map", replace: true);
+    }
+
+    private void UpdateFocusedPoiDistance()
+    {
+        if (focusedPoi == null || !hasLocation)
+        {
+            return;
+        }
+
+        focusedPoi.Distance = CalculateDistance(userLat, userLng, focusedPoi.Latitude, focusedPoi.Longitude);
+    }
+
+    private static string BuildDirectionsUrl(LocationDto poi)
+    {
+        return $"https://www.google.com/maps/dir/?api=1&destination={poi.Latitude},{poi.Longitude}&travelmode=walking&dir_action=navigate";
+    }
+
+    private static string FormatDistance(double meters)
+    {
+        if (meters >= 1000)
+        {
+            return $"Cách bạn {meters / 1000:F1} km";
+        }
+
+        return $"Cách bạn {meters:F0} m";
     }
 
     private double CalculateDistance(double lat1, double lng1, double lat2, double lng2)
