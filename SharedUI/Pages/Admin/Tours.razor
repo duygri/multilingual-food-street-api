@@ -224,10 +224,10 @@
         align-items: center;
         gap: 8px;
         padding: 12px 20px;
-        background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
-        color: #fff;
+        background: linear-gradient(135deg, var(--color-accent) 0%, #f7931e 100%);
+        color: white;
         border: none;
-        border-radius: 12px;
+        border-radius: var(--radius-lg);
         font-size: 14px;
         font-weight: 600;
         cursor: pointer;
@@ -246,10 +246,10 @@
 
     .btn-secondary {
         padding: 12px 20px;
-        background: #f1f5f9;
-        color: #475569;
+        background: var(--surface-inset);
+        color: var(--text-secondary);
         border: none;
-        border-radius: 12px;
+        border-radius: var(--radius-lg);
         font-size: 14px;
         font-weight: 500;
         cursor: pointer;
@@ -257,13 +257,13 @@
     }
 
     .btn-secondary:hover {
-        background: #e2e8f0;
+        background: var(--color-neutral-200);
     }
 
     /* Empty State */
     .empty-state-card {
-        background: #fff;
-        border-radius: 20px;
+        background: white;
+        border-radius: var(--radius-xl);
         padding: 60px;
         text-align: center;
         box-shadow: 0 4px 12px rgba(0,0,0,0.05);
@@ -281,7 +281,7 @@
     }
 
     .empty-state-card p {
-        color: #64748b;
+        color: var(--text-secondary);
         margin-bottom: 24px;
     }
 
@@ -293,8 +293,8 @@
     }
 
     .tour-card {
-        background: #fff;
-        border-radius: 20px;
+        background: white;
+        border-radius: var(--radius-xl);
         overflow: hidden;
         box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         transition: all 0.3s ease;
@@ -314,25 +314,25 @@
         justify-content: space-between;
         align-items: center;
         padding: 16px 20px;
-        background: #f8fafc;
-        border-bottom: 1px solid #f1f5f9;
+        background: var(--surface-card);
+        border-bottom: 1px solid var(--surface-inset);
     }
 
     .tour-status {
         padding: 4px 12px;
-        border-radius: 20px;
+        border-radius: var(--radius-xl);
         font-size: 12px;
         font-weight: 600;
     }
 
     .tour-status.active {
         background: rgba(16, 185, 129, 0.1);
-        color: #10b981;
+        color: var(--color-success);
     }
 
     .tour-status.paused {
         background: rgba(245, 158, 11, 0.1);
-        color: #f59e0b;
+        color: var(--color-warning);
     }
 
     .tour-actions {
@@ -344,15 +344,15 @@
         width: 32px;
         height: 32px;
         border: none;
-        background: #fff;
-        border-radius: 8px;
+        background: white;
+        border-radius: var(--radius-md);
         cursor: pointer;
         font-size: 14px;
         transition: all 0.2s;
     }
 
     .action-btn:hover {
-        background: #f1f5f9;
+        background: var(--surface-inset);
     }
 
     .action-btn.danger:hover {
@@ -371,7 +371,7 @@
     }
 
     .tour-description {
-        color: #64748b;
+        color: var(--text-secondary);
         font-size: 14px;
         line-height: 1.5;
         margin-bottom: 16px;
@@ -388,17 +388,17 @@
         align-items: center;
         gap: 6px;
         font-size: 13px;
-        color: #475569;
+        color: var(--text-secondary);
     }
 
     .tour-stops {
         padding-top: 16px;
-        border-top: 1px solid #f1f5f9;
+        border-top: 1px solid var(--surface-inset);
     }
 
     .tour-stops h4 {
         font-size: 13px;
-        color: #64748b;
+        color: var(--text-secondary);
         margin-bottom: 12px;
     }
 
@@ -417,9 +417,9 @@
     .stop-number {
         width: 24px;
         height: 24px;
-        background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
-        color: #fff;
-        border-radius: 50%;
+        background: linear-gradient(135deg, var(--color-accent) 0%, #f7931e 100%);
+        color: white;
+        border-radius: var(--radius-full);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -434,7 +434,7 @@
 
     .stop-more {
         font-size: 12px;
-        color: #64748b;
+        color: var(--text-secondary);
         margin-left: 34px;
     }
 
@@ -443,19 +443,19 @@
         justify-content: space-between;
         align-items: center;
         padding: 16px 20px;
-        background: #f8fafc;
-        border-top: 1px solid #f1f5f9;
+        background: var(--surface-card);
+        border-top: 1px solid var(--surface-inset);
     }
 
     .created-date {
         font-size: 12px;
-        color: #94a3b8;
+        color: var(--color-neutral-400);
     }
 
     .btn-manage {
         background: transparent;
         border: none;
-        color: #ff6b35;
+        color: var(--color-accent);
         font-size: 13px;
         font-weight: 500;
         cursor: pointer;
@@ -478,8 +478,8 @@
     }
 
     .modal-content {
-        background: #fff;
-        border-radius: 20px;
+        background: white;
+        border-radius: var(--radius-xl);
         width: 90%;
         max-width: 500px;
         max-height: 90vh;
@@ -509,7 +509,7 @@
         justify-content: space-between;
         align-items: center;
         padding: 20px 24px;
-        border-bottom: 1px solid #f1f5f9;
+        border-bottom: 1px solid var(--surface-inset);
     }
 
     .modal-header h3 {
@@ -522,8 +522,8 @@
         width: 32px;
         height: 32px;
         border: none;
-        background: #f1f5f9;
-        border-radius: 8px;
+        background: var(--surface-inset);
+        border-radius: var(--radius-md);
         cursor: pointer;
         font-size: 16px;
     }
@@ -538,7 +538,7 @@
         justify-content: flex-end;
         gap: 12px;
         padding: 20px 24px;
-        border-top: 1px solid #f1f5f9;
+        border-top: 1px solid var(--surface-inset);
     }
 
     .form-group {
@@ -549,7 +549,7 @@
         display: block;
         font-size: 13px;
         font-weight: 500;
-        color: #475569;
+        color: var(--text-secondary);
         margin-bottom: 8px;
     }
 
@@ -558,8 +558,8 @@
     .form-group select {
         width: 100%;
         padding: 12px 14px;
-        border: 1px solid #e2e8f0;
-        border-radius: 10px;
+        border: 1px solid var(--color-neutral-200);
+        border-radius: var(--radius-md);
         font-size: 14px;
         transition: all 0.2s;
     }
@@ -568,7 +568,7 @@
     .form-group textarea:focus,
     .form-group select:focus {
         outline: none;
-        border-color: #ff6b35;
+        border-color: var(--color-accent);
         box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
     }
 
@@ -612,16 +612,16 @@
         align-items: center;
         gap: 12px;
         padding: 12px;
-        background: #f8fafc;
-        border-radius: 10px;
+        background: var(--surface-card);
+        border-radius: var(--radius-md);
     }
 
     .item-order {
         width: 28px;
         height: 28px;
-        background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
-        color: #fff;
-        border-radius: 50%;
+        background: linear-gradient(135deg, var(--color-accent) 0%, #f7931e 100%);
+        color: white;
+        border-radius: var(--radius-full);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -643,7 +643,7 @@
         width: 28px;
         height: 28px;
         border: none;
-        background: #fff;
+        background: white;
         border-radius: 6px;
         cursor: pointer;
         font-size: 12px;
@@ -659,7 +659,7 @@
     }
 
     .no-items {
-        color: #94a3b8;
+        color: var(--color-neutral-400);
         font-style: italic;
         text-align: center;
         padding: 20px;
@@ -679,8 +679,8 @@
     .add-item-form select {
         flex: 1;
         padding: 10px 14px;
-        border: 1px solid #e2e8f0;
-        border-radius: 10px;
+        border: 1px solid var(--color-neutral-200);
+        border-radius: var(--radius-md);
         font-size: 14px;
     }
 
@@ -688,15 +688,15 @@
     .loading-state {
         text-align: center;
         padding: 60px;
-        color: #64748b;
+        color: var(--text-secondary);
     }
 
     .spinner {
         width: 40px;
         height: 40px;
-        border: 3px solid #f1f5f9;
-        border-top-color: #ff6b35;
-        border-radius: 50%;
+        border: 3px solid var(--surface-inset);
+        border-top-color: var(--color-accent);
+        border-radius: var(--radius-full);
         margin: 0 auto 16px;
         animation: spin 1s linear infinite;
     }
@@ -957,3 +957,4 @@
         public string Name { get; set; } = "";
     }
 }
+
