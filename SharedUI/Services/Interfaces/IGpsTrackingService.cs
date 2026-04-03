@@ -15,6 +15,7 @@ namespace FoodStreet.Client.Services
 
         event Action<double, double>? OnPositionUpdated;
         event Action<List<NearbyPoiDto>>? OnGeofenceEntered;
+        event Action<List<int>>? OnGeofenceExited;
         event Action<string>? OnError;
 
         Task StartTrackingAsync();
