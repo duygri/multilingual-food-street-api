@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+             android:layout_width="match_parent"
+             android:layout_height="match_parent"
+             android:background="#F8FAFC">
+
+  <FrameLayout
+      android:id="@+id/native_map_fragment_host"
+      android:layout_width="match_parent"
+      android:layout_height="match_parent" />
+
+  <LinearLayout
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:layout_gravity="top"
+      android:orientation="horizontal"
+      android:gravity="center_vertical"
+      android:padding="12dp"
+      android:background="#F9FFFFFF">
+
+    <ImageButton
+        android:id="@+id/native_map_close_button"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="@android:color/transparent"
+        android:contentDescription="Đóng bản đồ"
+        android:padding="8dp"
+        android:src="@android:drawable/ic_menu_close_clear_cancel"
+        android:tint="#0F172A" />
+
+    <TextView
+        android:id="@+id/native_map_title"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:paddingStart="8dp"
+        android:text="Bản đồ POI"
+        android:textColor="#0F172A"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <ImageButton
+        android:id="@+id/native_map_recenter_button"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="@android:color/transparent"
+        android:contentDescription="Đưa bản đồ về vị trí hiện tại"
+        android:padding="8dp"
+        android:src="@android:drawable/ic_menu_mylocation"
+        android:tint="#0F172A" />
+  </LinearLayout>
+
+  <LinearLayout
+      android:id="@+id/native_map_picker_actions"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:layout_gravity="bottom"
+      android:orientation="vertical"
+      android:padding="16dp"
+      android:background="#F9FFFFFF"
+      android:visibility="gone">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="10dp"
+        android:text="Chạm vào bản đồ hoặc kéo marker để chọn tọa độ POI."
+        android:textColor="#475569"
+        android:textSize="13sp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+      <Button
+          android:id="@+id/native_map_search_button"
+          android:layout_width="0dp"
+          android:layout_height="wrap_content"
+          android:layout_weight="1"
+          android:text="Tìm địa điểm" />
+
+      <Space
+          android:layout_width="12dp"
+          android:layout_height="1dp" />
+
+      <Button
+          android:id="@+id/native_map_cancel_button"
+          android:layout_width="0dp"
+          android:layout_height="wrap_content"
+          android:layout_weight="1"
+          android:text="Hủy" />
+
+      <Space
+          android:layout_width="12dp"
+          android:layout_height="1dp" />
+
+      <Button
+          android:id="@+id/native_map_confirm_button"
+          android:layout_width="0dp"
+          android:layout_height="wrap_content"
+          android:layout_weight="1"
+          android:enabled="false"
+          android:text="Xác nhận" />
+    </LinearLayout>
+  </LinearLayout>
+
+</FrameLayout>
