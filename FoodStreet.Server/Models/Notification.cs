@@ -4,12 +4,16 @@ namespace PROJECT_C_.Models
 {
     public enum NotificationType
     {
-        POI_Created,      // Seller tạo POI mới → thông báo Admin
-        POI_Approved,     // Admin duyệt POI → thông báo Seller
-        POI_Rejected,     // Admin từ chối POI → thông báo Seller
-        Food_Created,     // Seller tạo món ăn → thông báo Admin
-        Food_Approved,    // Admin duyệt món ăn → thông báo Seller
-        System            // Thông báo hệ thống
+        POI_Created,      // POI Owner tạo POI mới → thông báo Admin
+        POI_Approved,     // Admin duyệt POI → thông báo POI Owner
+        POI_Rejected,     // Admin từ chối POI → thông báo POI Owner
+        Food_Created,     // Enum legacy: dữ liệu cũ cho sự kiện tạo/cập nhật menu → thông báo Admin
+        Food_Approved,    // Enum legacy: dữ liệu cũ cho sự kiện duyệt menu → thông báo POI Owner
+        System,           // Thông báo hệ thống
+        POI_Updated,      // POI Owner cập nhật POI → cần duyệt lại
+        POI_AudioReady,   // Audio / TTS cho POI đã sẵn sàng
+        Menu_Created,     // Enum mới: dùng cho sự kiện tạo/cập nhật menu → thông báo Admin
+        Menu_Approved     // Enum mới: dùng cho sự kiện duyệt menu → thông báo POI Owner
     }
 
     public class Notification
@@ -22,7 +26,7 @@ namespace PROJECT_C_.Models
         public string? UserId { get; set; }
 
         /// <summary>
-        /// Role nhận thông báo ("Admin" hoặc "Seller")
+        /// Role nhận thông báo ("Admin" hoặc role persistence legacy "Seller" cho POI Owner)
         /// Nếu UserId null → gửi cho tất cả user có role này
         /// </summary>
         [MaxLength(20)]
@@ -42,7 +46,7 @@ namespace PROJECT_C_.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         /// <summary>
-        /// ID liên quan (LocationId, FoodId, etc.)
+        /// ID liên quan (LocationId, MenuItemId, etc.)
         /// </summary>
         public int? RelatedId { get; set; }
 
