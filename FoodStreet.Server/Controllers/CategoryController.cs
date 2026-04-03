@@ -8,7 +8,7 @@ using FoodStreet.Server.Extensions;
 namespace PROJECT_C_.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/content/category")]
     public class CategoryController : ControllerBase
     {
         private readonly AppDbContext _context;
