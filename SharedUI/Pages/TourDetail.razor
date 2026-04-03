@@ -1,0 +1,881 @@
+@page "/tours/{Id:int}"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@using FoodStreet.Client.DTOs
+@using FoodStreet.Client.Services
+@inject ITourClientService TourClient
+@inject TourPlayerService TourPlayer
+@inject ISessionStorageService SessionStorage
+@inject NavigationManager Navigation
+
+<div class="tour-detail-page">
+    @if (isLoading)
+    {
+        <div class="tour-state">
+            <div class="tour-spinner"></div>
+            <p>Đang tải tour...</p>
+        </div>
+    }
+    else if (tour == null)
+    {
+        <div class="tour-state">
+            <span class="state-icon">🧭</span>
+            <h3>Không tìm thấy tour</h3>
+            <p>Tour này có thể đã bị ẩn hoặc chưa được kích hoạt.</p>
+            <button class="ghost-btn" @onclick="GoBack">← Quay lại danh sách</button>
+        </div>
+    }
+    else
+    {
+        <header class="tour-hero">
+            <button class="hero-back" @onclick="GoBack">← Tour</button>
+            <div class="hero-copy">
+                <span class="hero-tag">Tour trải nghiệm</span>
+                <h1>@tour.Name</h1>
+                <p>@(tour.Description ?? "Khám phá từng điểm dừng theo lộ trình được gợi ý.")</p>
+            </div>
+            <div class="hero-stats">
+                <div><strong>@tour.ItemCount</strong><span>điểm dừng</span></div>
+                <div><strong>@tour.EstimatedDurationMinutes</strong><span>phút</span></div>
+                <div><strong>@tour.EstimatedDistanceKm.ToString("0.#")</strong><span>km</span></div>
+            </div>
+        </header>
+
+        <section class="tour-session-card">
+            @if (session == null)
+            {
+                <div class="session-idle">
+                    <h2>Bắt đầu hành trình</h2>
+                    <p>Hệ thống sẽ tạo phiên tour, mở điểm dừng đầu tiên và phát thuyết minh nếu nội dung đã sẵn sàng.</p>
+                    <button class="primary-btn" @onclick="StartTourAsync" disabled="@isStarting">
+                        @(isStarting ? "Đang bắt đầu..." : "▶ Bắt đầu tour")
+                    </button>
+                </div>
+            }
+            else
+            {
+                <div class="session-header">
+                    <div>
+                        <h2>Tiến độ tour</h2>
+                        <p>Phiên: @session.SessionId</p>
+                    </div>
+                    <div class="progress-pill">@(session.ProgressPercent)%</div>
+                </div>
+
+                <div class="progress-track">
+                    <div class="progress-bar" style="width:@($"{session.ProgressPercent}%")"></div>
+                </div>
+
+                <div class="progress-meta">
+                    <span>Đã hoàn thành @session.CompletedStops / @session.TotalStops điểm</span>
+                    <span>@(session.IsCompleted ? "Đã hoàn tất hành trình" : "Đang tiếp tục hành trình")</span>
+                </div>
+
+                @if (activeStop != null)
+                {
+                    <article class="active-stop-card">
+                        <div class="active-stop-copy">
+                            <span class="stop-order">Điểm đang nghe: @activeStop.Order</span>
+                            <h3>@activeStop.LocationName</h3>
+                            <p>@(activeStop.LocationDescription ?? "Nội dung giới thiệu sẽ hiển thị tại đây.")</p>
+                            <div class="stop-tags">
+                                <span>🌐 @activeStop.LanguageCode</span>
+                                <span>🎧 @activeStop.AudioStatus</span>
+                                @if (activeStop.FallbackUsed)
+                                {
+                                    <span>↩ fallback</span>
+                                }
+                            </div>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(activeStop.LocationImageUrl))
+                        {
+                            <img class="active-stop-image" src="@activeStop.LocationImageUrl" alt="@activeStop.LocationName" />
+                        }
+                    </article>
+                }
+
+                <div class="session-actions">
+                    <button class="primary-btn" @onclick="PlayActiveStopAsync" disabled="@(activeStop == null)">
+                        🎧 Phát thuyết minh
+                    </button>
+                    <button class="ghost-btn" @onclick="OpenActivePoi" disabled="@(activeStop == null)">
+                        📍 Mở chi tiết POI
+                    </button>
+                    <button class="ghost-btn" @onclick="AdvanceTourAsync" disabled="@(activeStop == null || session.IsCompleted || isAdvancing)">
+                        @(isAdvancing ? "Đang cập nhật..." : "➡ Điểm kế tiếp")
+                    </button>
+                </div>
+
+                @if (session.NextStop != null && !session.IsCompleted)
+                {
+                    <div class="next-stop-card">
+                        <span class="next-label">Tiếp theo</span>
+                        <strong>@session.NextStop.LocationName</strong>
+                        <p>@(session.NextStop.Note ?? "Điểm dừng kế tiếp trong hành trình.")</p>
+                    </div>
+                }
+            }
+        </section>
+
+        <section class="tour-stops-section">
+            <div class="section-header">
+                <h2>Lộ trình chi tiết</h2>
+                <p>Danh sách điểm dừng theo thứ tự được đề xuất.</p>
+            </div>
+
+            <div class="stop-list">
+                @foreach (var stop in tour.Items.OrderBy(i => i.Order))
+                {
+                    var isActive = activeStop?.LocationId == stop.LocationId;
+                    var isCompleted = session != null && stop.Order <= session.CompletedStops;
+
+                    <article class="stop-list-item @(isActive ? "active" : "") @(isCompleted ? "completed" : "")">
+                        <div class="stop-number">@stop.Order</div>
+                        <div class="stop-body">
+                            <div class="stop-title-row">
+                                <h3>@stop.LocationName</h3>
+                                @if (isCompleted)
+                                {
+                                    <span class="stop-state complete">Đã qua</span>
+                                }
+                                else if (isActive)
+                                {
+                                    <span class="stop-state active">Hiện tại</span>
+                                }
+                            </div>
+                            <p>@(stop.LocationDescription ?? stop.Note ?? "Điểm dừng trong tour trải nghiệm.")</p>
+                            <div class="stop-meta">
+                                <span>⏱️ @stop.EstimatedStopMinutes phút</span>
+                                <span>🌐 @stop.LanguageCode</span>
+                                @if (stop.HasAudio)
+                                {
+                                    <span>🎧 Có audio</span>
+                                }
+                            </div>
+                        </div>
+                        <button class="stop-link" @onclick="@(() => OpenStopPoi(stop))">Chi tiết</button>
+                    </article>
+                }
+            </div>
+        </section>
+    }
+</div>
+
+<style>
+    .tour-detail-page {
+        min-height: calc(100vh - 112px);
+        background: linear-gradient(180deg, #fff7ed 0%, #ffffff 20%, #f8fafc 100%);
+        padding-bottom: 32px;
+    }
+
+    .tour-state {
+        min-height: 70vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        color: #64748b;
+        padding: 24px;
+    }
+
+    .state-icon {
+        font-size: 52px;
+        margin-bottom: 12px;
+    }
+
+    .tour-spinner {
+        width: 42px;
+        height: 42px;
+        border: 3px solid #fed7aa;
+        border-top-color: #ea580c;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        margin-bottom: 12px;
+    }
+
+    .tour-hero {
+        padding: 22px 18px 20px;
+        background: radial-gradient(circle at top left, rgba(251, 146, 60, 0.24), transparent 40%), linear-gradient(135deg, #9a3412, #ea580c 55%, #fb923c);
+        color: white;
+    }
+
+    .hero-back {
+        border: none;
+        background: rgba(255,255,255,0.16);
+        color: white;
+        padding: 8px 12px;
+        border-radius: 999px;
+        font-weight: 700;
+        cursor: pointer;
+        margin-bottom: 16px;
+    }
+
+    .hero-tag {
+        display: inline-flex;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.18);
+        font-size: 12px;
+        font-weight: 700;
+        margin-bottom: 10px;
+    }
+
+    .hero-copy h1 {
+        margin: 0 0 8px;
+        font-size: 28px;
+        font-weight: 800;
+    }
+
+    .hero-copy p {
+        margin: 0;
+        max-width: 720px;
+        color: rgba(255,255,255,0.88);
+        line-height: 1.6;
+    }
+
+    .hero-stats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 18px;
+    }
+
+    .hero-stats div {
+        min-width: 90px;
+        padding: 10px 12px;
+        border-radius: 16px;
+        background: rgba(255,255,255,0.12);
+        backdrop-filter: blur(8px);
+    }
+
+    .hero-stats strong {
+        display: block;
+        font-size: 20px;
+        line-height: 1.1;
+    }
+
+    .hero-stats span {
+        font-size: 12px;
+        color: rgba(255,255,255,0.8);
+    }
+
+    .tour-session-card,
+    .tour-stops-section {
+        margin: 16px;
+        background: white;
+        border-radius: 24px;
+        padding: 18px;
+        border: 1px solid #ffedd5;
+        box-shadow: 0 12px 32px rgba(15, 23, 42, 0.05);
+    }
+
+    .session-idle h2,
+    .section-header h2 {
+        margin: 0 0 8px;
+        color: #111827;
+        font-size: 20px;
+        font-weight: 800;
+    }
+
+    .session-idle p,
+    .section-header p {
+        margin: 0 0 16px;
+        color: #6b7280;
+        line-height: 1.6;
+    }
+
+    .session-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .session-header h2 {
+        margin: 0 0 4px;
+        color: #111827;
+        font-size: 20px;
+    }
+
+    .session-header p {
+        margin: 0;
+        color: #94a3b8;
+        font-size: 12px;
+    }
+
+    .progress-pill {
+        padding: 10px 14px;
+        border-radius: 999px;
+        background: #fff7ed;
+        color: #c2410c;
+        font-weight: 800;
+    }
+
+    .progress-track {
+        margin-top: 16px;
+        background: #e5e7eb;
+        border-radius: 999px;
+        height: 10px;
+        overflow: hidden;
+    }
+
+    .progress-bar {
+        height: 100%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #ea580c, #fb923c);
+    }
+
+    .progress-meta {
+        margin-top: 10px;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 8px;
+        color: #64748b;
+        font-size: 13px;
+    }
+
+    .active-stop-card {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 112px;
+        gap: 14px;
+        margin-top: 18px;
+        padding: 14px;
+        border-radius: 22px;
+        background: linear-gradient(135deg, #fff7ed, #ffffff);
+        border: 1px solid #fdba74;
+    }
+
+    .active-stop-copy h3 {
+        margin: 6px 0 8px;
+        color: #111827;
+        font-size: 20px;
+        font-weight: 800;
+    }
+
+    .active-stop-copy p {
+        margin: 0;
+        color: #6b7280;
+        line-height: 1.6;
+    }
+
+    .stop-order {
+        display: inline-flex;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: #ffedd5;
+        color: #c2410c;
+        font-size: 12px;
+        font-weight: 800;
+    }
+
+    .stop-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+        font-size: 12px;
+        color: #475569;
+    }
+
+    .stop-tags span {
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: #fff;
+        border: 1px solid #fed7aa;
+    }
+
+    .active-stop-image {
+        width: 112px;
+        height: 112px;
+        object-fit: cover;
+        border-radius: 18px;
+    }
+
+    .session-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 16px;
+    }
+
+    .primary-btn,
+    .ghost-btn,
+    .stop-link {
+        border: none;
+        border-radius: 14px;
+        padding: 12px 16px;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    .primary-btn {
+        background: linear-gradient(135deg, #ea580c, #fb923c);
+        color: white;
+        box-shadow: 0 10px 24px rgba(234, 88, 12, 0.2);
+    }
+
+    .ghost-btn,
+    .stop-link {
+        background: #fff7ed;
+        color: #c2410c;
+    }
+
+    .primary-btn:disabled,
+    .ghost-btn:disabled,
+    .stop-link:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+    }
+
+    .next-stop-card {
+        margin-top: 14px;
+        padding: 14px;
+        border-radius: 18px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+    }
+
+    .next-label {
+        display: inline-flex;
+        margin-bottom: 8px;
+        font-size: 12px;
+        font-weight: 800;
+        color: #475569;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .next-stop-card strong {
+        display: block;
+        margin-bottom: 4px;
+        color: #111827;
+    }
+
+    .next-stop-card p {
+        margin: 0;
+        color: #64748b;
+    }
+
+    .stop-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .stop-list-item {
+        display: grid;
+        grid-template-columns: 40px minmax(0, 1fr) auto;
+        gap: 12px;
+        align-items: start;
+        padding: 14px;
+        border-radius: 18px;
+        background: #f8fafc;
+        border: 1px solid transparent;
+    }
+
+    .stop-list-item.active {
+        border-color: #fb923c;
+        background: #fff7ed;
+    }
+
+    .stop-list-item.completed {
+        background: #f0fdf4;
+        border-color: #bbf7d0;
+    }
+
+    .stop-number {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #111827;
+        color: white;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .stop-title-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 6px;
+    }
+
+    .stop-title-row h3 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 800;
+        color: #111827;
+    }
+
+    .stop-state {
+        padding: 4px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 800;
+    }
+
+    .stop-state.active {
+        background: #fff7ed;
+        color: #c2410c;
+    }
+
+    .stop-state.complete {
+        background: #dcfce7;
+        color: #15803d;
+    }
+
+    .stop-body p {
+        margin: 0 0 10px;
+        color: #64748b;
+        line-height: 1.5;
+    }
+
+    .stop-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        color: #475569;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    @@keyframes spin { to { transform: rotate(360deg); } }
+
+    @@media (max-width: 640px) {
+        .active-stop-card {
+            grid-template-columns: 1fr;
+        }
+
+        .active-stop-image {
+            width: 100%;
+            height: 180px;
+        }
+
+        .stop-list-item {
+            grid-template-columns: 36px minmax(0, 1fr);
+        }
+
+        .stop-link {
+            grid-column: 2;
+            justify-self: start;
+        }
+    }
+</style>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private TourDto? tour;
+    private TourSessionDto? session;
+    private TourStopDto? activeStop;
+    private bool isLoading = true;
+    private bool isStarting;
+    private bool isAdvancing;
+    private string? lastContextKey;
+    private const string TourResumeStorageKey = "tour_resume_snapshot";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var contextKey = $"{Id}|{Navigation.ToAbsoluteUri(Navigation.Uri).Query}";
+        if (string.Equals(lastContextKey, contextKey, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        lastContextKey = contextKey;
+        await LoadTourAsync();
+    }
+
+    private async Task LoadTourAsync()
+    {
+        isLoading = true;
+
+        try
+        {
+            tour = await TourClient.GetTourAsync(Id);
+            await RestoreSessionFromQueryAsync(Navigation.ToAbsoluteUri(Navigation.Uri));
+            await PersistResumeSnapshotAsync();
+        }
+        catch
+        {
+            tour = null;
+            session = null;
+            activeStop = null;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task StartTourAsync()
+    {
+        if (tour == null)
+        {
+            return;
+        }
+
+        isStarting = true;
+
+        try
+        {
+            session = await TourClient.StartTourAsync(tour.Id, new StartTourRequestDto
+            {
+                DeviceType = "web"
+            });
+
+            activeStop = session?.CurrentStop;
+            SyncSessionToUrl();
+            await PersistResumeSnapshotAsync();
+            await PlayActiveStopAsync();
+        }
+        finally
+        {
+            isStarting = false;
+        }
+    }
+
+    private async Task AdvanceTourAsync()
+    {
+        if (tour == null || session == null || activeStop == null)
+        {
+            return;
+        }
+
+        isAdvancing = true;
+
+        try
+        {
+            var progress = await TourClient.UpdateProgressAsync(tour.Id, new TourProgressRequestDto
+            {
+                SessionId = session.SessionId,
+                CurrentLocationId = activeStop.LocationId,
+                DeviceType = "web"
+            });
+
+            if (progress != null)
+            {
+                session = progress;
+                activeStop = progress.CurrentStop ?? progress.NextStop;
+                SyncSessionToUrl();
+                await PersistResumeSnapshotAsync();
+                await PlayActiveStopAsync();
+            }
+        }
+        finally
+        {
+            isAdvancing = false;
+        }
+    }
+
+    private async Task PlayActiveStopAsync()
+    {
+        if (activeStop == null)
+        {
+            return;
+        }
+
+        await TourPlayer.Play(new PlayableItem(
+            activeStop.LocationId,
+            activeStop.LocationName,
+            activeStop.Note ?? "Thuyết minh điểm dừng",
+            activeStop.LocationImageUrl,
+            activeStop.AudioUrl,
+            activeStop.LocationDescription));
+    }
+
+    private void OpenActivePoi()
+    {
+        if (activeStop == null)
+        {
+            return;
+        }
+
+        Navigation.NavigateTo(BuildPoiJourneyUrl(activeStop));
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/tours");
+    }
+
+    private void OpenStopPoi(TourStopDto stop)
+    {
+        Navigation.NavigateTo(BuildPoiJourneyUrl(stop));
+    }
+
+    private async Task RestoreSessionFromQueryAsync(Uri uri)
+    {
+        if (tour == null)
+        {
+            session = null;
+            activeStop = null;
+            return;
+        }
+
+        var sessionId = GetQueryValue(uri, "session");
+        if (string.IsNullOrWhiteSpace(sessionId))
+        {
+            session = null;
+            activeStop = null;
+            return;
+        }
+
+        var persistedSession = await TourClient.ResumeTourAsync(tour.Id, new ResumeTourRequestDto
+        {
+            SessionId = sessionId,
+            DeviceType = "web"
+        });
+
+        persistedSession ??= await TourClient.GetSessionAsync(tour.Id, sessionId);
+        if (persistedSession != null)
+        {
+            session = persistedSession;
+            activeStop = persistedSession.CurrentStop ?? persistedSession.NextStop;
+            return;
+        }
+
+        var orderedStops = tour.Items.OrderBy(item => item.Order).ToList();
+        if (!orderedStops.Any())
+        {
+            session = null;
+            activeStop = null;
+            return;
+        }
+
+        var requestedStop = ParseStopOrder(GetQueryValue(uri, "stop"));
+        var currentStop = requestedStop.HasValue
+            ? orderedStops.FirstOrDefault(item => item.Order == requestedStop.Value)
+            : null;
+
+        currentStop ??= orderedStops[0];
+
+        var nextStop = orderedStops.FirstOrDefault(item => item.Order == currentStop.Order + 1);
+        var completedStops = Math.Max(0, currentStop.Order - 1);
+        var progressPercent = orderedStops.Count == 0
+            ? 0
+            : (int)Math.Round((double)completedStops / orderedStops.Count * 100, MidpointRounding.AwayFromZero);
+
+        session = new TourSessionDto
+        {
+            TourId = tour.Id,
+            SessionId = sessionId,
+            TotalStops = orderedStops.Count,
+            CompletedStops = completedStops,
+            ProgressPercent = progressPercent,
+            CurrentStop = currentStop,
+            NextStop = nextStop,
+            IsCompleted = nextStop == null && currentStop.Order >= orderedStops.Count
+        };
+        activeStop = currentStop;
+    }
+
+    private void SyncSessionToUrl()
+    {
+        if (tour == null || session == null || activeStop == null)
+        {
+            return;
+        }
+
+        var targetUrl = BuildTourSessionUrl(tour.Id, session.SessionId, activeStop.Order);
+        var currentRelative = $"{Navigation.ToAbsoluteUri(Navigation.Uri).AbsolutePath}{Navigation.ToAbsoluteUri(Navigation.Uri).Query}";
+        if (string.Equals(currentRelative, targetUrl, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        Navigation.NavigateTo(targetUrl, replace: true);
+    }
+
+    private string BuildPoiJourneyUrl(TourStopDto stop)
+    {
+        var queryParts = new List<string>
+        {
+            $"entry={Uri.EscapeDataString(GetEntrySource(stop))}",
+            $"tourId={Id}",
+            $"stop={stop.Order}"
+        };
+
+        if (!string.IsNullOrWhiteSpace(session?.SessionId))
+        {
+            queryParts.Add($"session={Uri.EscapeDataString(session.SessionId)}");
+        }
+
+        return $"/poi/{stop.LocationId}?{string.Join("&", queryParts)}";
+    }
+
+    private string GetEntrySource(TourStopDto stop)
+    {
+        return stop.Order <= 1 && (session?.CompletedStops ?? 0) == 0
+            ? "tour_start"
+            : "tour_progress";
+    }
+
+    private static string BuildTourSessionUrl(int tourId, string sessionId, int stopOrder)
+    {
+        return $"/tours/{tourId}?session={Uri.EscapeDataString(sessionId)}&stop={stopOrder}";
+    }
+
+    private static int? ParseStopOrder(string? value)
+    {
+        return int.TryParse(value, out var stopOrder) && stopOrder > 0
+            ? stopOrder
+            : null;
+    }
+
+    private static string? GetQueryValue(Uri uri, string key)
+    {
+        if (string.IsNullOrWhiteSpace(uri.Query))
+        {
+            return null;
+        }
+
+        var segments = uri.Query.TrimStart('?')
+            .Split('&', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        foreach (var segment in segments)
+        {
+            var parts = segment.Split('=', 2);
+            if (!string.Equals(parts[0], key, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            return parts.Length == 2
+                ? Uri.UnescapeDataString(parts[1])
+                : string.Empty;
+        }
+
+        return null;
+    }
+
+    private async Task PersistResumeSnapshotAsync()
+    {
+        if (tour == null || session == null || activeStop == null || string.IsNullOrWhiteSpace(session.SessionId) || session.IsCompleted)
+        {
+            await SessionStorage.RemoveItemAsync(TourResumeStorageKey);
+            return;
+        }
+
+        var snapshot = new TourResumeSnapshotDto
+        {
+            TourId = tour.Id,
+            TourName = tour.Name,
+            TourDescription = tour.Description,
+            SessionId = session.SessionId,
+            StopOrder = activeStop.Order,
+            CurrentStopName = activeStop.LocationName,
+            ProgressPercent = session.ProgressPercent,
+            CompletedStops = session.CompletedStops,
+            TotalStops = session.TotalStops,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        await SessionStorage.SetItemAsync(TourResumeStorageKey, snapshot);
+    }
+}
