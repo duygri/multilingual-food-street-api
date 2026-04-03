@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using FoodStreet.Server.Constants;
 using PROJECT_C_.Configuration;
 using PROJECT_C_.DTOs;
 using System.IdentityModel.Tokens.Jwt;
@@ -12,9 +13,9 @@ using System.Text;
 namespace PROJECT_C_.Controllers
 {
     /// <summary>
-    /// Authentication controller - handles login, register, and token refresh
+    /// Authentication controller - handles register, login, and profile/account operations
     /// </summary>
-    [Route("api/[controller]")]
+    [Route("api/content/auth")]
     [ApiController]
     public class AuthController : ControllerBase
     {
@@ -28,8 +29,9 @@ namespace PROJECT_C_.Controllers
             {
                 IsAuthenticated = User.Identity?.IsAuthenticated,
                 AuthType = User.Identity?.AuthenticationType,
-                IsAdmin = User.IsInRole("Admin"),
-                IsSeller = User.IsInRole("Seller"),
+                IsAdmin = User.IsInRole(AppRoles.Admin),
+                IsPoiOwner = User.IsInRole(AppRoles.PoiOwner),
+                IsTourist = User.IsInRole(AppRoles.Tourist),
                 ClaimCount = claims.Count,
                 Claims = claims
             });
@@ -64,8 +66,7 @@ namespace PROJECT_C_.Controllers
             }
 
             // Validate Role
-            var allowedRoles = new[] { "Seller", "User" };
-            if (!allowedRoles.Contains(request.Role)) request.Role = "User";
+            request.Role = AppRoles.NormalizeForPersistence(request.Role);
 
             var user = new IdentityUser
             {
@@ -74,8 +75,8 @@ namespace PROJECT_C_.Controllers
                 EmailConfirmed = true // Email verified by default for simplicity
             };
 
-            // If Seller -> Lock account until approved
-            if (request.Role == "Seller")
+            // If POI Owner -> lock account until approved
+            if (request.Role == AppRoles.PoiOwner)
             {
                 user.LockoutEnabled = true;
                 user.LockoutEnd = DateTimeOffset.UtcNow.AddYears(100); // Indefinite lock
@@ -96,11 +97,12 @@ namespace PROJECT_C_.Controllers
             await _userManager.AddToRoleAsync(user, request.Role);
             _logger.LogInformation("User registered: {Email} as {Role}", request.Email, request.Role);
 
-            // Seller phải chờ Admin duyệt
             return Ok(new AuthResponse
             {
                 Success = true,
-                Message = "Tài khoản đã được tạo. Vui lòng chờ Admin phê duyệt."
+                Message = request.Role == AppRoles.PoiOwner
+                    ? "Tài khoản POI Owner đã được tạo. Vui lòng chờ Admin phê duyệt."
+                    : "Tài khoản du khách đã được tạo."
             });
         }
 
@@ -153,15 +155,12 @@ namespace PROJECT_C_.Controllers
             }
 
             var token = await GenerateJwtToken(user);
-            var refreshToken = GenerateRefreshToken();
-
             _logger.LogInformation("User logged in successfully: {Email}", request.Email);
 
             return Ok(new AuthResponse
             {
                 Success = true,
                 AccessToken = token,
-                RefreshToken = refreshToken,
                 ExpiresAt = DateTime.UtcNow.AddMinutes(_jwtSettings.AccessTokenExpiryMinutes),
                 Email = user.Email,
                 Message = "Đăng nhập thành công"
@@ -196,31 +195,61 @@ namespace PROJECT_C_.Controllers
         }
 
         /// <summary>
-        /// Refresh access token using refresh token
+        /// Change password for the currently authenticated user
         /// </summary>
-        [HttpPost("refresh")]
-        [AllowAnonymous]
-        public ActionResult<AuthResponse> RefreshToken([FromBody] RefreshTokenRequest request)
+        [HttpPost("change-password")]
+        [Authorize]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
         {
-            // Note: In production, you would validate the refresh token against a database
-            // For now, we'll generate a new token (simplified implementation)
-            
-            if (string.IsNullOrWhiteSpace(request.RefreshToken))
+            if (string.IsNullOrWhiteSpace(request.CurrentPassword) || string.IsNullOrWhiteSpace(request.NewPassword))
+                return BadRequest(new { success = false, message = "Vui lòng nhập đầy đủ mật khẩu" });
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new { success = false, message = "Chưa đăng nhập" });
+
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                return NotFound(new { success = false, message = "Không tìm thấy tài khoản" });
+
+            var result = await _userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
+            if (!result.Succeeded)
             {
-                return BadRequest(new AuthResponse
-                {
-                    Success = false,
-                    Message = "Refresh token is required"
-                });
+                var errors = result.Errors.Select(e => e.Description).ToList();
+                return BadRequest(new { success = false, message = "Đổi mật khẩu thất bại", errors });
             }
 
-            // TODO: Validate refresh token from database
-            // For now, return error - full implementation would look up the token
-            return Unauthorized(new AuthResponse
+            _logger.LogInformation("User changed password: {Email}", user.Email);
+            return Ok(new { success = true, message = "Đổi mật khẩu thành công" });
+        }
+
+        /// <summary>
+        /// Update display name for the currently authenticated user
+        /// </summary>
+        [HttpPut("update-profile")]
+        [Authorize]
+        public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequest request)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new { success = false, message = "Chưa đăng nhập" });
+
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                return NotFound(new { success = false, message = "Không tìm thấy tài khoản" });
+
+            if (!string.IsNullOrWhiteSpace(request.DisplayName))
             {
-                Success = false,
-                Message = "Please login again"
-            });
+                user.UserName = request.DisplayName;
+                var result = await _userManager.UpdateAsync(user);
+                if (!result.Succeeded)
+                {
+                    return BadRequest(new { success = false, message = "Cập nhật thất bại", errors = result.Errors.Select(e => e.Description).ToList() });
+                }
+            }
+
+            _logger.LogInformation("User updated profile: {Email}", user.Email);
+            return Ok(new { success = true, message = "Cập nhật thông tin thành công", displayName = user.UserName });
         }
 
         #region Private Methods
@@ -260,11 +289,17 @@ namespace PROJECT_C_.Controllers
             return handler.WriteToken(token);
         }
 
-        private static string GenerateRefreshToken()
-        {
-            return Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");
-        }
-
         #endregion
+    }
+
+    public class ChangePasswordRequest
+    {
+        public string CurrentPassword { get; set; } = string.Empty;
+        public string NewPassword { get; set; } = string.Empty;
+    }
+
+    public class UpdateProfileRequest
+    {
+        public string? DisplayName { get; set; }
     }
 }
