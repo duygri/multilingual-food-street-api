@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using FoodStreet.Server.Constants;
 using Microsoft.EntityFrameworkCore;
 using FoodStreet.Server.Extensions;
 using FoodStreet.Server.Hubs;
@@ -10,7 +11,8 @@ using PROJECT_C_.Models;
 
 namespace PROJECT_C_.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/content/notifications")]
+    [Route("api/notifications")]
     [ApiController]
     [Authorize]
     public class NotificationController : ControllerBase
@@ -34,7 +36,7 @@ namespace PROJECT_C_.Controllers
             if (userId == null) return Unauthorized();
 
             var isAdmin = User.IsAdminRole();
-            var role = isAdmin ? "Admin" : "Seller";
+            var role = isAdmin ? AppRoles.Admin : AppRoles.PoiOwner;
 
             var notifications = await _context.Notifications
                 .Where(n => n.UserId == userId || n.TargetRole == role)
@@ -66,7 +68,7 @@ namespace PROJECT_C_.Controllers
             if (userId == null) return Unauthorized();
 
             var isAdmin = User.IsAdminRole();
-            var role = isAdmin ? "Admin" : "Seller";
+            var role = isAdmin ? AppRoles.Admin : AppRoles.PoiOwner;
 
             var count = await _context.Notifications
                 .CountAsync(n => (n.UserId == userId || n.TargetRole == role) && !n.IsRead);
@@ -99,7 +101,7 @@ namespace PROJECT_C_.Controllers
             if (userId == null) return Unauthorized();
 
             var isAdmin = User.IsAdminRole();
-            var role = isAdmin ? "Admin" : "Seller";
+            var role = isAdmin ? AppRoles.Admin : AppRoles.PoiOwner;
 
             await _context.Notifications
                 .Where(n => (n.UserId == userId || n.TargetRole == role) && !n.IsRead)
@@ -122,7 +124,7 @@ namespace PROJECT_C_.Controllers
 
             // Chỉ cho phép xóa notification thuộc về user hoặc role của mình
             var isAdmin = User.IsAdminRole();
-            var role = isAdmin ? "Admin" : "Seller";
+            var role = isAdmin ? AppRoles.Admin : AppRoles.PoiOwner;
             if (notification.UserId != userId && notification.TargetRole != role)
                 return Forbid();
 
@@ -142,7 +144,7 @@ namespace PROJECT_C_.Controllers
             if (userId == null) return Unauthorized();
 
             var isAdmin = User.IsAdminRole();
-            var role = isAdmin ? "Admin" : "Seller";
+            var role = isAdmin ? AppRoles.Admin : AppRoles.PoiOwner;
 
             await _context.Notifications
                 .Where(n => (n.UserId == userId || n.TargetRole == role) && n.IsRead)
