@@ -177,10 +177,10 @@ else
                     </button>
                 </div>
                 <div style="position:relative;">
-                    <div id="geofence-test-map" class="test-map" style="width:100%; height:520px; border-radius:12px; overflow:hidden; border:1px solid #e2e8f0;"></div>
+                    <div id="geofence-test-map" class="test-map" style="width:100%; height:520px; border-radius:12px; overflow:hidden; border:1px solid var(--color-neutral-200);"></div>
                     @if (!mapInitialized)
                     {
-                        <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#94a3b8; flex-direction:column; gap:8px; background:rgba(255,255,255,0.95); border-radius:12px; z-index:10;">
+                        <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--color-neutral-400); flex-direction:column; gap:8px; background:rgba(255,255,255,0.95); border-radius:12px; z-index:10;">
                             @if (string.IsNullOrEmpty(mapError))
                             {
                                 <span class="spinner-border spinner-border-sm"></span>
@@ -189,7 +189,7 @@ else
                             else
                             {
                                 <span class="text-danger">Lỗi:</span>
-                                <span style="color:#ef4444; font-size:13px; max-width:400px; text-align:center;">@mapError</span>
+                                <span style="color:var(--color-danger); font-size:13px; max-width:400px; text-align:center;">@mapError</span>
                             }
                         </div>
                     }
@@ -224,13 +224,13 @@ else
     .geotest-title {
         font-size: 22px;
         font-weight: 700;
-        color: #1e293b;
+        color: var(--color-neutral-800);
         margin: 0 0 4px;
     }
 
     .geotest-desc {
         font-size: 14px;
-        color: #64748b;
+        color: var(--text-secondary);
         margin: 0;
     }
 
@@ -243,8 +243,8 @@ else
     }
 
     .panel-card {
-        background: #fff;
-        border-radius: 16px;
+        background: white;
+        border-radius: var(--radius-xl);
         padding: 20px;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
         margin-bottom: 16px;
@@ -253,7 +253,7 @@ else
     .panel-title {
         font-size: 15px;
         font-weight: 700;
-        color: #1e293b;
+        color: var(--color-neutral-800);
         margin: 0 0 16px;
         display: flex;
         align-items: center;
@@ -263,10 +263,10 @@ else
     .result-count {
         font-size: 11px;
         font-weight: 600;
-        color: #ff6b35;
+        color: var(--color-accent);
         background: rgba(255, 107, 53, 0.1);
         padding: 2px 8px;
-        border-radius: 10px;
+        border-radius: var(--radius-md);
     }
 
     /* Coordinate inputs */
@@ -285,25 +285,25 @@ else
     .coord-field label {
         font-size: 12px;
         font-weight: 600;
-        color: #64748b;
+        color: var(--text-secondary);
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
 
     .coord-field input {
         padding: 10px 14px;
-        border: 1px solid #e2e8f0;
-        border-radius: 10px;
+        border: 1px solid var(--color-neutral-200);
+        border-radius: var(--radius-md);
         font-size: 14px;
         font-family: 'Courier New', monospace;
-        background: #f8fafc;
+        background: var(--surface-card);
         transition: all 0.2s;
     }
 
     .coord-field input:focus {
         outline: none;
-        border-color: #ff6b35;
-        background: #fff;
+        border-color: var(--color-accent);
+        background: white;
         box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
     }
 
@@ -318,10 +318,10 @@ else
     .btn-check {
         width: 100%;
         padding: 12px;
-        background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
-        color: #fff;
+        background: linear-gradient(135deg, var(--color-accent) 0%, #f7931e 100%);
+        color: white;
         border: none;
-        border-radius: 12px;
+        border-radius: var(--radius-lg);
         font-size: 15px;
         font-weight: 600;
         cursor: pointer;
@@ -346,8 +346,8 @@ else
         width: 16px;
         height: 16px;
         border: 2px solid rgba(255, 255, 255, 0.3);
-        border-top-color: #fff;
-        border-radius: 50%;
+        border-top-color: white;
+        border-radius: var(--radius-full);
         animation: spin 0.7s linear infinite;
     }
 
@@ -360,10 +360,10 @@ else
     .btn-locate {
         width: 100%;
         padding: 10px;
-        background: #f1f5f9;
-        color: #475569;
-        border: 1px solid #e2e8f0;
-        border-radius: 10px;
+        background: var(--surface-inset);
+        color: var(--text-secondary);
+        border: 1px solid var(--color-neutral-200);
+        border-radius: var(--radius-md);
         font-size: 13px;
         font-weight: 500;
         cursor: pointer;
@@ -371,21 +371,21 @@ else
     }
 
     .btn-locate:hover {
-        background: #e2e8f0;
-        border-color: #cbd5e1;
+        background: var(--color-neutral-200);
+        border-color: var(--color-neutral-300);
     }
 
     /* Presets */
     .preset-section {
         margin-top: 16px;
         padding-top: 16px;
-        border-top: 1px solid #f1f5f9;
+        border-top: 1px solid var(--surface-inset);
     }
 
     .preset-label {
         font-size: 12px;
         font-weight: 600;
-        color: #94a3b8;
+        color: var(--color-neutral-400);
         display: block;
         margin-bottom: 8px;
     }
@@ -398,44 +398,44 @@ else
 
     .preset-btn {
         padding: 6px 12px;
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
+        background: var(--surface-card);
+        border: 1px solid var(--color-neutral-200);
+        border-radius: var(--radius-md);
         font-size: 12px;
         font-weight: 500;
-        color: #475569;
+        color: var(--text-secondary);
         cursor: pointer;
         transition: all 0.2s;
     }
 
     .preset-btn:hover {
-        background: #fff7ed;
-        border-color: #ff6b35;
-        color: #ff6b35;
+        background: var(--color-warning-bg);
+        border-color: var(--color-accent);
+        color: var(--color-accent);
     }
 
     /* Check summary */
     .check-summary {
         padding: 12px 14px;
-        background: #f1f5f9;
-        border-radius: 10px;
+        background: var(--surface-inset);
+        border-radius: var(--radius-md);
         font-size: 13px;
-        color: #475569;
+        color: var(--text-secondary);
         margin-bottom: 14px;
         line-height: 1.5;
     }
 
     .check-summary.has-entered {
         background: #f0fdf4;
-        color: #166534;
-        border: 1px solid #bbf7d0;
+        color: var(--color-success-dark);
+        border: 1px solid var(--color-success-bg);
     }
 
     /* Result table */
     .result-table-wrapper {
         overflow-x: auto;
-        border-radius: 10px;
-        border: 1px solid #f1f5f9;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--surface-inset);
     }
 
     .result-table {
@@ -447,19 +447,19 @@ else
     .result-table th {
         text-align: left;
         padding: 10px 12px;
-        background: #f8fafc;
+        background: var(--surface-card);
         font-weight: 600;
-        color: #64748b;
+        color: var(--text-secondary);
         font-size: 11px;
         text-transform: uppercase;
         letter-spacing: 0.5px;
-        border-bottom: 1px solid #e2e8f0;
+        border-bottom: 1px solid var(--color-neutral-200);
     }
 
     .result-table td {
         padding: 10px 12px;
-        border-bottom: 1px solid #f8fafc;
-        color: #334155;
+        border-bottom: 1px solid var(--surface-card);
+        color: var(--color-neutral-700);
     }
 
     .result-table tr:last-child td {
@@ -483,15 +483,15 @@ else
 
     .poi-cell-desc {
         font-size: 11px;
-        color: #94a3b8;
+        color: var(--color-neutral-400);
         margin-top: 2px;
     }
 
     .badge-inside {
         display: inline-block;
         padding: 3px 8px;
-        background: #dcfce7;
-        color: #166534;
+        background: var(--color-success-bg);
+        color: var(--color-success-dark);
         border-radius: 6px;
         font-size: 11px;
         font-weight: 600;
@@ -501,8 +501,8 @@ else
     .badge-outside {
         display: inline-block;
         padding: 3px 8px;
-        background: #f1f5f9;
-        color: #94a3b8;
+        background: var(--surface-inset);
+        color: var(--color-neutral-400);
         border-radius: 6px;
         font-size: 11px;
         font-weight: 600;
@@ -512,7 +512,7 @@ else
     .empty-result {
         text-align: center;
         padding: 32px 16px;
-        color: #94a3b8;
+        color: var(--color-neutral-400);
     }
 
     .empty-result span {
@@ -545,26 +545,26 @@ else
 
     .btn-fit {
         padding: 6px 12px;
-        background: #f1f5f9;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
+        background: var(--surface-inset);
+        border: 1px solid var(--color-neutral-200);
+        border-radius: var(--radius-md);
         font-size: 12px;
         font-weight: 500;
-        color: #475569;
+        color: var(--text-secondary);
         cursor: pointer;
         transition: all 0.2s;
     }
 
     .btn-fit:hover {
-        background: #e2e8f0;
+        background: var(--color-neutral-200);
     }
 
     .test-map {
         width: 100%;
         height: 520px;
-        border-radius: 12px;
+        border-radius: var(--radius-lg);
         overflow: hidden;
-        border: 1px solid #e2e8f0;
+        border: 1px solid var(--color-neutral-200);
     }
 
     .map-legend {
@@ -572,9 +572,9 @@ else
         gap: 16px;
         margin-top: 10px;
         padding-top: 10px;
-        border-top: 1px solid #f1f5f9;
+        border-top: 1px solid var(--surface-inset);
         font-size: 12px;
-        color: #64748b;
+        color: var(--text-secondary);
     }
 
     .legend-item {
@@ -586,17 +586,17 @@ else
     .legend-dot {
         width: 10px;
         height: 10px;
-        border-radius: 50%;
+        border-radius: var(--radius-full);
     }
 
     .legend-dot.inside {
-        background: #22c55e;
+        background: var(--color-success);
         border: 2px solid #16a34a;
     }
 
     .legend-dot.outside {
         background: #93c5fd;
-        border: 2px solid #3b82f6;
+        border: 2px solid var(--color-info);
     }
 
     /* Responsive */
@@ -834,3 +834,4 @@ else
         public string? ImageUrl { get; set; }
     }
 }
+
