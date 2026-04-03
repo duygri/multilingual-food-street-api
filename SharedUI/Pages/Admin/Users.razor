@@ -10,11 +10,11 @@
 <div class="users-page">
     <div class="page-header">
         <div>
-            <h3>👥 Quản lý Người dùng</h3>
+            <h3>Quản lý Người dùng</h3>
             <span class="user-count">@users.Count người dùng</span>
         </div>
         <button class="btn-add" @onclick="ShowCreateForm">
-            ➕ Thêm người dùng
+            Thêm người dùng
         </button>
     </div>
 
@@ -23,14 +23,14 @@
     {
         <div class="create-form-card">
             <div class="form-card-header">
-                <h4>🆕 Tạo người dùng mới</h4>
+                <h4>Tạo người dùng mới</h4>
                 <button class="btn-close-form" @onclick="HideCreateForm">✕</button>
             </div>
 
             @if (!string.IsNullOrEmpty(createMessage))
             {
                 <div class="alert-box @(createSuccess ? "alert-success" : "alert-error")">
-                    <span>@(createSuccess ? "✅" : "⚠️")</span>
+                    <span>@(createSuccess ? "✓" : "!")</span>
                     <div>
                         <span>@createMessage</span>
                         @if (createErrors != null)
@@ -48,17 +48,17 @@
 
             <div class="form-grid">
                 <div class="form-group">
-                    <label>✉️ Email</label>
+                    <label>Email</label>
                     <input type="email" @bind="newEmail" placeholder="email@example.com" />
                 </div>
                 <div class="form-group">
-                    <label>🔒 Mật khẩu</label>
+                    <label>Mật khẩu</label>
                     <input type="password" @bind="newPassword" placeholder="Tối thiểu 8 ký tự" />
                 </div>
                 <div class="form-group">
-                    <label>🎭 Vai trò</label>
+                    <label>Vai trò</label>
                     <select @bind="newRole">
-                        <option value="Seller">Seller (Người bán)</option>
+                        <option value="POI Owner">POI Owner (Chủ điểm)</option>
                         <option value="Admin">Admin (Quản trị viên)</option>
                     </select>
                 </div>
@@ -81,13 +81,13 @@
             Tất cả <span class="tab-count">@users.Count</span>
         </button>
         <button class="tab-btn pending @(activeTab == "pending" ? "active" : "")" @onclick="@(() => activeTab = "pending")">
-            ⏳ Chờ duyệt <span class="tab-count">@PendingCount</span>
+            Chờ duyệt <span class="tab-count">@PendingCount</span>
         </button>
         <button class="tab-btn @(activeTab == "admin" ? "active" : "")" @onclick="@(() => activeTab = "admin")">
-            🛡️ Admin <span class="tab-count">@AdminCount</span>
+            Admin <span class="tab-count">@AdminCount</span>
         </button>
-        <button class="tab-btn @(activeTab == "seller" ? "active" : "")" @onclick="@(() => activeTab = "seller")">
-            🏪 Seller <span class="tab-count">@SellerCount</span>
+        <button class="tab-btn @(activeTab == "poi-owner" ? "active" : "")" @onclick="@(() => activeTab = "poi-owner")">
+            POI Owner <span class="tab-count">@PoiOwnerCount</span>
         </button>
     </div>
 
@@ -121,7 +121,7 @@
                             <td>
                                 @if (user.IsLocked)
                                 {
-                                    @if (user.Roles.Contains("Seller"))
+                                    @if (IsPoiOwner(user))
                                     {
                                         <span class="status-badge status-pending">Chờ duyệt</span>
                                     }
@@ -139,19 +139,19 @@
                                 <div class="action-buttons">
                                     @if (!user.Roles.Contains("Admin"))
                                     {
-                                        @if (user.IsLocked && user.Roles.Contains("Seller"))
+                                        @if (user.IsLocked && IsPoiOwner(user))
                                         {
-                                            <button class="btn-action btn-approve" @onclick="() => ApproveSeller(user.Id)" title="Duyệt Seller">
-                                                ✅ Duyệt
+                                            <button class="btn-action btn-approve" @onclick="() => ApprovePoiOwner(user.Id)" title="Duyệt POI Owner">
+                                                Duyệt
                                             </button>
                                         }
                                         <button class="btn-action @(user.IsLocked ? "btn-unlock" : "btn-lock")" 
                                                 @onclick="() => ToggleLock(user.Id)" 
                                                 title="@(user.IsLocked ? "Mở khóa" : "Khóa")">
-                                            @(user.IsLocked ? "🔓" : "🔒")
+                                            @(user.IsLocked ? "Unlock" : "Lock")
                                         </button>
                                         <button class="btn-action btn-delete" @onclick="() => DeleteUser(user.Id)" title="Xóa">
-                                            🗑️
+                                            Del
                                         </button>
                                     }
                                     else
@@ -167,7 +167,7 @@
                 {
                     <tr>
                         <td colspan="4" class="empty-state">
-                            <span>📭</span>
+                            <span>—</span>
                             <p>Không có người dùng nào</p>
                         </td>
                     </tr>
@@ -488,7 +488,7 @@
         color: #dc2626;
     }
 
-    .role-seller {
+    .role-poi-owner {
         background: #ecfdf5;
         color: #059669;
     }
@@ -590,21 +590,21 @@
     private bool showCreateForm = false;
     private string newEmail = "";
     private string newPassword = "";
-    private string newRole = "Seller";
+    private string newRole = "POI Owner";
     private bool isCreating = false;
     private string? createMessage;
     private bool createSuccess;
     private List<string>? createErrors;
 
-    private int PendingCount => users.Count(u => u.Roles.Contains("Seller") && u.IsLocked);
+    private int PendingCount => users.Count(u => IsPoiOwner(u) && u.IsLocked);
     private int AdminCount => users.Count(u => u.Roles.Contains("Admin"));
-    private int SellerCount => users.Count(u => u.Roles.Contains("Seller"));
+    private int PoiOwnerCount => users.Count(IsPoiOwner);
 
     private IEnumerable<UserDto> FilteredUsers => activeTab switch
     {
-        "pending" => users.Where(u => u.Roles.Contains("Seller") && u.IsLocked),
+        "pending" => users.Where(u => IsPoiOwner(u) && u.IsLocked),
         "admin" => users.Where(u => u.Roles.Contains("Admin")),
-        "seller" => users.Where(u => u.Roles.Contains("Seller")),
+        "poi-owner" => users.Where(IsPoiOwner),
         _ => users
     };
 
@@ -649,7 +649,7 @@
     {
         newEmail = "";
         newPassword = "";
-        newRole = "Seller";
+        newRole = "POI Owner";
         createMessage = null;
         createErrors = null;
     }
@@ -672,7 +672,7 @@
         if (result.Success)
         {
             createSuccess = true;
-            createMessage = $"Tạo tài khoản {newRole} thành công!";
+            createMessage = $"Tạo tài khoản {GetRoleDisplayName(newRole)} thành công!";
             newEmail = "";
             newPassword = "";
             await LoadUsers();
@@ -688,9 +688,9 @@
     }
 
     // === ACTIONS ===
-    private async Task ApproveSeller(string userId)
+    private async Task ApprovePoiOwner(string userId)
     {
-        if (await UserService.ApproveSellerAsync(userId))
+        if (await UserService.ApprovePoiOwnerAsync(userId))
         {
             await LoadUsers();
         }
@@ -715,19 +715,24 @@
         }
     }
 
-    private string GetRoleBadgeClass(string role) => role switch
+    private string GetRoleBadgeClass(string role) => UiRoles.NormalizeRole(role) switch
     {
-        "Admin" => "role-admin",
-        "Seller" => "role-seller",
+        UiRoles.Admin => "role-admin",
+        UiRoles.PoiOwner => "role-poi-owner",
         _ => "role-user"
     };
 
-    private string GetRoleDisplayName(string role) => role switch
+    private string GetRoleDisplayName(string role) => UiRoles.NormalizeRole(role) switch
     {
-        "Admin" => "Quản trị viên",
-        "Seller" => "Người bán",
+        UiRoles.Admin => "Quản trị viên",
+        UiRoles.PoiOwner => UiRoles.PoiOwner,
         _ => "Người dùng"
     };
+
+    private static bool IsPoiOwner(UserDto user)
+    {
+        return UiRoles.IsPoiOwner(user.Roles);
+    }
 
     public void Dispose()
     {
