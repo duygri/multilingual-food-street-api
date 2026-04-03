@@ -330,6 +330,10 @@ namespace FoodStreet.Server.Migrations
                     b.Property<DateTime?>("ApprovedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("AudioStatus")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<int?>("CategoryId")
                         .HasColumnType("integer");
 
@@ -379,6 +383,7 @@ namespace FoodStreet.Server.Migrations
                         {
                             Id = 1,
                             Address = "Đường Vĩnh Khánh, Q.4, TP.HCM",
+                            AudioStatus = "pending",
                             Description = "Quán phở bò truyền thống",
                             IsApproved = true,
                             Latitude = 10.776889000000001,
@@ -391,6 +396,7 @@ namespace FoodStreet.Server.Migrations
                         {
                             Id = 2,
                             Address = "Đường Vĩnh Khánh, Q.4, TP.HCM",
+                            AudioStatus = "pending",
                             Description = "Bánh mì nóng giòn",
                             IsApproved = true,
                             Latitude = 10.762622,
@@ -403,6 +409,7 @@ namespace FoodStreet.Server.Migrations
                         {
                             Id = 3,
                             Address = "Đường Vĩnh Khánh, Q.4, TP.HCM",
+                            AudioStatus = "pending",
                             Description = "Cơm tấm sườn nướng",
                             IsApproved = true,
                             Latitude = 10.792375,
@@ -421,9 +428,18 @@ namespace FoodStreet.Server.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("AudioUrl")
+                        .HasColumnType("text");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<DateTime?>("GeneratedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsFallback")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("LanguageCode")
                         .IsRequired()
@@ -434,6 +450,9 @@ namespace FoodStreet.Server.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TtsScript")
                         .HasColumnType("text");
 
                     b.HasKey("Id");
