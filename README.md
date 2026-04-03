@@ -23,6 +23,8 @@ Bạn cũng có thể xem qua mã nguồn tại thư mục [SharedUI](./SharedUI
 - .NET 8 SDK
 - PostgreSQL và pgAdmin 4
 - Visual Studio 2022 (khuyến nghị)
+- Google Cloud project cho `Translate + TTS`
+- Google Maps Platform project cho web/mobile map
 
 ### Thiết lập CSDL và Chạy
 
@@ -37,6 +39,99 @@ Bạn cũng có thể xem qua mã nguồn tại thư mục [SharedUI](./SharedUI
    dotnet ef database update --project FoodStreet.Server
    dotnet run --project FoodStreet.Server
    ```
+
+## Google Cloud và Google Maps
+
+### Backend `Translate + TTS`
+
+`FoodStreet.Server` hiện hỗ trợ 3 cách xác thực Google Cloud:
+
+- `Service account JSON` qua `GOOGLE_APPLICATION_CREDENTIALS` hoặc `GoogleCloud:CredentialPath`
+- `ADC / gcloud`
+- `API key` cho trường hợp local/dev cần đi nhanh
+
+Tài liệu chi tiết:
+
+- [Google Cloud setup](./GOOGLE_CLOUD_ADC_SETUP.md)
+
+### Web map
+
+Web vẫn dùng `Google Maps JavaScript API` qua browser key tại:
+
+- [Frontend runtime-config](./Frontend/wwwroot/runtime-config.js)
+
+Cần bật:
+
+- `Maps JavaScript API`
+- `Places API`
+- `Maps Static API`
+
+### Mobile Android native map
+
+Mobile Android đã chuyển flow `browse map + focus + directions + picker tọa độ` sang native `Maps SDK for Android`.
+Autocomplete tìm địa điểm và vòng geofence overlay cho POI cũng đã chạy trên native map.
+
+Key Android native không đọc từ `runtime-config.js`. Thay vào đó:
+
+1. Copy file:
+   - `Mobile/Resources/values/google_maps_api.xml.template`
+2. Tạo file local:
+   - `Mobile/Resources/values/google_maps_api.xml`
+3. Thay `__SET_ANDROID_MAPS_KEY__` bằng Android-restricted key
+
+Cần bật:
+
+- `Maps SDK for Android`
+
+Application restriction khuyến nghị:
+
+- `Android apps`
+- package name hiện tại: `com.companyname.foodstreet.mobile`
+- thêm `SHA-1` của debug/release keystore tương ứng
+
+Lưu ý:
+
+- `Mobile/wwwroot/runtime-config.js` giờ chỉ còn dùng cho các màn fallback WebView như JS/Static Maps còn sót
+- flow native browse/picker không còn phụ thuộc browser key nữa
+
+## Smoke Checklist
+
+### Backend / Google Cloud
+
+- login nhận access token và dùng được trên admin pages
+- `GET /api/content/auth/me` và `GET /api/content/auth/debug/claims` trả đúng identity/role sau login
+- `GET /api/adminaudio/status` trả đúng `AuthMode`, `ProjectId`, `CredentialFile`
+- `POST /api/adminaudio/health-check` pass cho cả `Translate` và `TTS`
+- `/admin/tts-console` chạy được `Quick TTS Test`
+- `GET /api/qrcode`, `GET /api/qrcode/{id}/meta`, `GET /api/qrcode/{id}` trả dữ liệu/PNG đúng cho POI public
+- `GET /api/maps/locations/{id}` và `GET /api/maps/locations/near` trả được POI public
+
+### Web
+
+- `/map` hiển thị POI và focus từ trang chi tiết
+- modal `Locations` chọn tọa độ bằng JS picker
+- modal `MyStore` chọn tọa độ bằng JS picker
+
+### Mobile Android
+
+- `/mobile-map` mở native map
+- focus từ `PoiDetail` nhảy đúng POI
+- nút recenter hoạt động
+- search địa điểm trong native picker hoạt động
+- POI có geofence hiển thị vòng bán kính trên native map
+- bấm info window mở walking directions
+- modal `MyStore` mở native picker và nhận lại `lat/lng`
+- modal `Locations` mở native picker và nhận lại `lat/lng`
+
+### Geofence debug
+
+- `/admin/geofence-test` được giữ như công cụ debug admin trên trình duyệt
+- mobile Android dùng geofence overlay trực tiếp trong native map, không nhân đôi trang test này
+
+### Tour
+
+- `GET /api/tours` cần có ít nhất 1 tour `IsActive = true` để smoke test runtime end-to-end
+- nếu danh sách tour đang rỗng, tạo trước một tour active trong admin rồi mới test `/tours` và flow `start / resume / progress`
 
 ## Về Dự án Food Street (About Project)
 
