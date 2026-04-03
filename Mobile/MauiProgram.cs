@@ -1,9 +1,13 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Components.Authorization;
 using FoodStreet.Client;
+using FoodStreet.Client.DTOs;
 using FoodStreet.Client.Services;
 using FoodStreet.Client.Layout;
+
+
 using FoodStreet.Mobile.Services;
+using FoodStreet.Mobile.Platforms.Android.Maps;
 using Plugin.Maui.Audio;
 
 namespace FoodStreet.Mobile;
@@ -74,12 +78,17 @@ public static class MauiProgram
         // APPLICATION SERVICES
         // ========================================
         builder.Services.AddScoped<ILocationClientService, LocationClientService>();
+        builder.Services.AddScoped<ITourClientService, TourClientService>();
+        builder.Services.AddScoped<IOwnerPortalService, OwnerPortalService>();
         builder.Services.AddScoped<IAudioService, AudioService>();
         builder.Services.AddScoped<IUserService, UserService>();
         builder.Services.AddScoped<IGpsTrackingService, NativeGpsTrackingService>();
+        builder.Services.AddScoped<INarrationEngine, NarrationEngine>();
         builder.Services.AddScoped<ITtsService, NativeTtsService>();
+        builder.Services.AddScoped<TourPlayerService>();
         builder.Services.AddScoped<INotificationService, NotificationService>();
         builder.Services.AddScoped<IFavoritesService, FavoritesService>();
+        builder.Services.AddScoped<IMobileNativeMapService, AndroidNativeMapService>();
         
         // Audio Plugin
         builder.Services.AddSingleton(AudioManager.Current);
@@ -87,6 +96,13 @@ public static class MauiProgram
         builder.Services.AddLocalization();
         builder.Services.AddSingleton<ILocalizationService, LocalizationService>();
         builder.Services.AddSingleton<IPlatformDetector, MobilePlatformDetector>();
+
+        // ========================================
+        // STARTUP FLOW (Frontend Startup Sequence)
+        // ========================================
+        // Equivalent to: SW Register → Router → Splash → Language → Parallel Load
+        // (GPS + Offline + Online + Hotset + Warmup) via Task.WhenAll
+        builder.Services.AddScoped<AppStartupFlow>();
 
 		return builder.Build();
 	}
