@@ -57,21 +57,21 @@ else
                 </div>
                 <div class="col-6 col-md-3">
                     <div class="admin-card text-center py-4 h-100">
-                        <div class="stat-dot" style="background:#22c55e;"></div>
+                        <div class="stat-dot" style="background:var(--color-success);"></div>
                         <div class="fw-bold fs-3 text-success">@profile.ApprovedPois</div>
                         <small class="text-muted">Đã duyệt</small>
                     </div>
                 </div>
                 <div class="col-6 col-md-3">
                     <div class="admin-card text-center py-4 h-100">
-                        <div class="stat-dot" style="background:#f59e0b;"></div>
+                        <div class="stat-dot" style="background:var(--color-warning);"></div>
                         <div class="fw-bold fs-3 text-warning">@profile.PendingPois</div>
                         <small class="text-muted">Chờ duyệt</small>
                     </div>
                 </div>
                 <div class="col-6 col-md-3">
                     <div class="admin-card text-center py-4 h-100">
-                        <div class="stat-dot" style="background:#3b82f6;"></div>
+                        <div class="stat-dot" style="background:var(--color-info);"></div>
                         <div class="fw-bold fs-3 text-info">@profile.PoisWithAudio</div>
                         <small class="text-muted">Có audio</small>
                     </div>
@@ -85,7 +85,7 @@ else
                 </div>
                 <div class="col-6 col-md-3">
                     <div class="admin-card text-center py-4 h-100">
-                        <div class="stat-dot" style="background:#10b981;"></div>
+                        <div class="stat-dot" style="background:var(--color-success);"></div>
                         <div class="fw-bold fs-3 text-success">@profile.AvailableMenuItems</div>
                         <small class="text-muted">Đang phục vụ</small>
                     </div>
@@ -190,8 +190,8 @@ else
         width: 88px;
         height: 88px;
         border-radius: 24px;
-        background: linear-gradient(135deg, #ff6b35, #f7931e);
-        color: #fff;
+        background: linear-gradient(135deg, var(--color-accent), #f7931e);
+        color: white;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -210,8 +210,8 @@ else
     .owner-tip-icon {
         width: 42px;
         height: 42px;
-        border-radius: 12px;
-        background: #f8fafc;
+        border-radius: var(--radius-lg);
+        background: var(--surface-card);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -338,3 +338,4 @@ else
         return string.Concat(parts);
     }
 }
+
