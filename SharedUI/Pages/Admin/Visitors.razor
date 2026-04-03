@@ -3,7 +3,7 @@
 @inject HttpClient Http
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="mb-0">👥 Lượt truy cập</h3>
+    <h3 class="mb-0">Lượt truy cập</h3>
     <div class="d-flex gap-2">
         <select class="form-select" style="width: 150px;" @bind="selectedPeriod" @bind:after="LoadData">
             <option value="7">7 ngày qua</option>
@@ -44,7 +44,7 @@
 <!-- Visitors Table -->
 <div class="admin-card">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">📊 Chi tiết lượt truy cập</h5>
+        <h5 class="mb-0">Chi tiết lượt truy cập</h5>
     </div>
     
     @if (visitors == null)
@@ -57,7 +57,7 @@
     else if (visitors.Count == 0)
     {
         <div class="text-center py-5">
-            <div style="font-size: 4rem;">📭</div>
+            <div class="text-muted" style="font-size: 1.5rem;">No data</div>
             <h5 class="mt-3">Chưa có dữ liệu</h5>
             <p class="text-muted">Dữ liệu lượt truy cập sẽ xuất hiện khi có người dùng.</p>
         </div>
@@ -68,7 +68,7 @@
             <thead>
                 <tr>
                     <th>Thời gian</th>
-                    <th>Món ăn</th>
+                    <th>POI</th>
                     <th>Nguồn</th>
                     <th>Thiết bị</th>
                     <th>Ngôn ngữ</th>
@@ -80,14 +80,14 @@
                 {
                     <tr>
                         <td>@v.PlayedAt.ToString("dd/MM/yyyy HH:mm")</td>
-                        <td><strong>@v.FoodName</strong></td>
+                        <td><strong>@v.PoiName</strong></td>
                         <td>
                             <span class="badge @GetSourceBadgeClass(v.Source)">
                                 @GetSourceIcon(v.Source) @GetSourceLabel(v.Source)
                             </span>
                         </td>
                         <td>@GetDeviceIcon(v.DeviceType) @v.DeviceType</td>
-                        <td>@(v.Language == "vi-VN" ? "🇻🇳 VI" : "🇺🇸 EN")</td>
+                        <td>@(v.Language == "vi-VN" ? "VI" : "EN")</td>
                         <td>@v.DurationSeconds giây</td>
                     </tr>
                 }
@@ -117,12 +117,16 @@
         // Calculate stats
         totalVisits = visitors.Count;
         uniqueSessions = visitors.Select(v => v.SessionId).Distinct().Count();
-        avgDuration = (int)visitors.Average(v => v.DurationSeconds);
+        avgDuration = visitors.Count > 0
+            ? (int)visitors.Average(v => v.DurationSeconds)
+            : 0;
         
         var sourceCount = visitors.GroupBy(v => v.Source)
             .OrderByDescending(g => g.Count())
             .FirstOrDefault();
-        topSource = GetSourceLabel(sourceCount?.Key ?? "");
+        topSource = sourceCount is null
+            ? "N/A"
+            : GetSourceLabel(sourceCount.Key);
 
         await Task.CompletedTask;
     }
@@ -137,10 +141,10 @@
 
     private string GetSourceIcon(string source) => source switch
     {
-        "qr_scan" => "📱",
-        "geofence" => "📍",
-        "manual" => "👆",
-        _ => "❓"
+        "qr_scan" => "QR",
+        "geofence" => "GPS",
+        "manual" => "TAP",
+        _ => "?"
     };
 
     private string GetSourceLabel(string source) => source switch
@@ -153,17 +157,17 @@
 
     private string GetDeviceIcon(string device) => device switch
     {
-        "mobile" => "📱",
-        "desktop" => "💻",
-        "tablet" => "📲",
-        _ => "🖥️"
+        "mobile" => "[M]",
+        "desktop" => "[D]",
+        "tablet" => "[T]",
+        _ => "[?]"
     };
 
     public class VisitorLog
     {
         public int Id { get; set; }
         public DateTime PlayedAt { get; set; }
-        public string FoodName { get; set; } = "";
+        public string PoiName { get; set; } = "";
         public string Source { get; set; } = "";
         public string DeviceType { get; set; } = "";
         public string Language { get; set; } = "";
