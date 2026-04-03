@@ -2,14 +2,16 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PROJECT_C_.Data;
+using FoodStreet.Server.Constants;
+using FoodStreet.Server.Links;
 using QRCoder;
-using System.Drawing;
-using System.Drawing.Imaging;
 
 namespace PROJECT_C_.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/content/qrcode")]
+    [Route("api/qrcode")]
+    [Route("api/qr")]
     public class QrCodeController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -30,9 +32,7 @@ namespace PROJECT_C_.Controllers
             var location = await _context.Locations.FindAsync(locationId);
             if (location == null) return NotFound("POI not found");
 
-            // Generate deep link URL - this URL will play audio when scanned
-            var baseUrl = _configuration["App:BaseUrl"] ?? "https://vinhkhanh.app";
-            var qrUrl = $"{baseUrl}/poi/{locationId}";
+            var qrUrl = BuildPoiDeepLink(locationId);
 
             // Generate QR code
             using var qrGenerator = new QRCodeGenerator();
@@ -52,8 +52,7 @@ namespace PROJECT_C_.Controllers
             var location = await _context.Locations.FindAsync(locationId);
             if (location == null) return NotFound("POI not found");
 
-            var baseUrl = _configuration["App:BaseUrl"] ?? "https://vinhkhanh.app";
-            var qrUrl = $"{baseUrl}/poi/{locationId}";
+            var qrUrl = BuildPoiDeepLink(locationId);
 
             using var qrGenerator = new QRCodeGenerator();
             var qrCodeData = qrGenerator.CreateQrCode(qrUrl, QRCodeGenerator.ECCLevel.Q);
@@ -61,6 +60,28 @@ namespace PROJECT_C_.Controllers
             var qrCodeBytes = qrCode.GetGraphic(size / 33);
 
             return File(qrCodeBytes, "image/png", $"qr-{location.Name.Replace(" ", "-")}.png");
+        }
+
+        /// <summary>
+        /// Get QR metadata for a specific POI
+        /// </summary>
+        [HttpGet("{locationId}/meta")]
+        public async Task<IActionResult> GetQrMetadata(int locationId)
+        {
+            var location = await _context.Locations.FindAsync(locationId);
+            if (location == null) return NotFound("POI not found");
+
+            return Ok(new
+            {
+                location.Id,
+                location.Name,
+                location.Description,
+                DeepLink = BuildPoiDeepLink(locationId),
+                QrCodeUrl = $"/api/qrcode/{locationId}",
+                LabeledQrUrl = $"/api/qrcode/{locationId}/labeled",
+                PreviewPage = $"/poi/{locationId}",
+                RecommendedSource = PlaySources.QrScan
+            });
         }
 
         /// <summary>
@@ -76,13 +97,23 @@ namespace PROJECT_C_.Controllers
                     l.Name,
                     l.Description,
                     l.Latitude,
-                    l.Longitude,
-                    QrCodeUrl = $"/api/qrcode/{l.Id}",
-                    LabeledQrUrl = $"/api/qrcode/{l.Id}/labeled"
+                    l.Longitude
                 })
                 .ToListAsync();
 
-            return Ok(locations);
+            var result = locations.Select(l => new
+            {
+                l.Id,
+                l.Name,
+                l.Description,
+                l.Latitude,
+                l.Longitude,
+                DeepLink = BuildPoiDeepLink(l.Id),
+                QrCodeUrl = $"/api/qrcode/{l.Id}",
+                LabeledQrUrl = $"/api/qrcode/{l.Id}/labeled"
+            });
+
+            return Ok(result);
         }
 
         /// <summary>
@@ -103,6 +134,7 @@ namespace PROJECT_C_.Controllers
             {
                 l.Id,
                 l.Name,
+                DeepLink = BuildPoiDeepLink(l.Id),
                 QrCodeUrl = $"/api/qrcode/{l.Id}",
                 DirectUrl = $"/poi/{l.Id}"
             }).ToList();
@@ -132,10 +164,27 @@ namespace PROJECT_C_.Controllers
                 l.Name,
                 l.Description,
                 Location = $"{l.Latitude:F6}, {l.Longitude:F6}",
+                DeepLink = BuildPoiDeepLink(l.Id),
                 QrCodeUrl = $"/api/qrcode/{l.Id}?size=200"
             }).ToList();
 
             return Ok(qrCodes);
+        }
+
+        private string ResolveBaseUrl()
+        {
+            var configuredBaseUrl = _configuration["App:BaseUrl"];
+            if (!string.IsNullOrWhiteSpace(configuredBaseUrl))
+            {
+                return configuredBaseUrl;
+            }
+
+            return $"{Request.Scheme}://{Request.Host}";
+        }
+
+        private string BuildPoiDeepLink(int locationId)
+        {
+            return PoiDeepLinkBuilder.Build(ResolveBaseUrl(), locationId, PlaySources.QrScan);
         }
     }
 }
