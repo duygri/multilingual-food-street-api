@@ -1,0 +1,845 @@
+@page "/admin/menu"
+@page "/admin/foods"
+@page "/owner/menu"
+@page "/owner/foods"
+@layout AdminLayout
+@inject HttpClient Http
+@inject AuthenticationStateProvider AuthStateProvider
+@inject INotificationService NotificationSvc
+@using FoodStreet.Client.DTOs
+@using FoodStreet.Client.Services
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = UiRoles.AdminOrPoiOwnerCompat)]
+@implements IDisposable
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <div>
+        <h3 class="mb-1">Menu Ẩm thực theo POI</h3>
+        <p class="text-muted mb-0">@pageDescription</p>
+    </div>
+    <button class="btn btn-admin btn-admin-primary" @onclick="ShowCreateModal" disabled="@(locations.Count == 0)">
+        Thêm món vào menu
+    </button>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(successMessage))
+{
+    <div class="alert alert-success">@successMessage</div>
+}
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+<div class="admin-card mb-4">
+    <div class="row align-items-end g-3">
+        <div class="col-md-5">
+            <label class="form-label fw-medium">Lọc theo POI</label>
+            <select class="form-select" @bind="selectedLocationId">
+                <option value="0">Tất cả POI</option>
+                @foreach (var location in locations)
+                {
+                    <option value="@location.Id">@location.Name</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label fw-medium">Hiển thị</label>
+            <select class="form-select" @bind="availabilityFilter">
+                <option value="all">Tất cả</option>
+                <option value="available">Đang phục vụ</option>
+                <option value="unavailable">Tạm ẩn</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <div class="form-check form-switch pt-2">
+                <input class="form-check-input" type="checkbox" id="showImage" @bind="showImages" />
+                <label class="form-check-label" for="showImage">Hiện ảnh</label>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-outline-primary w-100" @onclick="LoadMenuItemsAsync">Tải lại</button>
+        </div>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <div class="admin-card text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-3 text-muted mb-0">Đang tải dữ liệu menu...</p>
+    </div>
+}
+else if (locations.Count == 0)
+{
+    <div class="admin-card text-center py-5">
+        <div class="text-muted" style="font-size: 1.5rem;">POI</div>
+        <h5 class="mt-3">Chưa có POI để gắn menu</h5>
+        <p class="text-muted mb-0">Tạo POI trước, sau đó mới thêm menu ẩm thực cho từng điểm.</p>
+    </div>
+}
+else if (filteredMenuItems.Count == 0)
+{
+    <div class="admin-card text-center py-5">
+        <div class="text-muted" style="font-size: 1.5rem;">Menu</div>
+        <h5 class="mt-3">Chưa có món nào trong menu</h5>
+        <p class="text-muted mb-0">Thêm món đầu tiên để hoàn thiện hồ sơ ẩm thực cho POI.</p>
+    </div>
+}
+else
+{
+    <div class="admin-card">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <div>
+                <h5 class="mb-1">Danh sách món ăn</h5>
+                <div class="small text-muted">@filteredMenuItems.Count món đang hiển thị theo bộ lọc hiện tại.</div>
+            </div>
+            <span class="badge bg-light text-dark border">Host: @(isAdmin ? "Admin" : "POI Owner")</span>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table align-middle admin-table">
+                <thead>
+                    <tr>
+                        @if (showImages)
+                        {
+                            <th style="width: 90px;">Ảnh</th>
+                        }
+                        <th>POI</th>
+                        <th>Món ăn</th>
+                        <th>Giá</th>
+                        <th>Trạng thái</th>
+                        <th>Cập nhật</th>
+                        <th style="width: 160px;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in filteredMenuItems)
+                    {
+                        <tr>
+                            @if (showImages)
+                            {
+                                <td>
+                                    @if (!string.IsNullOrWhiteSpace(item.ImageUrl))
+                                    {
+                                        <img src="@item.ImageUrl" alt="@item.Name" class="menu-thumb" />
+                                    }
+                                    else
+                                    {
+                                        <div class="menu-thumb menu-thumb-empty">Menu</div>
+                                    }
+                                </td>
+                            }
+                            <td>
+                                <div class="fw-semibold">@item.LocationName</div>
+                                <div class="small text-muted">Thứ tự: @item.SortOrder</div>
+                            </td>
+                            <td>
+                                <div class="fw-semibold">@item.Name</div>
+                                <div class="small text-muted">@(string.IsNullOrWhiteSpace(item.Description) ? "Chưa có mô tả" : item.Description)</div>
+                                <div class="small text-info">@item.TranslationCount bản dịch</div>
+                            </td>
+                            <td>
+                                <div class="fw-bold text-primary">@FormatPrice(item.Price, item.Currency)</div>
+                            </td>
+                            <td>
+                                @if (item.IsAvailable)
+                                {
+                                    <span class="badge bg-success">Đang phục vụ</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">Tạm ẩn</span>
+                                }
+                            </td>
+                            <td>
+                                <div class="small">@item.UpdatedAt.ToLocalTime().ToString("dd/MM/yyyy")</div>
+                                <div class="small text-muted">@item.UpdatedAt.ToLocalTime().ToString("HH:mm")</div>
+                            </td>
+                            <td>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowEditModal(item)">Sửa</button>
+                                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => ShowTranslationModalAsync(item)">Dịch</button>
+                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteMenuItemAsync(item.Id)">Xóa</button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@if (showModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content admin-modal">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title">@modalTitle</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body bg-white">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-medium">POI *</label>
+                            <select class="form-select" @bind="editingItem.LocationId">
+                                <option value="0">-- Chọn POI --</option>
+                                @foreach (var location in locations)
+                                {
+                                    <option value="@location.Id">@location.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label fw-medium">Giá *</label>
+                            <input type="number" step="1000" class="form-control" @bind="editingItem.Price" />
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label fw-medium">Tiền tệ</label>
+                            <input class="form-control" @bind="editingItem.Currency" />
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">Tên món *</label>
+                        <input class="form-control" @bind="editingItem.Name" placeholder="Ví dụ: Ốc len xào dừa" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">Mô tả</label>
+                        <textarea class="form-control" rows="3" @bind="editingItem.Description" placeholder="Mô tả ngắn về món ăn nổi bật, khẩu vị, cách phục vụ..."></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            <label class="form-label fw-medium">Ảnh món ăn</label>
+                            <input class="form-control" @bind="editingItem.ImageUrl" placeholder="https://..." />
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <label class="form-label fw-medium">Thứ tự</label>
+                            <input type="number" class="form-control" @bind="editingItem.SortOrder" />
+                        </div>
+                        <div class="col-md-2 mb-3 d-flex align-items-end">
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="menu-available" @bind="editingItem.IsAvailable" />
+                                <label class="form-check-label" for="menu-available">Phục vụ</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-0 pt-0">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModal">Hủy</button>
+                    <button type="button" class="btn btn-admin btn-admin-primary" @onclick="SaveMenuItemAsync" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        Lưu món ăn
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showTranslationModal && translationTarget != null)
+{
+    <div class="modal show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content admin-modal">
+                <div class="modal-header bg-light">
+                    <div>
+                        <h5 class="modal-title mb-1">Bản dịch cho @translationTarget.Name</h5>
+                        <div class="small text-muted">@translationTarget.LocationName • @translationItems.Count bản dịch hiện có</div>
+                    </div>
+                    <button type="button" class="btn-close" @onclick="CloseTranslationModal"></button>
+                </div>
+                <div class="modal-body bg-white">
+                    @if (!string.IsNullOrWhiteSpace(translationErrorMessage))
+                    {
+                        <div class="alert alert-danger">@translationErrorMessage</div>
+                    }
+
+                    <div class="translation-list mb-4">
+                        @if (translationItems.Count == 0)
+                        {
+                            <div class="text-muted small">Chưa có bản dịch nào cho món này. Hãy thêm bản dịch đầu tiên.</div>
+                        }
+                        else
+                        {
+                            @foreach (var translation in translationItems.OrderBy(item => item.LanguageCode))
+                            {
+                                <div class="translation-item">
+                                    <div>
+                                        <div class="fw-semibold">@GetLanguageLabel(translation.LanguageCode) • @translation.Name</div>
+                                        <div class="small text-muted">@(string.IsNullOrWhiteSpace(translation.Description) ? "Chưa có mô tả" : translation.Description)</div>
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => EditMenuTranslation(translation)">Sửa</button>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteMenuTranslationAsync(translation.Id)">Xóa</button>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+
+                    <div class="border rounded-4 p-3 bg-light-subtle">
+                        <div class="fw-semibold mb-3">@translationModalTitle</div>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-medium">Ngôn ngữ *</label>
+                                <select class="form-select" @bind="editingTranslation.LanguageCode">
+                                    <option value="">-- Chọn --</option>
+                                    <option value="vi-VN">Tiếng Việt</option>
+                                    <option value="en-US">Tiếng Anh</option>
+                                    <option value="ja-JP">Tiếng Nhật</option>
+                                    <option value="ko-KR">Tiếng Hàn</option>
+                                    <option value="zh-CN">Tiếng Trung</option>
+                                </select>
+                            </div>
+                            <div class="col-md-8 mb-3">
+                                <label class="form-label fw-medium">Tên món theo ngôn ngữ *</label>
+                                <input class="form-control" @bind="editingTranslation.Name" placeholder="Ví dụ: Coconut stir-fried snails" />
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-medium">Mô tả bản dịch</label>
+                            <textarea class="form-control" rows="3" @bind="editingTranslation.Description" placeholder="Mô tả món ăn theo ngôn ngữ đã chọn..."></textarea>
+                        </div>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button type="button" class="btn btn-admin btn-admin-primary" @onclick="SaveMenuTranslationAsync" disabled="@isTranslationSaving">
+                                @if (isTranslationSaving)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                }
+                                Lưu bản dịch
+                            </button>
+                            <button type="button" class="btn btn-outline-primary" @onclick="AutoTranslateMenuAsync" disabled="@isAutoTranslating">
+                                @if (isAutoTranslating)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                }
+                                Dịch tự động
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" @onclick="ResetTranslationForm">Nhập mới</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .menu-thumb {
+        width: 64px;
+        height: 64px;
+        object-fit: cover;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .menu-thumb-empty {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f8fafc;
+        color: #94a3b8;
+        font-size: 1.5rem;
+    }
+
+    .translation-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .translation-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        padding: 12px 14px;
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        background: #fff;
+    }
+</style>
+
+@code {
+    private readonly List<LocationOptionDto> locations = new();
+    private List<MenuItemDto> menuItems = new();
+    private List<MenuItemDto> filteredMenuItems = new();
+
+    private bool isAdmin;
+    private bool isLoading = true;
+    private bool isSaving;
+    private bool isTranslationSaving;
+    private bool isAutoTranslating;
+    private bool showModal;
+    private bool showTranslationModal;
+    private bool showImages = true;
+    private string availabilityFilter = "all";
+    private int selectedLocationId;
+    private string pageDescription = string.Empty;
+    private string? errorMessage;
+    private string? successMessage;
+    private string? translationErrorMessage;
+    private string modalTitle = string.Empty;
+    private string translationModalTitle = "Thêm bản dịch";
+    private EditableMenuItem editingItem = new();
+    private EditableMenuTranslation editingTranslation = new();
+    private MenuItemDto? translationTarget;
+    private List<MenuTranslationItemDto> translationItems = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        isAdmin = authState.User.IsInRole("Admin");
+        pageDescription = isAdmin
+            ? "Theo dõi và điều chỉnh menu ẩm thực của toàn bộ POI trong hệ thống."
+            : "Quản lý menu món ăn gắn với các POI mà bạn đang sở hữu.";
+
+        NotificationSvc.OnRealtimeActivity += HandleRealtimeActivity;
+        await NotificationSvc.InitializeAsync();
+        await LoadLocationsAsync();
+        await LoadMenuItemsAsync();
+    }
+
+    private async Task LoadLocationsAsync()
+    {
+        errorMessage = null;
+        try
+        {
+            var endpoint = isAdmin ? "api/maps/locations/admin/all" : "api/maps/locations/my";
+            var result = await Http.GetFromJsonAsync<List<LocationOptionDto>>(endpoint) ?? new();
+            locations.Clear();
+            locations.AddRange(result.OrderBy(location => location.Name));
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Không thể tải danh sách POI: {ex.Message}";
+        }
+    }
+
+    private async Task LoadMenuItemsAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            var endpoint = isAdmin ? "api/admin/menu" : "api/owner/menu";
+            var query = new List<string>();
+
+            if (selectedLocationId > 0)
+            {
+                query.Add($"locationId={selectedLocationId}");
+            }
+
+            if (isAdmin && availabilityFilter != "unavailable")
+            {
+                query.Add("includeUnavailable=true");
+            }
+
+            var url = query.Count == 0 ? endpoint : $"{endpoint}?{string.Join("&", query)}";
+            menuItems = await Http.GetFromJsonAsync<List<MenuItemDto>>(url) ?? new();
+            ApplyFilters();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Không thể tải menu: {ex.Message}";
+            menuItems = new();
+            filteredMenuItems = new();
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ApplyFilters()
+    {
+        IEnumerable<MenuItemDto> query = menuItems;
+
+        if (availabilityFilter == "available")
+        {
+            query = query.Where(item => item.IsAvailable);
+        }
+        else if (availabilityFilter == "unavailable")
+        {
+            query = query.Where(item => !item.IsAvailable);
+        }
+
+        if (selectedLocationId > 0)
+        {
+            query = query.Where(item => item.LocationId == selectedLocationId);
+        }
+
+        filteredMenuItems = query
+            .OrderBy(item => item.LocationName)
+            .ThenBy(item => item.SortOrder)
+            .ThenBy(item => item.Name)
+            .ToList();
+    }
+
+    private void ShowCreateModal()
+    {
+        editingItem = new EditableMenuItem
+        {
+            Currency = "VND",
+            IsAvailable = true,
+            LocationId = selectedLocationId > 0 ? selectedLocationId : locations.FirstOrDefault()?.Id ?? 0
+        };
+        modalTitle = "Thêm món ăn vào menu";
+        showModal = true;
+    }
+
+    private void ShowEditModal(MenuItemDto item)
+    {
+        editingItem = new EditableMenuItem
+        {
+            Id = item.Id,
+            LocationId = item.LocationId,
+            Name = item.Name,
+            Description = item.Description,
+            Price = item.Price,
+            Currency = item.Currency,
+            ImageUrl = item.ImageUrl,
+            IsAvailable = item.IsAvailable,
+            SortOrder = item.SortOrder
+        };
+        modalTitle = "Cập nhật món ăn";
+        showModal = true;
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+    }
+
+    private async Task ShowTranslationModalAsync(MenuItemDto item)
+    {
+        translationTarget = item;
+        showTranslationModal = true;
+        translationErrorMessage = null;
+        ResetTranslationForm();
+        await LoadMenuTranslationsAsync(item.Id);
+    }
+
+    private void CloseTranslationModal()
+    {
+        showTranslationModal = false;
+        translationTarget = null;
+        translationItems = new();
+        translationErrorMessage = null;
+        ResetTranslationForm();
+    }
+
+    private async Task SaveMenuItemAsync()
+    {
+        if (editingItem.LocationId == 0 || string.IsNullOrWhiteSpace(editingItem.Name))
+        {
+            errorMessage = "Vui lòng chọn POI và nhập tên món ăn.";
+            successMessage = null;
+            return;
+        }
+
+        isSaving = true;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            var endpoint = isAdmin ? "api/admin/menu" : "api/owner/menu";
+            var request = new UpsertMenuItemRequest
+            {
+                LocationId = editingItem.LocationId,
+                Name = editingItem.Name.Trim(),
+                Description = editingItem.Description?.Trim() ?? string.Empty,
+                Price = editingItem.Price,
+                Currency = string.IsNullOrWhiteSpace(editingItem.Currency) ? "VND" : editingItem.Currency.Trim().ToUpperInvariant(),
+                ImageUrl = editingItem.ImageUrl?.Trim(),
+                IsAvailable = editingItem.IsAvailable,
+                SortOrder = editingItem.SortOrder
+            };
+
+            HttpResponseMessage response;
+            if (editingItem.Id == 0)
+            {
+                response = await Http.PostAsJsonAsync(endpoint, request);
+            }
+            else
+            {
+                response = await Http.PutAsJsonAsync($"{endpoint}/{editingItem.Id}", request);
+            }
+
+            response.EnsureSuccessStatusCode();
+
+            showModal = false;
+            successMessage = editingItem.Id == 0
+                ? "Đã thêm món ăn vào menu."
+                : "Đã cập nhật món ăn.";
+            await LoadMenuItemsAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Không thể lưu món ăn: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task DeleteMenuItemAsync(int id)
+    {
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            var endpoint = isAdmin ? $"api/admin/menu/{id}" : $"api/owner/menu/{id}";
+            var response = await Http.DeleteAsync(endpoint);
+            response.EnsureSuccessStatusCode();
+
+            successMessage = "Đã xóa món ăn khỏi menu.";
+            await LoadMenuItemsAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Không thể xóa món ăn: {ex.Message}";
+        }
+    }
+
+    private async Task LoadMenuTranslationsAsync(int menuItemId)
+    {
+        translationErrorMessage = null;
+
+        try
+        {
+            translationItems = await Http.GetFromJsonAsync<List<MenuTranslationItemDto>>($"api/localization/menu-items/{menuItemId}/translations") ?? new();
+        }
+        catch (Exception ex)
+        {
+            translationItems = new();
+            translationErrorMessage = $"Không thể tải bản dịch menu: {ex.Message}";
+        }
+    }
+
+    private void EditMenuTranslation(MenuTranslationItemDto translation)
+    {
+        editingTranslation = new EditableMenuTranslation
+        {
+            Id = translation.Id,
+            PoiMenuItemId = translation.PoiMenuItemId,
+            LanguageCode = translation.LanguageCode,
+            Name = translation.Name,
+            Description = translation.Description
+        };
+        translationModalTitle = "Cập nhật bản dịch";
+        translationErrorMessage = null;
+    }
+
+    private void ResetTranslationForm()
+    {
+        editingTranslation = new EditableMenuTranslation
+        {
+            PoiMenuItemId = translationTarget?.Id ?? 0
+        };
+        translationModalTitle = "Thêm bản dịch";
+        translationErrorMessage = null;
+    }
+
+    private async Task SaveMenuTranslationAsync()
+    {
+        if (translationTarget == null)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(editingTranslation.LanguageCode) || string.IsNullOrWhiteSpace(editingTranslation.Name))
+        {
+            translationErrorMessage = "Vui lòng chọn ngôn ngữ và nhập tên món theo bản dịch.";
+            return;
+        }
+
+        isTranslationSaving = true;
+        translationErrorMessage = null;
+
+        try
+        {
+            var request = new UpsertMenuTranslationRequest
+            {
+                PoiMenuItemId = translationTarget.Id,
+                LanguageCode = editingTranslation.LanguageCode,
+                Name = editingTranslation.Name.Trim(),
+                Description = editingTranslation.Description?.Trim()
+            };
+
+            HttpResponseMessage response;
+            if (editingTranslation.Id == 0)
+            {
+                response = await Http.PostAsJsonAsync("api/localization/menu-translations", request);
+            }
+            else
+            {
+                response = await Http.PutAsJsonAsync($"api/localization/menu-translations/{editingTranslation.Id}", request);
+            }
+
+            response.EnsureSuccessStatusCode();
+
+            await LoadMenuTranslationsAsync(translationTarget.Id);
+            await LoadMenuItemsAsync();
+            translationTarget = filteredMenuItems.FirstOrDefault(item => item.Id == translationTarget.Id)
+                ?? menuItems.FirstOrDefault(item => item.Id == translationTarget.Id)
+                ?? translationTarget;
+            ResetTranslationForm();
+        }
+        catch (Exception ex)
+        {
+            translationErrorMessage = $"Không thể lưu bản dịch menu: {ex.Message}";
+        }
+        finally
+        {
+            isTranslationSaving = false;
+        }
+    }
+
+    private async Task DeleteMenuTranslationAsync(int id)
+    {
+        if (translationTarget == null)
+        {
+            return;
+        }
+
+        translationErrorMessage = null;
+
+        try
+        {
+            var response = await Http.DeleteAsync($"api/localization/menu-translations/{id}");
+            response.EnsureSuccessStatusCode();
+
+            await LoadMenuTranslationsAsync(translationTarget.Id);
+            await LoadMenuItemsAsync();
+            translationTarget = filteredMenuItems.FirstOrDefault(item => item.Id == translationTarget.Id)
+                ?? menuItems.FirstOrDefault(item => item.Id == translationTarget.Id)
+                ?? translationTarget;
+            ResetTranslationForm();
+        }
+        catch (Exception ex)
+        {
+            translationErrorMessage = $"Không thể xóa bản dịch menu: {ex.Message}";
+        }
+    }
+
+    private async Task AutoTranslateMenuAsync()
+    {
+        if (translationTarget == null)
+        {
+            return;
+        }
+
+        isAutoTranslating = true;
+        translationErrorMessage = null;
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync(
+                $"api/localization/menu-items/{translationTarget.Id}/translate",
+                new
+                {
+                    lang = string.IsNullOrWhiteSpace(editingTranslation.LanguageCode)
+                        ? null
+                        : editingTranslation.LanguageCode
+                });
+
+            response.EnsureSuccessStatusCode();
+
+            await LoadMenuTranslationsAsync(translationTarget.Id);
+            await LoadMenuItemsAsync();
+            translationTarget = filteredMenuItems.FirstOrDefault(item => item.Id == translationTarget.Id)
+                ?? menuItems.FirstOrDefault(item => item.Id == translationTarget.Id)
+                ?? translationTarget;
+            ResetTranslationForm();
+        }
+        catch (Exception ex)
+        {
+            translationErrorMessage = $"Không thể dịch tự động menu: {ex.Message}";
+        }
+        finally
+        {
+            isAutoTranslating = false;
+        }
+    }
+
+    private static string FormatPrice(decimal price, string currency)
+    {
+        var normalizedCurrency = string.IsNullOrWhiteSpace(currency) ? "VND" : currency;
+        return normalizedCurrency == "VND"
+            ? string.Format("{0:N0} đ", price)
+            : string.Format("{0:N2} {1}", price, normalizedCurrency);
+    }
+
+    private static string GetLanguageLabel(string code) => code switch
+    {
+        "vi-VN" => "Tiếng Việt",
+        "en-US" => "Tiếng Anh",
+        "ja-JP" => "Tiếng Nhật",
+        "ko-KR" => "Tiếng Hàn",
+        "zh-CN" => "Tiếng Trung",
+        _ => code
+    };
+
+    private void HandleRealtimeActivity(RealtimeActivityDto activity)
+    {
+        if (activity.EventName != RealtimeEventNames.MenuUpdated)
+        {
+            return;
+        }
+
+        _ = InvokeAsync(async () =>
+        {
+            await LoadMenuItemsAsync();
+            StateHasChanged();
+        });
+    }
+
+    public void Dispose()
+    {
+        NotificationSvc.OnRealtimeActivity -= HandleRealtimeActivity;
+    }
+
+    private sealed class EditableMenuItem
+    {
+        public int Id { get; set; }
+        public int LocationId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public decimal Price { get; set; }
+        public string Currency { get; set; } = "VND";
+        public string? ImageUrl { get; set; }
+        public bool IsAvailable { get; set; } = true;
+        public int SortOrder { get; set; }
+    }
+
+    private sealed class EditableMenuTranslation
+    {
+        public int Id { get; set; }
+        public int PoiMenuItemId { get; set; }
+        public string LanguageCode { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
+    }
+
+    private sealed class LocationOptionDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+    }
+}
