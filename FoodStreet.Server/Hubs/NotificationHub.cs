@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
-using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using FoodStreet.Server.Constants;
 
 namespace FoodStreet.Server.Hubs
 {
@@ -20,14 +20,14 @@ namespace FoodStreet.Server.Hubs
             if (!string.IsNullOrEmpty(userId))
             {
                 // Group theo userId (thông báo cá nhân)
-                await Groups.AddToGroupAsync(Context.ConnectionId, $"user_{userId}");
+                await Groups.AddToGroupAsync(Context.ConnectionId, NotificationHubGroups.User(userId));
             }
 
             // Group theo role (thông báo theo vai trò)
             var role = GetRole();
             if (!string.IsNullOrEmpty(role))
             {
-                await Groups.AddToGroupAsync(Context.ConnectionId, $"role_{role}");
+                await Groups.AddToGroupAsync(Context.ConnectionId, NotificationHubGroups.Role(role));
             }
 
             await base.OnConnectedAsync();
@@ -38,16 +38,26 @@ namespace FoodStreet.Server.Hubs
             var userId = GetUserId();
             if (!string.IsNullOrEmpty(userId))
             {
-                await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"user_{userId}");
+                await Groups.RemoveFromGroupAsync(Context.ConnectionId, NotificationHubGroups.User(userId));
             }
 
             var role = GetRole();
             if (!string.IsNullOrEmpty(role))
             {
-                await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"role_{role}");
+                await Groups.RemoveFromGroupAsync(Context.ConnectionId, NotificationHubGroups.Role(role));
             }
 
             await base.OnDisconnectedAsync(exception);
+        }
+
+        public Task JoinPoiGroup(int poiId)
+        {
+            return Groups.AddToGroupAsync(Context.ConnectionId, NotificationHubGroups.Poi(poiId));
+        }
+
+        public Task LeavePoiGroup(int poiId)
+        {
+            return Groups.RemoveFromGroupAsync(Context.ConnectionId, NotificationHubGroups.Poi(poiId));
         }
 
         private string? GetUserId()
@@ -58,8 +68,12 @@ namespace FoodStreet.Server.Hubs
 
         private string? GetRole()
         {
-            return Context.User?.Claims.FirstOrDefault(c =>
+            var rawRole = Context.User?.Claims.FirstOrDefault(c =>
                 c.Type == "role" || c.Type == ClaimTypes.Role)?.Value;
+
+            return string.IsNullOrWhiteSpace(rawRole)
+                ? null
+                : AppRoles.NormalizeForPersistence(rawRole);
         }
     }
 }
