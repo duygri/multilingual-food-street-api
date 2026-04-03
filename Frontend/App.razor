@@ -1,7 +1,16 @@
-﻿<CascadingAuthenticationState>
+<CascadingAuthenticationState>
     <Router AppAssembly="@typeof(App).Assembly" AdditionalAssemblies="new[] { typeof(FoodStreet.Client.Layout.MainLayout).Assembly }">
         <Found Context="routeData">
             <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+                <Authorizing>
+                    <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#f0f2f5;">
+                        <div style="text-align:center;">
+                            <div style="width:40px;height:40px;border:3px solid #e2e8f0;border-top-color:#ff6b35;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px;"></div>
+                            <p style="color:#64748b;font-size:14px;">Đang kiểm tra đăng nhập...</p>
+                        </div>
+                    </div>
+                    <style>@@keyframes spin { to { transform: rotate(360deg); } }</style>
+                </Authorizing>
                 <NotAuthorized>
                     @if (context.User.Identity?.IsAuthenticated != true)
                     {
