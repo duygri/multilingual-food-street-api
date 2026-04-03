@@ -26,8 +26,10 @@ namespace PROJECT_C_.DTOs
         public int? CategoryId { get; set; }
         public string? CategoryName { get; set; }
 
-        // Approval (read-only for Seller)
+        // Approval (read-only for POI Owner)
         public bool IsApproved { get; set; }
+        public DateTime? ApprovedAt { get; set; }
+        public string? OwnerId { get; set; }
 
         // Computed fields (GPS result)
         public double Distance { get; set; }
@@ -36,7 +38,11 @@ namespace PROJECT_C_.DTOs
         // Audio info
         public bool HasAudio { get; set; }
         public string? AudioUrl { get; set; }
-
+        public string AudioStatus { get; set; } = "pending";
+        public string LanguageCode { get; set; } = "vi-VN";
+        public int Tier { get; set; } = 3;
+        public bool FallbackUsed { get; set; }
+        public bool IsFallback { get; set; }
 
     }
 }
