@@ -19,6 +19,9 @@ namespace PROJECT_C_.Data
         public DbSet<PlayLog> PlayLogs => Set<PlayLog>();
         public DbSet<Tour> Tours => Set<Tour>();
         public DbSet<TourItem> TourItems => Set<TourItem>();
+        public DbSet<TourSession> TourSessions => Set<TourSession>();
+        public DbSet<PoiMenuItem> PoiMenuItems => Set<PoiMenuItem>();
+        public DbSet<PoiMenuItemTranslation> PoiMenuItemTranslations => Set<PoiMenuItemTranslation>();
         public DbSet<UserLocation> UserLocations => Set<UserLocation>();
         public DbSet<PushSubscription> PushSubscriptions => Set<PushSubscription>();
         public DbSet<Category> Categories => Set<Category>();
@@ -79,12 +82,44 @@ namespace PROJECT_C_.Data
                 .HasForeignKey(l => l.CategoryId)
                 .OnDelete(DeleteBehavior.SetNull);
 
+            modelBuilder.Entity<PoiMenuItem>()
+                .HasOne(menuItem => menuItem.Location)
+                .WithMany(location => location.MenuItems)
+                .HasForeignKey(menuItem => menuItem.LocationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PoiMenuItemTranslation>()
+                .HasOne(translation => translation.PoiMenuItem)
+                .WithMany(menuItem => menuItem.Translations)
+                .HasForeignKey(translation => translation.PoiMenuItemId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PoiMenuItemTranslation>()
+                .HasIndex(translation => new { translation.PoiMenuItemId, translation.LanguageCode })
+                .IsUnique();
+
             // LocationTranslation Configuration
             modelBuilder.Entity<LocationTranslation>()
                 .HasOne(lt => lt.Location)
                 .WithMany(l => l.Translations)
                 .HasForeignKey(lt => lt.LocationId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<TourSession>()
+                .HasOne(session => session.Tour)
+                .WithMany()
+                .HasForeignKey(session => session.TourId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<TourSession>()
+                .HasIndex(session => session.SessionId)
+                .IsUnique();
+
+            modelBuilder.Entity<TourSession>()
+                .HasIndex(session => new { session.UserId, session.IsCompleted, session.LastActivityAt });
+
+            modelBuilder.Entity<TourSession>()
+                .HasIndex(session => new { session.IsCompleted, session.CurrentLocationId, session.LastActivityAt });
 
             base.OnModelCreating(modelBuilder);
         }
