@@ -131,16 +131,16 @@
     }
 
     .count-badge {
-        background: linear-gradient(135deg, #ff6b35, #f7931e);
-        color: #fff;
+        background: linear-gradient(135deg, var(--color-accent), #f7931e);
+        color: white;
         padding: 4px 12px;
-        border-radius: 20px;
+        border-radius: var(--radius-xl);
         font-size: 12px;
         font-weight: 600;
     }
 
     .count-all {
-        color: #64748b;
+        color: var(--text-secondary);
         font-size: 13px;
     }
 
@@ -151,25 +151,25 @@
 
     .btn-action {
         padding: 8px 16px;
-        border: 1px solid #e2e8f0;
-        border-radius: 10px;
-        background: #fff;
+        border: 1px solid var(--color-neutral-200);
+        border-radius: var(--radius-md);
+        background: white;
         font-size: 13px;
         font-weight: 500;
         cursor: pointer;
         transition: all 0.2s ease;
-        color: #475569;
+        color: var(--text-secondary);
     }
 
     .btn-action:hover {
-        border-color: #ff6b35;
-        color: #ff6b35;
+        border-color: var(--color-accent);
+        color: var(--color-accent);
         background: rgba(255, 107, 53, 0.05);
     }
 
     .btn-clear:hover {
-        border-color: #ef4444;
-        color: #ef4444;
+        border-color: var(--color-danger);
+        color: var(--color-danger);
         background: rgba(239, 68, 68, 0.05);
     }
 
@@ -178,8 +178,8 @@
         display: flex;
         gap: 4px;
         padding: 4px;
-        background: #f1f5f9;
-        border-radius: 12px;
+        background: var(--surface-inset);
+        border-radius: var(--radius-lg);
         margin-bottom: 20px;
     }
 
@@ -188,10 +188,10 @@
         padding: 10px 16px;
         border: none;
         background: transparent;
-        border-radius: 10px;
+        border-radius: var(--radius-md);
         font-size: 13px;
         font-weight: 500;
-        color: #64748b;
+        color: var(--text-secondary);
         cursor: pointer;
         transition: all 0.2s ease;
         display: flex;
@@ -206,8 +206,8 @@
     }
 
     .filter-tab.active {
-        background: #fff;
-        color: #ff6b35;
+        background: white;
+        color: var(--color-accent);
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         font-weight: 600;
     }
@@ -215,13 +215,13 @@
     .tab-count {
         background: rgba(100, 116, 139, 0.1);
         padding: 2px 8px;
-        border-radius: 10px;
+        border-radius: var(--radius-md);
         font-size: 11px;
     }
 
     .filter-tab.active .tab-count {
         background: rgba(255, 107, 53, 0.1);
-        color: #ff6b35;
+        color: var(--color-accent);
     }
 
     /* Notification cards */
@@ -236,9 +236,9 @@
         align-items: flex-start;
         gap: 14px;
         padding: 16px 20px;
-        background: #fff;
-        border-radius: 14px;
-        border: 1px solid #e2e8f0;
+        background: white;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--color-neutral-200);
         cursor: pointer;
         transition: all 0.2s ease;
         position: relative;
@@ -246,7 +246,7 @@
     }
 
     .notification-card:hover {
-        border-color: #cbd5e1;
+        border-color: var(--color-neutral-300);
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
         transform: translateY(-1px);
     }
@@ -265,21 +265,21 @@
         border-radius: 4px 0 0 4px;
     }
 
-    .card-indicator.type-poi { background: #3b82f6; }
-    .card-indicator.type-menu { background: #f59e0b; }
-    .card-indicator.type-approved { background: #22c55e; }
-    .card-indicator.type-rejected { background: #ef4444; }
+    .card-indicator.type-poi { background: var(--color-info); }
+    .card-indicator.type-menu { background: var(--color-warning); }
+    .card-indicator.type-approved { background: var(--color-success); }
+    .card-indicator.type-rejected { background: var(--color-danger); }
     .card-indicator.type-system { background: #8b5cf6; }
 
     .card-icon {
         width: 44px;
         height: 44px;
-        border-radius: 12px;
+        border-radius: var(--radius-lg);
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 20px;
-        background: #f8fafc;
+        background: var(--surface-card);
         flex-shrink: 0;
     }
 
@@ -302,19 +302,19 @@
     }
 
     .notification-card.unread .card-title {
-        color: #ff6b35;
+        color: var(--color-accent);
     }
 
     .card-time {
         font-size: 12px;
-        color: #94a3b8;
+        color: var(--color-neutral-400);
         white-space: nowrap;
         margin-left: 12px;
     }
 
     .card-message {
         font-size: 13px;
-        color: #64748b;
+        color: var(--text-secondary);
         margin: 0 0 8px 0;
         line-height: 1.5;
     }
@@ -327,7 +327,7 @@
 
     .meta-sender {
         font-size: 12px;
-        color: #94a3b8;
+        color: var(--color-neutral-400);
     }
 
     .meta-type {
@@ -337,10 +337,10 @@
         font-weight: 500;
     }
 
-    .badge-type-poi { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
-    .badge-type-menu { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
-    .badge-type-approved { background: rgba(34, 197, 94, 0.1); color: #22c55e; }
-    .badge-type-rejected { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+    .badge-type-poi { background: rgba(59, 130, 246, 0.1); color: var(--color-info); }
+    .badge-type-menu { background: rgba(245, 158, 11, 0.1); color: var(--color-warning); }
+    .badge-type-approved { background: rgba(34, 197, 94, 0.1); color: var(--color-success); }
+    .badge-type-rejected { background: rgba(239, 68, 68, 0.1); color: var(--color-danger); }
     .badge-type-system { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
 
     .card-actions {
@@ -360,7 +360,7 @@
         height: 32px;
         border: none;
         background: transparent;
-        border-radius: 8px;
+        border-radius: var(--radius-md);
         cursor: pointer;
         font-size: 14px;
         display: flex;
@@ -370,7 +370,7 @@
     }
 
     .btn-icon:hover {
-        background: #f1f5f9;
+        background: var(--surface-inset);
     }
 
     .btn-delete:hover {
@@ -381,7 +381,7 @@
     .empty-state {
         text-align: center;
         padding: 60px 20px;
-        color: #94a3b8;
+        color: var(--color-neutral-400);
     }
 
     .empty-icon {
@@ -391,7 +391,7 @@
     }
 
     .empty-state h3 {
-        color: #64748b;
+        color: var(--text-secondary);
         margin: 0 0 8px 0;
         font-weight: 600;
     }
@@ -517,3 +517,4 @@
         NotificationSvc.OnNotificationsChanged -= OnChanged;
     }
 }
+
