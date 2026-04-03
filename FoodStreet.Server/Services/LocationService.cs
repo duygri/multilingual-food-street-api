@@ -1,6 +1,7 @@
 using PROJECT_C_.DTOs;
 using PROJECT_C_.Services.Interfaces;
 using PROJECT_C_.Data;
+using FoodStreet.Server.Mapping;
 using Microsoft.EntityFrameworkCore;
 using PROJECT_C_.Models;
 
@@ -29,7 +30,7 @@ namespace PROJECT_C_.Services
             int pageSize,
             string languageCode = "vi-VN")
         {
-            var lang = languageCode.Split(',')[0].Trim();
+            var lang = PoiContentResolver.NormalizeLanguageCode(languageCode);
 
             var locations = _context.Locations
                 .AsNoTracking()
@@ -37,25 +38,6 @@ namespace PROJECT_C_.Services
                 .Include(l => l.Translations)
                 .Include(l => l.AudioFiles)
                 .Include(l => l.Category)
-                .Select(l => new
-                {
-                    l.Id,
-                    l.Latitude,
-                    l.Longitude,
-                    l.ImageUrl,
-                    l.MapLink,
-                    l.Radius,
-                    l.Priority,
-                    l.TtsScript,
-                    l.Address,
-                    l.CategoryId,
-                    CategoryName = l.Category != null ? l.Category.Name : null,
-                    Audio = l.AudioFiles.FirstOrDefault(),
-                    Transl = l.Translations.FirstOrDefault(t => t.LanguageCode == lang)
-                             ?? l.Translations.FirstOrDefault(t => t.LanguageCode == "vi-VN"),
-                    DefaultName = l.Name,
-                    DefaultDesc = l.Description
-                })
                 .ToList();
 
             var total = locations.Count;
@@ -70,32 +52,38 @@ namespace PROJECT_C_.Services
                 .OrderBy(x => x.Km)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .Select(x => new LocationDto
+                .Select(x =>
                 {
-                    Id = x.Location.Id,
-                    Name = lang == "vi-VN"
-                        ? x.Location.DefaultName
-                        : (x.Location.Transl?.Name ?? x.Location.DefaultName),
-                    Description = lang == "vi-VN"
-                        ? x.Location.DefaultDesc
-                        : (x.Location.Transl?.Description ?? x.Location.DefaultDesc),
-                    Address = x.Location.Address,
-                    Latitude = x.Location.Latitude,
-                    Longitude = x.Location.Longitude,
-                    ImageUrl = x.Location.ImageUrl,
-                    MapLink = x.Location.MapLink,
-                    Radius = x.Location.Radius,
-                    Priority = x.Location.Priority,
-                    TtsScript = x.Location.TtsScript,
-                    CategoryId = x.Location.CategoryId,
-                    CategoryName = x.Location.CategoryName,
-                    HasAudio = x.Location.Audio != null,
-                    AudioUrl = x.Location.Audio != null ? $"/api/audio/{x.Location.Audio.Id}" : null,
-                    IsApproved = true,
-                    Distance = x.Km < 1
-                        ? Math.Round(x.Km * 1000.0, 0)
-                        : Math.Round(x.Km, 2),
-                    Unit = x.Km < 1 ? "m" : "km"
+                    var resolved = PoiContentResolver.Resolve(x.Location, lang);
+
+                    return new LocationDto
+                    {
+                        Id = x.Location.Id,
+                        Name = resolved.Name,
+                        Description = resolved.Description,
+                        Address = x.Location.Address,
+                        Latitude = x.Location.Latitude,
+                        Longitude = x.Location.Longitude,
+                        ImageUrl = x.Location.ImageUrl,
+                        MapLink = x.Location.MapLink,
+                        Radius = x.Location.Radius,
+                        Priority = x.Location.Priority,
+                        TtsScript = resolved.TtsScript,
+                        CategoryId = x.Location.CategoryId,
+                        CategoryName = x.Location.Category?.Name,
+                        HasAudio = resolved.HasAudio,
+                        AudioUrl = resolved.AudioUrl,
+                        AudioStatus = resolved.AudioStatus,
+                        LanguageCode = resolved.LanguageCode,
+                        Tier = resolved.Tier,
+                        FallbackUsed = resolved.FallbackUsed,
+                        IsFallback = resolved.IsFallback,
+                        IsApproved = true,
+                        Distance = x.Km < 1
+                            ? Math.Round(x.Km * 1000.0, 0)
+                            : Math.Round(x.Km, 2),
+                        Unit = x.Km < 1 ? "m" : "km"
+                    };
                 })
                 .ToList();
 
@@ -116,7 +104,7 @@ namespace PROJECT_C_.Services
             return location;
         }
 
-        public async Task<Location?> UpdateLocationAsync(int id, Location location)
+        public async Task<Location?> UpdateLocationAsync(int id, Location location, bool resetApproval = false)
         {
             var existing = await _context.Locations.FindAsync(id);
             if (existing == null) return null;
@@ -132,6 +120,12 @@ namespace PROJECT_C_.Services
             existing.Priority = location.Priority;
             existing.TtsScript = location.TtsScript;
             existing.CategoryId = location.CategoryId;
+
+            if (resetApproval)
+            {
+                existing.IsApproved = false;
+                existing.ApprovedAt = null;
+            }
 
             await _context.SaveChangesAsync();
             return existing;
@@ -177,6 +171,8 @@ namespace PROJECT_C_.Services
         {
             return await _context.Locations
                 .Include(l => l.Category)
+                .Include(l => l.Translations)
+                .Include(l => l.AudioFiles)
                 .Where(l => l.OwnerId == ownerId)
                 .OrderByDescending(l => l.Id)
                 .ToListAsync();
@@ -189,6 +185,8 @@ namespace PROJECT_C_.Services
         {
             return await _context.Locations
                 .Include(l => l.Category)
+                .Include(l => l.Translations)
+                .Include(l => l.AudioFiles)
                 .OrderByDescending(l => l.Id)
                 .ToListAsync();
         }
@@ -197,6 +195,8 @@ namespace PROJECT_C_.Services
         {
             return await _context.Locations
                 .Include(l => l.Category)
+                .Include(l => l.Translations)
+                .Include(l => l.AudioFiles)
                 .Where(l => !l.IsApproved)
                 .OrderByDescending(l => l.Id)
                 .ToListAsync();
