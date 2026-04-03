@@ -10,11 +10,11 @@ namespace PROJECT_C_.Services.Interfaces
 
         // === CRUD ===
         Task<Location> CreateLocationAsync(Location location);
-        Task<Location?> UpdateLocationAsync(int id, Location location);
+        Task<Location?> UpdateLocationAsync(int id, Location location, bool resetApproval = false);
         Task<bool> DeleteLocationAsync(int id);
         Task<Location?> GetLocationByIdAsync(int id);
 
-        // === Seller-specific ===
+        // === POI Owner-specific ===
         Task<IEnumerable<Location>> GetLocationsByOwnerAsync(string ownerId);
 
         // === Admin-specific ===
