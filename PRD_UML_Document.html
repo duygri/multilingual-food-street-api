@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PRD & UML v2.0 — Du Lịch Ẩm Thực Quận 4</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0e17;--surface:#111827;--card:#1a2332;--border:#2a3a4e;--accent:#f59e0b;--accent2:#3b82f6;--green:#10b981;--red:#ef4444;--pink:#ec4899;--purple:#8b5cf6;--text:#e5e7eb;--muted:#9ca3af;--dim:#6b7280}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+a{color:var(--accent2);text-decoration:none}
+
+/* NAV */
+.sidebar{position:fixed;top:0;left:0;width:280px;height:100vh;background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;z-index:100;padding:24px 0}
+.sidebar h2{padding:0 20px 16px;font-size:15px;color:var(--accent);border-bottom:1px solid var(--border);margin-bottom:12px}
+.sidebar .logo{padding:12px 20px 20px;font-size:18px;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.nav-group{margin-bottom:8px}
+.nav-group-title{padding:8px 20px;font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);font-weight:600}
+.nav-link{display:block;padding:7px 20px 7px 32px;font-size:13px;color:var(--muted);transition:.2s;border-left:3px solid transparent}
+.nav-link:hover,.nav-link.active{color:var(--text);background:rgba(245,158,11,.06);border-left-color:var(--accent)}
+
+/* MAIN */
+.main{margin-left:280px;padding:40px 48px 80px}
+section{margin-bottom:48px}
+h1{font-size:32px;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px}
+.subtitle{color:var(--muted);font-size:14px;margin-bottom:32px}
+h2{font-size:22px;font-weight:700;color:var(--text);margin:32px 0 16px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+h3{font-size:16px;font-weight:600;color:var(--accent);margin:20px 0 10px}
+h4{font-size:14px;color:var(--accent2);margin:16px 0 8px}
+p,.desc{color:var(--muted);font-size:14px;margin-bottom:12px;max-width:800px}
+
+/* CARDS & TABLES */
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px}
+table{width:100%;border-collapse:collapse;margin:12px 0 20px;font-size:13px}
+th{background:var(--card);color:var(--accent);text-align:left;padding:10px 14px;font-weight:600;border-bottom:2px solid var(--border)}
+td{padding:9px 14px;border-bottom:1px solid rgba(42,58,78,.5);color:var(--muted)}
+tr:hover td{background:rgba(245,158,11,.03)}
+
+/* CODE */
+.code-block{background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:16px;font-family:'Fira Code',monospace;font-size:12.5px;overflow-x:auto;margin:12px 0;color:#c9d1d9;white-space:pre;line-height:1.6}
+
+/* BADGES */
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-green{background:rgba(16,185,129,.15);color:var(--green)}
+.badge-red{background:rgba(239,68,68,.15);color:var(--red)}
+.badge-blue{background:rgba(59,130,246,.15);color:var(--accent2)}
+.badge-amber{background:rgba(245,158,11,.15);color:var(--accent)}
+.badge-purple{background:rgba(139,92,246,.15);color:var(--purple)}
+
+/* GRID */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;text-align:center}
+.stat-card .num{font-size:28px;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.stat-card .label{font-size:12px;color:var(--muted);margin-top:4px}
+.section-header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.section-header .icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.section-num{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--accent);font-weight:700;margin-bottom:2px}
+.arch-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0}
+.arch-module{border:1px solid var(--border);border-radius:12px;padding:16px;background:var(--card);transition:.2s}
+.arch-module:hover{border-color:var(--accent);transform:translateY(-2px)}
+.arch-module .mod-icon{font-size:24px;margin-bottom:6px}
+.arch-module .mod-name{font-size:14px;font-weight:700;color:var(--text)}
+.arch-module .mod-desc{font-size:12px;color:var(--muted);margin-top:4px}
+.timeline{position:relative;padding-left:28px;margin:16px 0}
+.timeline::before{content:'';position:absolute;left:8px;top:0;bottom:0;width:2px;background:var(--accent)}
+.timeline-item{position:relative;margin-bottom:18px}
+.timeline-item::before{content:'';position:absolute;left:-28px;top:6px;width:12px;height:12px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px rgba(245,158,11,.15)}
+.timeline-item h4{font-size:14px;color:var(--text);margin-bottom:4px}
+.flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0}
+.flow-step{background:var(--card);border:1px solid var(--border);color:var(--text);padding:7px 12px;border-radius:10px;font-size:12px;font-weight:600}
+.flow-step.alt{border-color:var(--accent2);color:var(--accent2)}
+.flow-step.success{border-color:var(--green);color:var(--green)}
+.flow-step.warning{border-color:var(--accent);color:var(--accent)}
+.flow-arrow{font-size:16px;color:var(--dim)}
+
+/* DIAGRAMS */
+.diagram-container{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px;margin:16px 0;overflow-x:auto}
+.diagram-container .mermaid{display:flex;justify-content:center}
+
+/* ALERT */
+.alert{border-radius:8px;padding:14px 18px;margin:12px 0;font-size:13px}
+.alert-warn{background:rgba(245,158,11,.1);border-left:4px solid var(--accent);color:var(--accent)}
+.alert-info{background:rgba(59,130,246,.1);border-left:4px solid var(--accent2);color:var(--accent2)}
+.alert-danger{background:rgba(239,68,68,.1);border-left:4px solid var(--red);color:var(--red)}
+
+/* UML SECTION TABS */
+.tabs{display:flex;gap:4px;margin-bottom:16px;flex-wrap:wrap}
+.tab{padding:8px 16px;background:var(--card);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;color:var(--muted);transition:.2s}
+.tab:hover,.tab.active{background:rgba(245,158,11,.12);color:var(--accent);border-color:var(--accent)}
+
+@media(max-width:900px){
+.sidebar{display:none}.main{margin-left:0;padding:20px}
+.grid-2,.grid-3,.arch-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<!-- SIDEBAR -->
+<nav class="sidebar">
+<div class="logo">🍜 Quận 4 Culinary</div>
+<div class="nav-group"><div class="nav-group-title">📋 PRD</div>
+<a class="nav-link" href="#overview">Tổng Quan</a>
+<a class="nav-link" href="#architecture">Kiến Trúc</a>
+<a class="nav-link" href="#startup">Startup Flow</a>
+<a class="nav-link" href="#data-models">Data Models</a>
+<a class="nav-link" href="#api">API Endpoints</a>
+<a class="nav-link" href="#auth">Auth & RBAC</a>
+<a class="nav-link" href="#pages">Trang UI</a>
+<a class="nav-link" href="#ops">Operations Flow</a>
+<a class="nav-link" href="#patterns">Core Patterns</a>
+<a class="nav-link" href="#constants">Constants</a>
+</div>
+<div class="nav-group"><div class="nav-group-title">📐 UML</div>
+<a class="nav-link" href="#uml-class">Class Diagram</a>
+<a class="nav-link" href="#uml-seq">Sequence Diagrams</a>
+<a class="nav-link" href="#uml-act">Activity Diagrams</a>
+<a class="nav-link" href="#uml-state">State Diagrams</a>
+</div>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+
+<!-- HEADER -->
+<section id="overview">
+<h1>PRD & UML v2.0 — Du Lịch Ẩm Thực Quận 4</h1>
+<p class="subtitle">.NET 8 + React 18 + PostgreSQL + SignalR + QR Code + Tour &nbsp;|&nbsp; Cập nhật: 2026</p>
+
+<div class="grid-3">
+<div class="stat-card"><div class="num">6</div><div class="label">Backend Modules</div></div>
+<div class="stat-card"><div class="num">~55</div><div class="label">API Endpoints</div></div>
+<div class="stat-card"><div class="num">10</div><div class="label">PostgreSQL Tables</div></div>
+<div class="stat-card"><div class="num">3</div><div class="label">Core Roles</div></div>
+<div class="stat-card"><div class="num">2</div><div class="label">Entry Flows</div></div>
+<div class="stat-card"><div class="num">Real-time</div><div class="label">SignalR Updates</div></div>
+</div>
+
+<div class="alert alert-warn">⚠️ <strong>Bản tạm thời mới</strong> — hệ thống hiện có <strong>POI Owner</strong>, <strong>menu (food)</strong>, <strong>Tour</strong>, <strong>QR Code</strong>, <strong>SignalR</strong>, <strong>.NET</strong>, <strong>PostgreSQL</strong>; <strong>du khách bắt buộc đăng nhập</strong> trước khi sử dụng.</div>
+
+<p>Tài liệu này được chỉnh lại theo mạch trình bày của file presentation nguồn: đi từ tổng quan kiến trúc, startup, domain flow, auth và vận hành. Tuy nhiên toàn bộ nội dung kỹ thuật đã được chuyển sang hướng <strong>C# / ASP.NET Core / Entity Framework Core / PostgreSQL / SignalR</strong>.</p>
+
+<h2>Giá trị cốt lõi</h2>
+<div class="grid-3">
+<div class="card"><h4>👤 Du khách (đã đăng nhập)</h4><p>Xem bản đồ, menu món ăn, tham gia tour, quét QR code để vào POI hoặc tour và nhận cập nhật realtime</p></div>
+<div class="card"><h4>🏪 Chủ quán (poi_owner)</h4><p>Quản lý POI sở hữu, cập nhật menu food, theo dõi QR/tour liên quan và nhận trạng thái realtime</p></div>
+<div class="card"><h4>🛡️ Admin</h4><p>CRUD toàn bộ hệ thống: POI, menu, tour, QR code, users, roles và broadcast thay đổi qua SignalR</p></div>
+</div>
+
+<h3>Actors & Roles</h3>
+<table><tr><th>Actor</th><th>Mô tả</th><th>Truy cập</th></tr>
+<tr><td><span class="badge badge-green">Tourist User</span></td><td>Du khách đã đăng nhập</td><td>Map, POI, Menu, Tour, QR flow</td></tr>
+<tr><td><span class="badge badge-amber">POI Owner</span></td><td>Chủ quán đã được gán POI</td><td>Owner Portal <code>/owner/*</code></td></tr>
+<tr><td><span class="badge badge-red">Admin</span></td><td>Quản trị viên hệ thống</td><td>Dashboard <code>/admin/*</code></td></tr>
+</table>
+</section>
+
+<!-- ARCHITECTURE -->
+<section id="architecture">
+<h2>2. Kiến Trúc Hệ Thống</h2>
+<p>Giống cấu trúc của file presentation tham chiếu, hệ thống được trình bày theo dạng modular monolith với các domain tách rõ trách nhiệm. Khác biệt chính là backend ở đây dùng <code>ASP.NET Core Web API</code>, truy cập dữ liệu qua <code>EF Core + Npgsql</code>, và dùng <code>SignalR</code> cho các cập nhật realtime.</p>
+
+<div class="arch-grid">
+<div class="arch-module"><div class="mod-icon">🔐</div><div class="mod-name">Auth</div><div class="mod-desc">Đăng ký, đăng nhập, session hydrate, role guard cho tourist/owner/admin.</div></div>
+<div class="arch-module"><div class="mod-icon">📍</div><div class="mod-name">POI</div><div class="mod-desc">CRUD POI, load map data, owner assignment, publish trạng thái điểm đến.</div></div>
+<div class="arch-module"><div class="mod-icon">🍽️</div><div class="mod-name">Menu</div><div class="mod-desc">Menu food, menu item, giá bán, trạng thái publish và realtime refresh.</div></div>
+<div class="arch-module"><div class="mod-icon">🗺️</div><div class="mod-name">Tour</div><div class="mod-desc">Tạo tour, sắp xếp stop, publish tour, liên kết POI vào hành trình.</div></div>
+<div class="arch-module"><div class="mod-icon">🔳</div><div class="mod-name">QR</div><div class="mod-desc">Generate/resolve QR, scan logging, điều hướng vào POI, menu hoặc tour.</div></div>
+<div class="arch-module"><div class="mod-icon">📡</div><div class="mod-name">Realtime</div><div class="mod-desc">SignalR hub cho menuUpdated, tourPublished, qrScanned và thông báo quản trị.</div></div>
+</div>
+
+<h3>Modular Monolith + Realtime Hub (6 Modules)</h3>
+<div class="code-block">Backend — ASP.NET Core Web API (.NET 8)
+├── Auth/           # Login, register, role checks, tourist gate
+├── POI/            # POI CRUD, load map data, owner assignment
+├── Menu/           # Menu + menu item CRUD cho food
+├── Tour/           # Tour, stop ordering, tour publish
+├── QR/             # QR generation, resolve target, scan logging
+└── Realtime/       # SignalR hubs, notifications, live refresh
+
+Frontend — React 18 + Vite
+├── AppRouter.jsx   # Login-gated app shell
+├── MapExplorer.jsx # Tourist map + POI detail
+├── TourPages/      # Tour list/detail/start flow
+├── OwnerLayout/    # Owner Portal
+├── AdminLayout/    # Admin Dashboard
+├── services/       # apiClient, signalRClient, authStore
+└── qr/             # QR scan / deep-link handlers</div>
+
+<h3>Technology Stack</h3>
+<table><tr><th>Layer</th><th>Công nghệ</th></tr>
+<tr><td>Backend</td><td>ASP.NET Core Web API (.NET 8 / C# 12), Entity Framework Core</td></tr>
+<tr><td>Frontend</td><td>React 18, Vite, Zustand, React Router</td></tr>
+<tr><td>Database</td><td>PostgreSQL (<code>quan4_culinary</code>) + Npgsql</td></tr>
+<tr><td>Maps</td><td>MapLibre GL JS + Turf.js + PMTiles (offline tiles)</td></tr>
+<tr><td>Realtime</td><td>SignalR (hub notifications, live menu/tour updates)</td></tr>
+<tr><td>Auth</td><td>ASP.NET Identity hoặc JWT + httpOnly cookie</td></tr>
+<tr><td>QR</td><td>QR deep-link + check-in logging</td></tr>
+<tr><td>Background Work</td><td>Hosted Services / BackgroundService cho broadcast, cleanup, scheduled sync</td></tr>
+<tr><td>Deployment</td><td>.NET hosting + PostgreSQL managed instance</td></tr>
+</table>
+
+<div class="diagram-container"><h4>Architecture Overview</h4>
+<pre class="mermaid">
+graph TB
+  subgraph Client["📱 Frontend (React 18 + Vite)"]
+    LOGIN["Login/Register"]
+    MAP["MapExplorer.jsx<br/>(Authenticated Tourist)"]
+    TOUR["Tour Pages"]
+    QR["QR Entry Flow"]
+    ADMIN["AdminLayout<br/>(Dashboard)"]
+    OWNER["OwnerLayout<br/>(Portal)"]
+  end
+  subgraph API["⚙️ Backend (.NET 8 Web API)"]
+    AUTH["Auth/"]
+    POI["POI/"]
+    MENU["Menu/"]
+    TOURAPI["Tour/"]
+    QRAPI["QR/"]
+    HUB["Realtime/ (SignalR)"]
+  end
+  subgraph Data["💾 Data Layer"]
+    DB[("PostgreSQL")]
+    FILES["Static Files<br/>(images, qr assets)"]
+    TILES["PMTiles<br/>(map data)"]
+  end
+  LOGIN --> AUTH
+  MAP --> POI
+  MAP --> MENU
+  MAP --> TOURAPI
+  TOUR --> TOURAPI
+  QR --> QRAPI
+  OWNER --> POI
+  OWNER --> MENU
+  ADMIN --> AUTH
+  ADMIN --> POI
+  ADMIN --> TOURAPI
+  ADMIN --> QRAPI
+  MAP --> HUB
+  OWNER --> HUB
+  ADMIN --> HUB
+  MAP --> TILES
+  API --> DB
+  API --> FILES
+  POI --> TILES
+</pre></div>
+</section>
+
+<!-- STARTUP -->
+<section id="startup">
+<h2>3. Luồng Khởi Động (Backend + Frontend)</h2>
+<p>Phần này được viết theo tinh thần của file presentation nguồn: mô tả rõ hệ thống boot như thế nào, nhưng toàn bộ bước kỹ thuật đã đổi sang stack <code>.NET 8</code> và <code>PostgreSQL</code>.</p>
+
+<h3>Backend Startup Sequence</h3>
+<div class="timeline">
+<div class="timeline-item"><h4>Tầng 1 — Configuration Guard</h4><p>Kiểm tra <code>ConnectionStrings__Default</code>, JWT secrets, cookie settings, CORS origins và cấu hình SignalR trước khi mở app.</p></div>
+<div class="timeline-item"><h4>Tầng 2 — PostgreSQL Connectivity</h4><p>Khởi tạo <code>DbContext</code>, kiểm tra kết nối <code>PostgreSQL</code> qua <code>Npgsql</code>, bật retry policy nếu cần.</p></div>
+<div class="timeline-item"><h4>Tầng 3 — EF Core Migration / Indexing</h4><p>Áp dụng migration, đảm bảo unique index cho <code>users.email</code>, <code>qr_codes.code</code>, và các foreign key giữa <code>pois</code>, <code>menus</code>, <code>tours</code>.</p></div>
+<div class="timeline-item"><h4>Tầng 4 — Seed Roles & Admin</h4><p>Tạo sẵn role <code>admin</code>, <code>poi_owner</code>, <code>tourist</code>; seed tài khoản quản trị nếu môi trường yêu cầu.</p></div>
+<div class="timeline-item"><h4>Tầng 5 — Endpoint + Hub Ready</h4><p>Map controllers/API groups, mount <code>/hubs/notifications</code>, bật auth middleware, static files và map style endpoints.</p></div>
+</div>
+
+<h3>Frontend Startup Flow</h3>
+<div class="flow">
+<span class="flow-step">App Bootstrap</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step alt">GET /auth/me</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step warning">Login Gate</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step">Load /map</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step success">Connect SignalR</span>
+</div>
+
+<div class="grid-3">
+<div class="card"><h4>🔐 Session Restore</h4><p>Frontend đọc session qua <code>/auth/me</code>; nếu chưa xác thực thì chuyển thẳng tới <code>/login</code>.</p></div>
+<div class="card"><h4>📍 Initial Data Load</h4><p>Sau khi đăng nhập, app nạp <code>/pois</code>, tour publish và menu tóm tắt để render map + landing state.</p></div>
+<div class="card"><h4>📡 Realtime Attach</h4><p><code>signalRClient.start()</code> được gọi ngay sau khi có session để lắng nghe menu/tour/QR events.</p></div>
+</div>
+</section>
+
+<!-- DATA MODELS -->
+<section id="data-models">
+<h2>4. Data Models (PostgreSQL Core Tables)</h2>
+<div class="grid-2">
+<div class="card"><h4>📍 pois</h4><div class="code-block">{
+  id: uuid,
+  owner_user_id: uuid?,
+  name: string,
+  description: string,
+  category: "restaurant|cafe|street_food|dessert|bar",
+  latitude: decimal,
+  longitude: decimal,
+  address: string,
+  is_active: boolean,
+  created_at, updated_at
+}</div></div>
+<div class="card"><h4>🍽️ menus</h4><div class="code-block">{
+  id: uuid,
+  poi_id: uuid (ref -> pois),
+  title: string,
+  description: string?,
+  is_published: boolean,
+  updated_by: uuid,
+  updated_at: timestamptz
+}</div></div>
+<div class="card"><h4>🥘 menu_items</h4><div class="code-block">{
+  id: uuid,
+  menu_id: uuid (ref -> menus),
+  name: string,
+  description: string?,
+  price: numeric(12,2),
+  image_url: string?,
+  is_available: boolean,
+  sort_order: integer
+}</div></div>
+<div class="card"><h4>👤 users</h4><div class="code-block">{
+  id: uuid,
+  email: string (unique),
+  full_name: string,
+  password_hash: string,
+  role: "tourist|poi_owner|admin",
+  is_active: boolean,
+  created_at, updated_at
+}</div></div>
+<div class="card"><h4>🔐 roles</h4><div class="code-block">{
+  id: uuid,
+  name: string (unique),
+  permissions: string[],
+  is_system: boolean,
+  created_at: timestamptz
+}</div></div>
+<div class="card"><h4>🗺️ tours + tour_stops</h4><div class="code-block">// tours
+{ id, title, description, duration_minutes,
+  is_public, created_by, created_at, updated_at }
+
+// tour_stops
+{ id, tour_id, poi_id, stop_order,
+  note, estimated_minutes, qr_code_id? }</div></div>
+<div class="card"><h4>🔳 qr_codes</h4><div class="code-block">{
+  id: uuid,
+  code: string (unique),
+  target_type: "poi|tour|menu",
+  target_id: uuid,
+  scan_count: integer,
+  is_active: boolean,
+  expires_at: timestamptz?
+}</div></div>
+<div class="card"><h4>🔗 poi_owner_links + 📋 audit_logs</h4><div class="code-block">// poi_owner_links
+{ id, poi_id, user_id, status, assigned_at }
+
+// audit_logs
+{ id, actor_user_id, action, target_type,
+  target_id, metadata, created_at }</div></div>
+</div>
+</section>
+
+<!-- API -->
+<section id="api">
+<h2>5. API Endpoints (~55 APIs)</h2>
+
+<h3>POI & Menu Module <code>/api</code></h3>
+<table><tr><th>Method</th><th>Endpoint</th><th>Mô tả</th></tr>
+<tr><td><span class="badge badge-green">GET</span></td><td>/pois</td><td>Load POIs cho map sau khi đăng nhập</td></tr>
+<tr><td><span class="badge badge-green">GET</span></td><td>/pois/{id}</td><td>POI detail</td></tr>
+<tr><td><span class="badge badge-green">GET</span></td><td>/pois/{id}/menu</td><td>Lấy menu food của POI</td></tr>
+<tr><td><span class="badge badge-amber">POST</span></td><td>/pois</td><td>Tạo POI mới</td></tr>
+<tr><td><span class="badge badge-blue">PUT</span></td><td>/pois/{id}</td><td>Cập nhật POI</td></tr>
+<tr><td><span class="badge badge-amber">POST</span></td><td>/menus</td><td>Tạo menu cho POI</td></tr>
+<tr><td><span class="badge badge-blue">PUT</span></td><td>/menus/{id}</td><td>Cập nhật menu + menu items</td></tr>
+</table>
+
+<h3>Tour & QR Module <code>/api</code></h3>
+<table><tr><th>Method</th><th>Endpoint</th><th>Mô tả</th></tr>
+<tr><td><span class="badge badge-green">GET</span></td><td>/tours</td><td>Danh sách tour đang publish</td></tr>
+<tr><td><span class="badge badge-green">GET</span></td><td>/tours/{id}</td><td>Chi tiết tour + danh sách stop</td></tr>
+<tr><td><span class="badge badge-amber">POST</span></td><td>/tours</td><td>Tạo tour mới</td></tr>
+<tr><td><span class="badge badge-amber">POST</span></td><td>/tours/{id}/stops</td><td>Gán POI vào tour</td></tr>
+<tr><td><span class="badge badge-green">GET</span></td><td>/qr/{code}</td><td>Resolve QR target (POI, menu, tour)</td></tr>
+<tr><td><span class="badge badge-amber">POST</span></td><td>/qr/{code}/scan</td><td>Ghi nhận lượt scan QR</td></tr>
+</table>
+
+<h3>Auth & User Module <code>/api</code></h3>
+<table><tr><th>Method</th><th>Endpoint</th><th>Mô tả</th></tr>
+<tr><td><span class="badge badge-amber">POST</span></td><td>/auth/register</td><td>Đăng ký tài khoản du khách</td></tr>
+<tr><td><span class="badge badge-amber">POST</span></td><td>/auth/login</td><td>Đăng nhập bắt buộc trước khi dùng app</td></tr>
+<tr><td><span class="badge badge-amber">POST</span></td><td>/auth/logout</td><td>Đăng xuất</td></tr>
+<tr><td><span class="badge badge-green">GET</span></td><td>/auth/me</td><td>Lấy thông tin user hiện tại</td></tr>
+<tr><td><span class="badge badge-green">GET</span></td><td>/users/me/tours</td><td>Lịch sử tour / tour đang tham gia</td></tr>
+<tr><td><span class="badge badge-green">GET</span></td><td>/admin/users</td><td>Admin xem users</td></tr>
+<tr><td><span class="badge badge-blue">PUT</span></td><td>/admin/users/{id}/role</td><td>Admin đổi role / gán quyền owner</td></tr>
+<tr><td><span class="badge badge-green">GET</span></td><td>/admin/audit-logs</td><td>Nhật ký hoạt động hệ thống</td></tr>
+</table>
+
+<h3>Realtime Module <code>/hubs/notifications</code> &nbsp;|&nbsp; Maps <code>/api/maps</code></h3>
+<table><tr><th>Method</th><th>Endpoint</th><th>Mô tả</th></tr>
+<tr><td><span class="badge badge-blue">WS</span></td><td>/hubs/notifications</td><td>SignalR hub cho menu, tour, QR scan, admin notice</td></tr>
+<tr><td><span class="badge badge-green">GET</span></td><td>/maps/style.json</td><td>MapLibre style spec</td></tr>
+<tr><td><span class="badge badge-green">GET</span></td><td>/maps/tiles/{z}/{x}/{y}.pbf</td><td>PMTiles vector tiles</td></tr>
+<tr><td><span class="badge badge-green">EVENT</span></td><td>menuUpdated / tourPublished / qrScanned</td><td>Client refresh realtime từ SignalR</td></tr>
+</table>
+</section>
+
+<!-- AUTH & RBAC -->
+<section id="auth">
+<h2>6. Authentication & RBAC</h2>
+<div class="card">
+<h4>🔐 Login Required cho Du Khách</h4>
+<div class="code-block">Login → POST /api/auth/login
+  → Server set httpOnly cookie hoặc issue JWT
+  → GET /api/auth/me để hydrate session
+  → Route guard chỉ cho vào /map, /tours, /qr/* khi đã đăng nhập</div>
+</div>
+
+<h3>Dynamic RBAC (Tạm thời)</h3>
+<table><tr><th>Domain</th><th>Permissions</th></tr>
+<tr><td><span class="badge badge-blue">poi</span></td><td>create, read, update, delete</td></tr>
+<tr><td><span class="badge badge-green">menu</span></td><td>create, read, update, publish</td></tr>
+<tr><td><span class="badge badge-amber">tour</span></td><td>create, read, update, assign_stop</td></tr>
+<tr><td><span class="badge badge-red">qr</span></td><td>generate, read, disable</td></tr>
+<tr><td><span class="badge badge-purple">user</span></td><td>read, update_profile</td></tr>
+<tr><td><span class="badge badge-amber">owner</span></td><td>manage_owned_poi, manage_owned_menu</td></tr>
+<tr><td><span class="badge badge-blue">realtime</span></td><td>subscribe, broadcast</td></tr>
+<tr><td><span class="badge badge-red">system</span></td><td>manage_roles, view_dashboard, view_audit_logs</td></tr>
+</table>
+
+<h3>3 System Roles</h3>
+<table><tr><th>Role</th><th>Key Permissions</th></tr>
+<tr><td><span class="badge badge-red">admin</span></td><td>Full access tới POI, menu, tour, QR, users, roles, SignalR broadcast</td></tr>
+<tr><td><span class="badge badge-amber">poi_owner</span></td><td>Quản lý POI/menu được gán, xem tour và QR liên kết với POI của mình</td></tr>
+<tr><td><span class="badge badge-blue">tourist</span></td><td>Xem POI/menu/tour, scan QR và nhận cập nhật realtime sau khi đăng nhập</td></tr>
+</table>
+</section>
+
+<!-- PAGES -->
+<section id="pages">
+<h2>7. Trang UI (Frontend Routes)</h2>
+<h3>Khách đã đăng nhập</h3>
+<table><tr><th>Route</th><th>Component</th><th>Mô tả</th></tr>
+<tr><td><code>/login</code></td><td>LoginPage</td><td>Đăng nhập du khách / owner / admin</td></tr>
+<tr><td><code>/register</code></td><td>RegisterPage</td><td>Đăng ký tài khoản du khách</td></tr>
+<tr><td><code>/map</code></td><td>MapExplorer</td><td>Bản đồ POI sau khi xác thực</td></tr>
+<tr><td><code>/pois/:id</code></td><td>POIDetailPage</td><td>Chi tiết POI + menu food</td></tr>
+<tr><td><code>/tours</code></td><td>TourListPage</td><td>Danh sách tour</td></tr>
+<tr><td><code>/tours/:id</code></td><td>TourDetailPage</td><td>Chi tiết tour và các điểm dừng</td></tr>
+<tr><td><code>/qr/:code</code></td><td>QRRedirectPage</td><td>Resolve QR vào POI, menu hoặc tour</td></tr>
+</table>
+<h3>Admin Dashboard</h3>
+<table><tr><th>Route</th><th>Page</th><th>Mô tả</th></tr>
+<tr><td><code>/admin/login</code></td><td>LoginPage</td><td>Đăng nhập</td></tr>
+<tr><td><code>/admin/dashboard</code></td><td>DashboardPage</td><td>Thống kê tổng quan</td></tr>
+<tr><td><code>/admin/pois</code></td><td>POIManagementPage</td><td>CRUD POI</td></tr>
+<tr><td><code>/admin/menus</code></td><td>MenuManagementPage</td><td>CRUD menu food</td></tr>
+<tr><td><code>/admin/tours</code></td><td>TourManagementPage</td><td>CRUD tour + stop ordering</td></tr>
+<tr><td><code>/admin/qr</code></td><td>QRCodeManagementPage</td><td>Tạo và vô hiệu QR code</td></tr>
+<tr><td><code>/admin/users</code></td><td>UsersManagementPage</td><td>CRUD Users</td></tr>
+<tr><td><code>/admin/roles</code></td><td>RoleManagementPage</td><td>CRUD Roles + Permissions</td></tr>
+<tr><td><code>/admin/audit-logs</code></td><td>AuditLogsPage</td><td>Nhật ký hoạt động</td></tr>
+</table>
+<h3>Owner Portal</h3>
+<table><tr><th>Route</th><th>Page</th><th>Mô tả</th></tr>
+<tr><td><code>/owner/dashboard</code></td><td>OwnerDashboardPage</td><td>Thống kê POI sở hữu</td></tr>
+<tr><td><code>/owner/pois</code></td><td>OwnerPOIPage</td><td>Quản lý POI sở hữu</td></tr>
+<tr><td><code>/owner/menu</code></td><td>OwnerMenuPage</td><td>Quản lý menu food</td></tr>
+<tr><td><code>/owner/qr</code></td><td>OwnerQRCodePage</td><td>Xem QR của POI/tour liên quan</td></tr>
+</table>
+</section>
+
+<!-- OPERATIONS -->
+<section id="ops">
+<h2>8. Owner / Admin / Realtime Operations</h2>
+<p>Đây là phần lấy cảm hứng trực tiếp từ section vận hành của file presentation mẫu, nhưng đã đổi sang mô hình tạm thời hiện tại: owner quản lý POI/menu, admin quản lý toàn cục, và SignalR đẩy thay đổi tới client đang online.</p>
+
+<div class="grid-3">
+<div class="card"><h4>🏪 Owner Portal</h4><p>Owner chỉ thao tác trên POI được gán: sửa thông tin quán, menu food, xem QR gắn với quán hoặc tour liên quan.</p></div>
+<div class="card"><h4>🛡️ Admin Dashboard</h4><p>Admin quản lý users, roles, POIs, menus, tours, QR codes và audit logs; đồng thời là nguồn phát event realtime chính.</p></div>
+<div class="card"><h4>📡 SignalR Broadcast</h4><p>Mỗi thay đổi đã commit vào PostgreSQL sẽ phát event như <code>menuUpdated</code>, <code>tourPublished</code>, <code>qrScanned</code> để frontend refresh đúng chỗ.</p></div>
+</div>
+
+<h3>Operational Flow</h3>
+<div class="flow">
+<span class="flow-step">Owner/Admin Edit</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step alt">Save PostgreSQL</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step">Write Audit Log</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step success">Broadcast SignalR</span>
+<span class="flow-arrow">→</span>
+<span class="flow-step">Client Refresh</span>
+</div>
+
+<div class="alert alert-info">Góc nhìn tạm thời: tài liệu đang ưu tiên mô hình quản trị và discovery flow qua <strong>POI + menu + tour + QR</strong>, thay cho luồng audio/localization của file presentation gốc.</div>
+</section>
+
+<!-- PATTERNS -->
+<section id="patterns">
+<h2>9. Core Design Patterns</h2>
+<div class="grid-2">
+<div class="card"><h4>🔐 Login-Gated Visitor Flow</h4><div class="code-block">App start
+→ check /api/auth/me
+→ nếu chưa đăng nhập thì redirect /login
+→ login success mới vào /map, /tours, /qr/*
+→ role-based route guard cho owner/admin</div></div>
+<div class="card"><h4>📡 SignalR Realtime Sync</h4><div class="code-block">Owner/Admin update POI, menu, tour hoặc QR
+→ API save vào PostgreSQL
+→ Hub broadcast event
+→ client đang online nhận menuUpdated / tourPublished / qrScanned
+→ refresh đúng màn hình đang mở</div>
+<h4 style="margin-top:16px">🔳 QR Deep-Link Routing</h4><div class="code-block">Scan QR
+→ resolve code trong PostgreSQL
+→ xác định target_type: poi | menu | tour
+→ kiểm tra auth
+→ điều hướng tới màn hình tương ứng</div></div>
+<div class="card" style="grid-column:1/-1"><h4>🧭 POI + Menu + Tour Ownership</h4><div class="code-block">Admin gán POI cho POI_owner
+→ owner chỉ sửa được menu/POI của mình
+→ tour có thể gom nhiều POI theo thứ tự stop
+→ QR code có thể trỏ vào POI, menu hoặc tour
+→ audit log lưu mọi thay đổi quan trọng</div></div>
+</div>
+</section>
+
+<!-- CONSTANTS -->
+<section id="constants">
+<h2>10. Key Constants</h2>
+<table><tr><th>Constant</th><th>Value</th><th>Location</th></tr>
+<tr><td>ACCESS_TOKEN_EXPIRE</td><td>30 phút</td><td>Backend config</td></tr>
+<tr><td>REFRESH_TOKEN_EXPIRE</td><td>7 ngày</td><td>Backend config</td></tr>
+<tr><td>ROLE_CACHE_TTL</td><td>300s (5 phút)</td><td>Auth service</td></tr>
+<tr><td>MAX_POI_IMAGES</td><td>8</td><td>POI service</td></tr>
+<tr><td>MAX_MENU_ITEMS_PER_POI</td><td>100</td><td>Menu service</td></tr>
+<tr><td>MAX_TOUR_STOPS</td><td>20</td><td>Tour service</td></tr>
+<tr><td>QR_DEFAULT_EXPIRE</td><td>30 ngày</td><td>QR service</td></tr>
+<tr><td>SIGNALR_RECONNECT</td><td>0s, 2s, 5s, 10s</td><td>signalRClient.js</td></tr>
+<tr><td>SCAN_DEBOUNCE</td><td>2s</td><td>QRRedirectPage</td></tr>
+<tr><td>DEFAULT_MAP_RADIUS</td><td>3km</td><td>MapExplorer.jsx</td></tr>
+<tr><td>PASSWORD_MIN_LENGTH</td><td>8</td><td>Auth validators</td></tr>
+<tr><td>POSTGRES_SCHEMA</td><td>public</td><td>EF Core config</td></tr>
+</table>
+</section>
+
+<!-- ==================== UML SECTION ==================== -->
+<h1 style="margin-top:64px">📐 UML Diagrams</h1>
+<p class="subtitle">Mermaid diagrams — render trực tiếp trong trình duyệt</p>
+
+<!-- CLASS DIAGRAM -->
+<section id="uml-class">
+<h2>1. Class Diagram (PostgreSQL Core Tables)</h2>
+<div class="diagram-container">
+<pre class="mermaid">
+classDiagram
+  class POI {
+    +UUID id
+    +UUID owner_user_id
+    +String name
+    +String description
+    +String category
+    +Decimal latitude
+    +Decimal longitude
+    +String address
+    +Boolean is_active
+  }
+  class Menu {
+    +UUID id
+    +UUID poi_id
+    +String title
+    +Boolean is_published
+  }
+  class MenuItem {
+    +UUID id
+    +UUID menu_id
+    +String name
+    +Decimal price
+    +Boolean is_available
+  }
+  class Tour {
+    +UUID id
+    +String title
+    +Number duration_minutes
+    +Boolean is_public
+  }
+  class TourStop {
+    +UUID id
+    +UUID tour_id
+    +UUID poi_id
+    +Number stop_order
+  }
+  class QRCode {
+    +UUID id
+    +String code
+    +String target_type
+    +UUID target_id
+    +Boolean is_active
+  }
+  class User {
+    +UUID id
+    +String email
+    +String full_name
+    +String password_hash
+    +String role
+    +Boolean is_active
+  }
+  class Role {
+    +UUID id
+    +String name
+    +String[] permissions
+    +Boolean is_system
+  }
+  class POIOwnerLink {
+    +UUID id
+    +UUID poi_id
+    +UUID user_id
+    +String status
+  }
+  class AuditLog {
+    +UUID id
+    +UUID actor_user_id
+    +String action
+    +String target_type
+    +DateTime timestamp
+  }
+
+  POI "1" --> "1" Menu : has
+  Menu "1" --> "*" MenuItem : contains
+  Tour "1" --> "*" TourStop : includes
+  TourStop "*" --> "1" POI : points to
+  QRCode "*" --> "1" POI : opens
+  QRCode "*" --> "1" Tour : launches
+  User "*" --> "1" Role : has role
+  User "1" --> "*" POIOwnerLink : assigned
+  POI "1" --> "*" POIOwnerLink : owned by
+  User "1" --> "*" AuditLog : performs
+</pre></div>
+</section>
+
+<!-- SEQUENCE DIAGRAMS -->
+<section id="uml-seq">
+<h2>2. Sequence Diagrams</h2>
+
+<h3>2.1 Tourist Login & Access Map</h3>
+<div class="diagram-container">
+<pre class="mermaid">
+sequenceDiagram
+  actor Tourist as Du khách
+  participant LP as Login Page
+  participant API as Auth API
+  participant DB as PostgreSQL
+  participant APP as Map App
+
+  Tourist->>LP: Nhập email + password
+  LP->>API: POST /api/auth/login
+  API->>DB: Validate user + role
+  DB-->>API: User record
+  API-->>LP: 200 + Set-Cookie / JWT
+  LP->>API: GET /api/auth/me
+  API-->>LP: Tourist profile
+  LP->>APP: Redirect /map
+  APP->>API: GET /api/pois
+  API->>DB: SELECT active pois
+  API-->>APP: POI list + owner/menu summary
+</pre></div>
+
+<h3>2.2 POI Owner Update Menu + SignalR</h3>
+<div class="diagram-container">
+<pre class="mermaid">
+sequenceDiagram
+  actor Owner as POI Owner
+  participant OP as Owner Portal
+  participant API as Menu API
+  participant DB as PostgreSQL
+  participant HUB as SignalR Hub
+  participant TA as Tourist App
+
+  Owner->>OP: Sửa menu food
+  OP->>API: PUT /api/menus/{id}
+  API->>DB: UPDATE menus + menu_items
+  API->>DB: INSERT audit_logs
+  API->>HUB: Broadcast menuUpdated(poiId)
+  HUB-->>TA: menuUpdated event
+  TA->>API: GET /api/pois/{id}/menu
+  API-->>TA: Menu mới nhất
+  API-->>OP: 200 OK
+</pre></div>
+
+<h3>2.3 QR Scan to POI hoặc Tour</h3>
+<div class="diagram-container">
+<pre class="mermaid">
+sequenceDiagram
+  actor Tourist as Du khách
+  participant QR as QR Redirect Page
+  participant API as QR API
+  participant DB as PostgreSQL
+  participant TP as Tour/POI Page
+
+  Tourist->>QR: Mở /qr/{code}
+  QR->>API: GET /api/qr/{code}
+  API->>DB: SELECT qr_codes + target
+  DB-->>API: target_type + target_id
+  alt target_type = tour
+    API-->>QR: Redirect /tours/{id}
+    QR->>TP: Open tour detail
+  else target_type = poi
+    API-->>QR: Redirect /pois/{id}
+    QR->>TP: Open POI detail + menu
+  else target_type = menu
+    API-->>QR: Redirect /pois/{poiId}?tab=menu
+    QR->>TP: Open menu tab
+  end
+</pre></div>
+
+<h3>2.4 Admin Publish Tour + SignalR</h3>
+<div class="diagram-container">
+<pre class="mermaid">
+sequenceDiagram
+  actor Admin
+  participant AD as Admin Dashboard
+  participant API as Tour API
+  participant DB as PostgreSQL
+  participant HUB as SignalR Hub
+  participant TA as Tourist App
+
+  Admin->>AD: Tạo tour + sắp xếp stops
+  AD->>API: POST /api/tours
+  API->>DB: INSERT tours, tour_stops
+  API->>DB: INSERT qr_codes (optional)
+  API->>HUB: Broadcast tourPublished(tourId)
+  HUB-->>TA: tourPublished event
+  TA->>API: GET /api/tours/{tourId}
+  API-->>TA: Tour detail
+  API-->>AD: 201 Created
+</pre></div>
+</section>
+
+<!-- ACTIVITY DIAGRAMS -->
+<section id="uml-act">
+<h2>3. Activity Diagrams</h2>
+
+<h3>3.1 Authenticated Tourist Journey</h3>
+<div class="diagram-container">
+<pre class="mermaid">
+flowchart TD
+  A[User mở app] --> B{Đã đăng nhập?}
+  B -->|No| C[Đi tới /login]
+  B -->|Yes| D[Load /map]
+  C --> E[POST /api/auth/login]
+  E --> F[GET /api/auth/me]
+  F --> D
+  D --> G[GET /api/pois]
+  G --> H{User action?}
+  H -->|Xem POI| I[Mở chi tiết + menu food]
+  H -->|Mở tour| J[GET /api/tours/{id}]
+  H -->|Quét QR| K[Resolve QR target]
+  H -->|Nhận event| L[SignalR refresh UI]
+  I --> H
+  J --> H
+  K --> H
+  L --> H
+</pre></div>
+
+<h3>3.2 Owner/Admin Content Management</h3>
+<div class="diagram-container">
+<pre class="mermaid">
+flowchart TD
+  A[Owner/Admin mở dashboard] --> B{Vai trò nào?}
+  B -->|Owner| C[Load POI được gán]
+  B -->|Admin| D[Load POI, menu, tour, QR]
+  C --> E{Action?}
+  D --> E
+  E -->|Sửa POI| F[PUT /api/pois/{id}]
+  E -->|Sửa menu| G[PUT /api/menus/{id}]
+  E -->|Tạo tour| H[POST /api/tours]
+  E -->|Tạo QR| I[POST /api/qr]
+  F --> J[Save PostgreSQL + audit log]
+  G --> J
+  H --> J
+  I --> J
+  J --> K[Broadcast SignalR event]
+  K --> L[Client liên quan refresh]
+</pre></div>
+</section>
+
+<!-- STATE DIAGRAMS -->
+<section id="uml-state">
+<h2>4. State Diagrams</h2>
+
+<h3>4.1 Tourist Session Lifecycle</h3>
+<div class="diagram-container">
+<pre class="mermaid">
+stateDiagram-v2
+  [*] --> Guest
+  Guest --> Registered: POST /auth/register
+  Registered --> LoggedIn: POST /auth/login
+
+  state LoggedIn {
+    [*] --> ExploringMap
+    ExploringMap --> ViewingPOI: Open /pois/{id}
+    ViewingPOI --> ViewingTour: Open /tours/{id}
+    ViewingPOI --> QRRedirecting: Open /qr/{code}
+    ViewingTour --> ExploringMap
+    QRRedirecting --> ViewingPOI
+    QRRedirecting --> ViewingTour
+  }
+
+  LoggedIn --> LoggedOut: POST /auth/logout
+  LoggedOut --> LoggedIn: POST /auth/login
+</pre></div>
+
+<h3>4.2 QR Code Lifecycle</h3>
+<div class="diagram-container">
+<pre class="mermaid">
+stateDiagram-v2
+  [*] --> Generated: POST /api/qr
+  Generated --> Active: is_active = true
+  Active --> Scanned: POST /api/qr/{code}/scan
+  Scanned --> Active: vẫn còn hiệu lực
+  Active --> Expired: expires_at reached
+  Active --> Disabled: Admin/Owner disable
+  Expired --> [*]
+  Disabled --> [*]
+</pre></div>
+
+<h3>4.3 Tour Lifecycle</h3>
+<div class="diagram-container">
+<pre class="mermaid">
+stateDiagram-v2
+  [*] --> Draft: POST /api/tours
+  Draft --> ReadyForPublish: stops assigned
+  ReadyForPublish --> Published: admin publish
+  Published --> Updated: menu/stop order changed
+  Updated --> Published: republish
+  Published --> Archived: admin archive
+  Archived --> [*]
+</pre></div>
+</section>
+
+<!-- FOOTER -->
+<div style="text-align:center;padding:48px 0;color:var(--dim);font-size:12px;border-top:1px solid var(--border);margin-top:48px">
+  <p>📋 PRD & UML v2.0 — Du Lịch Ẩm Thực Quận 4</p>
+  <p>.NET 8 + React 18 + PostgreSQL + SignalR + Tour + QR Code</p>
+  <p style="margin-top:8px;color:var(--accent)">Generated by Thao Ngan • 2026</p>
+</div>
+
+</div><!-- end .main -->
+
+<script>
+mermaid.initialize({theme:'dark',themeVariables:{primaryColor:'#f59e0b',primaryTextColor:'#e5e7eb',lineColor:'#6b7280',secondaryColor:'#1a2332',tertiaryColor:'#111827'}});
+</script>
+</body>
+</html>
