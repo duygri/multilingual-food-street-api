@@ -1,24 +1,3 @@
 @inherits LayoutComponentBase
-@inject NavigationManager Navigation
-
-@* 
-    MainLayout - Server Admin Only
-    Redirects all public routes to Admin Login
-*@
 
 @Body
-
-@code {
-    protected override void OnInitialized()
-    {
-        // For Web (Admin CMS), force-redirect to admin login
-        if (!OperatingSystem.IsAndroid() && !OperatingSystem.IsIOS())
-        {
-            var uri = Navigation.ToAbsoluteUri(Navigation.Uri).AbsolutePath.ToLower();
-            if (!uri.Contains("/admin/login"))
-            {
-                 Navigation.NavigateTo("admin/login");
-            }
-        }
-    }
-}
