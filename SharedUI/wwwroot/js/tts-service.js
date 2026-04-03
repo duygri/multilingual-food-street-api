@@ -4,6 +4,7 @@ window.TtsService = {
     queue: [],
     isEnabled: true,
     preferredLang: 'vi-VN',
+    currentAudio: null,
 
     // Initialize TTS
     init: function () {
@@ -91,6 +92,28 @@ window.TtsService = {
             this.synth.cancel();
             console.log('[TTS] Stopped');
         }
+
+        if (this.currentAudio) {
+            try {
+                this.currentAudio.pause();
+                this.currentAudio.currentTime = 0;
+            } catch (error) {
+                console.warn('[TTS] Failed to stop current audio', error);
+            }
+            this.currentAudio = null;
+        }
+    },
+
+    stopAudioElements: function (selector) {
+        const targets = document.querySelectorAll(selector || 'audio');
+        targets.forEach(audio => {
+            try {
+                audio.pause();
+                audio.currentTime = 0;
+            } catch (error) {
+                console.warn('[TTS] Failed to stop audio element', error);
+            }
+        });
     },
 
     // Check if currently speaking
@@ -111,6 +134,35 @@ window.TtsService = {
     // Get Vietnamese voices
     getVietnameseVoices: function () {
         return this.getVoices().filter(v => v.lang.startsWith('vi'));
+    },
+
+    playText: function (text, lang) {
+        return this.speak(text, lang);
+    },
+
+    playAudioFile: function (url) {
+        if (!url) {
+            return false;
+        }
+
+        this.stop();
+
+        const audio = new Audio(url);
+        audio.preload = 'auto';
+        audio.onended = () => {
+            if (this.currentAudio === audio) {
+                this.currentAudio = null;
+            }
+        };
+        audio.onerror = (error) => console.error('[TTS] Audio file error:', error);
+        this.currentAudio = audio;
+        audio.play().catch(error => console.error('[TTS] Audio play failed:', error));
+        return true;
+    },
+
+    stopAll: function () {
+        this.stop();
+        this.stopAudioElements();
     }
 };
 
