@@ -1,5 +1,6 @@
 @using FoodStreet.Client.Services
 @inject IGpsTrackingService GpsService
+@inject INarrationEngine NarrationEngine
 @implements IDisposable
 
 <div class="gps-tracker">
@@ -186,10 +187,12 @@
         if (GpsService.IsTracking)
         {
             await GpsService.StopTrackingAsync();
+            NarrationEngine.Stop();
         }
         else
         {
             await GpsService.StartTrackingAsync();
+            NarrationEngine.Start();
         }
         StateHasChanged();
     }
@@ -215,5 +218,6 @@
         GpsService.OnPositionUpdated -= HandlePositionUpdated;
         GpsService.OnGeofenceEntered -= HandleGeofenceEntered;
         GpsService.OnError -= HandleError;
+        NarrationEngine.Stop();
     }
 }
