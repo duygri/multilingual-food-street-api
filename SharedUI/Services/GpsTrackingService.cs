@@ -31,6 +31,7 @@ namespace FoodStreet.Client.Services
         // Events
         public event Action<double, double>? OnPositionUpdated;
         public event Action<List<NearbyPoiDto>>? OnGeofenceEntered;
+        public event Action<List<int>>? OnGeofenceExited;
         public event Action<string>? OnError;
 
         public GpsTrackingService(IJSRuntime jsRuntime, HttpClient httpClient, ITtsService ttsService)
@@ -90,8 +91,8 @@ namespace FoodStreet.Client.Services
             CurrentLongitude = longitude;
             Accuracy = accuracy;
 
-            // Throttle 3 giây để tránh spam API
-            if ((DateTime.UtcNow - _lastUpdateSent).TotalSeconds < 3)
+            // Throttle 5 giây để tránh spam API và tính toán liên tục
+            if ((DateTime.UtcNow - _lastUpdateSent).TotalSeconds < 5)
             {
                 OnPositionUpdated?.Invoke(latitude, longitude); // Vẫn update UI
                 return;
@@ -102,7 +103,7 @@ namespace FoodStreet.Client.Services
             // Gửi lên server
             try
             {
-                var response = await _httpClient.PostAsJsonAsync("api/gps/update", new
+                var response = await _httpClient.PostAsJsonAsync("api/maps/gps/update", new
                 {
                     sessionId = SessionId,
                     latitude,
@@ -142,16 +143,18 @@ namespace FoodStreet.Client.Services
                         // Chỉ invoke event nếu có POI mới thực sự
                         if (newlyEntered.Count > 0)
                         {
-                            // Xem TTS
-                            foreach (var poi in newlyEntered)
-                            {
-                                if (!string.IsNullOrWhiteSpace(poi.Description))
-                                    _ = _ttsService.PlayTextAsync($"Bạn vừa đến {poi.Name}. {poi.Description}");
-                                else
-                                    _ = _ttsService.PlayTextAsync($"Bạn vừa đến {poi.Name}");
-                            }
-
                             OnGeofenceEntered?.Invoke(newlyEntered);
+                        }
+
+                        // Detect EXIT: POI was in previous set but not in current
+                        var currentIds = result.EnteredPois.Select(p => p.Id).ToHashSet();
+                        var exitedIds = _currentGeofencePois
+                            .Where(id => !currentIds.Contains(id))
+                            .ToList();
+
+                        if (exitedIds.Count > 0)
+                        {
+                            OnGeofenceExited?.Invoke(exitedIds);
                         }
 
                         // Cập nhật danh sách POI hiện tại
@@ -197,6 +200,22 @@ namespace FoodStreet.Client.Services
             await StopTrackingAsync();
             _dotNetRef?.Dispose();
         }
+        // ── Client-side Haversine distance (meters) ──────────────
+        // Equivalent to turf.distance() in the reference diagram.
+        // Used to avoid unnecessary server calls for distance checks.
+        public static double HaversineMeters(double lat1, double lng1, double lat2, double lng2)
+        {
+            const double R = 6_371_000; // Earth radius in meters
+            var dLat = ToRad(lat2 - lat1);
+            var dLng = ToRad(lng2 - lng1);
+            var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2)
+                  + Math.Cos(ToRad(lat1)) * Math.Cos(ToRad(lat2))
+                  * Math.Sin(dLng / 2) * Math.Sin(dLng / 2);
+            var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+            return R * c;
+        }
+
+        private static double ToRad(double deg) => deg * Math.PI / 180.0;
     }
 
     // Response DTOs
@@ -220,6 +239,12 @@ namespace FoodStreet.Client.Services
         public string? ImageUrl { get; set; }
         public bool HasAudio { get; set; }
         public string? AudioUrl { get; set; }
+        public string AudioStatus { get; set; } = "pending";
+        public string LanguageCode { get; set; } = "vi-VN";
+        public int Tier { get; set; } = 3;
+        public bool FallbackUsed { get; set; }
         public string? TtsScript { get; set; }
+        public bool IsFallback { get; set; }
+        public int Priority { get; set; }
     }
 }
