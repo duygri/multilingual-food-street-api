@@ -6,9 +6,9 @@
 @using System.Threading
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="mb-0">🎵 Audio Management</h3>
+    <h3 class="mb-0">Audio Management</h3>
     <button class="btn btn-admin btn-admin-primary" @onclick="ShowUploadModal">
-        ➕ Upload Audio
+        Upload Audio
     </button>
 </div>
 
@@ -18,28 +18,28 @@
     <div class="row mb-4">
         <div class="col-md-3">
             <div class="admin-card text-center py-3">
-                <div style="font-size: 2rem;">📁</div>
+                <div class="stat-dot" style="background:#3b82f6;"></div>
                 <div class="fw-bold fs-4">@stats.TotalFiles</div>
                 <small class="text-muted">Total Files</small>
             </div>
         </div>
         <div class="col-md-3">
             <div class="admin-card text-center py-3">
-                <div style="font-size: 2rem;">✅</div>
+                <div class="stat-dot" style="background:#22c55e;"></div>
                 <div class="fw-bold fs-4 text-success">@stats.Assigned</div>
                 <small class="text-muted">Assigned to POI</small>
             </div>
         </div>
         <div class="col-md-3">
             <div class="admin-card text-center py-3">
-                <div style="font-size: 2rem;">❓</div>
+                <div class="stat-dot" style="background:#f59e0b;"></div>
                 <div class="fw-bold fs-4 text-warning">@stats.Unassigned</div>
                 <small class="text-muted">Unassigned</small>
             </div>
         </div>
         <div class="col-md-3">
             <div class="admin-card text-center py-3">
-                <div style="font-size: 2rem;">💾</div>
+                <div class="stat-dot" style="background:#8b5cf6;"></div>
                 <div class="fw-bold fs-4">@stats.TotalSizeMB MB</div>
                 <small class="text-muted">Total Size</small>
             </div>
@@ -79,7 +79,7 @@
     else if (!audioFiles.Any())
     {
         <div class="text-center py-5">
-            <div style="font-size: 4rem;">🎵</div>
+            <div class="text-muted" style="font-size: 1.5rem;">Audio</div>
             <p class="text-muted">No audio files found</p>
             <button class="btn btn-admin btn-admin-primary" @onclick="ShowUploadModal">
                 Upload your first audio
@@ -105,7 +105,7 @@
                         <tr>
                             <td>
                                 <div class="d-flex align-items-center gap-2">
-                                    <span style="font-size: 1.5rem;">🎵</span>
+                                    <span style="font-size: 1rem; color: #64748b;">♪</span>
                                     <div>
                                         <div class="fw-bold">@(audio.OriginalName ?? audio.FileName)</div>
                                         <small class="text-muted">@audio.ContentType</small>
@@ -115,7 +115,7 @@
                             <td>
                                 @if (audio.LocationId.HasValue)
                                 {
-                                    <span class="badge bg-success">📍 @audio.LocationName</span>
+                                    <span class="badge bg-success">@audio.LocationName</span>
                                 }
                                 else
                                 {
@@ -127,13 +127,13 @@
                             <td>
                                 <div class="btn-group btn-group-sm">
                                     <button class="btn btn-outline-primary" @onclick="() => PlayAudio(audio)" title="Play">
-                                        ▶️
+                                        Play
                                     </button>
                                     <button class="btn btn-outline-info" @onclick="() => ShowAssignModal(audio)" title="Assign to POI">
-                                        🔗
+                                        Link
                                     </button>
                                     <button class="btn btn-outline-danger" @onclick="() => DeleteAudio(audio.Id)" title="Delete">
-                                        🗑️
+                                        Del
                                     </button>
                                 </div>
                             </td>
@@ -150,7 +150,7 @@
 {
     <div class="position-fixed bottom-0 start-0 end-0 bg-dark text-white p-3" style="z-index: 1050;">
         <div class="container d-flex align-items-center gap-3">
-            <span>🎵 @playingName</span>
+            <span>@playingName</span>
             <audio controls autoplay src="@playingUrl" class="flex-grow-1" style="height: 40px;"></audio>
             <button class="btn btn-outline-light btn-sm" @onclick="StopPlaying">✕</button>
         </div>
@@ -164,7 +164,7 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content admin-modal">
                 <div class="modal-header">
-                    <h5 class="modal-title">🔗 Assign Audio to POI</h5>
+                    <h5 class="modal-title">Assign Audio to POI</h5>
                     <button type="button" class="btn-close" @onclick="CloseAssignModal"></button>
                 </div>
                 <div class="modal-body">
@@ -177,7 +177,7 @@
                             {
                                 @foreach (var loc in locations)
                                 {
-                                    <option value="@loc.Id">📍 @loc.Name</option>
+                                    <option value="@loc.Id">@loc.Name</option>
                                 }
                             }
                         </select>
@@ -185,7 +185,7 @@
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-outline-secondary" @onclick="CloseAssignModal">Cancel</button>
-                    <button class="btn btn-admin btn-admin-primary" @onclick="AssignAudio">💾 Save</button>
+                    <button class="btn btn-admin btn-admin-primary" @onclick="AssignAudio">Save</button>
                 </div>
             </div>
         </div>
@@ -199,12 +199,12 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content admin-modal">
                 <div class="modal-header">
-                    <h5 class="modal-title">➕ Upload Audio</h5>
+                    <h5 class="modal-title">Upload Audio</h5>
                     <button type="button" class="btn-close" @onclick="CloseUploadModal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="text-center py-4">
-                        <div style="font-size: 3rem;">🎤</div>
+                        <div class="text-muted" style="font-size: 1.5rem;">Upload</div>
                         <p class="mt-2">Select audio files (MP3, WAV, OGG)</p>
                         <InputFile OnChange="@OnFilesSelected" class="form-control" accept="audio/*" multiple />
                         @if (uploading)
@@ -229,7 +229,7 @@
                             {
                                 @foreach (var loc in locations)
                                 {
-                                    <option value="@loc.Id">📍 @loc.Name</option>
+                                    <option value="@loc.Id">@loc.Name</option>
                                 }
                             }
                         </select>
