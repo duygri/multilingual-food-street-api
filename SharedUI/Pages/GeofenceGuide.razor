@@ -4,6 +4,7 @@
 @using FoodStreet.Client.DTOs
 @inject IGpsTrackingService GpsService
 @inject ITtsService TtsService
+@inject INarrationEngine NarrationEngine
 @inject HttpClient Http
 @inject IJSRuntime JS
 @inject NavigationManager Navigation
@@ -121,23 +122,9 @@
         </div>
     }
 
-    @* ===== VIEW OPTIONS TOGGLE ===== *@
-    <div class="geo-view-controls">
-        <button class="view-btn @(!isShowingMap ? "active" : "")" @onclick="ShowList">📑 Danh Sách</button>
-        <button class="view-btn @(isShowingMap ? "active" : "")" @onclick="ShowMap">🗺️ Bản Đồ</button>
-    </div>
-
-    @* ===== ALL POIs SECTION / MAP VIEW ===== *@
+    @* ===== ALL POIs SECTION ===== *@
     <div class="geo-section" style="padding-top: 0;">
-        @if (isShowingMap)
-        {
-            <div class="geo-map-container">
-                <div id="geofence-map" style="width: 100%; height: 100%;"></div>
-            </div>
-        }
-        else
-        {
-            <h2 class="geo-section-title">📍 Danh sách điểm thuyết minh</h2>
+        <h2 class="geo-section-title">📍 Danh sách điểm thuyết minh</h2>
 
             @if (isLoadingPois)
             {
@@ -188,7 +175,6 @@
                     </div>
                 }
             }
-        }
     </div>
 </div>
 
@@ -560,7 +546,6 @@
     private bool isTracking;
     private bool isSpeaking;
     private bool isLoadingPois = true;
-    private bool isShowingMap = false;
     private NearbyPoiDto? activePoi;
 
     private List<NearbyPoiDto> enteredPois = new();
@@ -568,48 +553,6 @@
 
     private void ShowList()
     {
-        isShowingMap = false;
-    }
-
-    private async Task ShowMap()
-    {
-        isShowingMap = true;
-        StateHasChanged();
-        await Task.Delay(50);
-        await InitMapInterop();
-    }
-
-    private async Task InitMapInterop()
-    {
-        var lat = GpsService.CurrentLatitude ?? 10.7605;
-        var lng = GpsService.CurrentLongitude ?? 106.6942;
-
-        try
-        {
-            await JS.InvokeVoidAsync("AppMapHelper.init", "geofence-map", lat, lng, 16);
-            
-            var mapPois = allPois.Select(p => new
-            {
-                name = p.Name,
-                description = p.Description,
-                latitude = p.Latitude,
-                longitude = p.Longitude,
-                distance = p.Distance
-            }).ToList();
-
-            await JS.InvokeVoidAsync("AppMapHelper.setPois", mapPois);
-
-            if (GpsService.CurrentLatitude.HasValue)
-            {
-                await JS.InvokeVoidAsync("AppMapHelper.setUserLocation", lat, lng, 50);
-            }
-
-            await JS.InvokeVoidAsync("AppMapHelper.fitBounds");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[InitMapInterop] Error: {ex.Message}");
-        }
     }
 
     protected override async Task OnInitializedAsync()
@@ -633,7 +576,7 @@
             var lat = GpsService.CurrentLatitude ?? 10.7605;  // Default: Vĩnh Khánh center
             var lng = GpsService.CurrentLongitude ?? 106.6942;
             var result = await Http.GetFromJsonAsync<PagedResult<LocationDto>>(
-                $"api/locations/nearby?latitude={lat}&longitude={lng}&radiusKm=5&page=1&size=20");
+                $"api/maps/locations/near?lat={lat}&lng={lng}&page=1&pageSize=20");
             allPois = result?.Items?.ToList() ?? new();
         }
         catch (Exception ex)
@@ -652,6 +595,7 @@
         {
             await GpsService.StopTrackingAsync();
             await TtsService.StopAllAsync();
+            NarrationEngine.Stop();
             isTracking = false;
             isSpeaking = false;
             activePoi = null;
@@ -659,29 +603,20 @@
         else
         {
             await GpsService.StartTrackingAsync();
+            NarrationEngine.Start();
             isTracking = GpsService.IsTracking;
         }
     }
 
     private async void HandleGeofenceEntered(List<NearbyPoiDto> pois)
     {
-        await InvokeAsync(async () =>
+        await InvokeAsync(() =>
         {
             foreach (var poi in pois)
             {
                 if (!enteredPois.Any(p => p.Id == poi.Id))
                 {
                     enteredPois.Insert(0, poi);
-                    
-                    // Auto-play: priority Audio > TTS
-                    if (poi.HasAudio && !string.IsNullOrWhiteSpace(poi.AudioUrl))
-                    {
-                        await PlayPoiAudio(poi);
-                    }
-                    else if (!string.IsNullOrWhiteSpace(poi.TtsScript) || !string.IsNullOrWhiteSpace(poi.Description))
-                    {
-                        await PlayTts(poi);
-                    }
                 }
             }
             StateHasChanged();
@@ -690,16 +625,8 @@
 
     private async void HandlePositionUpdated(double lat, double lng)
     {
-        await InvokeAsync(async () =>
+        await InvokeAsync(() =>
         {
-            if (isShowingMap)
-            {
-                try
-                {
-                    await JS.InvokeVoidAsync("AppMapHelper.setUserLocation", lat, lng, 50);
-                }
-                catch { }
-            }
             StateHasChanged();
         });
     }
@@ -725,7 +652,7 @@
             ? $"Bạn đang ở gần {poi.Name}. {poi.Description}"
             : $"Bạn đang ở gần {poi.Name}.";
 
-        await TtsService.PlayTextAsync(text);
+        await TtsService.PlayTextAsync(text, poi.LanguageCode);
         isSpeaking = false;
         activePoi = null;
         StateHasChanged();
@@ -740,7 +667,7 @@
             ? poi.TtsScript
             : $"Chào mừng bạn đến {poi.Name}. {poi.Description}";
 
-        await TtsService.PlayTextAsync(text);
+        await TtsService.PlayTextAsync(text, poi.LanguageCode);
         isSpeaking = false;
         StateHasChanged();
     }
@@ -796,5 +723,6 @@
     {
         GpsService.OnGeofenceEntered -= HandleGeofenceEntered;
         GpsService.OnPositionUpdated -= HandlePositionUpdated;
+        NarrationEngine.Stop();
     }
 }
