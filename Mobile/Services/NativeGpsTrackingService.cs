@@ -31,6 +31,7 @@ namespace FoodStreet.Mobile.Services
 
         public event Action<double, double>? OnPositionUpdated;
         public event Action<List<NearbyPoiDto>>? OnGeofenceEntered;
+        public event Action<List<int>>? OnGeofenceExited;
         public event Action<string>? OnError;
 
         public NativeGpsTrackingService(HttpClient httpClient, ITtsService ttsService)
@@ -184,7 +185,7 @@ namespace FoodStreet.Mobile.Services
 
             try
             {
-                var response = await _httpClient.PostAsJsonAsync("api/gps/update", new
+                var response = await _httpClient.PostAsJsonAsync("api/maps/gps/update", new
                 {
                     sessionId = SessionId,
                     latitude,
@@ -220,17 +221,31 @@ namespace FoodStreet.Mobile.Services
                             {
                                 if (!string.IsNullOrWhiteSpace(poi.Description))
                                 {
-                                    _ = _ttsService.PlayTextAsync($"Bạn vừa đến {poi.Name}. {poi.Description}");
+                                    _ = _ttsService.PlayTextAsync(BuildArrivalText(poi), poi.LanguageCode);
                                 }
                                 else
                                 {
-                                    _ = _ttsService.PlayTextAsync($"Bạn vừa đến {poi.Name}");
+                                    _ = _ttsService.PlayTextAsync(BuildArrivalText(poi), poi.LanguageCode);
                                 }
                             }
 
                             MainThread.BeginInvokeOnMainThread(() =>
                             {
                                 OnGeofenceEntered?.Invoke(newlyEntered);
+                            });
+                        }
+
+                        // Detect EXIT: POI was in previous set but not in current
+                        var currentIds = result.EnteredPois.Select(p => p.Id).ToHashSet();
+                        var exitedIds = _currentGeofencePois
+                            .Where(id => !currentIds.Contains(id))
+                            .ToList();
+
+                        if (exitedIds.Count > 0)
+                        {
+                            MainThread.BeginInvokeOnMainThread(() =>
+                            {
+                                OnGeofenceExited?.Invoke(exitedIds);
                             });
                         }
 
@@ -262,5 +277,37 @@ namespace FoodStreet.Mobile.Services
         {
             return new ValueTask(StopTrackingAsync());
         }
+        // ── Client-side Haversine distance (meters) ──────────────
+        // Equivalent to turf.distance() from the reference diagram.
+        // Enables offline geofence checks without server round-trip.
+        public static double HaversineMeters(double lat1, double lng1, double lat2, double lng2)
+        {
+            const double R = 6_371_000; // Earth radius in meters
+            var dLat = ToRad(lat2 - lat1);
+            var dLng = ToRad(lng2 - lng1);
+            var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2)
+                  + Math.Cos(ToRad(lat1)) * Math.Cos(ToRad(lat2))
+                  * Math.Sin(dLng / 2) * Math.Sin(dLng / 2);
+            var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+            return R * c;
+        }
+
+        private static string BuildArrivalText(NearbyPoiDto poi)
+        {
+            var intro = poi.LanguageCode?.ToLowerInvariant() switch
+            {
+                var code when code != null && code.StartsWith("en") => $"You have arrived at {poi.Name}",
+                var code when code != null && code.StartsWith("ja") => $"{poi.Name} に到着しました",
+                var code when code != null && code.StartsWith("ko") => $"{poi.Name}에 도착했습니다",
+                var code when code != null && code.StartsWith("zh") => $"您已到达 {poi.Name}",
+                _ => $"Bạn vừa đến {poi.Name}"
+            };
+
+            return string.IsNullOrWhiteSpace(poi.Description)
+                ? intro
+                : $"{intro}. {poi.Description}";
+        }
+
+        private static double ToRad(double deg) => deg * Math.PI / 180.0;
     }
 }
