@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using FoodStreet.Server.Mapping;
 using PROJECT_C_.Data;
 using PROJECT_C_.DTOs;
 using PROJECT_C_.Models;
@@ -7,7 +8,7 @@ using PROJECT_C_.Models;
 namespace PROJECT_C_.Controllers
 {
     [ApiController]
-    [Route("api/gps")]
+    [Route("api/maps/gps")]
     public class GpsTrackingController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -37,7 +38,7 @@ namespace PROJECT_C_.Controllers
             await _context.SaveChangesAsync();
 
             // Check geofences và trả về POIs đang trong phạm vi
-            var nearbyPois = await GetNearbyPoisInternal(request.Latitude, request.Longitude, 200);
+            var nearbyPois = await GetNearbyPoisInternal(request.Latitude, request.Longitude, 200, ResolveLanguage());
             var enteredPois = nearbyPois.Where(p => p.IsInGeofence).ToList();
 
             return Ok(new
@@ -57,7 +58,7 @@ namespace PROJECT_C_.Controllers
             [FromQuery] double lng,
             [FromQuery] double radius = 500) // meters
         {
-            var pois = await GetNearbyPoisInternal(lat, lng, radius);
+            var pois = await GetNearbyPoisInternal(lat, lng, radius, ResolveLanguage());
             return Ok(pois);
         }
 
@@ -69,7 +70,7 @@ namespace PROJECT_C_.Controllers
             [FromQuery] double lat,
             [FromQuery] double lng)
         {
-            var pois = await GetNearbyPoisInternal(lat, lng, 500);
+            var pois = await GetNearbyPoisInternal(lat, lng, 500, ResolveLanguage());
             var enteredPois = pois.Where(p => p.IsInGeofence).ToList();
 
             return Ok(new GeofenceCheckResponse
@@ -83,28 +84,46 @@ namespace PROJECT_C_.Controllers
         /// <summary>
         /// Internal: Lấy POIs gần và tính khoảng cách
         /// </summary>
-        private async Task<List<NearbyPoiResponse>> GetNearbyPoisInternal(double lat, double lng, double radius)
+        private string ResolveLanguage()
+        {
+            return PoiContentResolver.NormalizeLanguageCode(Request.Headers["Accept-Language"].ToString());
+        }
+
+        private async Task<List<NearbyPoiResponse>> GetNearbyPoisInternal(double lat, double lng, double radius, string languageCode)
         {
             var locations = await _context.Locations
+                .Include(l => l.Translations)
                 .Include(l => l.AudioFiles)
                 .Where(l => l.IsApproved)
                 .ToListAsync();
 
             var nearbyPois = locations
-                .Select(l => new NearbyPoiResponse
+                .Select(l =>
                 {
-                    Id = l.Id,
-                    Name = l.Name,
-                    Description = l.Description,
-                    Latitude = l.Latitude,
-                    Longitude = l.Longitude,
-                    Radius = l.Radius,
-                    ImageUrl = l.ImageUrl,
-                    TtsScript = l.TtsScript,
-                    HasAudio = l.AudioFiles != null && l.AudioFiles.Any(),
-                    AudioUrl = l.AudioFiles != null && l.AudioFiles.Any() ? $"/api/audio/{l.AudioFiles.First().Id}" : null,
-                    Distance = CalculateHaversineDistance(lat, lng, l.Latitude, l.Longitude),
-                    IsInGeofence = CalculateHaversineDistance(lat, lng, l.Latitude, l.Longitude) <= l.Radius
+                    var resolved = PoiContentResolver.Resolve(l, languageCode);
+                    var distance = CalculateHaversineDistance(lat, lng, l.Latitude, l.Longitude);
+
+                    return new NearbyPoiResponse
+                    {
+                        Id = l.Id,
+                        Name = resolved.Name,
+                        Description = resolved.Description,
+                        Latitude = l.Latitude,
+                        Longitude = l.Longitude,
+                        Radius = l.Radius,
+                        ImageUrl = l.ImageUrl,
+                        TtsScript = resolved.TtsScript,
+                        HasAudio = resolved.HasAudio,
+                        AudioUrl = resolved.AudioUrl,
+                        AudioStatus = resolved.AudioStatus,
+                        LanguageCode = resolved.LanguageCode,
+                        Tier = resolved.Tier,
+                        FallbackUsed = resolved.FallbackUsed,
+                        IsFallback = resolved.IsFallback,
+                        Priority = l.Priority,
+                        Distance = distance,
+                        IsInGeofence = distance <= l.Radius
+                    };
                 })
                 .Where(p => p.Distance <= radius)
                 .OrderBy(p => p.Distance)
