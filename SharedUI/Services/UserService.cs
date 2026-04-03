@@ -6,13 +6,14 @@ namespace FoodStreet.Client.Services
     {
         Task<List<UserDto>> GetUsersAsync();
         Task<CreateUserResult> CreateUserAsync(string email, string password, string role);
-        Task<bool> ApproveSellerAsync(string userId);
+        Task<bool> ApprovePoiOwnerAsync(string userId);
         Task<bool> ToggleLockAsync(string userId);
         Task<bool> DeleteUserAsync(string userId);
     }
 
     public class UserService : IUserService
     {
+        private const string UsersApiBase = "api/admin/users";
         private readonly HttpClient _http;
 
         public UserService(HttpClient http)
@@ -24,7 +25,7 @@ namespace FoodStreet.Client.Services
         {
             try
             {
-                return await _http.GetFromJsonAsync<List<UserDto>>("api/user") ?? new();
+                return await _http.GetFromJsonAsync<List<UserDto>>(UsersApiBase) ?? new();
             }
             catch
             {
@@ -36,7 +37,7 @@ namespace FoodStreet.Client.Services
         {
             try
             {
-                var response = await _http.PostAsJsonAsync("api/user/create", new { email, password, role });
+                var response = await _http.PostAsJsonAsync($"{UsersApiBase}/create", new { email, password, role });
                 if (response.IsSuccessStatusCode)
                 {
                     return new CreateUserResult { Success = true };
@@ -55,21 +56,21 @@ namespace FoodStreet.Client.Services
             }
         }
 
-        public async Task<bool> ApproveSellerAsync(string userId)
+        public async Task<bool> ApprovePoiOwnerAsync(string userId)
         {
-            var response = await _http.PostAsync($"api/user/{userId}/approve", null);
+            var response = await _http.PostAsync($"{UsersApiBase}/{userId}/approve", null);
             return response.IsSuccessStatusCode;
         }
 
         public async Task<bool> ToggleLockAsync(string userId)
         {
-            var response = await _http.PostAsync($"api/user/{userId}/toggle-lock", null);
+            var response = await _http.PostAsync($"{UsersApiBase}/{userId}/toggle-lock", null);
             return response.IsSuccessStatusCode;
         }
 
         public async Task<bool> DeleteUserAsync(string userId)
         {
-            var response = await _http.DeleteAsync($"api/user/{userId}");
+            var response = await _http.DeleteAsync($"{UsersApiBase}/{userId}");
             return response.IsSuccessStatusCode;
         }
     }
