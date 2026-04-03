@@ -13,6 +13,7 @@ namespace FoodStreet.Client.Services
         public bool IsPlaying { get; private set; }
         public PlayableItem? CurrentItem { get; private set; }
         public bool IsTtsMode { get; private set; } // true if playing TTS, false if playing MP3
+        public bool IsLoading { get; private set; } // true if preparing audio stream
 
         public event Action? OnChange;
 
@@ -40,22 +41,26 @@ namespace FoodStreet.Client.Services
 
             CurrentItem = item;
             IsVisible = true;
-            NotifyStateChanged();
 
             if (!string.IsNullOrEmpty(item.AudioUrl))
             {
+                IsLoading = false;
                 IsTtsMode = false;
+                NotifyStateChanged();
                 await _js.InvokeVoidAsync("TourPlayer.playAudio", item.AudioUrl);
             }
             else if (!string.IsNullOrEmpty(item.TtsScript))
             {
+                IsLoading = false;
                 IsTtsMode = true;
+                NotifyStateChanged();
                 await _js.InvokeVoidAsync("TourPlayer.playTts", item.TtsScript);
             }
             else
             {
-                // Both empty
-                IsVisible = false;
+                // Both empty -> Loading state
+                IsLoading = true;
+                IsTtsMode = false;
                 NotifyStateChanged();
             }
         }
