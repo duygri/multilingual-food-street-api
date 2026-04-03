@@ -1,0 +1,376 @@
+@page "/admin/categories"
+@layout AdminLayout
+@inject HttpClient Http
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="mb-1">Phân loại POI</h3>
+        <p class="text-muted mb-0">Quản lý danh mục phân loại cho các điểm ẩm thực.</p>
+    </div>
+    <button class="btn btn-admin btn-admin-primary shadow-sm" style="border-radius: 10px;" @onclick="ShowCreateModal">
+        Thêm phân loại
+    </button>
+</div>
+
+@if (errorMessage != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @errorMessage
+        <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+    </div>
+}
+@if (successMessage != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @successMessage
+        <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+    </div>
+}
+
+<div class="admin-card">
+    @if (categories == null)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Đang tải...</span>
+            </div>
+            <p class="mt-3 text-muted">Đang tải danh mục...</p>
+        </div>
+    }
+    else if (categories.Count == 0)
+    {
+        <div class="text-center py-5">
+            <div class="text-muted" style="font-size: 1.5rem;">Categories</div>
+            <h5 class="mt-3">Chưa có phân loại nào</h5>
+            <p class="text-muted">Nhấn "Thêm phân loại" để tạo danh mục mới.</p>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            @foreach (var cat in categories)
+            {
+                <div class="col-md-6 col-lg-4 mb-3">
+                    <div class="category-card">
+                        <div class="category-card-header">
+                            <span class="category-icon">@(cat.Icon ?? "📁")</span>
+                            <div class="category-info">
+                                <h5 class="category-name">@cat.Name</h5>
+                                @if (!string.IsNullOrEmpty(cat.Description))
+                                {
+                                    <p class="category-desc">@cat.Description</p>
+                                }
+                            </div>
+                        </div>
+                        <div class="category-card-footer">
+                            <span class="category-count">
+                                @cat.LocationCount địa điểm
+                            </span>
+                            <div class="category-actions">
+                                <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowEditModal(cat)" title="Sửa">
+                                    Edit
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteCategory(cat)" title="Xóa"
+                                        disabled="@(cat.LocationCount > 0)">
+                                    Del
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@* Modal thêm/sửa Category *@
+@if (showModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content admin-modal">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title fw-bold text-primary">@modalTitle</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body bg-white">
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">Tên phân loại *</label>
+                        <input type="text" class="form-control" @bind="editingCategory.Name" placeholder="VD: Hải sản, Ăn vặt..." />
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">Icon (Emoji)</label>
+                        <div class="d-flex gap-2 align-items-center">
+                            <input type="text" class="form-control" style="width: 80px; text-align: center; font-size: 1.5rem;" 
+                                   @bind="editingCategory.Icon" placeholder="🍜" />
+                            <div class="emoji-suggestions">
+                                @foreach (var emoji in emojiSuggestions)
+                                {
+                                    <button type="button" class="emoji-btn" @onclick="() => editingCategory.Icon = emoji">@emoji</button>
+                                }
+                            </div>
+                        </div>
+                        <small class="text-muted">Chọn emoji bên dưới hoặc nhập trực tiếp</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">Mô tả (Tùy chọn)</label>
+                        <textarea class="form-control" rows="2" @bind="editingCategory.Description" placeholder="Mô tả ngắn gọn..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-0 pt-0">
+                    <button type="button" class="btn btn-secondary" style="border-radius: 8px;" @onclick="CloseModal">Hủy</button>
+                    <button type="button" class="btn btn-primary px-4" style="border-radius: 8px;" @onclick="SaveCategory" disabled="@saving">
+                        @if (saving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        @(isEditing ? "Lưu thay đổi" : "Tạo phân loại")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .category-card {
+        background: #fff;
+        border-radius: 16px;
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    
+    .category-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+        border-color: #ff6b35;
+    }
+    
+    .category-card-header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 20px;
+    }
+    
+    .category-icon {
+        width: 56px;
+        height: 56px;
+        background: linear-gradient(135deg, #fff5f2 0%, #ffeee8 100%);
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 28px;
+        flex-shrink: 0;
+    }
+    
+    .category-info {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .category-name {
+        font-size: 16px;
+        font-weight: 700;
+        color: #1e293b;
+        margin: 0 0 4px;
+    }
+    
+    .category-desc {
+        font-size: 13px;
+        color: #64748b;
+        margin: 0;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    
+    .category-card-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 20px;
+        background: #f8fafc;
+        border-top: 1px solid #f1f5f9;
+    }
+    
+    .category-count {
+        font-size: 13px;
+        color: #64748b;
+        font-weight: 500;
+    }
+    
+    .category-actions {
+        display: flex;
+        gap: 6px;
+    }
+    
+    .emoji-suggestions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+    
+    .emoji-btn {
+        width: 36px;
+        height: 36px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        background: #fff;
+        font-size: 18px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.15s ease;
+    }
+    
+    .emoji-btn:hover {
+        background: #fff5f2;
+        border-color: #ff6b35;
+        transform: scale(1.1);
+    }
+</style>
+
+@code {
+    private List<CategoryDto>? categories;
+    private bool showModal = false;
+    private string modalTitle = "";
+    private CategoryFormModel editingCategory = new();
+    private bool isEditing = false;
+    private bool saving = false;
+    private string? errorMessage;
+    private string? successMessage;
+    
+    private readonly string[] emojiSuggestions = new[]
+    {
+        "🦐", "🍢", "🍜", "🍚", "🍲", "☕", "🍰", "🏪",
+        "🍕", "🍔", "🥗", "🍣", "🧋", "🍦", "🥘", "🍱"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            categories = await Http.GetFromJsonAsync<List<CategoryDto>>("api/content/category");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Lỗi tải dữ liệu: {ex.Message}";
+            categories = new();
+        }
+    }
+
+    private void ShowCreateModal()
+    {
+        editingCategory = new CategoryFormModel();
+        modalTitle = "Thêm phân loại mới";
+        isEditing = false;
+        showModal = true;
+    }
+
+    private void ShowEditModal(CategoryDto cat)
+    {
+        editingCategory = new CategoryFormModel
+        {
+            Id = cat.Id,
+            Name = cat.Name,
+            Icon = cat.Icon,
+            Description = cat.Description
+        };
+        modalTitle = "Sửa phân loại";
+        isEditing = true;
+        showModal = true;
+    }
+
+    private void CloseModal() => showModal = false;
+
+    private async Task SaveCategory()
+    {
+        if (string.IsNullOrWhiteSpace(editingCategory.Name))
+        {
+            errorMessage = "Tên phân loại không được để trống.";
+            return;
+        }
+
+        saving = true;
+        try
+        {
+            var payload = new { editingCategory.Name, editingCategory.Icon, editingCategory.Description };
+            
+            if (isEditing)
+            {
+                var response = await Http.PutAsJsonAsync($"api/content/category/{editingCategory.Id}", payload);
+                response.EnsureSuccessStatusCode();
+                successMessage = $"Đã cập nhật phân loại \"{editingCategory.Name}\".";
+            }
+            else
+            {
+                var response = await Http.PostAsJsonAsync("api/content/category", payload);
+                response.EnsureSuccessStatusCode();
+                successMessage = $"Đã tạo phân loại \"{editingCategory.Name}\" thành công.";
+            }
+            showModal = false;
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Lỗi lưu phân loại: {ex.Message}";
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+
+    private async Task DeleteCategory(CategoryDto cat)
+    {
+        if (cat.LocationCount > 0)
+        {
+            errorMessage = $"Không thể xóa \"{cat.Name}\" vì có {cat.LocationCount} địa điểm đang sử dụng.";
+            return;
+        }
+
+        try
+        {
+            var response = await Http.DeleteAsync($"api/content/category/{cat.Id}");
+            response.EnsureSuccessStatusCode();
+            successMessage = $"Đã xóa phân loại \"{cat.Name}\".";
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Lỗi xóa: {ex.Message}";
+        }
+    }
+
+    // DTOs
+    public class CategoryDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+        public string? Icon { get; set; }
+        public string? Description { get; set; }
+        public int LocationCount { get; set; }
+    }
+
+    public class CategoryFormModel
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+        public string? Icon { get; set; }
+        public string? Description { get; set; }
+    }
+}
