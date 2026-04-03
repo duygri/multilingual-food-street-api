@@ -26,10 +26,5 @@ namespace PROJECT_C_.Configuration
         /// Access token expiry in minutes
         /// </summary>
         public int AccessTokenExpiryMinutes { get; set; } = 60;
-        
-        /// <summary>
-        /// Refresh token expiry in days
-        /// </summary>
-        public int RefreshTokenExpiryDays { get; set; } = 7;
     }
 }
