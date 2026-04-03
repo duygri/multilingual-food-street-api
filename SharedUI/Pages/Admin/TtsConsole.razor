@@ -468,13 +468,13 @@
         margin: 0 0 6px;
         font-size: 26px;
         font-weight: 900;
-        color: #0f172a;
+        color: var(--color-neutral-900);
         letter-spacing: -0.4px;
     }
 
     .tts-page-subtitle {
         margin: 0;
-        color: #64748b;
+        color: var(--text-secondary);
         font-size: 14px;
         font-weight: 500;
         max-width: 720px;
@@ -497,7 +497,7 @@
     .tts-mini-badge,
     .tts-filter-chip,
     .tts-link-btn {
-        border-radius: 999px;
+        border-radius: var(--radius-full);
         font-weight: 700;
         font-size: 12px;
         line-height: 1;
@@ -505,20 +505,20 @@
 
     .tts-header-badge {
         padding: 10px 14px;
-        background: #eff6ff;
-        color: #1d4ed8;
+        background: var(--color-info-bg);
+        color: var(--color-info-dark);
         border: 1px solid rgba(59, 130, 246, 0.15);
     }
 
     .tts-header-badge.live {
-        background: #ecfdf5;
-        color: #047857;
+        background: var(--color-success-bg);
+        color: var(--color-success-dark);
         border-color: rgba(16, 185, 129, 0.18);
     }
 
     .tts-card {
-        background: #fff;
-        border-radius: 20px;
+        background: white;
+        border-radius: var(--radius-xl);
         margin-bottom: 20px;
         border: 1px solid rgba(15, 23, 42, 0.06);
         box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05);
@@ -535,20 +535,20 @@
         align-items: flex-start;
         gap: 14px;
         padding: 20px 22px;
-        border-bottom: 1px solid #e2e8f0;
+        border-bottom: 1px solid var(--color-neutral-200);
     }
 
     .tts-card-header h4 {
         margin: 0 0 4px;
         font-size: 16px;
         font-weight: 800;
-        color: #0f172a;
+        color: var(--color-neutral-900);
     }
 
     .tts-card-header p {
         margin: 0;
         font-size: 13px;
-        color: #64748b;
+        color: var(--text-secondary);
         font-weight: 500;
     }
 
@@ -558,7 +558,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        border-radius: 14px;
+        border-radius: var(--radius-lg);
         font-size: 22px;
         flex-shrink: 0;
     }
@@ -582,18 +582,18 @@
         width: 38px;
         height: 38px;
         border: none;
-        border-radius: 12px;
-        background: #f8fafc;
+        border-radius: var(--radius-lg);
+        background: var(--surface-inset);
         cursor: pointer;
         transition: all 0.2s ease;
     }
 
     .tts-btn-icon:hover {
-        background: #e2e8f0;
+        background: var(--color-neutral-200);
     }
 
     .tts-btn-icon.tts-streaming {
-        background: #fef2f2;
+        background: var(--color-danger-bg);
         animation: tts-pulse 1.8s infinite;
     }
 
@@ -605,8 +605,8 @@
     .tts-lang-chip,
     .tts-template-btn,
     .tts-filter-chip {
-        border: 1px solid #dbe4ee;
-        background: #fff;
+        border: 1px solid var(--color-neutral-200);
+        background: white;
         cursor: pointer;
         transition: all 0.2s ease;
     }
@@ -616,23 +616,23 @@
         align-items: center;
         gap: 8px;
         padding: 10px 14px;
-        border-radius: 14px;
+        border-radius: var(--radius-lg);
         font-weight: 700;
-        color: #334155;
+        color: var(--color-neutral-700);
     }
 
     .tts-lang-chip:hover,
     .tts-template-btn:hover,
     .tts-filter-chip:hover {
-        background: #f8fafc;
+        background: var(--surface-inset);
         border-color: #bfd1e5;
     }
 
     .tts-lang-chip.active,
     .tts-filter-chip.active {
-        background: #eff6ff;
-        border-color: #3b82f6;
-        color: #1d4ed8;
+        background: var(--color-info-bg);
+        border-color: var(--color-info);
+        color: var(--color-info-dark);
     }
 
     .tts-lang-flag {
@@ -645,14 +645,14 @@
 
     .tts-textarea-wrapper {
         margin: 18px 0 14px;
-        border: 2px solid #dbe4ee;
-        border-radius: 18px;
+        border: 2px solid var(--color-neutral-200);
+        border-radius: var(--radius-xl);
         overflow: hidden;
         transition: all 0.2s ease;
     }
 
     .tts-textarea-wrapper:focus-within {
-        border-color: #3b82f6;
+        border-color: var(--color-info);
         box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.08);
     }
 
@@ -665,7 +665,7 @@
         font: inherit;
         font-size: 15px;
         line-height: 1.6;
-        color: #0f172a;
+        color: var(--color-neutral-900);
     }
 
     .tts-textarea-footer {
@@ -673,15 +673,15 @@
         justify-content: space-between;
         align-items: center;
         padding: 10px 14px;
-        background: #f8fafc;
-        border-top: 1px solid #e2e8f0;
+        background: var(--surface-inset);
+        border-top: 1px solid var(--color-neutral-200);
     }
 
     .tts-char-count,
     .tts-templates-label,
     .tts-metric-label,
     .tts-task-time {
-        color: #64748b;
+        color: var(--text-secondary);
         font-size: 12px;
         font-weight: 600;
     }
@@ -689,7 +689,7 @@
     .tts-btn-clear {
         border: none;
         background: transparent;
-        color: #dc2626;
+        color: var(--color-danger);
         font-weight: 700;
         cursor: pointer;
         padding: 0;
@@ -697,10 +697,10 @@
 
     .tts-template-btn {
         padding: 8px 12px;
-        border-radius: 999px;
+        border-radius: var(--radius-full);
         font-size: 12px;
         font-weight: 700;
-        color: #475569;
+        color: var(--text-secondary);
     }
 
     .tts-btn {
@@ -709,7 +709,7 @@
         justify-content: center;
         gap: 8px;
         border: none;
-        border-radius: 14px;
+        border-radius: var(--radius-lg);
         padding: 14px 22px;
         font-size: 14px;
         font-weight: 800;
@@ -723,19 +723,19 @@
     }
 
     .tts-btn-primary {
-        background: linear-gradient(135deg, #3b82f6, #2563eb);
-        color: #fff;
+        background: linear-gradient(135deg, var(--color-info), var(--color-info));
+        color: white;
         box-shadow: 0 10px 24px rgba(37, 99, 235, 0.2);
     }
 
     .tts-btn-secondary {
-        background: #f1f5f9;
-        color: #334155;
+        background: var(--surface-inset);
+        color: var(--color-neutral-700);
     }
 
     .tts-btn-green {
-        background: linear-gradient(135deg, #10b981, #059669);
-        color: #fff;
+        background: linear-gradient(135deg, var(--color-success), var(--color-success-dark));
+        color: white;
         box-shadow: 0 10px 24px rgba(5, 150, 105, 0.2);
     }
 
@@ -743,7 +743,7 @@
         width: 16px;
         height: 16px;
         border: 2px solid rgba(255, 255, 255, 0.35);
-        border-top-color: #fff;
+        border-top-color: white;
         border-radius: 50%;
         animation: tts-spin 0.8s linear infinite;
     }
@@ -757,30 +757,30 @@
         align-items: center;
         gap: 10px;
         padding: 14px 16px;
-        border-radius: 16px;
+        border-radius: var(--radius-xl);
         font-size: 14px;
         font-weight: 700;
         margin-top: 14px;
     }
 
     .tts-result-success {
-        background: #ecfdf5;
-        color: #047857;
+        background: var(--color-success-bg);
+        color: var(--color-success-dark);
         border: 1px solid #a7f3d0;
     }
 
     .tts-result-error {
-        background: #fef2f2;
-        color: #b91c1c;
-        border: 1px solid #fecaca;
+        background: var(--color-danger-bg);
+        color: var(--color-danger-dark);
+        border: 1px solid var(--color-danger-bg);
     }
 
     .tts-audio-player {
         margin-top: 16px;
         padding: 18px;
-        border-radius: 18px;
-        background: linear-gradient(160deg, #0f172a, #1e293b);
-        color: #fff;
+        border-radius: var(--radius-xl);
+        background: linear-gradient(160deg, var(--color-neutral-900), var(--color-neutral-800));
+        color: white;
     }
 
     .tts-player-header,
@@ -795,7 +795,7 @@
     .tts-player-icon {
         width: 42px;
         height: 42px;
-        border-radius: 14px;
+        border-radius: var(--radius-lg);
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -813,7 +813,7 @@
         display: block;
         margin-top: 4px;
         font-size: 12px;
-        color: #cbd5e1;
+        color: var(--color-neutral-300);
         font-weight: 600;
     }
 
@@ -830,7 +830,7 @@
 
     .tts-metric-card {
         padding: 12px 14px;
-        border-radius: 14px;
+        border-radius: var(--radius-lg);
         background: rgba(255, 255, 255, 0.08);
     }
 
@@ -855,26 +855,26 @@
     .tts-select {
         flex: 1;
         padding: 14px 16px;
-        border-radius: 14px;
-        border: 2px solid #dbe4ee;
-        background: #fff;
+        border-radius: var(--radius-lg);
+        border: 2px solid var(--color-neutral-200);
+        background: white;
         font-size: 14px;
         font-weight: 700;
-        color: #0f172a;
+        color: var(--color-neutral-900);
         outline: none;
     }
 
     .tts-select:focus {
-        border-color: #10b981;
+        border-color: var(--color-success);
         box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.08);
     }
 
     .tts-poi-preview {
         margin-top: 16px;
         padding: 18px;
-        border-radius: 18px;
-        background: linear-gradient(180deg, #fff7ed, #fff);
-        border: 1px solid #fdba74;
+        border-radius: var(--radius-xl);
+        background: linear-gradient(180deg, var(--color-warning-bg), white);
+        border: 1px solid var(--color-warning);
     }
 
     .tts-poi-preview-head {
@@ -888,7 +888,7 @@
         margin: 0 0 4px;
         font-size: 16px;
         font-weight: 800;
-        color: #9a3412;
+        color: var(--color-warning-dark);
     }
 
     .tts-poi-preview-head p,
@@ -896,7 +896,7 @@
     .tts-task-message {
         margin: 0;
         font-size: 13px;
-        color: #475569;
+        color: var(--text-secondary);
         line-height: 1.6;
     }
 
@@ -914,43 +914,43 @@
     .tts-poi-meta span,
     .tts-mini-badge.neutral {
         background: rgba(255, 255, 255, 0.76);
-        color: #475569;
+        color: var(--text-secondary);
         border: 1px solid rgba(148, 163, 184, 0.2);
     }
 
     .tts-mini-badge.info {
         background: rgba(59, 130, 246, 0.14);
-        color: #1d4ed8;
+        color: var(--color-info-dark);
         border: 1px solid rgba(59, 130, 246, 0.18);
     }
 
     .tts-mini-badge.task-ready,
     .tts-mini-badge.ready {
-        background: #dcfce7;
-        color: #15803d;
+        background: var(--color-success-bg);
+        color: var(--color-success-dark);
         border: 1px solid #86efac;
     }
 
     .tts-mini-badge.task-running,
     .tts-mini-badge.running {
-        background: #dbeafe;
-        color: #1d4ed8;
+        background: var(--color-info-bg);
+        color: var(--color-info-dark);
         border: 1px solid #93c5fd;
     }
 
     .tts-mini-badge.task-failed,
     .tts-mini-badge.failed {
         background: #fee2e2;
-        color: #b91c1c;
+        color: var(--color-danger-dark);
         border: 1px solid #fca5a5;
     }
 
     .tts-mini-badge.task-queued,
     .tts-mini-badge.queued,
     .tts-mini-badge.pending {
-        background: #f1f5f9;
-        color: #475569;
-        border: 1px solid #cbd5e1;
+        background: var(--surface-inset);
+        color: var(--text-secondary);
+        border: 1px solid var(--color-neutral-300);
     }
 
     .tts-link-btn {
@@ -959,23 +959,23 @@
         justify-content: center;
         padding: 10px 14px;
         text-decoration: none;
-        background: #0f172a;
-        color: #fff;
+        background: var(--color-neutral-900);
+        color: white;
         border: none;
     }
 
     .tts-link-btn:hover {
-        color: #fff;
+        color: white;
         opacity: 0.92;
     }
 
     .tts-link-btn-secondary {
-        background: #e2e8f0;
-        color: #0f172a;
+        background: var(--color-neutral-200);
+        color: var(--color-neutral-900);
     }
 
     .tts-link-btn-secondary:hover {
-        color: #0f172a;
+        color: var(--color-neutral-900);
     }
 
     .tts-loading-mini,
@@ -987,7 +987,7 @@
         gap: 10px;
         padding: 28px 16px;
         text-align: center;
-        color: #64748b;
+        color: var(--text-secondary);
     }
 
     .tts-loading-mini {
@@ -1021,19 +1021,19 @@
 
     .tts-health-card {
         flex: 1 1 280px;
-        border-radius: 18px;
-        border: 1px solid #dbe4ee;
+        border-radius: var(--radius-xl);
+        border: 1px solid var(--color-neutral-200);
         padding: 16px;
-        background: #f8fafc;
+        background: var(--surface-inset);
     }
 
     .tts-health-card.tts-health-ok {
-        background: #ecfdf5;
+        background: var(--color-success-bg);
         border-color: rgba(16, 185, 129, 0.22);
     }
 
     .tts-health-card.tts-health-bad {
-        background: #fef2f2;
+        background: var(--color-danger-bg);
         border-color: rgba(239, 68, 68, 0.22);
     }
 
@@ -1047,7 +1047,7 @@
 
     .tts-health-message {
         margin: 0;
-        color: #334155;
+        color: var(--color-neutral-700);
         font-size: 13px;
         line-height: 1.5;
     }
@@ -1062,7 +1062,7 @@
     .tts-health-label {
         font-size: 11px;
         font-weight: 800;
-        color: #64748b;
+        color: var(--text-secondary);
         text-transform: uppercase;
         letter-spacing: 0.3px;
     }
@@ -1073,9 +1073,9 @@
         word-break: break-word;
         background: rgba(255, 255, 255, 0.72);
         padding: 10px 12px;
-        border-radius: 12px;
+        border-radius: var(--radius-lg);
         border: 1px solid rgba(148, 163, 184, 0.2);
-        color: #0f172a;
+        color: var(--color-neutral-900);
         font-size: 12px;
     }
 
@@ -1090,9 +1090,9 @@
         gap: 12px;
         text-align: left;
         padding: 14px;
-        border-radius: 16px;
-        border: 1px solid #e2e8f0;
-        background: #f8fafc;
+        border-radius: var(--radius-xl);
+        border: 1px solid var(--color-neutral-200);
+        background: var(--surface-inset);
         cursor: pointer;
         transition: all 0.2s ease;
     }
@@ -1100,7 +1100,7 @@
     .tts-summary-card.active,
     .tts-summary-card:hover {
         border-color: #93c5fd;
-        background: #eff6ff;
+        background: var(--color-info-bg);
     }
 
     .tts-summary-icon {
@@ -1111,13 +1111,13 @@
         display: block;
         font-size: 12px;
         font-weight: 700;
-        color: #64748b;
+        color: var(--text-secondary);
         margin-bottom: 4px;
     }
 
     .tts-summary-card strong {
         font-size: 20px;
-        color: #0f172a;
+        color: var(--color-neutral-900);
     }
 
     .tts-filter-row {
@@ -1126,8 +1126,8 @@
 
     .tts-filter-chip {
         padding: 10px 14px;
-        border-radius: 999px;
-        color: #475569;
+        border-radius: var(--radius-full);
+        color: var(--text-secondary);
     }
 
     .tts-task-list {
@@ -1142,23 +1142,23 @@
         justify-content: space-between;
         gap: 14px;
         padding: 16px 18px;
-        border-radius: 18px;
-        border: 1px solid #e2e8f0;
-        background: #fff;
+        border-radius: var(--radius-xl);
+        border: 1px solid var(--color-neutral-200);
+        background: white;
     }
 
     .tts-task-item.task-running {
-        background: #eff6ff;
+        background: var(--color-info-bg);
         border-color: rgba(59, 130, 246, 0.18);
     }
 
     .tts-task-item.task-ready {
-        background: #ecfdf5;
+        background: var(--color-success-bg);
         border-color: rgba(16, 185, 129, 0.2);
     }
 
     .tts-task-item.task-failed {
-        background: #fef2f2;
+        background: var(--color-danger-bg);
         border-color: rgba(239, 68, 68, 0.2);
     }
 
@@ -1193,7 +1193,7 @@
     .tts-task-name {
         font-size: 14px;
         font-weight: 800;
-        color: #0f172a;
+        color: var(--color-neutral-900);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -1223,32 +1223,32 @@
 
     .tts-progress-bg {
         fill: none;
-        stroke: #dbe4ee;
+        stroke: var(--color-neutral-200);
         stroke-width: 3;
     }
 
     .tts-progress-fill {
         fill: none;
-        stroke: #94a3b8;
+        stroke: var(--color-neutral-400);
         stroke-width: 3;
         stroke-linecap: round;
         transition: stroke-dasharray 0.25s ease;
     }
 
-    .tts-progress-fill.task-running { stroke: #3b82f6; }
-    .tts-progress-fill.task-ready { stroke: #10b981; }
-    .tts-progress-fill.task-failed { stroke: #ef4444; }
+    .tts-progress-fill.task-running { stroke: var(--color-info); }
+    .tts-progress-fill.task-ready { stroke: var(--color-success); }
+    .tts-progress-fill.task-failed { stroke: var(--color-danger); }
 
     .tts-progress-text {
         position: absolute;
         font-size: 10px;
         font-weight: 800;
-        color: #334155;
+        color: var(--color-neutral-700);
     }
 
     .tts-task-badge {
         padding: 8px 10px;
-        border-radius: 10px;
+        border-radius: var(--radius-md);
         font-size: 11px;
         font-weight: 800;
         text-transform: uppercase;
@@ -1256,23 +1256,23 @@
     }
 
     .tts-task-badge.task-queued {
-        background: #e2e8f0;
-        color: #475569;
+        background: var(--color-neutral-200);
+        color: var(--text-secondary);
     }
 
     .tts-task-badge.task-running {
-        background: #dbeafe;
-        color: #1d4ed8;
+        background: var(--color-info-bg);
+        color: var(--color-info-dark);
     }
 
     .tts-task-badge.task-ready {
-        background: #bbf7d0;
-        color: #166534;
+        background: var(--color-success-bg);
+        color: var(--color-success-dark);
     }
 
     .tts-task-badge.task-failed {
-        background: #fecaca;
-        color: #b91c1c;
+        background: var(--color-danger-bg);
+        color: var(--color-danger-dark);
     }
 
     @@media (max-width: 860px) {
@@ -1797,3 +1797,4 @@
         streamCts?.Dispose();
     }
 }
+
