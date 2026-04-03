@@ -14,8 +14,7 @@
     <link rel="stylesheet" href="_content/FoodStreet.UI/css/admin.css" />
     <link href="_content/FoodStreet.UI/FoodStreet.UI.styles.css" rel="stylesheet" />
 
-    <!-- MapBox GL CSS (non-blocking) -->
-    <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
+    <!-- Google Maps JS remains only for fallback/shared WebView pages. -->
 </head>
 
 <body>
@@ -33,13 +32,14 @@
     <!-- Blazor WebView MUST load first with autostart="false" in MAUI -->
     <script src="_framework/blazor.webview.js" autostart="false"></script>
 
-    <!-- CDN Scripts: async so they don't block Blazor when offline -->
-    <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js" async></script>
+    <!-- CDN Scripts: Chart.js -->
+    <!-- Google Maps JS is injected dynamically only when a fallback/shared page still needs it. -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js" async></script>
 
     <!-- Local Scripts (these load from APK, always available) -->
     <script src="_content/FoodStreet.UI/js/gps-tracking.js"></script>
-    <script src="_content/FoodStreet.UI/js/mapbox-map.js"></script>
+    <script src="runtime-config.js?v=20260403-2"></script>
+    <script src="_content/FoodStreet.UI/js/google-maps-helper.js"></script>
     <script src="_content/FoodStreet.UI/js/tts-service.js"></script>
     <script src="_content/FoodStreet.UI/js/push-notification.js"></script>
     <script src="_content/FoodStreet.UI/js/heatmap-helper.js"></script>
