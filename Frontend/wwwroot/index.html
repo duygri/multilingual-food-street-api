@@ -6,15 +6,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>FoodStreet.Client</title>
     <base href="/" />
-    <link rel="preload" id="webassembly" />
+
     <link rel="stylesheet" href="_content/FoodStreet.UI/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="_content/FoodStreet.UI/css/app.css" />
     <link rel="stylesheet" href="_content/FoodStreet.UI/css/admin.css" />
     <link rel="icon" type="image/png" href="favicon.png" />
-    <link href="FoodStreet.Client.styles.css" rel="stylesheet" />
-    <!-- MapBox GL JS -->
-    <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.css" rel="stylesheet">
-    <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.2/mapbox-gl.js"></script>
+
+    <!-- Google Maps script is injected dynamically by google-maps-helper.js -->
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
     <style>
@@ -46,7 +44,8 @@
         <span class="dismiss">🗙</span>
     </div>
     <script src="_content/FoodStreet.UI/js/gps-tracking.js"></script>
-    <script src="_content/FoodStreet.UI/js/mapbox-map.js"></script>
+    <script src="runtime-config.js?v=20260403-2"></script>
+    <script src="_content/FoodStreet.UI/js/google-maps-helper.js"></script>
     <script src="_content/FoodStreet.UI/js/tts-service.js"></script>
     <script src="_content/FoodStreet.UI/js/push-notification.js"></script>
     <script src="_content/FoodStreet.UI/js/heatmap-helper.js"></script>
