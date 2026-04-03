@@ -8,11 +8,13 @@ namespace FoodStreet.Client.Services
     public interface IAuthService
     {
         Task<AuthResult> LoginAsync(string email, string password);
-        Task<AuthResult> RegisterAsync(string email, string password, string? fullName = null, string role = "Seller");
+        Task<AuthResult> RegisterAsync(string email, string password, string? fullName = null, string role = "POI Owner");
         Task LogoutAsync();
         Task ClearTokensAsync();
         Task<string?> GetTokenAsync();
         Task<bool> IsAuthenticatedAsync();
+        Task<AuthResult> ChangePasswordAsync(string currentPassword, string newPassword);
+        Task<AuthResult> UpdateProfileAsync(string displayName);
         void NotifyStateChanged();
         event Action? OnAuthStateChanged;
     }
@@ -23,7 +25,6 @@ namespace FoodStreet.Client.Services
         private readonly ISessionStorageService _sessionStorage;
         
         private const string AccessTokenKey = "auth_access_token";
-        private const string RefreshTokenKey = "auth_refresh_token";
         private const string TokenExpiryKey = "auth_token_expiry";
         private const string UserEmailKey = "auth_user_email";
 
@@ -44,13 +45,30 @@ namespace FoodStreet.Client.Services
         {
             try
             {
-                var response = await _httpClient.PostAsJsonAsync("api/auth/login", new
+                var response = await _httpClient.PostAsJsonAsync("api/content/auth/login", new
                 {
                     email,
                     password
                 });
 
-                var result = await response.Content.ReadFromJsonAsync<AuthApiResponse>(_jsonOptions);
+                var responseString = await response.Content.ReadAsStringAsync();
+                
+                if (string.IsNullOrWhiteSpace(responseString))
+                {
+                     return AuthResult.Fail($"Server không phản hồi dữ liệu (Mã lỗi: {response.StatusCode})");
+                }
+
+                AuthApiResponse? result;
+                try 
+                {
+                    result = System.Text.Json.JsonSerializer.Deserialize<AuthApiResponse>(responseString, _jsonOptions);
+                }
+                catch (System.Text.Json.JsonException)
+                {
+                     // Return HTML or plain text error for diagnosis
+                     string excerpt = responseString.Length > 80 ? responseString.Substring(0, 80) + "..." : responseString;
+                     return AuthResult.Fail($"Server lỗi rỗng/HTML (Mã: {response.StatusCode}): {excerpt}");
+                }
 
                 if (response.IsSuccessStatusCode && result?.Success == true)
                 {
@@ -69,11 +87,11 @@ namespace FoodStreet.Client.Services
             }
         }
 
-        public async Task<AuthResult> RegisterAsync(string email, string password, string? fullName = null, string role = "Seller")
+        public async Task<AuthResult> RegisterAsync(string email, string password, string? fullName = null, string role = "POI Owner")
         {
             try
             {
-                var response = await _httpClient.PostAsJsonAsync("api/auth/register", new
+                var response = await _httpClient.PostAsJsonAsync("api/content/auth/register", new
                 {
                     email,
                     password,
@@ -81,7 +99,24 @@ namespace FoodStreet.Client.Services
                     role
                 });
 
-                var result = await response.Content.ReadFromJsonAsync<AuthApiResponse>(_jsonOptions);
+                var responseString = await response.Content.ReadAsStringAsync();
+                
+                if (string.IsNullOrWhiteSpace(responseString))
+                {
+                     return AuthResult.Fail($"Server không phản hồi dữ liệu (Mã lỗi: {response.StatusCode})");
+                }
+
+                AuthApiResponse? result;
+                try 
+                {
+                    result = System.Text.Json.JsonSerializer.Deserialize<AuthApiResponse>(responseString, _jsonOptions);
+                }
+                catch (System.Text.Json.JsonException)
+                {
+                     // Return HTML or plain text error for diagnosis
+                     string excerpt = responseString.Length > 80 ? responseString.Substring(0, 80) + "..." : responseString;
+                     return AuthResult.Fail($"Server lỗi rỗng/HTML (Mã: {response.StatusCode}): {excerpt}");
+                }
 
                 if (response.IsSuccessStatusCode && result?.Success == true)
                 {
@@ -113,6 +148,47 @@ namespace FoodStreet.Client.Services
             OnAuthStateChanged?.Invoke();
         }
 
+        public async Task<AuthResult> ChangePasswordAsync(string currentPassword, string newPassword)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsJsonAsync("api/content/auth/change-password", new
+                {
+                    currentPassword,
+                    newPassword
+                });
+                var body = await response.Content.ReadAsStringAsync();
+                var result = System.Text.Json.JsonSerializer.Deserialize<ChangePasswordResponse>(body, _jsonOptions);
+                if (response.IsSuccessStatusCode && result?.Success == true)
+                    return AuthResult.Ok();
+                return AuthResult.Fail(result?.Message ?? "Đổi mật khẩu thất bại");
+            }
+            catch (Exception ex)
+            {
+                return AuthResult.Fail($"Lỗi kết nối: {ex.Message}");
+            }
+        }
+
+        public async Task<AuthResult> UpdateProfileAsync(string displayName)
+        {
+            try
+            {
+                var response = await _httpClient.PutAsJsonAsync("api/content/auth/update-profile", new
+                {
+                    displayName
+                });
+                var body = await response.Content.ReadAsStringAsync();
+                var result = System.Text.Json.JsonSerializer.Deserialize<ChangePasswordResponse>(body, _jsonOptions);
+                if (response.IsSuccessStatusCode && result?.Success == true)
+                    return AuthResult.Ok();
+                return AuthResult.Fail(result?.Message ?? "Cập nhật thất bại");
+            }
+            catch (Exception ex)
+            {
+                return AuthResult.Fail($"Lỗi kết nối: {ex.Message}");
+            }
+        }
+
         /// <summary>
         /// Clears stored tokens WITHOUT triggering OnAuthStateChanged.
         /// Use when you need to clear auth but don't want component tree re-renders.
@@ -120,7 +196,7 @@ namespace FoodStreet.Client.Services
         public async Task ClearTokensAsync()
         {
             await _sessionStorage.RemoveItemAsync(AccessTokenKey);
-            await _sessionStorage.RemoveItemAsync(RefreshTokenKey);
+            await _sessionStorage.RemoveItemAsync("auth_refresh_token");
             await _sessionStorage.RemoveItemAsync(TokenExpiryKey);
             await _sessionStorage.RemoveItemAsync(UserEmailKey);
         }
@@ -154,9 +230,6 @@ namespace FoodStreet.Client.Services
             if (!string.IsNullOrEmpty(response.AccessToken))
                 await _sessionStorage.SetItemAsync(AccessTokenKey, response.AccessToken);
 
-            if (!string.IsNullOrEmpty(response.RefreshToken))
-                await _sessionStorage.SetItemAsync(RefreshTokenKey, response.RefreshToken);
-
             if (response.ExpiresAt.HasValue)
                 await _sessionStorage.SetItemAsync(TokenExpiryKey, response.ExpiresAt.Value.ToString("O"));
 
@@ -189,9 +262,15 @@ namespace FoodStreet.Client.Services
     {
         public bool Success { get; set; }
         public string? AccessToken { get; set; }
-        public string? RefreshToken { get; set; }
         public DateTime? ExpiresAt { get; set; }
         public string? Email { get; set; }
+        public string? Message { get; set; }
+        public List<string>? Errors { get; set; }
+    }
+
+    public class ChangePasswordResponse
+    {
+        public bool Success { get; set; }
         public string? Message { get; set; }
         public List<string>? Errors { get; set; }
     }
