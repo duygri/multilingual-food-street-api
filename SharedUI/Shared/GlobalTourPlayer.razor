@@ -26,7 +26,11 @@
             <div class="poi-info">
                 <div class="poi-name">@PlayerService.CurrentItem.Title</div>
                 <div class="poi-status">
-                    @if (PlayerService.IsTtsMode)
+                    @if (PlayerService.IsLoading)
+                    {
+                        <span class="badge bg-warning-subtle text-warning"><i class="bi bi-hourglass-split"></i> Đang chuẩn bị âm thanh...</span>
+                    }
+                    else if (PlayerService.IsTtsMode)
                     {
                         <span class="badge bg-info-subtle text-info"><i class="bi bi-robot"></i> Đang đọc thuyết minh AI...</span>
                     }
