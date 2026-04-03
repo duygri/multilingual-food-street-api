@@ -10,7 +10,7 @@
 <div class="notifications-page">
     <div class="page-header">
         <div class="header-info">
-            <h2>🔔 Thông báo</h2>
+            <h2>Thông báo</h2>
             <span class="notification-count">
                 @if (NotificationSvc.UnreadCount > 0)
                 {
@@ -26,13 +26,13 @@
             @if (NotificationSvc.Notifications.Any(n => !n.IsRead))
             {
                 <button class="btn-action btn-read-all" @onclick="MarkAllRead">
-                    ✅ Đọc tất cả
+                    Đọc tất cả
                 </button>
             }
             @if (NotificationSvc.Notifications.Any(n => n.IsRead))
             {
                 <button class="btn-action btn-clear" @onclick="ClearRead">
-                    🗑️ Xóa đã đọc
+                    Xóa đã đọc
                 </button>
             }
         </div>
@@ -47,10 +47,10 @@
             Chưa đọc <span class="tab-count">@NotificationSvc.Notifications.Count(n => !n.IsRead)</span>
         </button>
         <button class="filter-tab @(activeFilter == "poi" ? "active" : "")" @onclick='() => SetFilter("poi")'>
-            📍 POI <span class="tab-count">@NotificationSvc.Notifications.Count(n => n.Type.StartsWith("POI"))</span>
+            POI <span class="tab-count">@NotificationSvc.Notifications.Count(n => n.Type.StartsWith("POI"))</span>
         </button>
-        <button class="filter-tab @(activeFilter == "food" ? "active" : "")" @onclick='() => SetFilter("food")'>
-            🍜 Món ăn <span class="tab-count">@NotificationSvc.Notifications.Count(n => n.Type.StartsWith("Food"))</span>
+        <button class="filter-tab @(activeFilter == "menu" ? "active" : "")" @onclick='() => SetFilter("menu")'>
+            Menu <span class="tab-count">@NotificationSvc.Notifications.Count(n => UiNotificationTypes.IsMenuNotification(n.Type))</span>
         </button>
     </div>
 
@@ -59,7 +59,7 @@
         @if (!FilteredNotifications.Any())
         {
             <div class="empty-state">
-                <div class="empty-icon">🔔</div>
+                <div class="empty-icon">—</div>
                 <h3>Không có thông báo</h3>
                 <p>Bạn sẽ nhận được thông báo khi có hoạt động mới</p>
             </div>
@@ -82,7 +82,7 @@
                         <div class="card-meta">
                             @if (!string.IsNullOrEmpty(notification.SenderName))
                             {
-                                <span class="meta-sender">👤 @notification.SenderName</span>
+                                <span class="meta-sender">@notification.SenderName</span>
                             }
                             <span class="meta-type badge-@GetTypeClass(notification.Type)">@GetTypeLabel(notification.Type)</span>
                         </div>
@@ -91,11 +91,11 @@
                         @if (!notification.IsRead)
                         {
                             <button class="btn-icon" title="Đánh dấu đã đọc" @onclick:stopPropagation="true" @onclick="() => MarkRead(notification.Id)">
-                                ✅
+                                ✓
                             </button>
                         }
                         <button class="btn-icon btn-delete" title="Xóa" @onclick:stopPropagation="true" @onclick="() => Delete(notification.Id)">
-                            🗑️
+                            ✗
                         </button>
                     </div>
                 </div>
@@ -266,7 +266,7 @@
     }
 
     .card-indicator.type-poi { background: #3b82f6; }
-    .card-indicator.type-food { background: #f59e0b; }
+    .card-indicator.type-menu { background: #f59e0b; }
     .card-indicator.type-approved { background: #22c55e; }
     .card-indicator.type-rejected { background: #ef4444; }
     .card-indicator.type-system { background: #8b5cf6; }
@@ -338,7 +338,7 @@
     }
 
     .badge-type-poi { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
-    .badge-type-food { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+    .badge-type-menu { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
     .badge-type-approved { background: rgba(34, 197, 94, 0.1); color: #22c55e; }
     .badge-type-rejected { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
     .badge-type-system { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
@@ -409,7 +409,7 @@
     {
         "unread" => NotificationSvc.Notifications.Where(n => !n.IsRead),
         "poi" => NotificationSvc.Notifications.Where(n => n.Type.StartsWith("POI")),
-        "food" => NotificationSvc.Notifications.Where(n => n.Type.StartsWith("Food")),
+        "menu" => NotificationSvc.Notifications.Where(n => UiNotificationTypes.IsMenuNotification(n.Type)),
         _ => NotificationSvc.Notifications
     };
 
@@ -455,41 +455,50 @@
         {
             var path = notification.Type switch
             {
-                "POI_Created" or "POI_Approved" or "POI_Rejected" => $"admin/locations",
-                "Food_Created" or "Food_Approved" => $"admin/foods",
+                "POI_Created" or "POI_Updated" or "POI_Approved" or "POI_Rejected" or "POI_AudioReady" => $"admin/locations",
                 _ => null
             };
+            path ??= UiNotificationTypes.IsMenuNotification(notification.Type) ? "admin/menu" : null;
             if (path != null) Navigation.NavigateTo(path);
         }
     }
 
     private string GetTypeIcon(string type) => type switch
     {
-        "POI_Created" => "📍",
-        "POI_Approved" => "✅",
-        "POI_Rejected" => "❌",
-        "Food_Created" => "🍜",
-        "Food_Approved" => "✅",
-        _ => "🔔"
+        "POI_Created" => "●",
+        "POI_Updated" => "✎",
+        "POI_Approved" => "✓",
+        "POI_Rejected" => "✗",
+        "POI_AudioReady" => "♪",
+        _ when UiNotificationTypes.IsMenuNotification(type) && type.Contains("Created", StringComparison.OrdinalIgnoreCase) => "○",
+        _ when UiNotificationTypes.IsMenuNotification(type) && type.Contains("Approved", StringComparison.OrdinalIgnoreCase) => "✓",
+        _ when UiNotificationTypes.IsMenuNotification(type) && type.Contains("Rejected", StringComparison.OrdinalIgnoreCase) => "✗",
+        _ => "•"
     };
 
     private string GetTypeClass(string type) => type switch
     {
         "POI_Created" => "type-poi",
+        "POI_Updated" => "type-poi",
         "POI_Approved" => "type-approved",
         "POI_Rejected" => "type-rejected",
-        "Food_Created" => "type-food",
-        "Food_Approved" => "type-approved",
+        "POI_AudioReady" => "type-approved",
+        _ when UiNotificationTypes.IsMenuNotification(type) && type.Contains("Created", StringComparison.OrdinalIgnoreCase) => "type-menu",
+        _ when UiNotificationTypes.IsMenuNotification(type) && type.Contains("Approved", StringComparison.OrdinalIgnoreCase) => "type-approved",
+        _ when UiNotificationTypes.IsMenuNotification(type) && type.Contains("Rejected", StringComparison.OrdinalIgnoreCase) => "type-rejected",
         _ => "type-system"
     };
 
     private string GetTypeLabel(string type) => type switch
     {
         "POI_Created" => "POI mới",
+        "POI_Updated" => "Cập nhật POI",
         "POI_Approved" => "Đã duyệt",
         "POI_Rejected" => "Từ chối",
-        "Food_Created" => "Món ăn mới",
-        "Food_Approved" => "Đã duyệt",
+        "POI_AudioReady" => "Audio sẵn sàng",
+        _ when UiNotificationTypes.IsMenuNotification(type) && type.Contains("Created", StringComparison.OrdinalIgnoreCase) => "POI Owner cập nhật menu",
+        _ when UiNotificationTypes.IsMenuNotification(type) && type.Contains("Approved", StringComparison.OrdinalIgnoreCase) => "Quản trị cập nhật menu",
+        _ when UiNotificationTypes.IsMenuNotification(type) && type.Contains("Rejected", StringComparison.OrdinalIgnoreCase) => "Menu bị từ chối",
         _ => "Hệ thống"
     };
 
