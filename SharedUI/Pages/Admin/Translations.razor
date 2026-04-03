@@ -1,89 +1,176 @@
 @page "/admin/translations"
 @layout AdminLayout
 @inject HttpClient Http
+@using FoodStreet.Client.DTOs
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Admin")]
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="mb-0">🌐 Manage Translations</h3>
-    <button class="btn btn-admin btn-admin-primary" @onclick="ShowAddModal">
-        ➕ Add Translation
-    </button>
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <div>
+        <h3 class="mb-1">Trung tâm bản dịch</h3>
+        <p class="text-muted mb-0">Quản lý bản dịch cho cả POI và menu ẩm thực trong cùng một màn hình.</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <div class="btn-group" role="group" aria-label="Translation mode">
+            <button class="btn @(contentMode == "poi" ? "btn-admin btn-admin-primary" : "btn-outline-secondary")" @onclick='() => SwitchMode("poi")'>
+                POI
+            </button>
+            <button class="btn @(contentMode == "menu" ? "btn-admin btn-admin-primary" : "btn-outline-secondary")" @onclick='() => SwitchMode("menu")'>
+                Menu
+            </button>
+        </div>
+        <button class="btn btn-admin btn-admin-primary" @onclick="ShowAddModal" disabled="@(!CanAddTranslation)">
+            Thêm bản dịch
+        </button>
+    </div>
 </div>
 
 <div class="admin-card mb-4">
-    <div class="row align-items-center">
+    <div class="row align-items-end g-3">
         <div class="col-md-4">
-            <label class="form-label">Select Place</label>
-            <select class="form-select" @onchange="OnPlaceSelected">
-                <option value="">-- Select a place --</option>
-                @if (places != null)
+            <label class="form-label fw-medium">Chọn POI</label>
+            <select class="form-select" @bind="selectedPlaceId" @bind:after="OnPlaceChangedAsync">
+                <option value="0">-- Chọn POI --</option>
+                @foreach (var place in places)
                 {
-                    @foreach (var place in places)
-                    {
-                        <option value="@place.Id">@place.Name</option>
-                    }
+                    <option value="@place.Id">@place.Name</option>
                 }
             </select>
         </div>
+        @if (contentMode == "menu")
+        {
+            <div class="col-md-4">
+                <label class="form-label fw-medium">Chọn món trong menu</label>
+                <select class="form-select" @bind="selectedMenuItemId">
+                    <option value="0">-- Chọn món --</option>
+                    @foreach (var menuItem in menuItems)
+                    {
+                        <option value="@menuItem.Id">@menuItem.Name</option>
+                    }
+                </select>
+            </div>
+        }
         <div class="col-md-4">
-            <label class="form-label">Language</label>
+            <label class="form-label fw-medium">Ngôn ngữ</label>
             <select class="form-select" @bind="selectedLanguage">
-                <option value="">All Languages</option>
-                <option value="vi-VN">🇻🇳 Vietnamese</option>
-                <option value="en-US">🇺🇸 English</option>
-                <option value="ja-JP">🇯🇵 Japanese</option>
-                <option value="ko-KR">🇰🇷 Korean</option>
-                <option value="zh-CN">🇨🇳 Chinese</option>
+                <option value="">Tất cả ngôn ngữ</option>
+                <option value="vi-VN">Tiếng Việt</option>
+                <option value="en-US">Tiếng Anh</option>
+                <option value="ja-JP">Tiếng Nhật</option>
+                <option value="ko-KR">Tiếng Hàn</option>
+                <option value="zh-CN">Tiếng Trung</option>
             </select>
         </div>
-        <div class="col-md-4 d-flex align-items-end">
-            <button class="btn btn-outline-primary w-100" @onclick="LoadTranslations">
-                🔍 Filter
+        <div class="col-md-4 d-flex gap-2">
+            <button class="btn btn-outline-primary flex-grow-1" @onclick="LoadTranslationsAsync">
+                Tải dữ liệu
+            </button>
+            <button class="btn btn-outline-secondary" @onclick="AutoTranslateAsync" disabled="@(!CanAutoTranslate || isAutoTranslating)">
+                @if (isAutoTranslating)
+                {
+                    <span class="spinner-border spinner-border-sm"></span>
+                }
+                else
+                {
+                    <span>Dịch</span>
+                }
             </button>
         </div>
     </div>
 </div>
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+@if (!string.IsNullOrWhiteSpace(successMessage))
+{
+    <div class="alert alert-success">@successMessage</div>
+}
 
 <div class="admin-card">
     @if (isLoading)
     {
         <div class="text-center py-5">
             <div class="spinner-border text-primary"></div>
-            <p class="mt-3 text-muted">Loading translations...</p>
+        <p class="mt-3 text-muted mb-0">Đang tải trung tâm bản dịch...</p>
         </div>
     }
-    else if (translations == null || translations.Count == 0)
+    else if (selectedPlaceId == 0)
     {
         <div class="text-center py-5">
-            <div style="font-size: 4rem;">🌍</div>
-            <h5 class="mt-3">No translations found</h5>
-            <p class="text-muted">Select a place and click "Add Translation" to add content in different languages.</p>
+            <div class="text-muted" style="font-size: 1.5rem;">POI</div>
+            <h5 class="mt-3">Chọn một POI để bắt đầu</h5>
+            <p class="text-muted mb-0">Trung tâm bản dịch sẽ hiển thị theo POI, và nếu bạn chọn mode menu thì cần chọn thêm món cụ thể.</p>
+        </div>
+    }
+    else if (contentMode == "menu" && selectedMenuItemId == 0)
+    {
+        <div class="text-center py-5">
+            <div class="text-muted" style="font-size: 1.5rem;">Menu</div>
+            <h5 class="mt-3">Chọn một món trong menu</h5>
+            <p class="text-muted mb-0">Chọn món để xem, dịch hoặc chỉnh sửa bản dịch cho từng món ăn.</p>
+        </div>
+    }
+    else if (translationRows.Count == 0)
+    {
+        <div class="text-center py-5">
+            <div class="text-muted" style="font-size: 1.5rem;">Translation</div>
+            <h5 class="mt-3">Chưa có bản dịch nào</h5>
+            <p class="text-muted mb-0">
+                @(contentMode == "poi"
+                    ? "Hãy thêm bản dịch đầu tiên hoặc dùng nút dịch tự động cho POI."
+                    : "Hãy thêm bản dịch đầu tiên hoặc dùng nút dịch tự động cho món trong menu.")
+            </p>
         </div>
     }
     else
     {
-        <table class="admin-table">
+        <table class="table admin-table align-middle">
             <thead>
                 <tr>
-                    <th>Language</th>
-                    <th>Place</th>
-                    <th>Translated Name</th>
-                    <th>Description</th>
-                    <th style="width: 150px;">Actions</th>
+                    <th>Ngôn ngữ</th>
+                    @if (contentMode == "menu")
+                    {
+                        <th>Món</th>
+                    }
+                    <th>POI</th>
+                    <th>Tên bản dịch</th>
+                    <th>Mô tả</th>
+                    <th>Trạng thái</th>
+                    <th style="width: 150px;">Thao tác</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach (var trans in translations)
+                @foreach (var row in translationRows)
                 {
                     <tr>
                         <td>
-                            <span class="badge bg-info">@GetLanguageFlag(trans.LanguageCode) @trans.LanguageCode</span>
+                            <span class="badge bg-info-subtle text-info border">@GetLanguageLabel(row.LanguageCode)</span>
                         </td>
-                        <td>@trans.PlaceName</td>
-                        <td><strong>@trans.Name</strong></td>
-                        <td class="text-muted">@(trans.Description?.Length > 40 ? trans.Description.Substring(0, 40) + "..." : trans.Description)</td>
+                        @if (contentMode == "menu")
+                        {
+                            <td>
+                                <div class="fw-semibold">@row.ItemName</div>
+                            </td>
+                        }
+                        <td>@row.ContextName</td>
+                        <td><strong>@row.Name</strong></td>
+                        <td class="text-muted">@(TrimText(row.Description, 70))</td>
                         <td>
-                            <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => EditTranslation(trans)">✏️</button>
-                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteTranslation(trans.Id)">🗑️</button>
+                            @if (row.IsFallback)
+                            {
+                                <span class="badge bg-warning text-dark">Fallback</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-success">Thủ công</span>
+                            }
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => EditTranslation(row)">Sửa</button>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteTranslationAsync(row.Id)">Xóa</button>
                         </td>
                     </tr>
                 }
@@ -97,49 +184,82 @@
     <div class="modal show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content admin-modal">
-                <div class="modal-header">
+                <div class="modal-header bg-light">
                     <h5 class="modal-title">@modalTitle</h5>
                     <button type="button" class="btn-close" @onclick="CloseModal"></button>
                 </div>
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Place *</label>
-                            <select class="form-select" @bind="editingTranslation.PlaceId">
-                                <option value="0">-- Select --</option>
-                                @if (places != null)
-                                {
+                <div class="modal-body bg-white">
+                    @if (contentMode == "menu")
+                    {
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-medium">POI *</label>
+                                <select class="form-select" @bind="editingTranslation.LocationId" @bind:after="OnModalPlaceChangedAsync">
+                                    <option value="0">-- Chọn POI --</option>
                                     @foreach (var place in places)
                                     {
                                         <option value="@place.Id">@place.Name</option>
                                     }
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-medium">Món trong menu *</label>
+                                <select class="form-select" @bind="editingTranslation.MenuItemId">
+                                    <option value="0">-- Chọn món --</option>
+                                    @foreach (var item in modalMenuItems)
+                                    {
+                                        <option value="@item.Id">@item.Name</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mb-3">
+                            <label class="form-label fw-medium">POI *</label>
+                            <select class="form-select" @bind="editingTranslation.LocationId">
+                                <option value="0">-- Chọn POI --</option>
+                                @foreach (var place in places)
+                                {
+                                    <option value="@place.Id">@place.Name</option>
                                 }
                             </select>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Language *</label>
+                    }
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-medium">Ngôn ngữ *</label>
                             <select class="form-select" @bind="editingTranslation.LanguageCode">
-                                <option value="">-- Select --</option>
-                                <option value="vi-VN">🇻🇳 Vietnamese</option>
-                                <option value="en-US">🇺🇸 English</option>
-                                <option value="ja-JP">🇯🇵 Japanese</option>
-                                <option value="ko-KR">🇰🇷 Korean</option>
-                                <option value="zh-CN">🇨🇳 Chinese</option>
+                                <option value="">-- Chọn --</option>
+                                <option value="vi-VN">Tiếng Việt</option>
+                                <option value="en-US">Tiếng Anh</option>
+                                <option value="ja-JP">Tiếng Nhật</option>
+                                <option value="ko-KR">Tiếng Hàn</option>
+                                <option value="zh-CN">Tiếng Trung</option>
                             </select>
                         </div>
+                        <div class="col-md-8 mb-3">
+                            <label class="form-label fw-medium">Tên bản dịch *</label>
+                            <input class="form-control" @bind="editingTranslation.Name" placeholder="Tên theo ngôn ngữ đã chọn" />
+                        </div>
                     </div>
+
                     <div class="mb-3">
-                        <label class="form-label">Translated Name *</label>
-                        <input type="text" class="form-control" @bind="editingTranslation.Name" placeholder="Name in selected language" />
+                        <label class="form-label fw-medium">Mô tả bản dịch</label>
+                        <textarea class="form-control" rows="4" @bind="editingTranslation.Description" placeholder="Mô tả theo ngôn ngữ đã chọn..."></textarea>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Translated Description</label>
-                        <textarea class="form-control" rows="4" @bind="editingTranslation.Description" placeholder="Description in selected language..."></textarea>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-admin btn-admin-primary flex-grow-1" @onclick="SaveTranslation">💾 Save Translation</button>
-                        <button class="btn btn-outline-secondary" @onclick="CloseModal">Cancel</button>
-                    </div>
+                </div>
+                <div class="modal-footer bg-light border-0 pt-0">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModal">Hủy</button>
+                    <button type="button" class="btn btn-admin btn-admin-primary" @onclick="SaveTranslationAsync" disabled="@isSavingTranslation">
+                        @if (isSavingTranslation)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        Lưu bản dịch
+                    </button>
                 </div>
             </div>
         </div>
@@ -147,148 +267,414 @@
 }
 
 @code {
-    private List<PlaceItem>? places;
-    private List<TranslationItem>? translations;
+    private readonly List<PlaceItem> places = new();
+    private readonly List<MenuItemDto> menuItems = new();
+    private readonly List<MenuItemDto> modalMenuItems = new();
+    private readonly List<TranslationRow> translationRows = new();
+
+    private string contentMode = "poi";
     private int selectedPlaceId;
-    private string selectedLanguage = "";
-    private bool isLoading = false;
-    private bool showModal = false;
-    private string modalTitle = "";
-    private TranslationItem editingTranslation = new();
+    private int selectedMenuItemId;
+    private string selectedLanguage = string.Empty;
+    private bool isLoading;
+    private bool showModal;
+    private bool isSavingTranslation;
+    private bool isAutoTranslating;
+    private string? errorMessage;
+    private string? successMessage;
+    private string modalTitle = string.Empty;
+    private EditableTranslation editingTranslation = new();
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadPlaces();
+        await LoadPlacesAsync();
     }
 
-    private async Task LoadPlaces()
+    private bool CanAddTranslation => contentMode == "poi"
+        ? selectedPlaceId > 0
+        : selectedPlaceId > 0 && selectedMenuItemId > 0;
+
+    private bool CanAutoTranslate => contentMode == "poi"
+        ? selectedPlaceId > 0
+        : selectedMenuItemId > 0;
+
+    private async Task LoadPlacesAsync()
     {
         try
         {
-            places = await Http.GetFromJsonAsync<List<PlaceItem>>("api/places");
+            var result = await Http.GetFromJsonAsync<List<PlaceItem>>("api/maps/locations/admin/all") ?? new();
+            places.Clear();
+            places.AddRange(result.OrderBy(place => place.Name));
         }
         catch
         {
-            places = new List<PlaceItem>();
+            places.Clear();
         }
     }
 
-    private async Task OnPlaceSelected(ChangeEventArgs e)
+    private async Task SwitchMode(string mode)
     {
-        if (int.TryParse(e.Value?.ToString(), out int placeId))
+        if (contentMode == mode)
         {
-            selectedPlaceId = placeId;
-            await LoadTranslations();
-        }
-    }
-
-    private async Task LoadTranslations()
-    {
-        if (selectedPlaceId == 0)
-        {
-            translations = new List<TranslationItem>();
             return;
         }
 
-        isLoading = true;
+        contentMode = mode;
+        errorMessage = null;
+        successMessage = null;
+        translationRows.Clear();
+
+        if (contentMode == "poi")
+        {
+            selectedMenuItemId = 0;
+        }
+        else if (selectedPlaceId > 0)
+        {
+            await LoadMenuItemsAsync(selectedPlaceId, menuItems);
+        }
+    }
+
+    private async Task OnPlaceChangedAsync()
+    {
+        errorMessage = null;
+        successMessage = null;
+        translationRows.Clear();
+        selectedMenuItemId = 0;
+
+        if (selectedPlaceId > 0 && contentMode == "menu")
+        {
+            await LoadMenuItemsAsync(selectedPlaceId, menuItems);
+        }
+        else
+        {
+            menuItems.Clear();
+        }
+    }
+
+    private async Task OnModalPlaceChangedAsync()
+    {
+        editingTranslation.MenuItemId = 0;
+        modalMenuItems.Clear();
+
+        if (editingTranslation.LocationId > 0 && contentMode == "menu")
+        {
+            await LoadMenuItemsAsync(editingTranslation.LocationId, modalMenuItems);
+        }
+    }
+
+    private async Task LoadMenuItemsAsync(int locationId, List<MenuItemDto> target)
+    {
         try
         {
-            // Note: This endpoint needs to be created in the backend
-            var url = $"api/places/{selectedPlaceId}/translations";
-            if (!string.IsNullOrEmpty(selectedLanguage))
-            {
-                url += $"?lang={selectedLanguage}";
-            }
-            translations = await Http.GetFromJsonAsync<List<TranslationItem>>(url);
+            var items = await Http.GetFromJsonAsync<List<MenuItemDto>>($"api/admin/menu?locationId={locationId}") ?? new();
+            target.Clear();
+            target.AddRange(items.OrderBy(item => item.SortOrder).ThenBy(item => item.Name));
         }
         catch
         {
-            // If API doesn't exist yet, show empty
-            translations = new List<TranslationItem>();
+            target.Clear();
         }
-        isLoading = false;
+    }
+
+    private async Task LoadTranslationsAsync()
+    {
+        errorMessage = null;
+        successMessage = null;
+        isLoading = true;
+
+        try
+        {
+            translationRows.Clear();
+
+            if (contentMode == "poi")
+            {
+                if (selectedPlaceId == 0)
+                {
+                    return;
+                }
+
+                var url = $"api/localization/locations/{selectedPlaceId}/translations";
+                if (!string.IsNullOrWhiteSpace(selectedLanguage))
+                {
+                    url += $"?lang={selectedLanguage}";
+                }
+
+                var items = await Http.GetFromJsonAsync<List<PoiTranslationItem>>(url) ?? new();
+                translationRows.AddRange(items.Select(item => new TranslationRow
+                {
+                    Id = item.Id,
+                    ContextName = item.LocationName,
+                    ItemName = item.LocationName,
+                    LanguageCode = item.LanguageCode,
+                    Name = item.Name,
+                    Description = item.Description,
+                    IsFallback = item.IsFallback
+                }));
+            }
+            else
+            {
+                if (selectedMenuItemId == 0)
+                {
+                    return;
+                }
+
+                var url = $"api/localization/menu-items/{selectedMenuItemId}/translations";
+                if (!string.IsNullOrWhiteSpace(selectedLanguage))
+                {
+                    url += $"?lang={selectedLanguage}";
+                }
+
+                var items = await Http.GetFromJsonAsync<List<MenuTranslationItemDto>>(url) ?? new();
+                translationRows.AddRange(items.Select(item => new TranslationRow
+                {
+                    Id = item.Id,
+                    ContextName = item.LocationName,
+                    ItemName = item.MenuItemName,
+                    LanguageCode = item.LanguageCode,
+                    Name = item.Name,
+                    Description = item.Description,
+                    IsFallback = item.IsFallback
+                }));
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Không thể tải bản dịch: {ex.Message}";
+            translationRows.Clear();
+        }
+        finally
+        {
+            isLoading = false;
+        }
     }
 
     private void ShowAddModal()
     {
-        editingTranslation = new TranslationItem { PlaceId = selectedPlaceId };
-        modalTitle = "➕ Add Translation";
-        showModal = true;
-    }
-
-    private void EditTranslation(TranslationItem trans)
-    {
-        editingTranslation = new TranslationItem
+        editingTranslation = new EditableTranslation
         {
-            Id = trans.Id,
-            PlaceId = trans.PlaceId,
-            LanguageCode = trans.LanguageCode,
-            Name = trans.Name,
-            Description = trans.Description
+            LocationId = selectedPlaceId,
+            MenuItemId = selectedMenuItemId
         };
-        modalTitle = "✏️ Edit Translation";
+        modalTitle = contentMode == "poi" ? "Thêm bản dịch POI" : "Thêm bản dịch menu";
+
+        modalMenuItems.Clear();
+        if (contentMode == "menu" && selectedPlaceId > 0)
+        {
+            modalMenuItems.AddRange(menuItems);
+        }
+
         showModal = true;
     }
 
-    private async Task SaveTranslation()
+    private void EditTranslation(TranslationRow row)
     {
+        editingTranslation = new EditableTranslation
+        {
+            Id = row.Id,
+            LocationId = selectedPlaceId,
+            MenuItemId = selectedMenuItemId,
+            LanguageCode = row.LanguageCode,
+            Name = row.Name,
+            Description = row.Description
+        };
+        modalTitle = contentMode == "poi" ? "Cập nhật bản dịch POI" : "Cập nhật bản dịch menu";
+
+        modalMenuItems.Clear();
+        if (contentMode == "menu" && selectedPlaceId > 0)
+        {
+            modalMenuItems.AddRange(menuItems);
+        }
+
+        showModal = true;
+    }
+
+    private async Task SaveTranslationAsync()
+    {
+        isSavingTranslation = true;
+        errorMessage = null;
+        successMessage = null;
+
         try
         {
-            if (editingTranslation.Id == 0)
+            if (contentMode == "poi")
             {
-                await Http.PostAsJsonAsync("api/places/translations", editingTranslation);
+                var request = new
+                {
+                    locationId = editingTranslation.LocationId,
+                    languageCode = editingTranslation.LanguageCode,
+                    name = editingTranslation.Name,
+                    description = editingTranslation.Description
+                };
+
+                if (editingTranslation.Id == 0)
+                {
+                    await Http.PostAsJsonAsync("api/localization/translations", request);
+                }
+                else
+                {
+                    await Http.PutAsJsonAsync($"api/localization/translations/{editingTranslation.Id}", request);
+                }
             }
             else
             {
-                await Http.PutAsJsonAsync($"api/places/translations/{editingTranslation.Id}", editingTranslation);
+                var request = new UpsertMenuTranslationRequest
+                {
+                    PoiMenuItemId = editingTranslation.MenuItemId,
+                    LanguageCode = editingTranslation.LanguageCode,
+                    Name = editingTranslation.Name,
+                    Description = editingTranslation.Description
+                };
+
+                if (editingTranslation.Id == 0)
+                {
+                    await Http.PostAsJsonAsync("api/localization/menu-translations", request);
+                }
+                else
+                {
+                    await Http.PutAsJsonAsync($"api/localization/menu-translations/{editingTranslation.Id}", request);
+                }
             }
+
             showModal = false;
-            await LoadTranslations();
+            successMessage = contentMode == "poi"
+                ? "Đã lưu bản dịch POI."
+                : "Đã lưu bản dịch menu.";
+            await LoadTranslationsAsync();
         }
         catch (Exception ex)
         {
-            Console.WriteLine(ex.Message);
+            errorMessage = $"Không thể lưu bản dịch: {ex.Message}";
+        }
+        finally
+        {
+            isSavingTranslation = false;
         }
     }
 
-    private async Task DeleteTranslation(int id)
+    private async Task DeleteTranslationAsync(int id)
     {
+        errorMessage = null;
+        successMessage = null;
+
         try
         {
-            await Http.DeleteAsync($"api/places/translations/{id}");
-            await LoadTranslations();
+            var endpoint = contentMode == "poi"
+                ? $"api/localization/translations/{id}"
+                : $"api/localization/menu-translations/{id}";
+
+            await Http.DeleteAsync(endpoint);
+            successMessage = contentMode == "poi"
+                ? "Đã xóa bản dịch POI."
+                : "Đã xóa bản dịch menu.";
+            await LoadTranslationsAsync();
         }
         catch (Exception ex)
         {
-            Console.WriteLine(ex.Message);
+            errorMessage = $"Không thể xóa bản dịch: {ex.Message}";
         }
     }
 
-    private void CloseModal() => showModal = false;
-
-    private string GetLanguageFlag(string code) => code switch
+    private async Task AutoTranslateAsync()
     {
-        "vi-VN" => "🇻🇳",
-        "en-US" => "🇺🇸",
-        "ja-JP" => "🇯🇵",
-        "ko-KR" => "🇰🇷",
-        "zh-CN" => "🇨🇳",
-        _ => "🌐"
-    };
+        if (!CanAutoTranslate)
+        {
+            return;
+        }
 
-    class PlaceItem
-    {
-        public int Id { get; set; }
-        public string Name { get; set; } = "";
+        isAutoTranslating = true;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            if (contentMode == "poi")
+            {
+                await Http.PostAsJsonAsync(
+                    $"api/localization/locations/{selectedPlaceId}/translate",
+                    new { lang = string.IsNullOrWhiteSpace(selectedLanguage) ? null : selectedLanguage });
+            }
+            else
+            {
+                await Http.PostAsJsonAsync(
+                    $"api/localization/menu-items/{selectedMenuItemId}/translate",
+                    new { lang = string.IsNullOrWhiteSpace(selectedLanguage) ? null : selectedLanguage });
+            }
+
+            successMessage = contentMode == "poi"
+                ? "Đã gửi yêu cầu dịch tự động cho POI."
+                : "Đã gửi yêu cầu dịch tự động cho menu.";
+            await LoadTranslationsAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Không thể dịch tự động: {ex.Message}";
+        }
+        finally
+        {
+            isAutoTranslating = false;
+        }
     }
 
-    class TranslationItem
+    private void CloseModal()
+    {
+        showModal = false;
+    }
+
+    private static string GetLanguageLabel(string code) => code switch
+    {
+        "vi-VN" => "VI",
+        "en-US" => "EN",
+        "ja-JP" => "JA",
+        "ko-KR" => "KO",
+        "zh-CN" => "ZH",
+        _ => code
+    };
+
+    private static string TrimText(string? value, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "—";
+        }
+
+        return value.Length <= maxLength ? value : $"{value[..maxLength]}...";
+    }
+
+    private sealed class PlaceItem
     {
         public int Id { get; set; }
-        public int PlaceId { get; set; }
-        public string PlaceName { get; set; } = "";
-        public string LanguageCode { get; set; } = "";
-        public string Name { get; set; } = "";
+        public string Name { get; set; } = string.Empty;
+    }
+
+    private sealed class PoiTranslationItem
+    {
+        public int Id { get; set; }
+        public int LocationId { get; set; }
+        public string LocationName { get; set; } = string.Empty;
+        public string LanguageCode { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public bool IsFallback { get; set; }
+    }
+
+    private sealed class TranslationRow
+    {
+        public int Id { get; set; }
+        public string ContextName { get; set; } = string.Empty;
+        public string ItemName { get; set; } = string.Empty;
+        public string LanguageCode { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public bool IsFallback { get; set; }
+    }
+
+    private sealed class EditableTranslation
+    {
+        public int Id { get; set; }
+        public int LocationId { get; set; }
+        public int MenuItemId { get; set; }
+        public string LanguageCode { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
         public string? Description { get; set; }
     }
 }
