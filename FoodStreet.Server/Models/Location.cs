@@ -1,7 +1,7 @@
 namespace PROJECT_C_.Models
 {
     /// <summary>
-    /// Địa điểm / POI - do Seller tạo, Admin duyệt.
+    /// Địa điểm / POI - do POI Owner tạo, Admin duyệt.
     /// </summary>
     public class Location
     {
@@ -25,12 +25,13 @@ namespace PROJECT_C_.Models
         // TTS Script (nếu không có audio file)
         public string? TtsScript { get; set; }
 
-        // Ownership (Seller)
+        // Ownership (POI Owner)
         public string? OwnerId { get; set; }
 
         // Approval Workflow
         public bool IsApproved { get; set; } = false;
         public DateTime? ApprovedAt { get; set; }
+        public string AudioStatus { get; set; } = "pending"; // pending, queued, running, ready, failed
 
         // Category
         public int? CategoryId { get; set; }
@@ -43,5 +44,8 @@ namespace PROJECT_C_.Models
 
         [System.Text.Json.Serialization.JsonIgnore]
         public ICollection<AudioFile> AudioFiles { get; set; } = new List<AudioFile>();
+
+        [System.Text.Json.Serialization.JsonIgnore]
+        public ICollection<PoiMenuItem> MenuItems { get; set; } = new List<PoiMenuItem>();
     }
 }
