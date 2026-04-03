@@ -4,20 +4,23 @@ using Microsoft.EntityFrameworkCore;
 using PROJECT_C_.Data;
 using PROJECT_C_.DTOs;
 using PROJECT_C_.Models;
+using FoodStreet.Server.Services.Interfaces;
 
 namespace PROJECT_C_.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/audio")]
     public class AudioController : ControllerBase
     {
         private readonly AppDbContext _context;
         private readonly IWebHostEnvironment _env;
+        private readonly ITtsService _ttsService;
 
-        public AudioController(AppDbContext context, IWebHostEnvironment env)
+        public AudioController(AppDbContext context, IWebHostEnvironment env, ITtsService ttsService)
         {
             _context = context;
             _env = env;
+            _ttsService = ttsService;
         }
 
         /// <summary>
@@ -230,5 +233,78 @@ namespace PROJECT_C_.Controllers
                 TotalSizeMB = Math.Round(totalSize / 1024.0 / 1024.0, 2)
             };
         }
+
+        /// <summary>
+        /// Request On-demand TTS for a piece of text (Tier 2 API)
+        /// </summary>
+        [HttpPost("tts")]
+        public async Task<IActionResult> CreateTts([FromBody] TtsRequestDto request)
+        {
+            if (string.IsNullOrWhiteSpace(request.Text))
+                return BadRequest("Text is required");
+
+            var lang = request.Language ?? "vi-VN";
+            var url = await _ttsService.TextToSpeechAsync(request.Text, lang);
+            
+            if (string.IsNullOrEmpty(url)) 
+                return StatusCode(500, "Audio generation failed");
+
+            // Compute Hit/Miss info ideally inside the service, but since we get the URL, we know it exists.
+            string physicalPath = Path.Combine(_env.WebRootPath ?? "wwwroot", url.TrimStart('/'));
+            if (!System.IO.File.Exists(physicalPath)) return NotFound();
+
+            Response.Headers.Append("X-Static-Url", url);
+            Response.Headers.Append("X-Cache", "HIT/MISS"); // Simplified
+            
+            return PhysicalFile(physicalPath, "audio/mpeg", enableRangeProcessing: true);
+        }
+
+        /// <summary>
+        /// Scan all MP3 files for a specific language pack and return SHA-256 hashes
+        /// </summary>
+        [HttpGet("pack-manifest")]
+        public ActionResult GetPackManifest([FromQuery] string lang = "vi-VN")
+        {
+            var dir = Path.Combine(_env.WebRootPath ?? "wwwroot", "audio-cache", lang);
+            if (!Directory.Exists(dir))
+                return Ok(new { lang = lang, total_files = 0, files = new string[0] });
+
+            var files = Directory.GetFiles(dir, "*.mp3");
+            long totalBytes = 0;
+            var manifestFiles = new List<object>();
+
+            using var sha256 = System.Security.Cryptography.SHA256.Create();
+            
+            foreach (var f in files)
+            {
+                var fileInfo = new FileInfo(f);
+                totalBytes += fileInfo.Length;
+                
+                using var stream = System.IO.File.OpenRead(f);
+                var hash = sha256.ComputeHash(stream);
+                
+                manifestFiles.Add(new
+                {
+                    filename = fileInfo.Name,
+                    size = fileInfo.Length,
+                    sha256 = Convert.ToHexString(hash).ToLower()
+                });
+            }
+
+            return Ok(new
+            {
+                lang = lang,
+                pack_version = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss"),
+                total_files = files.Length,
+                total_bytes = totalBytes,
+                files = manifestFiles
+            });
+        }
+    }
+
+    public class TtsRequestDto
+    {
+        public string Text { get; set; } = string.Empty;
+        public string? Language { get; set; } = "vi-VN";
     }
 }
