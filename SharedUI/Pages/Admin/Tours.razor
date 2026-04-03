@@ -7,7 +7,7 @@
     <!-- Header Actions -->
     <div class="page-actions">
         <button class="btn-primary" @onclick="OpenCreateModal">
-            <span>➕</span> Tạo Tour mới
+            <span>+</span> Tạo Tour mới
         </button>
     </div>
 
@@ -22,11 +22,11 @@
     else if (!tours.Any())
     {
         <div class="empty-state-card">
-            <span class="empty-icon">🗺️</span>
+            <span class="empty-icon">—</span>
             <h3>Chưa có tour nào</h3>
             <p>Tạo tour đầu tiên để bắt đầu</p>
             <button class="btn-primary" @onclick="OpenCreateModal">
-                <span>➕</span> Tạo Tour
+                <span>+</span> Tạo Tour
             </button>
         </div>
     }
@@ -41,12 +41,12 @@
                             @(tour.IsActive ? "Đang hoạt động" : "Tạm dừng")
                         </div>
                         <div class="tour-actions">
-                            <button class="action-btn" title="Sửa" @onclick="() => EditTour(tour)">✏️</button>
+                            <button class="action-btn" title="Sửa" @onclick="() => EditTour(tour)">Edit</button>
                             <button class="action-btn" title="@(tour.IsActive ? "Tạm dừng" : "Kích hoạt")" 
                                     @onclick="() => ToggleTour(tour.Id)">
-                                @(tour.IsActive ? "⏸️" : "▶️")
+                                @(tour.IsActive ? "II" : "▶")
                             </button>
-                            <button class="action-btn danger" title="Xóa" @onclick="() => DeleteTour(tour.Id)">🗑️</button>
+                            <button class="action-btn danger" title="Xóa" @onclick="() => DeleteTour(tour.Id)">Del</button>
                         </div>
                     </div>
                     
@@ -56,15 +56,15 @@
                         
                         <div class="tour-stats">
                             <div class="stat">
-                                <span class="stat-icon">📍</span>
+                                <span class="stat-icon">·</span>
                                 <span class="stat-value">@tour.ItemCount điểm dừng</span>
                             </div>
                             <div class="stat">
-                                <span class="stat-icon">⏱️</span>
+                                <span class="stat-icon">·</span>
                                 <span class="stat-value">@tour.EstimatedDurationMinutes phút</span>
                             </div>
                             <div class="stat">
-                                <span class="stat-icon">📏</span>
+                                <span class="stat-icon">·</span>
                                 <span class="stat-value">@tour.EstimatedDistanceKm.ToString("0.#") km</span>
                             </div>
                         </div>
@@ -167,11 +167,11 @@
                             {
                                 <div class="item-row">
                                     <span class="item-order">@item.Order</span>
-                                    <span class="item-name">📍 @item.PlaceName</span>
+                                    <span class="item-name">@item.PlaceName</span>
                                     <div class="item-actions">
-                                        <button class="btn-sm" @onclick="() => MoveItemUp(item)" disabled="@(item.Order <= 1)">⬆️</button>
-                                        <button class="btn-sm" @onclick="() => MoveItemDown(item)" disabled="@(item.Order >= selectedTour.Items.Count)">⬇️</button>
-                                        <button class="btn-sm danger" @onclick="() => RemoveItem(item.Id)">🗑️</button>
+                                        <button class="btn-sm" @onclick="() => MoveItemUp(item)" disabled="@(item.Order <= 1)">▲</button>
+                                        <button class="btn-sm" @onclick="() => MoveItemDown(item)" disabled="@(item.Order >= selectedTour.Items.Count)">▼</button>
+                                        <button class="btn-sm danger" @onclick="() => RemoveItem(item.Id)">Del</button>
                                     </div>
                                 </div>
                             }
@@ -746,8 +746,9 @@
     {
         try
         {
-            var result = await Http.GetFromJsonAsync<List<PlaceSimpleDto>>("api/places");
-            availablePlaces = result ?? new();
+            // Backend uses api/maps/locations/approved (LocationController)
+            var locations = await Http.GetFromJsonAsync<List<PlaceSimpleDto>>("api/maps/locations/approved");
+            availablePlaces = locations ?? new();
         }
         catch { }
     }
