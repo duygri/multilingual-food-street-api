@@ -1,16 +1,19 @@
 @page "/"
 @inject NavigationManager Navigation
+@inject IPlatformDetector PlatformDetector
+@using FoodStreet.Client.Services
 <GpsTracker />
 @code {
-    protected override void OnInitialized()
+    private bool _redirected;
+
+    protected override void OnAfterRender(bool firstRender)
     {
-        if (OperatingSystem.IsAndroid() || OperatingSystem.IsIOS())
+        if (!firstRender || _redirected)
         {
-            Navigation.NavigateTo("explore");
+            return;
         }
-        else 
-        {
-            Navigation.NavigateTo("admin/login");
-        }
+
+        _redirected = true;
+        Navigation.NavigateTo(PlatformDetector.IsMobile ? "/explore" : "/admin/login", replace: true);
     }
 }
