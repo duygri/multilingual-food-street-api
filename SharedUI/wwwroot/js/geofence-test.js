@@ -1,153 +1,98 @@
 // Geofence Test Map Helper - Web-only tool for testing POI proximity
-// Uses Mapbox GL JS to visualize POIs, geofence circles, and simulated user position
+// Uses Google Maps JavaScript API
 
 window.GeofenceTestMap = {
     map: null,
+    mapElementId: null,
     testMarker: null,
     poiMarkers: [],
     geofenceCircles: [],
+    infoWindow: null,
     dotNetRef: null,
 
     // Initialize the test map
-    init: function (elementId, lat, lng, zoom, dotNetRef) {
+    init: async function (elementId, lat, lng, zoom, dotNetRef, apiKey) {
         this.dotNetRef = dotNetRef;
 
         if (this.map) {
-            this.map.remove();
+            this.destroy();
         }
 
-        mapboxgl.accessToken = 'YOUR_MAPBOX_TOKEN_HERE';
-
-        this.map = new mapboxgl.Map({
-            container: elementId,
-            style: 'mapbox://styles/mapbox/streets-v12',
-            center: [lng, lat],
-            zoom: zoom || 15
-        });
-
-        this.map.addControl(new mapboxgl.NavigationControl());
-
-        // Add test position marker (draggable)
-        const el = document.createElement('div');
-        el.innerHTML = '<div style="font-size:36px; filter:drop-shadow(0 3px 6px rgba(0,0,0,0.4)); cursor:grab; user-select:none;">🧑</div>';
-        el.style.cursor = 'grab';
-
-        this.testMarker = new mapboxgl.Marker(el, { draggable: true })
-            .setLngLat([lng, lat])
-            .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML('<strong>📍 Vị trí Test</strong><br>Kéo để di chuyển'))
-            .addTo(this.map);
-
-        // When marker is dragged, notify Blazor
-        this.testMarker.on('dragend', () => {
-            const lngLat = this.testMarker.getLngLat();
-            if (this.dotNetRef) {
-                this.dotNetRef.invokeMethodAsync('OnTestPositionChanged', lngLat.lat, lngLat.lng);
+        try {
+            if (window.AppMapHelper && window.AppMapHelper.loadScript) {
+                await window.AppMapHelper.loadScript(apiKey);
             }
-        });
 
-        // When map is clicked, move marker there
-        this.map.on('click', (e) => {
-            this.testMarker.setLngLat(e.lngLat);
-            if (this.dotNetRef) {
-                this.dotNetRef.invokeMethodAsync('OnTestPositionChanged', e.lngLat.lat, e.lngLat.lng);
-            }
-        });
+            this.mapElementId = elementId;
+            this.infoWindow = new google.maps.InfoWindow();
+            this.map = new google.maps.Map(document.getElementById(elementId), {
+                center: { lat: Number(lat), lng: Number(lng) },
+                zoom: zoom || 15,
+                mapTypeControl: false,
+                streetViewControl: false,
+                fullscreenControl: false,
+                gestureHandling: "greedy"
+            });
 
-        // Wait for map style to load before adding sources
-        this.map.on('load', () => {
-            console.log('[GeofenceTest] Map loaded and ready');
-        });
+            this.testMarker = new google.maps.Marker({
+                position: { lat: Number(lat), lng: Number(lng) },
+                map: this.map,
+                draggable: true,
+                title: "Test position",
+                label: {
+                    text: "🧑",
+                    fontSize: "22px"
+                }
+            });
 
-        console.log('[GeofenceTest] Map initialized at', lat, lng);
-        return true;
+            this.testMarker.addListener("dragend", () => {
+                const position = this.testMarker.getPosition();
+                if (position && this.dotNetRef) {
+                    this.dotNetRef.invokeMethodAsync("OnTestPositionChanged", position.lat(), position.lng());
+                }
+            });
+
+            this.map.addListener("click", (event) => {
+                const position = {
+                    lat: event.latLng.lat(),
+                    lng: event.latLng.lng()
+                };
+
+                this.testMarker.setPosition(position);
+                if (this.dotNetRef) {
+                    this.dotNetRef.invokeMethodAsync("OnTestPositionChanged", position.lat, position.lng);
+                }
+            });
+
+            console.log("[GeofenceTest] Map initialized at", lat, lng);
+            return true;
+        } catch (e) {
+            console.error("[GeofenceTest] Init Error", e);
+            return false;
+        }
     },
 
-    // Update test marker position (from input fields)
     updateTestPosition: function (lat, lng) {
         if (!this.map || !this.testMarker) return;
-        this.testMarker.setLngLat([lng, lat]);
-        this.map.flyTo({ center: [lng, lat], zoom: this.map.getZoom() });
+        const position = { lat: Number(lat), lng: Number(lng) };
+        this.testMarker.setPosition(position);
+        this.map.panTo(position);
     },
 
-    // Display POIs with geofence radius circles
-    setPoisWithGeofence: function (pois, testLat, testLng) {
-        if (!this.map) return;
+    setPoisWithGeofence: function (pois) {
+        if (!this.map || !window.google?.maps) return;
 
-        // Clear existing POI markers
-        this.poiMarkers.forEach(m => m.remove());
+        this.poiMarkers.forEach(marker => marker.setMap(null));
         this.poiMarkers = [];
 
-        // Remove existing geofence circle layers/sources
-        this.geofenceCircles.forEach(id => {
-            if (this.map.getLayer(id + '-fill')) this.map.removeLayer(id + '-fill');
-            if (this.map.getLayer(id + '-outline')) this.map.removeLayer(id + '-outline');
-            if (this.map.getSource(id)) this.map.removeSource(id);
-        });
+        this.geofenceCircles.forEach(circle => circle.setMap(null));
         this.geofenceCircles = [];
 
-        pois.forEach((poi, index) => {
+        const bounds = new google.maps.LatLngBounds();
+
+        pois.forEach((poi) => {
             const isInside = poi.isInGeofence;
-            const sourceId = 'geofence-' + index;
-
-            // Create geofence circle using GeoJSON circle approximation
-            const circleGeoJSON = this._createCircleGeoJSON(poi.latitude, poi.longitude, poi.radius);
-
-            // Add geofence circle source and layers
-            const addCircle = () => {
-                if (this.map.getSource(sourceId)) return; // already added
-
-                this.map.addSource(sourceId, {
-                    type: 'geojson',
-                    data: circleGeoJSON
-                });
-
-                // Fill layer
-                this.map.addLayer({
-                    id: sourceId + '-fill',
-                    type: 'fill',
-                    source: sourceId,
-                    paint: {
-                        'fill-color': isInside ? '#22c55e' : '#3b82f6',
-                        'fill-opacity': isInside ? 0.2 : 0.08
-                    }
-                });
-
-                // Outline layer
-                this.map.addLayer({
-                    id: sourceId + '-outline',
-                    type: 'line',
-                    source: sourceId,
-                    paint: {
-                        'line-color': isInside ? '#16a34a' : '#2563eb',
-                        'line-width': isInside ? 2.5 : 1.5,
-                        'line-dasharray': isInside ? [1, 0] : [4, 3]
-                    }
-                });
-
-                this.geofenceCircles.push(sourceId);
-            };
-
-            if (this.map.isStyleLoaded()) {
-                addCircle();
-            } else {
-                this.map.on('load', addCircle);
-            }
-
-            // Create POI marker
-            const markerEl = document.createElement('div');
-            markerEl.innerHTML = `<div style="
-                font-size: 24px;
-                background: ${isInside ? '#dcfce7' : '#fff'};
-                border: 2px solid ${isInside ? '#16a34a' : '#e2e8f0'};
-                border-radius: 50%;
-                width: 40px;
-                height: 40px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-                ${isInside ? 'animation: geoPulse 1.5s ease-in-out infinite;' : ''}
-            ">🍜</div>`;
+            const position = { lat: Number(poi.latitude), lng: Number(poi.longitude) };
 
             const distText = poi.distance >= 1000
                 ? (poi.distance / 1000).toFixed(1) + ' km'
@@ -157,8 +102,7 @@ window.GeofenceTestMap = {
                 ? '<span style="color:#16a34a; font-weight:700;">✅ TRONG geofence</span>'
                 : '<span style="color:#94a3b8;">⚪ Ngoài geofence</span>';
 
-            const popup = new mapboxgl.Popup({ offset: 25, maxWidth: '280px' })
-                .setHTML(`
+            const popupHTML = `
                     <div style="font-family: system-ui, sans-serif;">
                         <strong style="font-size:14px;">${poi.name}</strong><br>
                         <span style="color:#64748b; font-size:12px;">${poi.description || ''}</span><br>
@@ -167,88 +111,106 @@ window.GeofenceTestMap = {
                             ${statusText}
                         </div>
                     </div>
-                `);
+                `;
 
-            const marker = new mapboxgl.Marker(markerEl)
-                .setLngLat([poi.longitude, poi.latitude])
-                .setPopup(popup)
-                .addTo(this.map);
+            const circle = new google.maps.Circle({
+                map: this.map,
+                center: position,
+                radius: Number(poi.radius),
+                fillColor: isInside ? "#22c55e" : "#3b82f6",
+                fillOpacity: isInside ? 0.2 : 0.08,
+                strokeColor: isInside ? "#16a34a" : "#2563eb",
+                strokeOpacity: 1,
+                strokeWeight: isInside ? 3 : 2
+            });
 
+            const marker = new google.maps.Marker({
+                position,
+                map: this.map,
+                title: poi.name,
+                icon: {
+                    path: google.maps.SymbolPath.CIRCLE,
+                    fillColor: isInside ? "#16a34a" : "#2563eb",
+                    fillOpacity: 1,
+                    strokeColor: "#ffffff",
+                    strokeWeight: 2,
+                    scale: 10
+                }
+            });
+
+            marker.addListener("click", () => {
+                this.infoWindow.setContent(popupHTML);
+                this.infoWindow.open({ map: this.map, anchor: marker });
+            });
+
+            this.geofenceCircles.push(circle);
             this.poiMarkers.push(marker);
+            bounds.extend(position);
         });
 
-        // Add CSS animation
-        if (!document.getElementById('geofence-test-styles')) {
-            const style = document.createElement('style');
-            style.id = 'geofence-test-styles';
-            style.textContent = `
-                @keyframes geoPulse {
-                    0%, 100% { transform: scale(1); box-shadow: 0 2px 8px rgba(22,163,106,0.15); }
-                    50% { transform: scale(1.1); box-shadow: 0 4px 16px rgba(22,163,106,0.3); }
-                }
-            `;
-            document.head.appendChild(style);
+        const testPosition = this.testMarker?.getPosition?.();
+        if (testPosition) {
+            bounds.extend({ lat: testPosition.lat(), lng: testPosition.lng() });
         }
 
-        console.log('[GeofenceTest] POIs updated:', pois.length);
+        if (!bounds.isEmpty()) {
+            this.map.fitBounds(bounds, 80);
+        }
+
+        console.log("[GeofenceTest] POIs updated:", pois.length);
     },
 
-    // Fit map to show all POIs + test position
     fitAll: function () {
-        if (!this.map) return;
+        if (!this.map || !window.google?.maps) return;
 
-        const bounds = new mapboxgl.LngLatBounds();
+        const bounds = new google.maps.LatLngBounds();
         let hasPoints = false;
 
         this.poiMarkers.forEach(m => {
-            bounds.extend(m.getLngLat());
-            hasPoints = true;
+            const pos = m.getPosition?.();
+            if (pos) {
+                bounds.extend({ lat: pos.lat(), lng: pos.lng() });
+                hasPoints = true;
+            }
         });
 
         if (this.testMarker) {
-            bounds.extend(this.testMarker.getLngLat());
-            hasPoints = true;
+            const pos = this.testMarker.getPosition?.();
+            if (pos) {
+                bounds.extend({ lat: pos.lat(), lng: pos.lng() });
+                hasPoints = true;
+            }
         }
 
         if (hasPoints) {
-            this.map.fitBounds(bounds, { padding: 60, maxZoom: 17 });
+            this.map.fitBounds(bounds, 80);
         }
     },
 
-    // Create GeoJSON circle polygon (approximation with 64 points)
-    _createCircleGeoJSON: function (lat, lng, radiusMeters) {
-        const points = 64;
-        const coords = [];
-        const km = radiusMeters / 1000;
-        const distanceX = km / (111.32 * Math.cos(lat * Math.PI / 180));
-        const distanceY = km / 110.574;
-
-        for (let i = 0; i < points; i++) {
-            const theta = (i / points) * (2 * Math.PI);
-            const x = lng + distanceX * Math.cos(theta);
-            const y = lat + distanceY * Math.sin(theta);
-            coords.push([x, y]);
-        }
-        coords.push(coords[0]); // close polygon
-
-        return {
-            type: 'Feature',
-            geometry: {
-                type: 'Polygon',
-                coordinates: [coords]
-            }
-        };
-    },
-
-    // Destroy
     destroy: function () {
         if (this.map) {
-            this.map.remove();
-            this.map = null;
-            this.testMarker = null;
+            this.poiMarkers.forEach(marker => marker.setMap(null));
+            if(this.testMarker) this.testMarker.setMap(null);
+            this.geofenceCircles.forEach(circle => circle.setMap(null));
+
             this.poiMarkers = [];
             this.geofenceCircles = [];
+            if (this.infoWindow) {
+                this.infoWindow.close();
+                this.infoWindow = null;
+            }
+            google.maps.event.clearInstanceListeners(this.map);
+            this.map = null;
+            this.testMarker = null;
             this.dotNetRef = null;
+
+            if (this.mapElementId) {
+                const element = document.getElementById(this.mapElementId);
+                if (element) {
+                    element.innerHTML = "";
+                }
+                this.mapElementId = null;
+            }
         }
     }
 };
