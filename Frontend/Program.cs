@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Components.Authorization;
 using FoodStreet.Client;
 using FoodStreet.Client.Services;
 
+
+
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
@@ -45,14 +47,18 @@ builder.Services.AddAuthorizationCore();
 // APPLICATION SERVICES
 // ========================================
 builder.Services.AddScoped<ILocationClientService, LocationClientService>();
+builder.Services.AddScoped<ITourClientService, TourClientService>();
+builder.Services.AddScoped<IOwnerPortalService, OwnerPortalService>();
 builder.Services.AddScoped<IAudioService, AudioService>();
 builder.Services.AddScoped<IUserService, UserService>();
     builder.Services.AddScoped<IGpsTrackingService, GpsTrackingService>();
+    builder.Services.AddScoped<INarrationEngine, NarrationEngine>();
     builder.Services.AddScoped<ITtsService, WebTtsService>();
     builder.Services.AddScoped<TourPlayerService>();
     builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddLocalization();
 builder.Services.AddSingleton<ILocalizationService, LocalizationService>();
 builder.Services.AddSingleton<IPlatformDetector, WebPlatformDetector>();
+builder.Services.AddScoped<IMobileNativeMapService, WebNativeMapService>();
 
 await builder.Build().RunAsync();
