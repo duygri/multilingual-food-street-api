@@ -23,18 +23,26 @@ namespace FoodStreet.Client.Services
 
         public override async Task<AuthenticationState> GetAuthenticationStateAsync()
         {
-            var token = await _authService.GetTokenAsync();
-
-            if (string.IsNullOrEmpty(token))
+            try
             {
+                var token = await _authService.GetTokenAsync();
+
+                if (string.IsNullOrEmpty(token))
+                {
+                    return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
+                }
+
+                var claims = ParseClaimsFromJwt(token);
+                var identity = new ClaimsIdentity(claims, "jwt");
+                var principal = new ClaimsPrincipal(identity);
+
+                return new AuthenticationState(principal);
+            }
+            catch
+            {
+                // JS Interop not ready or session storage error — treat as anonymous
                 return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
             }
-
-            var claims = ParseClaimsFromJwt(token);
-            var identity = new ClaimsIdentity(claims, "jwt");
-            var principal = new ClaimsPrincipal(identity);
-
-            return new AuthenticationState(principal);
         }
 
         public void NotifyAuthStateChanged()
