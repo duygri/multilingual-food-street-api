@@ -12,12 +12,12 @@ namespace FoodStreet.Client.Services
             _js = js;
         }
 
-        public async Task PlayTextAsync(string text)
+        public async Task PlayTextAsync(string text, string? languageCode = null)
         {
             if (string.IsNullOrWhiteSpace(text)) return;
             try
             {
-                await _js.InvokeVoidAsync("TtsService.playText", text);
+                await _js.InvokeVoidAsync("TtsService.playText", text, languageCode);
             }
             catch { }
         }
