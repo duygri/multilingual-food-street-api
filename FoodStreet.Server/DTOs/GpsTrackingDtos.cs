@@ -22,7 +22,13 @@ namespace PROJECT_C_.DTOs
         public string? ImageUrl { get; set; }
         public bool HasAudio { get; set; }
         public string? AudioUrl { get; set; }
+        public string AudioStatus { get; set; } = "pending";
+        public string LanguageCode { get; set; } = "vi-VN";
+        public int Tier { get; set; } = 3;
+        public bool FallbackUsed { get; set; }
         public string? TtsScript { get; set; }
+        public bool IsFallback { get; set; }
+        public int Priority { get; set; }
     }
 
     public class GeofenceCheckResponse
