@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,7 +22,7 @@ namespace FoodStreet.Mobile.Services
             _httpClient = new HttpClient();
         }
 
-        public async Task PlayTextAsync(string text)
+        public async Task PlayTextAsync(string text, string? languageCode = null)
         {
             if (string.IsNullOrWhiteSpace(text)) return;
             try
@@ -34,7 +35,14 @@ namespace FoodStreet.Mobile.Services
                 // Dừng audio player nếu đang phát
                 _audioPlayer?.Stop();
                 
-                await TextToSpeech.Default.SpeakAsync(text, new SpeechOptions { Volume = 1.0f }, _ttsCts.Token);
+                var options = new SpeechOptions { Volume = 1.0f };
+                var locale = await ResolveLocaleAsync(languageCode);
+                if (locale != null)
+                {
+                    options.Locale = locale;
+                }
+
+                await TextToSpeech.Default.SpeakAsync(text, options, _ttsCts.Token);
             }
             catch (OperationCanceledException) { }
             catch (Exception ex)
@@ -84,7 +92,44 @@ namespace FoodStreet.Mobile.Services
             }
             return Task.CompletedTask;
         }
+
+        private static async Task<Locale?> ResolveLocaleAsync(string? languageCode)
+        {
+            if (string.IsNullOrWhiteSpace(languageCode))
+            {
+                return null;
+            }
+
+            try
+            {
+                var normalized = NormalizeLanguageCode(languageCode);
+                var locales = await TextToSpeech.Default.GetLocalesAsync();
+
+                var exact = locales.FirstOrDefault(locale =>
+                    string.Equals(locale.Language, normalized, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals($"{locale.Language}-{locale.Country}", normalized, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals($"{locale.Language}_{locale.Country}", normalized, StringComparison.OrdinalIgnoreCase));
+
+                if (exact != null)
+                {
+                    return exact;
+                }
+
+                var languagePrefix = normalized.Split('-', '_')[0];
+                return locales.FirstOrDefault(locale =>
+                    string.Equals(locale.Language, languagePrefix, StringComparison.OrdinalIgnoreCase) ||
+                    locale.Language.StartsWith(languagePrefix, StringComparison.OrdinalIgnoreCase));
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static string NormalizeLanguageCode(string languageCode)
+        {
+            return languageCode.Split(',')[0].Trim();
+        }
     }
 }
-
 
