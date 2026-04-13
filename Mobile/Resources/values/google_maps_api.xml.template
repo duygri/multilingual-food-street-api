@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-  <!--
-    Copy this file to google_maps_api.xml locally, replace the placeholder with
-    your Android-restricted Google Maps SDK key, and keep the real file out of git.
-  -->
-  <string name="google_maps_key">__SET_ANDROID_MAPS_KEY__</string>
-</resources>

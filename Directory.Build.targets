@@ -1,8 +1,0 @@
-<Project>
-  <!-- Workaround for environments where MSBuild task hosts cannot be created (e.g., restricted named pipes). -->
-  <Target Name="ResolveWasmOutputs" Condition="'$(DisableWasmBuildAssets)' == 'true'">
-  </Target>
-
-  <Target Name="_ResolveWasmOutputs" Condition="'$(DisableWasmBuildAssets)' == 'true'">
-  </Target>
-</Project>

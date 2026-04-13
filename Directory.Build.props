@@ -1,6 +1,0 @@
-<Project>
-  <PropertyGroup>
-    <!-- Force-enable workload resolver; local SDK includes stub locator SDKs to avoid MSB4276. -->
-    <MSBuildEnableWorkloadResolver>true</MSBuildEnableWorkloadResolver>
-  </PropertyGroup>
-</Project>
