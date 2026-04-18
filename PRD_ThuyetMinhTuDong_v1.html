@@ -1,0 +1,2097 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PRD v1.1 - Ứng dụng Thuyết Minh Tự Động</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#08111f;--surface:#0f1b2e;--card:#13233b;--card-2:#172b48;--border:#28405e;
+  --accent:#10b981;--accent-2:#38bdf8;--good:#22c55e;--warn:#fb7185;--purple:#a855f7;--orange:#f59e0b;
+  --text:#e2e8f0;--muted:#94a3b8;--dim:#64748b;
+}
+html{scroll-behavior:smooth}
+body{font-family:"Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+a{color:var(--accent-2);text-decoration:none}
+code{font-family:"Cascadia Code","Consolas",monospace;background:rgba(148,163,184,.12);padding:2px 6px;border-radius:6px}
+.sidebar{position:fixed;top:0;left:0;width:290px;height:100vh;overflow-y:auto;background:linear-gradient(180deg,#0c1728,#0a1424);border-right:1px solid var(--border);padding:22px 0;z-index:20}
+.brand{padding:0 22px 18px;font-size:18px;font-weight:800;line-height:1.35}
+.brand small{display:block;color:var(--muted);font-size:12px;font-weight:600;margin-top:6px}
+.nav-group{margin-bottom:12px}
+.nav-title{padding:8px 22px;color:var(--dim);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.4px}
+.nav-link{display:block;padding:8px 22px 8px 34px;color:var(--muted);font-size:13px;border-left:3px solid transparent;transition:.2s}
+.nav-link:hover,.nav-link.active{background:rgba(16,185,129,.08);color:var(--text);border-left-color:var(--accent)}
+.main{margin-left:290px;padding:42px 48px 80px}
+section{margin-bottom:54px}
+h1{font-size:34px;font-weight:900;line-height:1.2;margin-bottom:10px;background:linear-gradient(135deg,var(--accent),#6ee7b7 40%,var(--accent-2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+h2{font-size:24px;font-weight:800;margin:28px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+h3{font-size:17px;font-weight:700;margin:20px 0 10px;color:var(--accent)}
+h4{font-size:14px;font-weight:700;margin:10px 0 6px;color:var(--accent-2)}
+p,li{font-size:14px;color:var(--muted)}
+ul{padding-left:18px}
+.subtitle{font-size:14px;color:var(--muted);margin-bottom:28px}
+.hero{background:radial-gradient(circle at top right,rgba(16,185,129,.14),transparent 35%),linear-gradient(135deg,#0d1626,#152845);border:1px solid var(--border);border-radius:18px;padding:28px 30px;margin-bottom:28px}
+.stats{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-top:20px}
+.stat{background:rgba(19,35,59,.72);border:1px solid var(--border);border-radius:14px;padding:18px 14px;text-align:center}
+.stat .num{font-size:24px;font-weight:900;color:var(--accent)}
+.stat .label{font-size:12px;color:var(--muted);margin-top:4px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:16px}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px;margin:10px 0 18px}
+th{text-align:left;padding:10px 14px;background:var(--card-2);color:var(--accent);font-weight:700;border-bottom:1px solid var(--border)}
+td{padding:9px 14px;border-bottom:1px solid rgba(40,64,94,.7);color:var(--muted);vertical-align:top}
+tr:hover td{background:rgba(19,35,59,.32)}
+.badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700}
+.badge-blue{background:rgba(56,189,248,.15);color:var(--accent-2)}
+.badge-accent{background:rgba(16,185,129,.15);color:var(--accent)}
+.badge-red{background:rgba(251,113,133,.15);color:var(--warn)}
+.badge-green{background:rgba(34,197,94,.15);color:var(--good)}
+.badge-purple{background:rgba(168,85,247,.15);color:var(--purple)}
+.badge-orange{background:rgba(245,158,11,.15);color:var(--orange)}
+.alert{border-left:4px solid var(--accent);background:rgba(16,185,129,.08);padding:14px 16px;border-radius:0 10px 10px 0;margin:14px 0}
+.alert.info{border-color:var(--accent-2);background:rgba(56,189,248,.08)}
+.alert.warn{border-color:var(--warn);background:rgba(251,113,133,.08)}
+.alert.success{border-color:var(--good);background:rgba(34,197,94,.08)}
+.module-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:14px 0}
+.module{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;min-height:150px}
+.module .icon{font-size:24px;margin-bottom:6px}
+.module .name{font-size:14px;font-weight:800;color:var(--text)}
+.module .desc{font-size:12px;color:var(--muted);margin-top:4px}
+.code-block{background:#0b1220;border:1px solid var(--border);border-radius:12px;padding:16px;font-family:"Cascadia Code","Consolas",monospace;font-size:12.5px;white-space:pre;overflow-x:auto;color:#dbe4ee;margin:14px 0}
+.diagram{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;margin:16px 0;overflow-x:auto}
+.diagram .mermaid{display:flex;justify-content:center}
+.timeline{position:relative;padding-left:28px;margin:16px 0}
+.timeline::before{content:"";position:absolute;left:8px;top:0;bottom:0;width:2px;background:var(--accent)}
+.timeline-item{position:relative;margin-bottom:18px}
+.timeline-item::before{content:"";position:absolute;left:-28px;top:7px;width:12px;height:12px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px rgba(16,185,129,.14)}
+.timeline-item h4{margin:0 0 4px;color:var(--text)}
+.timeline-item p{margin:0}
+.footer{text-align:center;color:var(--dim);font-size:12px;padding-top:28px;border-top:1px solid var(--border)}
+.version-badge{position:absolute;top:20px;right:30px;background:var(--accent);color:#000;font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px}
+@media(max-width:1100px){.stats{grid-template-columns:repeat(3,1fr)}.module-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:900px){.sidebar{display:none}.main{margin-left:0;padding:20px}.grid-2,.grid-3,.grid-4,.module-grid,.stats{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<nav class="sidebar">
+  <div class="brand">
+    PRD v1.3
+    <small>Ứng dụng Thuyết Minh Tự Động</small>
+  </div>
+  <div class="nav-group">
+    <div class="nav-title">PRD</div>
+    <a class="nav-link" href="#overview">Tổng quan</a>
+    <a class="nav-link" href="#vision">Định vị & Mục tiêu</a>
+    <a class="nav-link" href="#metrics">Success Metrics</a>
+    <a class="nav-link" href="#scope">Phạm vi & Tác nhân</a>
+    <a class="nav-link" href="#out-of-scope">Out of Scope</a>
+    <a class="nav-link" href="#assumptions">Giả định & Dependencies</a>
+    <a class="nav-link" href="#risks">Rủi ro & Giảm thiểu</a>
+    <a class="nav-link" href="#release">Release Plan</a>
+    <a class="nav-link" href="#capabilities">Năng lực cốt lõi</a>
+    <a class="nav-link" href="#architecture">Kiến trúc</a>
+    <a class="nav-link" href="#data-model">Mô hình dữ liệu</a>
+    <a class="nav-link" href="#requirements">Yêu cầu chức năng</a>
+    <a class="nav-link" href="#nfr">Yêu cầu phi chức năng</a>
+    <a class="nav-link" href="#permissions">Chức năng theo vai trò</a>
+    <a class="nav-link" href="#guest-mode">Guest Mode</a>
+    <a class="nav-link" href="#api">Module API</a>
+    <a class="nav-link" href="#flows">Luồng vận hành</a>
+    <a class="nav-link" href="#deployment">Deployment</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-title">UML</div>
+    <a class="nav-link" href="#uml-usecase">Use Case</a>
+    <a class="nav-link" href="#uml-class">Sơ đồ lớp</a>
+    <a class="nav-link" href="#uml-sequence">Sơ đồ tuần tự</a>
+    <a class="nav-link" href="#uml-activity">Sơ đồ hoạt động</a>
+    <a class="nav-link" href="#uml-state">Sơ đồ trạng thái</a>
+  </div>
+</nav>
+
+<main class="main">
+  <span class="version-badge">v1.3</span>
+
+  <!-- ========== 1. TỔNG QUAN ========== -->
+  <section id="overview">
+    <div class="hero">
+      <h1>PRD & UML v1.3 — Ứng dụng Thuyết Minh Tự Động</h1>
+      <p class="subtitle">Tài liệu đặc tả sản phẩm và UML — Ứng dụng Android thuyết minh tự động dựa trên vị trí GPS, geofencing và TTS đa ngôn ngữ cho du khách. Kèm web portal quản trị cho Admin/Owner.</p>
+      <div class="alert">
+        Đây là dự án <strong>độc lập</strong>, tách biệt hoàn toàn khỏi hệ thống FoodStreet/Vĩnh Khánh. Ứng dụng hướng tới việc thuyết minh tự động tại các điểm tham quan khi du khách di chuyển qua các khu vực POI.
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="num">3</div><div class="label">Tác nhân chính</div></div>
+        <div class="stat"><div class="num">12</div><div class="label">Bảng dữ liệu</div></div>
+        <div class="stat"><div class="num">12</div><div class="label">Core Features</div></div>
+        <div class="stat"><div class="num">5</div><div class="label">Ngôn ngữ</div></div>
+        <div class="stat"><div class="num">RT</div><div class="label">SignalR</div></div>
+        <div class="stat"><div class="num">C#</div><div class="label">Stack</div></div>
+      </div>
+    </div>
+
+    <div class="grid-3">
+      <div class="card">
+        <h3>🧳 Tourist (Du khách)</h3>
+        <p>Sử dụng ứng dụng Android (.NET MAUI) để khám phá điểm tham quan. Khi đi vào vùng geofence, ứng dụng tự động phát thuyết minh bằng TTS hoặc audio thu sẵn theo ngôn ngữ được chọn.</p>
+      </div>
+      <div class="card">
+        <h3>🏢 POI Owner</h3>
+        <p>Quản lý nội dung các điểm thuyết minh được gán cho mình: thêm/sửa POI, upload hoặc tạo audio TTS, quản lý bản dịch đa ngôn ngữ. Thay đổi phải gửi duyệt trước khi công khai.</p>
+      </div>
+      <div class="card">
+        <h3>🛡️ Admin</h3>
+        <p>Quản trị hệ thống qua web portal (Blazor WASM): duyệt nội dung, quản lý tour, xem analytics, xử lý moderation và giám sát vận hành toàn bộ hệ thống.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 2. ĐỊNH VỊ & MỤC TIÊU ========== -->
+  <section id="vision">
+    <h2>1. Định vị sản phẩm & Mục tiêu</h2>
+    <div class="card">
+      <h3>Tuyên bố sản phẩm</h3>
+      <p>Ứng dụng Thuyết Minh Tự Động là nền tảng hướng dẫn du khách bằng audio thuyết minh đa ngôn ngữ, kích hoạt tự động theo vị trí GPS. Hệ thống bao gồm ứng dụng Android cho du khách và web portal cho Admin/Owner quản lý nội dung, với mục tiêu số hóa trải nghiệm tham quan tại các khu vực có nhiều điểm đến (phường Khánh Hội, Vĩnh Hội, Xóm Chiếu…).</p>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Mục tiêu chính</h3>
+        <ul>
+          <li>Tự động phát thuyết minh khi du khách đến gần điểm POI (geofence-based).</li>
+          <li>Hỗ trợ đa ngôn ngữ linh hoạt bằng Google Cloud Translation + TTS.</li>
+          <li>Cho phép dùng cả audio thu sẵn (giọng chuyên nghiệp) và TTS (linh hoạt).</li>
+          <li>Quản lý nội dung tập trung cho Admin/Owner với flow duyệt rõ ràng.</li>
+          <li>Tối ưu pin và độ chính xác GPS trên Android (foreground + background).</li>
+          <li>Hỗ trợ kích hoạt bằng QR Code tại các điểm dừng xe buýt.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Vấn đề cần giải quyết</h3>
+        <ul>
+          <li>Du khách thiếu thông tin khi đến điểm tham quan — không có hướng dẫn viên hoặc biển chỉ dẫn đa ngôn ngữ.</li>
+          <li>Trải nghiệm tham quan bị động: du khách phải tự tìm kiếm thông tin.</li>
+          <li>Nội dung giới thiệu hiện tại rời rạc, không được chuẩn hóa.</li>
+          <li>Du khách quốc tế cần kênh tiếp cận nhanh bằng ngôn ngữ bản địa.</li>
+          <li>Chưa có hệ thống tracking để đo hiệu quả truyền thông tại điểm.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 3. SUCCESS METRICS ========== -->
+  <section id="metrics">
+    <h2>2. Success Metrics / KPI</h2>
+    <div class="alert info">
+      Các chỉ số đo lường để xác định sản phẩm đã "xong" — trả lời câu hỏi "đo bằng gì".
+    </div>
+    <div class="grid-4">
+      <div class="stat"><div class="num">30+</div><div class="label">POI số hóa</div></div>
+      <div class="stat"><div class="num">80%</div><div class="label">POI có ≥2 ngôn ngữ</div></div>
+      <div class="stat"><div class="num">70%</div><div class="label">POI có audio sẵn sàng</div></div>
+      <div class="stat"><div class="num">500+</div><div class="label">Lượt trigger/tháng</div></div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Metric</th><th>Target</th><th>Cách đo lường</th><th>Tần suất</th></tr>
+        <tr><td>Số POI đã số hóa</td><td>30+ POI</td><td>Đếm record trong bảng pois với status = published</td><td>Hàng tuần</td></tr>
+        <tr><td>Tỷ lệ POI có đủ 2-5 ngôn ngữ</td><td>≥ 80%</td><td>Đếm POI có ≥ 2 bản dịch / Tổng POI published</td><td>Hàng tuần</td></tr>
+        <tr><td>Tỷ lệ audio sẵn sàng</td><td>≥ 70%</td><td>Đếm POI có audio_assets status = ready / Tổng POI</td><td>Hàng tuần</td></tr>
+        <tr><td>Số lượt geofence trigger</td><td>500+/tháng</td><td>Đếm visit_events với event_type = geofence_enter</td><td>Hàng tháng</td></tr>
+        <tr><td>Số lượt QR scan</td><td>200+/tháng</td><td>Đếm visit_events với event_type = qr_scan</td><td>Hàng tháng</td></tr>
+        <tr><td>API response time (P95)</td><td>&lt; 500ms</td><td>Log timing từ API middleware</td><td>Hàng ngày</td></tr>
+        <tr><td>Tỷ lệ narration completion</td><td>≥ 60%</td><td>Đếm audio phát hết / tổng lượt phát</td><td>Hàng tháng</td></tr>
+        <tr><td>Battery drain rate</td><td>&lt; 5%/giờ</td><td>Test thực địa: GPS tracking + audio playback 1 giờ liên tục</td><td>Mỗi release</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ========== 4. PHẠM VI & TÁC NHÂN ========== -->
+  <section id="scope">
+    <h2>3. Phạm vi, Tác nhân & Quy ước</h2>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Tác nhân</th><th>Mô tả</th><th>Platform</th><th>Trách nhiệm chính</th><th>Đăng nhập</th></tr>
+        <tr>
+          <td><span class="badge badge-blue">Tourist</span></td>
+          <td>Du khách sử dụng app Android</td>
+          <td>.NET MAUI Android</td>
+          <td>Xem bản đồ, nghe thuyết minh tự động theo GPS/geofence, quét QR, chọn ngôn ngữ, xem tour</td>
+          <td>Guest mode (không bắt buộc login)</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-orange">POI Owner</span></td>
+          <td>Quản lý nội dung điểm được gán</td>
+          <td>Blazor WASM (Web)</td>
+          <td>CRUD POI/audio/bản dịch của điểm mình, gửi duyệt thay đổi</td>
+          <td>Phân quyền (đăng nhập bắt buộc)</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-red">Admin</span></td>
+          <td>Quản trị viên hệ thống</td>
+          <td>Blazor WASM (Web)</td>
+          <td>Duyệt nội dung, quản lý tour, analytics, moderation, quản lý user</td>
+          <td>Full access</td>
+        </tr>
+      </table>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Quy ước tên gọi</h3>
+        <div class="table-wrap">
+          <table>
+            <tr><th>Thuật ngữ</th><th>Ý nghĩa</th></tr>
+            <tr><td><code>POI</code></td><td>Point of Interest — điểm thuyết minh</td></tr>
+            <tr><td><code>Geofence</code></td><td>Vùng kích hoạt tự động quanh POI</td></tr>
+            <tr><td><code>Narration Engine</code></td><td>Module quyết định phát TTS hay audio, quản lý queue</td></tr>
+            <tr><td><code>Geofence Engine</code></td><td>Module xử lý GPS, tính khoảng cách, trigger event</td></tr>
+            <tr><td><code>VisitEvent</code></td><td>Sự kiện tương tác (nghe, quét QR, vào geofence…)</td></tr>
+            <tr><td><code>TTS</code></td><td>Text-to-Speech (Google Cloud)</td></tr>
+            <tr><td><code>Cooldown</code></td><td>Thời gian chờ tối thiểu trước khi phát lại cùng POI</td></tr>
+            <tr><td><code>Debounce</code></td><td>Chống kích hoạt liên tục khi vùng geofence chồng lấn</td></tr>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Ngôn ngữ hỗ trợ</h3>
+        <ul>
+          <li><code>vi</code> - Tiếng Việt (mặc định)</li>
+          <li><code>en</code> - English</li>
+          <li><code>ja</code> - 日本語</li>
+          <li><code>ko</code> - 한국어</li>
+          <li><code>zh</code> - 中文</li>
+        </ul>
+        <div class="alert info" style="margin-top:12px">
+          <strong>Ghi chú:</strong> Ưu tiên 5 ngôn ngữ mục tiêu trên. Khi thiếu bản dịch, hệ thống fallback về tiếng Việt. Bản dịch tự động qua Google Cloud Translation là fallback, ưu tiên bản dịch biên tập tay.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 5. OUT OF SCOPE ========== -->
+  <section id="out-of-scope">
+    <h2>4. Out of Scope — Ngoài phạm vi</h2>
+    <div class="alert warn">
+      Những mục này KHÔNG thuộc phạm vi PoC/MVP hiện tại. Giữ lại như wishlist để xem xét sau.
+    </div>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Chức năng</th><th>Lý do ngoài scope</th><th>Ghi chú</th></tr>
+        <tr><td>Thanh toán (Payment)</td><td>Cần tích hợp cổng thanh toán (MoMo/VNPay/Stripe), xây dựng mô hình gói premium, lịch sử giao dịch. Hướng đi: free basic tour + premium tour/audio chuyên sâu có phí.</td><td>Future v2</td></tr>
+        <tr><td>Chatbot AI</td><td>Chatbot hỏi đáp về POI bằng LLM (GPT/Gemini). Cần xây dựng knowledge base từ nội dung POI, guardrails chống hallucination, quản lý ngữ cảnh hội thoại đa ngôn ngữ.</td><td>Future v2</td></tr>
+        <tr><td>Offline Map toàn phần</td><td>Offline tile package + storage lớn, vượt scope</td><td>Future</td></tr>
+        <tr><td>Social sharing</td><td>Không thuộc phạm vi core</td><td>Future</td></tr>
+        <tr><td>Review/Rating POI</td><td>Tăng phức tạp, chưa cần thiết ở MVP</td><td>Future</td></tr>
+
+        <tr><td>AR (Augmented Reality)</td><td>Phức tạp, cần hardware tốt</td><td>Future v2</td></tr>
+        <tr><td>Multi-tenant (nhiều khu vực)</td><td>MVP tập trung 1 khu vực thí điểm</td><td>Future</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ========== 6. GIẢ ĐỊNH & DEPENDENCIES ========== -->
+  <section id="assumptions">
+    <h2>5. Assumptions & Dependencies</h2>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Giả định (Assumptions)</h3>
+        <ul>
+          <li>Du khách có smartphone Android với GPS và internet (3G/4G).</li>
+          <li>Khu vực thí điểm có coverage mạng di động tốt.</li>
+          <li>POI Owner có khả năng sử dụng web portal cơ bản.</li>
+          <li>Google Cloud credentials sẽ được cấp và không bị revoke.</li>
+          <li>Dữ liệu POI ban đầu được nhập liệu thủ công hoặc import CSV.</li>
+          <li>Ưu tiên pre-generate audio batch thay vì on-demand để tối ưu free tier.</li>
+          <li>Bán kính geofence từ 20–50m tùy mật độ POI khu vực.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Dependencies — Phụ thuộc bên ngoài</h3>
+        <ul>
+          <li><strong>Mapbox</strong>: Bản đồ Android (Mapbox SDK) + Web (Mapbox GL JS)</li>
+          <li><strong>Google Cloud Text-to-Speech</strong>: Tạo audio narration đa ngôn ngữ</li>
+          <li><strong>Google Cloud Translation</strong>: Dịch tự động fallback</li>
+          <li><strong>Cloudflare R2</strong>: Object storage cho file audio .mp3 và media</li>
+          <li><strong>SignalR</strong>: Realtime communication (server-side)</li>
+          <li><strong>Android FusedLocationProviderClient</strong>: GPS native trên mobile</li>
+          <li><strong>SQLite</strong>: Local database trên mobile (offline cache)</li>
+          <li><strong>PostgreSQL</strong>: Server-side database chính</li>
+        </ul>
+      </div>
+    </div>
+    <div class="alert success">
+      <strong>Free tier budget (ước tính):</strong> Google TTS Standard free 1M ký tự/tháng. Với 500 ký tự/POI × 5 ngôn ngữ × 30 POI = 75,000 ký tự — vẫn trong ngưỡng free nếu pre-generate 1 lần. Google Translation free 500K ký tự/tháng. Cloudflare R2 free 10GB storage + 10M read/tháng.
+    </div>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Dependency</th><th>Loại</th><th>Fallback khi lỗi</th><th>Critical</th></tr>
+        <tr><td>Mapbox API/SDK</td><td>External</td><td>Hiển thị danh sách POI thay vì map</td><td>High</td></tr>
+        <tr><td>Google Cloud TTS</td><td>External</td><td>Hiển thị text fallback</td><td>Medium</td></tr>
+        <tr><td>Google Cloud Translation</td><td>External</td><td>Chỉ hiển thị tiếng Việt</td><td>Low</td></tr>
+        <tr><td>Cloudflare R2</td><td>External</td><td>Phát bản cache local / text fallback</td><td>Medium</td></tr>
+        <tr><td>SignalR</td><td>Internal</td><td>Polling mỗi 30s</td><td>Medium</td></tr>
+        <tr><td>GPS Location</td><td>Device</td><td>QR scan hoặc danh sách POI thủ công</td><td>High</td></tr>
+        <tr><td>PostgreSQL</td><td>Internal</td><td>Service unavailable</td><td>Critical</td></tr>
+        <tr><td>SQLite (mobile)</td><td>Device</td><td>Always online mode</td><td>Low</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ========== 7. RỦI RO ========== -->
+  <section id="risks">
+    <h2>6. Risks & Mitigations</h2>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Risk</th><th>Mức độ</th><th>Tác động</th><th>Mitigation</th></tr>
+        <tr><td>GPS không chính xác trong khu đông đúc/nhà cao tầng</td><td><span class="badge badge-red">High</span></td><td>Geofence trigger sai POI</td><td>Haversine + nearest-only logic, bán kính geofence lớn hơn, QR fallback</td></tr>
+        <tr><td>Location permission bị từ chối</td><td><span class="badge badge-orange">Medium</span></td><td>Geofence không hoạt động</td><td>Hiển thị danh sách POI thủ công, QR entry, hướng dẫn bật permission</td></tr>
+        <tr><td>Battery drain nhanh khi GPS background</td><td><span class="badge badge-red">High</span></td><td>User tắt app sớm</td><td>Adaptive interval: high accuracy khi di chuyển, low-power khi đứng yên</td></tr>
+        <tr><td>Google API lỗi / hết quota</td><td><span class="badge badge-orange">Medium</span></td><td>Audio TTS không phát</td><td>Pre-generate batch, cache R2, text fallback</td></tr>
+        <tr><td>Mapbox token bị revoke</td><td><span class="badge badge-red">High</span></td><td>Map không hiển thị</td><td>Rotate keys, monitoring, fallback danh sách POI</td></tr>
+        <tr><td>Geofence chồng lấn (POI sát nhau)</td><td><span class="badge badge-orange">Medium</span></td><td>Trigger spam nhiều POI cùng lúc</td><td>nearest-only + priority + debounce + cooldown</td></tr>
+        <tr><td>Network yếu / gián đoạn</td><td><span class="badge badge-orange">Medium</span></td><td>Audio buffer fails</td><td>SQLite offline cache, pre-download audio pack</td></tr>
+        <tr><td>Content moderation chậm</td><td><span class="badge badge-blue">Low</span></td><td>POI mới không xuất hiện</td><td>Auto-approve draft, notify owner</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ========== 8. RELEASE PLAN ========== -->
+  <section id="release">
+    <h2>7. Release Plan — PoC & MVP</h2>
+    <div class="alert info">
+      <strong>PoC</strong>: Chứng minh trải nghiệm end-to-end (GPS → Geofence → Narration). <strong>MVP</strong>: Mở rộng tính năng quản trị, analytics và QR. <strong>Future</strong>: Định hướng sau MVP.
+    </div>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Phase</th><th>Feature</th><th>Mô tả</th></tr>
+        <tr><td><span class="badge badge-green">PoC</span></td><td>Narration Engine</td><td>Hỗ trợ TTS (Google Cloud Translation + TTS) và file audio thu sẵn. Queue audio, chống phát trùng, tự dừng khi có thông báo hệ thống.</td></tr>
+        <tr><td><span class="badge badge-green">PoC</span></td><td>GPS Tracking + Geofence Engine</td><td>Theo dõi vị trí liên tục (foreground + background). Kích hoạt theo bán kính và priority POI. Debounce + cooldown chống spam.</td></tr>
+        <tr><td><span class="badge badge-green">PoC</span></td><td>Map Discovery</td><td>Hiển thị vị trí user + tất cả POI trên Mapbox. Highlight POI gần nhất. Xem chi tiết POI.</td></tr>
+        <tr><td><span class="badge badge-green">PoC</span></td><td>POI Content + Translation</td><td>Mỗi POI có: mô tả văn bản, ảnh minh họa, link bản đồ, file audio hoặc script TTS. Bản dịch fallback qua Google Cloud Translation.</td></tr>
+        <tr><td><span class="badge badge-green">PoC</span></td><td>Offline Audio Cache</td><td>Cache audio local bằng SQLite để phát lại khi mạng yếu.</td></tr>
+        <tr><td><span class="badge badge-orange">MVP</span></td><td>CMS Web Portal</td><td>Blazor WASM quản trị: POI, Audio, Bản dịch, Lịch sử, Tour cho Admin/Owner.</td></tr>
+        <tr><td><span class="badge badge-orange">MVP</span></td><td>QR Code Entry</td><td>Quét QR tại điểm dừng xe buýt (Khánh Hội, Vĩnh Hội, Xóm Chiếu…) → nghe ngay, không cần GPS.</td></tr>
+        <tr><td><span class="badge badge-orange">MVP</span></td><td>Analytics Dashboard</td><td>Tuyến di chuyển ẩn danh, top POI nghe nhiều, thời gian trung bình nghe, heatmap vị trí.</td></tr>
+        <tr><td><span class="badge badge-orange">MVP</span></td><td>Tour Management</td><td>Gom nhiều POI thành hành trình có thứ tự, ước lượng thời gian, theo dõi tiến trình.</td></tr>
+        <tr><td><span class="badge badge-orange">MVP</span></td><td>Moderation & Realtime</td><td>Owner gửi duyệt → Admin approve/reject. SignalR thông báo realtime.</td></tr>
+        <tr><td><span class="badge badge-orange">MVP</span></td><td>Notification Center</td><td>Trung tâm thông báo hiển thị ở góc trên bên phải (bell icon) trên cả web portal và mobile app. Dropdown panel hiển thị thông báo moderation, audio ready, tour mới, cập nhật POI. Không đặt trong sidebar.</td></tr>
+        <tr><td><span class="badge badge-purple">Future</span></td><td>Thanh toán (Payment)</td><td>Tích hợp cổng thanh toán (MoMo/VNPay/Stripe). Mô hình gói premium: free basic tour + premium tour/audio chuyên sâu có phí.</td></tr>
+        <tr><td><span class="badge badge-purple">Future</span></td><td>Chatbot AI</td><td>Chatbot hỏi đáp về POI bằng LLM (GPT/Gemini). Knowledge base từ nội dung POI, guardrails chống hallucination, đa ngôn ngữ.</td></tr>
+        <tr><td><span class="badge badge-purple">Future</span></td><td>Offline Map Pack</td><td>Mapbox Offline SDK tải bản đồ khu vực offline dưới dạng map pack có thể download trước.</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ========== 9. NĂNG LỰC CỐT LÕI ========== -->
+  <section id="capabilities">
+    <h2>8. Năng lực cốt lõi</h2>
+    <div class="module-grid">
+      <div class="module"><div class="icon">📍</div><div class="name">GPS / Geofence Engine</div><div class="desc">FusedLocationProvider + Haversine distance. Foreground service + background tracking. Adaptive interval tùy tốc độ di chuyển.</div></div>
+      <div class="module"><div class="icon">🔊</div><div class="name">Narration Engine</div><div class="desc">Queue audio, chống phát trùng, cooldown, auto-pause khi có notification hệ thống. Hỗ trợ TTS + recorded audio.</div></div>
+      <div class="module"><div class="icon">🌐</div><div class="name">Localization / TTS</div><div class="desc">Google Cloud Translation + Text-to-Speech. 5 ngôn ngữ mục tiêu. Pre-generate batch + cache R2.</div></div>
+      <div class="module"><div class="icon">🗺️</div><div class="name">Map Discovery</div><div class="desc">Mapbox SDK Android + GL JS Web. Marker POI, user location, nearest POI highlight, POI detail bottom sheet.</div></div>
+      <div class="module"><div class="icon">📝</div><div class="name">POI Content</div><div class="desc">Hồ sơ số hóa: mô tả, ảnh, link bản đồ, script TTS, file audio, mức ưu tiên, bán kính geofence.</div></div>
+      <div class="module"><div class="icon">🔳</div><div class="name">QR Code</div><div class="desc">Quét QR → resolve POI → phát thuyết minh ngay. Không phụ thuộc GPS. Đặt tại điểm dừng xe buýt.</div></div>
+      <div class="module"><div class="icon">📊</div><div class="name">Analytics</div><div class="desc">Visit events, top POI, heatmap, thời gian nghe. Dashboard cho Admin.</div></div>
+      <div class="module"><div class="icon">📡</div><div class="name">SignalR Realtime</div><div class="desc">Thông báo thay đổi nội dung, trạng thái moderation, audio ready.</div></div>
+      <div class="module"><div class="icon">🔔</div><div class="name">Notification Center</div><div class="desc">Bell icon góc trên bên phải (web + mobile). Dropdown panel hiển thị thông báo: moderation, audio ready, tour mới, cập nhật POI. Không dùng sidebar.</div></div>
+    </div>
+  </section>
+
+  <!-- ========== 10. KIẾN TRÚC ========== -->
+  <section id="architecture">
+    <h2>9. Kiến trúc hệ thống</h2>
+    <p>Hệ thống theo <strong>modular monolith</strong> trên <code>ASP.NET Core Web API</code>, <code>Blazor WebAssembly</code> cho web portal, và <code>.NET MAUI Android</code> cho mobile app theo hướng <strong>native-first</strong> (Mapbox/GPS/Audio xử lý native, UI dùng Blazor Hybrid ở các màn không cần hiệu năng realtime).</p>
+    <div class="code-block">Solution Structure
+
+NarrationApp.Server      → ASP.NET Core Web API, EF Core, Identity, JWT, SignalR
+NarrationApp.Web         → Blazor WebAssembly cho Admin/Owner web portal
+NarrationApp.Mobile      → .NET MAUI Android (Mapbox/GPS/Audio native + Blazor Hybrid UI)
+NarrationApp.SharedUI    → Razor Class Library: shared components, DTO, auth state
+NarrationApp.Shared      → Shared models, enums, constants
+PostgreSQL               → Nguồn dữ liệu trung tâm (server)
+SQLite                   → Local cache trên mobile (offline audio, POI data)</div>
+    <div class="diagram">
+      <pre class="mermaid">
+graph TB
+  subgraph Clients["Client Layer"]
+    WEB["Blazor WebAssembly<br/>(Admin + Owner Portal)"]
+    MOBILE[".NET MAUI Android<br/>(Tourist App)"]
+    SHARED["SharedUI (RCL)"]
+  end
+
+  subgraph Server["NarrationApp.Server"]
+    AUTH["Auth Module"]
+    POI_MOD["POI Module"]
+    LOC_MOD["Localization"]
+    AUDIO_MOD["Audio / TTS"]
+    GEO_MOD["Geofence Config"]
+    TOUR_MOD["Tour"]
+    QR_MOD["QR"]
+    HUB["SignalR Hub"]
+    ANALYTICS_MOD["Analytics"]
+    ADMIN_MOD["Admin"]
+    OWNER_MOD["Owner Portal"]
+    MOD_REQ["Moderation"]
+  end
+
+  subgraph MobileNative["Mobile Native Layer"]
+    GPS["FusedLocationProvider"]
+    GEO_ENGINE["Geofence Engine"]
+    NARR_ENGINE["Narration Engine"]
+    LOCAL_DB["SQLite Cache"]
+    AUDIO_PLAYER["Audio Player"]
+  end
+
+  subgraph Data["Storage"]
+    DB[("PostgreSQL")]
+    FILES["Cloudflare R2"]
+  end
+
+  subgraph External["External APIs"]
+    MAPBOX["Mapbox SDK + GL JS"]
+    GTTS["Google Cloud TTS"]
+    GTRANS["Google Cloud Translation"]
+  end
+
+  WEB --> SHARED
+  MOBILE --> SHARED
+  SHARED --> AUTH
+  SHARED --> POI_MOD
+  SHARED --> LOC_MOD
+  SHARED --> AUDIO_MOD
+  SHARED --> TOUR_MOD
+  SHARED --> QR_MOD
+  SHARED --> HUB
+
+  GPS --> GEO_ENGINE
+  GEO_ENGINE --> NARR_ENGINE
+  NARR_ENGINE --> AUDIO_PLAYER
+  NARR_ENGINE --> LOCAL_DB
+
+  AUTH --> DB
+  POI_MOD --> DB
+  LOC_MOD --> DB
+  AUDIO_MOD --> DB
+  TOUR_MOD --> DB
+  QR_MOD --> DB
+  ANALYTICS_MOD --> DB
+  GEO_MOD --> DB
+  MOD_REQ --> DB
+
+  AUDIO_MOD --> FILES
+  QR_MOD --> FILES
+  AUDIO_MOD --> GTTS
+  LOC_MOD --> GTRANS
+  POI_MOD --> MAPBOX
+      </pre>
+    </div>
+  </section>
+
+  <!-- ========== 11. MÔ HÌNH DỮ LIỆU ========== -->
+  <section id="data-model">
+    <h2>10. Mô hình dữ liệu</h2>
+    <div class="grid-3">
+      <div class="card"><h3>app_users</h3><p>Người dùng: admin, POI owner, tourist. Lưu email, preferred_language, role, status.</p></div>
+      <div class="card"><h3>roles</h3><p>Định nghĩa role: admin, poi_owner, tourist.</p></div>
+      <div class="card"><h3>pois</h3><p>Điểm thuyết minh: tên, địa chỉ, tọa độ (lat/lng), mức ưu tiên, hình ảnh, map_link, narration_mode, status, owner_id.</p></div>
+      <div class="card"><h3>poi_translations</h3><p>Nội dung đa ngôn ngữ: title, description, story, highlight, is_fallback.</p></div>
+      <div class="card"><h3>audio_assets</h3><p>Audio narration: poi_id, language_code, source_type (tts/recorded), provider, storage_path, url, status, generated_at.</p></div>
+      <div class="card"><h3>geofences</h3><p>Geofence config: poi_id, radius_meters (20–50m), priority, debounce_seconds (mặc định 10s), cooldown_seconds (mặc định 1800s = 30 phút), queue_spacing_seconds (mặc định 3s), is_active, trigger_action, nearest_only.</p></div>
+      <div class="card"><h3>tours</h3><p>Tour: title, description, estimated_minutes, cover_image, status.</p></div>
+      <div class="card"><h3>tour_stops</h3><p>Điểm dừng trong tour: tour_id, poi_id, sequence, radius_meters.</p></div>
+      <div class="card"><h3>qr_codes</h3><p>QR code: code, target_type (poi/tour), target_id, location_hint, expires_at.</p></div>
+      <div class="card"><h3>visit_events</h3><p>Sự kiện: user_id (nullable), poi_id, event_type (geofence_enter/qr_scan/audio_play/tour_progress), source, listen_duration_seconds, lat, lng, created_at.</p></div>
+      <div class="card"><h3>notifications</h3><p>Thông báo: user_id, type, title, message, is_read, created_at.</p></div>
+      <div class="card"><h3>moderation_requests</h3><p>Duyệt nội dung: entity_type, entity_id, status (pending/approved/rejected), requested_by, reviewed_by, review_note.</p></div>
+    </div>
+    <div class="alert info">
+      <strong>Client-side only (SQLite trên mobile):</strong>
+    </div>
+    <div class="grid-2">
+      <div class="card"><h3>mobile_audio_cache</h3><p>Cache audio: audio_asset_id, local_file_path, is_cached, cached_at, expires_at. Không đồng bộ lên server.</p></div>
+      <div class="card"><h3>mobile_poi_cache</h3><p>Cache POI data: poi_id, json_data, last_synced_at. Cho phép xem POI offline.</p></div>
+    </div>
+    <div class="alert warn">
+      Khu vực thí điểm có thể có đường hẹp, POI sát nhau. Bán kính geofence mặc định 20–50m và trigger theo POI gần nhất (<code>nearest_only</code>) để tránh kích hoạt trùng.
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <tr><th>Bảng</th><th>Key Fields</th><th>Quan hệ</th></tr>
+        <tr><td>app_users</td><td>id (Guid), email, role_id, preferred_language</td><td>1 user → nhiều POI, events</td></tr>
+        <tr><td>pois</td><td>id, slug, owner_id, lat, lng, priority, narration_mode, status</td><td>1 POI → nhiều translation, audio, 1 geofence</td></tr>
+        <tr><td>poi_translations</td><td>poi_id, language_code, title, story</td><td>Thuộc 1 POI</td></tr>
+        <tr><td>audio_assets</td><td>poi_id, language_code, source_type, url, status</td><td>1 POI → nhiều bản audio theo ngôn ngữ</td></tr>
+        <tr><td>geofences</td><td>poi_id, radius_meters, priority, debounce_seconds, cooldown_seconds</td><td>1 POI → 1 geofence</td></tr>
+        <tr><td>tours</td><td>id, title, estimated_minutes, status</td><td>1 tour → nhiều tour_stops</td></tr>
+        <tr><td>tour_stops</td><td>tour_id, poi_id, sequence</td><td>N:1 POI, N:1 Tour</td></tr>
+        <tr><td>qr_codes</td><td>code, target_type, target_id</td><td>Link đến POI hoặc Tour</td></tr>
+        <tr><td>visit_events</td><td>user_id (nullable), poi_id, event_type, lat, lng</td><td>N:1 POI</td></tr>
+        <tr><td>moderation_requests</td><td>entity_type, entity_id, status</td><td>Link đến POI/Audio/Translation</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ========== 12. YÊU CẦU CHỨC NĂNG ========== -->
+  <section id="requirements">
+    <h2>11. Yêu cầu chức năng</h2>
+    <div class="table-wrap">
+      <table>
+        <tr><th>ID</th><th>Yêu cầu</th><th>Mô tả</th><th>Priority</th><th>Acceptance Criteria</th></tr>
+        <tr><td>FR-01</td><td>Narration Engine — TTS</td><td>Hỗ trợ Text-to-Speech đa ngôn ngữ: nhận script → dịch qua Google Cloud Translation → tạo audio qua Google Cloud TTS → lưu Cloudflare R2. Dung lượng nhẹ.</td><td><span class="badge badge-green">Must</span></td><td>Tạo audio cho 5 ngôn ngữ thành công, file .mp3 phát được trên Android</td></tr>
+        <tr><td>FR-02</td><td>Narration Engine — Audio thu sẵn</td><td>Hỗ trợ upload file audio thu sẵn (giọng tự nhiên, chuyên nghiệp). Lưu Cloudflare R2.</td><td><span class="badge badge-green">Must</span></td><td>Upload file .mp3/.wav thành công, stream phát được</td></tr>
+        <tr><td>FR-03</td><td>Audio Queue & Anti-duplicate</td><td>Quản lý hàng chờ audio: không phát trùng lặp, tự dừng khi có thông báo hệ thống khác. FIFO queue với priority.</td><td><span class="badge badge-green">Must</span></td><td>Không phát cùng POI 2 lần liên tiếp, auto-pause khi có system notification</td></tr>
+        <tr><td>FR-04</td><td>GPS Tracking realtime</td><td>Lấy vị trí người dùng liên tục (foreground + background). FusedLocationProviderClient. Tối ưu pin và độ chính xác.</td><td><span class="badge badge-green">Must</span></td><td>Vị trí cập nhật mỗi 5-15s, battery drain &lt; 5%/giờ</td></tr>
+        <tr><td>FR-05</td><td>Geofence Engine</td><td>Thiết lập POI với tọa độ, bán kính kích hoạt (20-50m), mức ưu tiên. Tự động trigger khi vào vùng/đến gần POI. Debounce + cooldown chống spam.</td><td><span class="badge badge-green">Must</span></td><td>Trigger đúng POI gần nhất, không lặp trong cooldown period</td></tr>
+        <tr><td>FR-06</td><td>Map Discovery</td><td>Hiển thị vị trí user + tất cả POI trên bản đồ Mapbox. Highlight POI gần nhất. Xem chi tiết POI khi tap marker.</td><td><span class="badge badge-green">Must</span></td><td>Map load nhanh, marker đúng vị trí, nearest POI được highlight</td></tr>
+        <tr><td>FR-07</td><td>POI Content Management</td><td>Mỗi POI có: mô tả văn bản, ảnh minh họa, link bản đồ, file audio hoặc script TTS. Owner CRUD, Admin duyệt.</td><td><span class="badge badge-green">Must</span></td><td>CRUD thành công, phân quyền đúng</td></tr>
+        <tr><td>FR-08</td><td>POI Translation</td><td>Nội dung đa ngôn ngữ + fallback tự động qua Google Cloud Translation khi chưa có bản dịch biên tập.</td><td><span class="badge badge-green">Must</span></td><td>Hiển thị đúng ngôn ngữ, fallback vi khi thiếu</td></tr>
+        <tr><td>FR-09</td><td>Authentication & Authorization</td><td>Đăng nhập JWT, phân quyền admin/owner/tourist. Tourist có guest mode cho map + nghe audio.</td><td><span class="badge badge-green">Must</span></td><td>Login/logout đúng, role-based access hoạt động</td></tr>
+        <tr><td>FR-10</td><td>QR Code Entry</td><td>Quét QR tại điểm dừng → resolve POI → phát thuyết minh ngay, không cần GPS.</td><td><span class="badge badge-orange">Should</span></td><td>QR resolve đúng POI, phát narration thành công</td></tr>
+        <tr><td>FR-11</td><td>Offline Audio Cache</td><td>Audio được cache local (SQLite) sau lần nghe đầu. Phát lại khi mạng yếu.</td><td><span class="badge badge-orange">Should</span></td><td>Lần phát sau ưu tiên local cache, gọi network khi cache miss</td></tr>
+        <tr><td>FR-12</td><td>CMS Web Portal</td><td>Blazor WASM quản trị: POI, Audio, Bản dịch, Lịch sử, Quản lý tour cho Admin/Owner.</td><td><span class="badge badge-orange">Should</span></td><td>Admin/Owner truy cập đúng tính năng theo role</td></tr>
+        <tr><td>FR-13</td><td>Analytics Dashboard</td><td>Top POI nghe nhiều, thời gian trung bình, heatmap vị trí, tuyến di chuyển ẩn danh.</td><td><span class="badge badge-orange">Should</span></td><td>Dashboard hiển thị dữ liệu analytics chính xác</td></tr>
+        <tr><td>FR-14</td><td>Tour Management</td><td>Gom POI thành tour có thứ tự, ước lượng thời gian. User đã login start/resume tour session.</td><td><span class="badge badge-orange">Should</span></td><td>Tour creation + completion flow hoạt động</td></tr>
+        <tr><td>FR-15</td><td>Moderation Flow</td><td>Owner gửi duyệt → Admin approve/reject. SignalR thông báo realtime.</td><td><span class="badge badge-orange">Should</span></td><td>Trạng thái moderation thay đổi đúng, thông báo realtime</td></tr>
+        <tr><td>FR-16</td><td>Language Selection</td><td>Tourist chọn ngôn ngữ ưu tiên → ảnh hưởng narration và nội dung hiển thị.</td><td><span class="badge badge-green">Must</span></td><td>Đổi ngôn ngữ → nội dung + audio thay đổi tương ứng</td></tr>
+        <tr><td>FR-17</td><td>Notification Center</td><td>Trung tâm thông báo hiển thị ở góc trên bên phải (bell icon) trên cả web portal và mobile app. Nhận thông báo realtime qua SignalR: kết quả moderation, audio ready, tour mới xuất bản, cập nhật POI. Dropdown panel từ bell icon — không đặt trong sidebar. Có badge đếm số thông báo chưa đọc. Hỗ trợ đánh dấu đã đọc và xem lịch sử thông báo.</td><td><span class="badge badge-orange">Should</span></td><td>Bell icon hiển thị đúng vị trí (top-right), badge count chính xác, dropdown hiển thị danh sách thông báo, mark as read hoạt động</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ========== 13. YÊU CẦU PHI CHỨC NĂNG ========== -->
+  <section id="nfr">
+    <h2>12. Yêu cầu phi chức năng</h2>
+    <div class="table-wrap">
+      <table>
+        <tr><th>ID</th><th>Yêu cầu</th><th>Mô tả</th><th>Priority</th><th>Acceptance</th></tr>
+        <tr><td>NFR-01</td><td>Performance</td><td>API response &lt; 2s, mục tiêu P95 &lt; 500ms. Geofence check &lt; 100ms trên thiết bị.</td><td><span class="badge badge-green">Must</span></td><td>Load test pass</td></tr>
+        <tr><td>NFR-02</td><td>Battery Efficiency</td><td>GPS tracking + audio playback &lt; 5% battery drain / giờ. Adaptive interval.</td><td><span class="badge badge-green">Must</span></td><td>Test thực địa 1 giờ liên tục</td></tr>
+        <tr><td>NFR-03</td><td>Security</td><td>JWT, route protection, owner-scoped access. HTTPS everywhere.</td><td><span class="badge badge-green">Must</span></td><td>Security audit pass</td></tr>
+        <tr><td>NFR-04</td><td>Reliability / Fallback</td><td>TTS/Translation/Mapbox lỗi → graceful fallback (text, danh sách POI)</td><td><span class="badge badge-green">Must</span></td><td>Hệ thống vẫn usable khi external API lỗi</td></tr>
+        <tr><td>NFR-05</td><td>Offline Support</td><td>Audio cache + POI data cache + Mapbox tile cache tự động cho khi mạng yếu/gián đoạn. Map fallback sang danh sách POI khi không có mạng. GPS + geofence vẫn hoạt động độc lập.</td><td><span class="badge badge-orange">Should</span></td><td>Phát audio cached + hiển thị POI list + geofence trigger thành công khi offline</td></tr>
+        <tr><td>NFR-06</td><td>Maintainability</td><td>Tách server/web/mobile/shared rõ ràng. Clean Architecture.</td><td><span class="badge badge-orange">Should</span></td><td>Code review pass</td></tr>
+        <tr><td>NFR-07</td><td>Extensibility</td><td>Dễ thêm ngôn ngữ, POI, khu vực mới không cần code mới</td><td><span class="badge badge-orange">Should</span></td><td>Thêm language/POI qua CMS</td></tr>
+        <tr><td>NFR-08</td><td>GPS Accuracy</td><td>Sử dụng Haversine + nearest-only để bù độ chính xác GPS</td><td><span class="badge badge-green">Must</span></td><td>Trigger đúng POI trong 90% trường hợp test thực địa</td></tr>
+        <tr><td>NFR-09</td><td>Privacy</td><td>Visit events ghi ẩn danh (user_id nullable). Không track cá nhân bắt buộc.</td><td><span class="badge badge-orange">Should</span></td><td>Analytics không yêu cầu login</td></tr>
+        <tr><td>NFR-10</td><td>Rate Limiting</td><td>Giới hạn request chống spam API</td><td><span class="badge badge-orange">Should</span></td><td>Rate limit enforced</td></tr>
+        <tr><td>NFR-11</td><td>Android Compatibility</td><td>Hỗ trợ Android 8.0+ (API 26+). Target Android 14.</td><td><span class="badge badge-green">Must</span></td><td>Chạy ổn trên Android 8.0+</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ========== 14. CHỨC NĂNG THEO VAI TRÒ ========== -->
+  <section id="permissions">
+    <h2>13. Chức năng theo vai trò</h2>
+    <div class="alert info">
+      Mỗi nhóm chức năng bên dưới tương ứng <strong>1 sequence diagram</strong> ở mục 20.
+    </div>
+    <div class="grid-3">
+      <div class="card">
+        <h3>🛡️ Admin (Web)</h3>
+        <ul>
+          <li><code>POI</code>: duyệt, từ chối, xóa POI.</li>
+          <li><code>Audio</code>: xem, nghe thử, ẩn/xóa audio.</li>
+          <li><code>Bản dịch</code>: xem, kiểm tra, xử lý translation.</li>
+          <li><code>Analytics</code>: xem dashboard, log nghe, heatmap.</li>
+          <li><code>Tour</code>: tạo, cập nhật, xuất bản tour.</li>
+          <li><code>Moderation</code>: xét duyệt yêu cầu từ Owner.</li>
+          <li><code>User</code>: quản lý user và phân role.</li>
+          <li><code>Notification</code>: xem thông báo hệ thống (bell icon góc trên bên phải).</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>🏢 POI Owner (Web)</h3>
+        <ul>
+          <li><code>POI</code>: thêm, sửa, xóa POI của mình → gửi duyệt.</li>
+          <li><code>Audio</code>: upload/tạo TTS audio → gửi duyệt.</li>
+          <li><code>Bản dịch</code>: thêm, sửa, xóa translation → gửi duyệt.</li>
+          <li><code>Dashboard</code>: xem stats POI của mình.</li>
+          <li><code>Notification</code>: nhận thông báo kết quả duyệt, audio ready (bell icon góc trên bên phải).</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>🧳 Tourist (App Android)</h3>
+        <ul>
+          <li><code>Chọn ngôn ngữ</code>: đổi ngôn ngữ hiển thị + narration.</li>
+          <li><code>Bản đồ</code>: xem vị trí user, marker POI, nearest POI.</li>
+          <li><code>Chi tiết POI</code>: ảnh, mô tả, map link.</li>
+          <li><code>Nghe thuyết minh</code>: tự động (geofence) hoặc thủ công.</li>
+          <li><code>Quét QR</code>: mở POI và phát narration.</li>
+          <li><code>Xem tour</code>: read-only hoặc start/resume (cần login).</li>
+          <li><code>Notification</code>: nhận thông báo tour mới, cập nhật POI (bell icon góc trên bên phải, cần login).</li>
+        </ul>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Role</th><th>Nhóm chức năng</th><th>Thao tác</th><th>Seq</th></tr>
+        <tr><td><span class="badge badge-red">Admin</span></td><td>POI Moderation</td><td>Duyệt / từ chối / xóa POI</td><td>20.1</td></tr>
+        <tr><td><span class="badge badge-red">Admin</span></td><td>Audio Management</td><td>Xem / nghe thử / ẩn-xóa audio</td><td>20.2</td></tr>
+        <tr><td><span class="badge badge-red">Admin</span></td><td>Translation Review</td><td>Xem / kiểm tra / xử lý bản dịch</td><td>20.3</td></tr>
+        <tr><td><span class="badge badge-red">Admin</span></td><td>Analytics</td><td>Xem dashboard, log sử dụng</td><td>20.4</td></tr>
+        <tr><td><span class="badge badge-red">Admin</span></td><td>Tour Management</td><td>Tạo / cập nhật / xuất bản tour</td><td>20.5</td></tr>
+        <tr><td><span class="badge badge-red">Admin</span></td><td>Moderation Queue</td><td>Xét duyệt yêu cầu từ Owner</td><td>20.6</td></tr>
+        <tr><td><span class="badge badge-orange">Owner</span></td><td>POI CRUD</td><td>Thêm / sửa / xóa POI → gửi duyệt</td><td>20.7</td></tr>
+        <tr><td><span class="badge badge-orange">Owner</span></td><td>Audio CRUD</td><td>Upload / tạo TTS / xóa audio → gửi duyệt</td><td>20.8</td></tr>
+        <tr><td><span class="badge badge-orange">Owner</span></td><td>Translation CRUD</td><td>Thêm / sửa / xóa translation → gửi duyệt</td><td>20.9</td></tr>
+        <tr><td><span class="badge badge-blue">Tourist</span></td><td>Chọn ngôn ngữ</td><td>Đổi ngôn ngữ UI + narration</td><td>20.10</td></tr>
+        <tr><td><span class="badge badge-blue">Tourist</span></td><td>Map Discovery</td><td>Xem bản đồ + POI markers</td><td>20.11</td></tr>
+        <tr><td><span class="badge badge-blue">Tourist</span></td><td>Geofence → Narration</td><td>Tự động trigger thuyết minh khi vào vùng</td><td>20.12</td></tr>
+        <tr><td><span class="badge badge-blue">Tourist</span></td><td>Quét QR</td><td>Quét → resolve → phát narration</td><td>20.13</td></tr>
+        <tr><td><span class="badge badge-blue">Tourist</span></td><td>Tour</td><td>Xem / start / resume tour</td><td>20.14</td></tr>
+        <tr><td><span class="badge badge-red">Admin</span></td><td>Notification Center</td><td>Xem thông báo hệ thống (bell icon top-right)</td><td>—</td></tr>
+        <tr><td><span class="badge badge-orange">Owner</span></td><td>Notification Center</td><td>Nhận kết quả duyệt, audio ready (bell icon top-right)</td><td>—</td></tr>
+        <tr><td><span class="badge badge-blue">Tourist</span></td><td>Notification Center</td><td>Nhận thông báo tour mới, cập nhật POI (bell icon top-right, cần login)</td><td>—</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ========== 14. GUEST MODE ========== -->
+  <section id="guest-mode">
+    <h2>14. Guest Mode — Chế độ khách (Tourist)</h2>
+    <div class="alert info">
+      Tourist mặc định sử dụng app ở <strong>Guest Mode</strong> — không bắt buộc đăng nhập. Mục tiêu: giảm ma sát tối đa, du khách mở app là dùng được ngay. Login chỉ cần khi muốn <strong>theo dõi tiến trình tour cá nhân</strong>.
+    </div>
+
+    <h3>14.1 Phân quyền Guest vs Logged-in Tourist</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Chức năng</th><th>Guest (không login)</th><th>Logged-in Tourist</th><th>API liên quan</th></tr>
+        <tr><td>Xem bản đồ + POI markers</td><td><span class="badge badge-green">✅</span></td><td><span class="badge badge-green">✅</span></td><td><code>GET /api/pois, /api/pois/near</code></td></tr>
+        <tr><td>Xem chi tiết POI (ảnh, mô tả, map link)</td><td><span class="badge badge-green">✅</span></td><td><span class="badge badge-green">✅</span></td><td><code>GET /api/pois/{id}</code></td></tr>
+        <tr><td>Nghe thuyết minh tự động (geofence)</td><td><span class="badge badge-green">✅</span></td><td><span class="badge badge-green">✅</span></td><td><code>GET /api/audio/{id}/stream</code></td></tr>
+        <tr><td>Nghe thuyết minh thủ công (tap POI)</td><td><span class="badge badge-green">✅</span></td><td><span class="badge badge-green">✅</span></td><td><code>GET /api/audio/{id}/stream</code></td></tr>
+        <tr><td>Chọn ngôn ngữ ưu tiên</td><td><span class="badge badge-green">✅</span></td><td><span class="badge badge-green">✅</span></td><td>Client-side (lưu local)</td></tr>
+        <tr><td>Quét QR → phát narration</td><td><span class="badge badge-green">✅</span></td><td><span class="badge badge-green">✅</span></td><td><code>GET /api/qr/{code}</code></td></tr>
+        <tr><td>Xem danh sách tour (read-only)</td><td><span class="badge badge-green">✅</span></td><td><span class="badge badge-green">✅</span></td><td><code>GET /api/tours</code></td></tr>
+        <tr><td>Xem bản dịch đa ngôn ngữ</td><td><span class="badge badge-green">✅</span></td><td><span class="badge badge-green">✅</span></td><td><code>GET /api/translations/poi/{id}</code></td></tr>
+        <tr><td>Ghi visit event (ẩn danh)</td><td><span class="badge badge-green">✅</span> (user_id = null)</td><td><span class="badge badge-green">✅</span> (có user_id)</td><td><code>POST /api/visit-events</code></td></tr>
+        <tr><td>Offline audio cache</td><td><span class="badge badge-green">✅</span></td><td><span class="badge badge-green">✅</span></td><td>SQLite local</td></tr>
+        <tr><td>Start / Resume Tour session</td><td><span class="badge badge-red">❌ Cần login</span></td><td><span class="badge badge-green">✅</span></td><td><code>POST /api/tours/{id}/start</code></td></tr>
+        <tr><td>Tour progress tracking</td><td><span class="badge badge-red">❌ Cần login</span></td><td><span class="badge badge-green">✅</span></td><td><code>POST /api/tours/{id}/progress</code></td></tr>
+        <tr><td>Xem lịch sử tour đã đi</td><td><span class="badge badge-red">❌ Cần login</span></td><td><span class="badge badge-green">✅</span></td><td><code>GET /api/tours/session/latest</code></td></tr>
+        <tr><td>Nhận notification cá nhân</td><td><span class="badge badge-red">❌ Cần login</span></td><td><span class="badge badge-green">✅</span></td><td>SignalR Hub</td></tr>
+        <tr><td>Cập nhật profile / đổi mật khẩu</td><td><span class="badge badge-red">❌ Cần login</span></td><td><span class="badge badge-green">✅</span></td><td><code>PUT /api/auth/update-profile</code></td></tr>
+      </table>
+    </div>
+    <div class="alert success">
+      <strong>Kết luận:</strong> Guest Tourist sử dụng được <strong>~80% tính năng chính</strong> (bản đồ, GPS, geofence, nghe thuyết minh, QR, chọn ngôn ngữ, offline cache) mà không cần đăng nhập. Chỉ cần login khi muốn <strong>theo dõi tiến trình tour cá nhân</strong>.
+    </div>
+
+    <h3>14.2 Guest Onboarding Flow</h3>
+    <div class="card">
+      <h4>Lần đầu mở app (First Launch)</h4>
+      <div class="timeline">
+        <div class="timeline-item">
+          <h4>Bước 1: Welcome Screen</h4>
+          <p>Hiển thị màn welcome giới thiệu tính năng chính. Nút <strong>"Bắt đầu khám phá"</strong> (không yêu cầu login).</p>
+        </div>
+        <div class="timeline-item">
+          <h4>Bước 2: Chọn ngôn ngữ</h4>
+          <p>Hiển thị 5 ngôn ngữ hỗ trợ (vi, en, ja, ko, zh). Lưu vào <code>SharedPreferences</code> / <code>SecureStorage</code>. Có thể thay đổi sau.</p>
+        </div>
+        <div class="timeline-item">
+          <h4>Bước 3: Yêu cầu Location Permission</h4>
+          <p>Giải thích lý do cần GPS: <em>"Để tự động phát thuyết minh khi bạn đến gần điểm tham quan"</em>. Nếu từ chối → vẫn dùng được (danh sách POI + QR).</p>
+        </div>
+        <div class="timeline-item">
+          <h4>Bước 4: Vào Map Discovery</h4>
+          <p>Chuyển thẳng vào màn bản đồ. Du khách bắt đầu khám phá ngay. Guest ID được tạo tự động.</p>
+        </div>
+      </div>
+    </div>
+
+    <h3>14.3 Guest ID — Định danh thiết bị</h3>
+    <div class="grid-2">
+      <div class="card">
+        <h4>🔑 Cơ chế Guest ID</h4>
+        <ul>
+          <li>Khi mở app lần đầu, tạo <code>guest_device_id</code> = UUID v4 ngẫu nhiên.</li>
+          <li>Lưu vào <code>SecureStorage</code> trên thiết bị (persist qua lần mở app).</li>
+          <li>Gửi kèm header <code>X-Device-Id</code> trong mọi API request.</li>
+          <li>Server sử dụng <code>guest_device_id</code> để:<br>
+            – Quản lý cooldown/debounce trên server-side (tùy chọn).<br>
+            – Ghi analytics ẩn danh (<code>visit_events.user_id = null</code>, nhưng có <code>device_id</code> để đếm unique).<br>
+            – Không mapping ngược được về cá nhân → đảm bảo privacy.
+          </li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>🔄 Guest → Login Merge</h4>
+        <ul>
+          <li>Khi guest đăng ký tài khoản, hệ thống <strong>merge dữ liệu</strong>:<br>
+            – <code>visit_events</code> có cùng <code>device_id</code> → cập nhật <code>user_id</code>.<br>
+            – Audio cache local giữ nguyên (không ảnh hưởng).<br>
+            – Ngôn ngữ ưu tiên → sync lên profile server.
+          </li>
+          <li>Đảm bảo trải nghiệm liền mạch, không mất dữ liệu đã tương tác.</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>14.4 Điều kiện hiển thị Prompt Login</h3>
+    <div class="alert warn">
+      <strong>Nguyên tắc:</strong> Không ép login. Chỉ hiển thị prompt login khi du khách thực sự cần tính năng yêu cầu tài khoản. Tối đa hiển thị <strong>1 lần/phiên</strong> cho mỗi trigger.
+    </div>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Trigger</th><th>Hành vi</th><th>UX</th></tr>
+        <tr><td>Tap <strong>"Bắt đầu Tour"</strong></td><td>Hiển thị bottom sheet: <em>"Đăng nhập để theo dõi tiến trình tour"</em></td><td>Nút Login + nút "Xem tour (không lưu)"</td></tr>
+        <tr><td>Tap <strong>"Tiếp tục Tour"</strong></td><td>Hiển thị bottom sheet: <em>"Đăng nhập để xem lại tour đã đi"</em></td><td>Nút Login + nút Đóng</td></tr>
+        <tr><td>Nghe xong <strong>POI thứ 5</strong> trong phiên</td><td>Hiển thị non-blocking snackbar: <em>"Thích ứng dụng? Tạo tài khoản để lưu hành trình"</em></td><td>Snackbar tự ẩn sau 5 giây, nút "Đăng ký" nhỏ</td></tr>
+        <tr><td>Quét QR lần đầu</td><td>Không hiển thị prompt — trải nghiệm liền mạch</td><td>—</td></tr>
+        <tr><td>Mở app từ lần thứ 3</td><td>Hiển thị non-blocking banner 1 lần: <em>"Tạo tài khoản để cá nhân hóa trải nghiệm"</em></td><td>Banner dismiss-able, không hiện lại</td></tr>
+      </table>
+    </div>
+
+    <h3>14.5 Giới hạn Guest Mode</h3>
+    <div class="grid-2">
+      <div class="card">
+        <h4>🟢 MVP: Không giới hạn</h4>
+        <ul>
+          <li>Guest được nghe <strong>không giới hạn</strong> số POI/ngày.</li>
+          <li>Guest được quét QR không giới hạn.</li>
+          <li>Guest được xem tất cả tour (read-only).</li>
+          <li>Lý do: MVP ưu tiên adoption rate, chưa cần monetize.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>🟡 Future (v2+): Giới hạn tùy chọn</h4>
+        <ul>
+          <li>Giới hạn số POI nghe miễn phí/ngày (ví dụ: 10 POI/ngày).</li>
+          <li>Premium tour yêu cầu login + thanh toán.</li>
+          <li>Audio chuyên nghiệp (giọng người thật) yêu cầu đăng ký.</li>
+          <li>Cấu hình linh hoạt qua <code>appsettings.json</code> → API config.</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>14.6 Kỹ thuật triển khai Guest Mode</h3>
+    <div class="card">
+      <h4>📱 Client-side (Mobile App)</h4>
+      <div class="code-block">// Guest State Management
+public class GuestStateService
+{
+    // Lưu trữ local
+    string DeviceId       → SecureStorage (persist)
+    string LanguageCode   → Preferences ("vi" default)
+    bool   IsFirstLaunch  → Preferences (true → false sau onboarding)
+    bool   IsLoggedIn      → false (guest) / true (logged in)
+    int    PoiListenCount  → Session counter (reset mỗi phiên)
+    int    AppOpenCount    → Preferences (đếm lần mở app)
+
+    // Cooldown tracking (client-side)
+    Dictionary&lt;Guid, DateTime&gt; PoiCooldowns → In-memory
+}
+
+// API Request Header
+X-Device-Id: {guest_device_id}     // Mọi request
+Authorization: Bearer {jwt}        // Chỉ khi logged in
+
+// Quyết định login prompt
+if (action requires login)
+  → Show login bottom sheet
+else
+  → Proceed as guest</div>
+    </div>
+    <div class="card">
+      <h4>🖥️ Server-side (API)</h4>
+      <div class="code-block">// Controller xử lý Guest vs Authenticated
+[AllowAnonymous]  // Public endpoints cho Guest
+GET  /api/pois, /api/pois/{id}, /api/pois/near
+GET  /api/audio/{id}/stream
+GET  /api/qr/{code}
+GET  /api/tours, /api/tours/{id}
+GET  /api/translations/poi/{id}
+GET  /api/geofences
+POST /api/visit-events         // user_id = null, device_id from header
+POST /api/qr/{code}/scan
+
+[Authorize(Roles = "tourist")]  // Yêu cầu login
+POST /api/tours/{id}/start
+POST /api/tours/{id}/resume
+POST /api/tours/{id}/progress
+GET  /api/tours/session/latest
+
+// Visit Event xử lý Guest
+var visitEvent = new VisitEvent {
+    UserId = User.Identity.IsAuthenticated ? GetUserId() : null,
+    DeviceId = Request.Headers["X-Device-Id"],
+    PoiId = dto.PoiId,
+    EventType = dto.EventType,
+    // ... analytics ẩn danh
+};</div>
+    </div>
+
+    <div class="diagram">
+      <h4>Guest Mode Flow Diagram</h4>
+      <pre class="mermaid">
+flowchart TD
+  START(["Mở App"]) --> CHECK{"Lần đầu?"}
+  CHECK -->|Có| WELCOME["Welcome Screen"]
+  CHECK -->|Không| MAP
+
+  WELCOME --> LANG["Chọn Ngôn ngữ"]
+  LANG --> GPS{"Cho phép GPS?"}
+  GPS -->|Có| MAP["Map Discovery"]
+  GPS -->|Không| LIST["Danh sách POI"]
+  LIST --> MAP
+
+  MAP --> GEO{"Vào vùng Geofence?"}
+  GEO -->|Có| NARR["Phát Thuyết Minh"]
+  GEO -->|Không| BROWSE["Duyệt POI / Quét QR"]
+  BROWSE --> NARR
+
+  NARR --> ACTION{"Hành động tiếp?"}
+  ACTION -->|Tiếp tục đi| GEO
+  ACTION -->|Tap Start Tour| LOGIN_CHECK{"Đã login?"}
+  ACTION -->|Quét QR| BROWSE
+
+  LOGIN_CHECK -->|Đã login| TOUR["Start Tour Session"]
+  LOGIN_CHECK -->|Guest| PROMPT["Prompt Login"]
+  PROMPT -->|Login| TOUR
+  PROMPT -->|Bỏ qua| MAP
+      </pre>
+    </div>
+  </section>
+
+  <!-- ========== 15. MODULE API ========== -->
+  <section id="api">
+    <h2>15. Module API</h2>
+    <div class="grid-2">
+      <div class="card"><h3>Auth</h3>
+        <div class="code-block">POST   /api/auth/register
+POST   /api/auth/login
+GET    /api/auth/me
+POST   /api/auth/change-password
+PUT    /api/auth/update-profile</div>
+      </div>
+      <div class="card"><h3>POI & Content</h3>
+        <div class="code-block">GET    /api/pois                           # Public
+GET    /api/pois/{id}                      # Public
+GET    /api/pois/near?lat=&lng=&radius=    # Public
+POST   /api/pois                           # Owner
+PUT    /api/pois/{id}                      # Owner (own POI)
+DELETE /api/pois/{id}                      # Owner (own) + Admin</div>
+      </div>
+      <div class="card"><h3>Audio & TTS</h3>
+        <div class="code-block">GET    /api/audio?poiId={id}&lang=         # Public
+GET    /api/audio/{id}/stream              # Public
+POST   /api/audio/upload                   # Owner (recorded)
+POST   /api/audio/tts                      # Owner (generate TTS)
+PUT    /api/audio/{id}                     # Owner + Admin
+DELETE /api/audio/{id}                     # Owner + Admin</div>
+      </div>
+      <div class="card"><h3>Translation</h3>
+        <div class="code-block">GET    /api/translations/poi/{id}          # Public
+POST   /api/translations                   # Owner
+PUT    /api/translations/{id}              # Owner (own)
+DELETE /api/translations/{id}              # Owner + Admin
+POST   /api/translations/auto-translate    # Owner (Google Translate)</div>
+      </div>
+      <div class="card"><h3>Geofence Config</h3>
+        <div class="code-block">GET    /api/geofences                      # App (load all active)
+GET    /api/geofences/poi/{poiId}          # Admin
+PUT    /api/geofences/{id}                 # Admin
+POST   /api/geofences                      # Admin</div>
+      </div>
+      <div class="card"><h3>Tour & Session</h3>
+        <div class="code-block">GET    /api/tours                          # Public
+GET    /api/tours/{id}                     # Public
+POST   /api/tours                          # Admin
+PUT    /api/tours/{id}                     # Admin
+POST   /api/tours/{id}/start              # Tourist (login)
+POST   /api/tours/{id}/resume             # Tourist (login)
+POST   /api/tours/{id}/progress           # Tourist (login)
+GET    /api/tours/session/latest           # Tourist (login)</div>
+      </div>
+      <div class="card"><h3>QR Code</h3>
+        <div class="code-block">POST   /api/qr                             # Admin
+GET    /api/qr/{code}                      # Public (resolve)
+POST   /api/qr/{code}/scan                # Public (log event)</div>
+      </div>
+      <div class="card"><h3>Visit Events</h3>
+        <div class="code-block">POST   /api/visit-events                   # App (log event)
+GET    /api/visit-events?poiId=            # Admin (view log)</div>
+      </div>
+      <div class="card"><h3>Analytics</h3>
+        <div class="code-block">GET    /api/analytics/dashboard             # Admin
+GET    /api/analytics/poi/{id}             # Admin
+GET    /api/analytics/heatmap              # Admin
+GET    /api/analytics/top-pois             # Admin
+GET    /api/analytics/audio-plays          # Admin</div>
+      </div>
+      <div class="card"><h3>Owner Portal</h3>
+        <div class="code-block">GET    /api/owner/pois                     # Owner (own POIs)
+GET    /api/owner/pois/{id}/stats          # Owner
+GET    /api/owner/dashboard                # Owner
+GET    /api/owner/notifications            # Owner</div>
+      </div>
+      <div class="card"><h3>Admin Management</h3>
+        <div class="code-block">GET    /api/admin/users                    # Admin
+PUT    /api/admin/users/{id}/role          # Admin
+GET    /api/admin/moderation/pending       # Admin
+POST   /api/admin/moderation/{id}/approve  # Admin
+POST   /api/admin/moderation/{id}/reject   # Admin
+GET    /api/admin/stats/overview           # Admin</div>
+      </div>
+      <div class="card"><h3>Moderation Requests</h3>
+        <div class="code-block">POST   /api/moderation-requests            # Owner (gửi duyệt)
+GET    /api/moderation-requests/my         # Owner (xem yêu cầu)</div>
+      </div>
+      <div class="card"><h3>Notification Center</h3>
+        <div class="code-block">GET    /api/notifications                   # Authenticated (danh sách thông báo)
+GET    /api/notifications/unread-count      # Authenticated (số chưa đọc → badge)
+PUT    /api/notifications/{id}/read        # Authenticated (đánh dấu đã đọc)
+PUT    /api/notifications/read-all         # Authenticated (đánh dấu tất cả đã đọc)
+DELETE /api/notifications/{id}             # Authenticated (xóa thông báo)</div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>SignalR Events</h3>
+      <div class="code-block">Hub: /hubs/notification
+
+Events:
+- poiUpdated(poiId)                    → Nội dung POI thay đổi
+- audioReady(poiId, language)          → Audio mới sẵn sàng
+- translationUpdated(poiId, language)  → Bản dịch cập nhật
+- tourPublished(tourId)                → Tour mới xuất bản
+- qrScanned(code, targetType)          → QR được quét
+- moderationChanged(entityType, id, status) → Kết quả duyệt
+- notification(userId, notification)   → Thông báo cá nhân
+- geofenceConfigUpdated(poiId)         → Geofence config thay đổi</div>
+    </div>
+    <div class="card">
+      <h3>Health Check</h3>
+      <div class="code-block">GET    /api/health                         # Admin
+GET    /api/health/database                # Admin
+GET    /api/health/google-cloud            # Admin
+GET    /api/health/cloudflare-r2           # Admin</div>
+    </div>
+
+    <h3>Bảng phân quyền API theo vai trò</h3>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Endpoint</th><th>Admin</th><th>Owner</th><th>Tourist/Guest</th></tr>
+        <tr><td><code>GET /api/pois, /api/pois/{id}, /api/pois/near</code></td><td>✅</td><td>✅</td><td>✅</td></tr>
+        <tr><td><code>POST /api/pois</code></td><td>❌</td><td>✅</td><td>❌</td></tr>
+        <tr><td><code>PUT /api/pois/{id}</code></td><td>❌</td><td>✅ (own)</td><td>❌</td></tr>
+        <tr><td><code>DELETE /api/pois/{id}</code></td><td>✅</td><td>✅ (own)</td><td>❌</td></tr>
+        <tr><td><code>GET /api/audio, /api/audio/{id}/stream</code></td><td>✅</td><td>✅</td><td>✅</td></tr>
+        <tr><td><code>POST /api/audio/upload, /api/audio/tts</code></td><td>✅</td><td>✅ (own POI)</td><td>❌</td></tr>
+        <tr><td><code>POST/PUT/DELETE /api/translations</code></td><td>✅</td><td>✅ (own POI)</td><td>❌</td></tr>
+        <tr><td><code>GET /api/translations/poi/{id}</code></td><td>✅</td><td>✅</td><td>✅</td></tr>
+        <tr><td><code>GET/PUT/POST /api/geofences</code></td><td>✅</td><td>❌</td><td>GET only (app)</td></tr>
+        <tr><td><code>GET /api/tours, /api/tours/{id}</code></td><td>✅</td><td>✅</td><td>✅</td></tr>
+        <tr><td><code>POST/PUT /api/tours</code></td><td>✅</td><td>❌</td><td>❌</td></tr>
+        <tr><td><code>POST /api/tours/{id}/start, /resume, /progress</code></td><td>❌</td><td>❌</td><td>✅ (login)</td></tr>
+        <tr><td><code>POST /api/qr, GET /api/qr/{code}</code></td><td>✅ (POST)</td><td>❌</td><td>✅ (GET + scan)</td></tr>
+        <tr><td><code>POST /api/visit-events</code></td><td>❌</td><td>❌</td><td>✅</td></tr>
+        <tr><td><code>GET /api/analytics/*</code></td><td>✅</td><td>❌</td><td>❌</td></tr>
+        <tr><td><code>GET/POST /api/owner/*</code></td><td>❌</td><td>✅</td><td>❌</td></tr>
+        <tr><td><code>GET/POST /api/admin/*</code></td><td>✅</td><td>❌</td><td>❌</td></tr>
+        <tr><td><code>POST /api/moderation-requests</code></td><td>❌</td><td>✅</td><td>❌</td></tr>
+        <tr><td><code>GET /api/health/*</code></td><td>✅</td><td>❌</td><td>❌</td></tr>
+        <tr><td><code>GET/PUT/DELETE /api/notifications/*</code></td><td>✅</td><td>✅</td><td>✅ (login)</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ========== 16. LUỒNG VẬN HÀNH ========== -->
+  <section id="flows">
+    <h2>16. Luồng vận hành</h2>
+    <div class="timeline">
+      <div class="timeline-item">
+        <h4>Hành trình du khách (Happy path)</h4>
+        <p>Cài app → mở app (guest/login) → chọn ngôn ngữ → bật GPS → xem bản đồ POI → di chuyển → Geofence Engine detect POI gần nhất → kiểm tra priority + debounce/cooldown → Narration Engine chọn nguồn audio (cache local → R2 audio → TTS) → phát thuyết minh → ghi visit_event → tiếp tục di chuyển.</p>
+      </div>
+      <div class="timeline-item">
+        <h4>Hành trình QR (thay thế GPS)</h4>
+        <p>Du khách đến điểm dừng xe buýt → quét QR code → resolve target POI → phát narration ngay → ghi event qr_scan. Không phụ thuộc GPS.</p>
+      </div>
+      <div class="timeline-item">
+        <h4>Luồng POI Owner</h4>
+        <p>Đăng nhập web portal → tạo/sửa POI → nhập script TTS hoặc upload audio → thêm bản dịch → gửi duyệt (moderation request) → chờ Admin review → nhận thông báo kết quả.</p>
+      </div>
+      <div class="timeline-item">
+        <h4>Luồng Admin</h4>
+        <p>Đăng nhập web portal → xem moderation queue → duyệt/từ chối content → tạo/quản lý tour → xem analytics dashboard → giám sát hệ thống (health check).</p>
+      </div>
+      <div class="timeline-item">
+        <h4>Exception: GPS không chính xác</h4>
+        <p>GPS drift > bán kính geofence → không trigger → Geofence Engine sử dụng nearest-only logic + tăng bán kính → nếu vẫn thất bại → du khách dùng danh sách POI hoặc QR.</p>
+      </div>
+      <div class="timeline-item">
+        <h4>Exception: Location permission denied</h4>
+        <p>App yêu cầu GPS → user từ chối → hiển thị danh sách POI thay vì map → hướng dẫn bật GPS → QR vẫn hoạt động.</p>
+      </div>
+      <div class="timeline-item">
+        <h4>Exception: Audio chưa ready / mạng yếu</h4>
+        <p>Yêu cầu audio → kiểm tra local cache → cache miss + network error → hiển thị text fallback → khi online lại, tự tải audio vào cache.</p>
+      </div>
+      <div class="timeline-item">
+        <h4>Exception: Mất mạng — Map không load được</h4>
+        <p>Mạng mất hoàn toàn → Mapbox SDK không tải được tiles mới → kiểm tra Mapbox tile cache (các ti les đã xem gần đây) → nếu cache hit: hiển thị map từ cache → nếu cache miss: chuyển sang <strong>chế độ danh sách POI</strong> với khoảng cách GPS, sắp xếp theo nearest-first. GPS + Geofence + Audio cache vẫn hoạt động bình thường. Khi có mạng lại → tự động chuyển về map view.</p>
+      </div>
+      <div class="timeline-item">
+        <h4>Exception: Geofence chồng lấn</h4>
+        <p>Nhiều POI trong bán kính → Geofence Engine chọn POI gần nhất + priority cao nhất → debounce 10s giữa các trigger → cooldown 30 phút cho cùng POI. Sau khi phát xong, kiểm tra lại — nếu vẫn trong vùng POI kế tiếp → queue phát tiếp.</p>
+      </div>
+    </div>
+
+    <h3>Chiến lược xử lý POI chồng lấn (Overlap Strategy)</h3>
+    <div class="alert info">
+      Khi nhiều POI nằm sát nhau (ví dụ: các quán trên cùng 1 con đường), Geofence Engine áp dụng thuật toán ưu tiên và cơ chế cooldown sau để đảm bảo trải nghiệm mượt mà, không bị spam audio.
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h4>📐 Thuật toán ưu tiên (Priority Algorithm)</h4>
+        <ol style="padding-left:18px">
+          <li style="color:var(--muted);font-size:14px;margin-bottom:8px"><strong style="color:var(--accent)">Nearest-first:</strong> POI gần nhất theo Haversine distance luôn được ưu tiên phát trước.</li>
+          <li style="color:var(--muted);font-size:14px;margin-bottom:8px"><strong style="color:var(--accent)">Priority-weighted:</strong> Nếu 2 POI chênh lệch ≤ 5m → so sánh giá trị <code>priority</code> (số lớn hơn = ưu tiên cao hơn).</li>
+          <li style="color:var(--muted);font-size:14px;margin-bottom:8px"><strong style="color:var(--accent)">Queue-sequential:</strong> Sau khi phát xong POI hiện tại → kiểm tra lại vị trí → nếu vẫn trong vùng POI kế tiếp (chưa phát) → tự động queue phát tiếp.</li>
+          <li style="color:var(--muted);font-size:14px;margin-bottom:8px"><strong style="color:var(--accent)">No-repeat:</strong> Không phát lại POI đã phát trong cùng phiên di chuyển (trừ khi hết cooldown).</li>
+        </ol>
+      </div>
+      <div class="card">
+        <h4>⏱️ Bảng Cooldown & Debounce</h4>
+        <div class="table-wrap">
+          <table>
+            <tr><th>Loại</th><th>Giá trị</th><th>Giải thích</th></tr>
+            <tr><td><code>same_poi_cooldown</code></td><td><strong>30 phút</strong></td><td>Không phát lại cùng POI trong 30 phút (du khách thường dừng 10–20 phút tại 1 điểm)</td></tr>
+            <tr><td><code>global_debounce</code></td><td><strong>10 giây</strong></td><td>Khoảng cách tối thiểu giữa 2 trigger bất kỳ</td></tr>
+            <tr><td><code>queue_spacing</code></td><td><strong>3 giây</strong></td><td>Khoảng im lặng giữa 2 audio liên tiếp trong queue</td></tr>
+            <tr><td><code>tour_cooldown</code></td><td><strong>0 giây</strong></td><td>Khi đang chạy Tour → phát ngay khi đến stop (trải nghiệm liền mạch)</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h4>🔄 Ví dụ: 3 quán sát nhau trên đường Xóm Chiếu</h4>
+      <div class="code-block">Vị trí du khách: (10.7540, 106.6960)
+
+POI-A "Quán Chè":     distance = 12m, priority = 5  ← Phát trước (nearest)
+POI-B "Tiệm Bánh":    distance = 18m, priority = 8
+POI-C "Quán Hủ Tiếu": distance = 25m, priority = 3
+
+→ Bước 1: Phát POI-A (nearest = 12m)
+→ Bước 2: Chờ 3s (queue_spacing)
+→ Bước 3: Check lại vị trí → POI-B vẫn trong range → Phát POI-B
+→ Bước 4: Chờ 3s → POI-C vẫn trong range → Phát POI-C
+→ Bước 5: Du khách rời đi → Idle
+
+Nếu du khách quay lại sau 10 phút → POI đã phát vẫn trong cooldown → SKIP
+Nếu quay lại sau 31 phút → cooldown hết → phát lại</div>
+    </div>
+    <div class="alert warn">
+      <strong>Cấu hình mặc định:</strong> <code>same_poi_cooldown = 1800s</code>, <code>global_debounce = 10s</code>, <code>queue_spacing = 3s</code>. Các giá trị này có thể điều chỉnh trong <code>appsettings.json</code> (server-side) và được sync xuống app qua API <code>GET /api/geofences</code>. Riêng <code>queue_spacing</code> là cấu hình client-side trên Narration Engine.
+    </div>
+
+    <h3>Chiến lược Offline Map Fallback</h3>
+    <div class="alert info">
+      Bản đồ Mapbox cần kết nối mạng để tải map tiles. Khi mất mạng, hệ thống áp dụng chiến lược fallback theo 3 mức độ để đảm bảo du khách vẫn sử dụng được app.
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <tr><th>Mức độ</th><th>Tình huống mạng</th><th>Map hiển thị</th><th>GPS/Geofence</th><th>Audio</th><th>UX</th></tr>
+        <tr>
+          <td><span class="badge badge-green">🟢 Online</span></td>
+          <td>3G/4G/WiFi bình thường</td>
+          <td>Mapbox render đầy đủ tiles + markers</td>
+          <td>✅ Hoạt động bình thường</td>
+          <td>✅ Stream từ R2 / TTS on-demand</td>
+          <td>Trải nghiệm đầy đủ</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-orange">🟡 Mạng yếu</span></td>
+          <td>Kết nối chậm / gián đoạn</td>
+          <td>Mapbox hiển thị tiles đã cache + loading placeholders cho tiles mới</td>
+          <td>✅ Hoạt động bình thường (GPS không cần internet)</td>
+          <td>✅ Ʈu tiên cache local → retry stream khi có mạng</td>
+          <td>Map có thể chậm, audio vẫn phát</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-red">🔴 Mất mạng</span></td>
+          <td>Không có kết nối internet</td>
+          <td><strong>Fallback: Danh sách POI</strong> (từ <code>mobile_poi_cache</code>) với khoảng cách GPS, sắp xếp nearest-first</td>
+          <td>✅ Hoạt động bình thường (GPS = satellite-based)</td>
+          <td>✅ Phát từ cache local (<code>mobile_audio_cache</code>). Cache miss → text fallback</td>
+          <td>Banner "Không có mạng — đang dùng dữ liệu offline"</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h4>🗺️ MVP: Mapbox Auto Tile Cache</h4>
+        <ul>
+          <li>Mapbox SDK có sẵn cơ chế <strong>ambient cache</strong> tự động: cache các tiles đã xem gần đây (~50MB mặc định).</li>
+          <li>Không cần code thêm — chỉ cần cấu hình <code>OfflineManager.setMaximumAmbientCacheSize()</code>.</li>
+          <li>Du khách đã xem bản đồ khu vực nào → tiles khu vực đó được cache → vẫn xem được khi offline.</li>
+          <li>Hạn chế: chỉ cache những gì đã xem, không cache khu vực chưa zoom tới.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>📦 Future (v2+): Offline Map Pack</h4>
+        <ul>
+          <li>Sử dụng <code>Mapbox OfflineManager</code> để tải trước map pack cho khu vực thí điểm.</li>
+          <li>Ưoc tính dung lượng: <strong>~50–100MB</strong> cho khu vực Q4 (zoom level 14–18).</li>
+          <li>UX: Nút <strong>"Tải bản đồ offline"</strong> trên màn Settings hoặc trước khi bắt đầu Tour.</li>
+          <li>Tự động xóa map pack cũ khi hết storage (ưu tiên giữ pack gần nhất).</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card">
+      <h4>🔄 Chuyển đổi Map ↔ List tự động</h4>
+      <div class="code-block">// NetworkMonitorService (client-side)
+public class NetworkMonitorService
+{
+    // Theo dõi trạng thái mạng liên tục
+    ConnectivityState CurrentState  → Online / Weak / Offline
+
+    // Khi mất mạng:
+    OnOffline:
+      1. Hiển thị banner "Đang dùng chế độ offline"
+      2. Chuyển MapView → OfflinePOIListView
+         - Load POI từ mobile_poi_cache (SQLite)
+         - Tính khoảng cách real-time bằng GPS (Haversine)
+         - Sắp xếp theo nearest-first
+         - Hiển thị: tên POI, khoảng cách, hướng, icôn (đã nghe / chưa nghe)
+      3. Geofence Engine vẫn chạy bình thường
+      4. Audio phát từ mobile_audio_cache
+
+    // Khi có mạng lại:
+    OnOnline:
+      1. Ẩn banner offline
+      2. Chuyển OfflinePOIListView → MapView
+      3. Sync visit_events chưa gửi lên server
+      4. Cập nhật mobile_poi_cache từ API</div>
+    </div>
+
+    <div class="card">
+      <h4>📱 Giao diện Danh sách POI (Offline Fallback)</h4>
+      <div class="code-block">+----------------------------------------------+
+|  ⚠️  Đang dùng chế độ offline              [x]  |
++----------------------------------------------+
+|  📍 Các điểm gần bạn            Sắp xếp: Gần ↓  |
++----------------------------------------------+
+|  🏛️  Chùa Bà Thiên Hậu            12m  ⬆️    |
+|       Quận 5 • Đã nghe ✅                     |
++----------------------------------------------+
+|  🏠  Nhà cổ Xóm Chiếu             25m  ➡️    |
+|       Q4 • Chưa nghe 🌟                        |
++----------------------------------------------+
+|  🍜  Quán Hủ Tiếu                   38m  ⬆️    |
+|       Xóm Chiếu • Chưa nghe 🌟                 |
++----------------------------------------------+
+|  [Tap để nghe thuyết minh từ cache]          |
++----------------------------------------------+</div>
+    </div>
+
+    <div class="alert warn">
+      <strong>Lưu ý quan trọng:</strong> GPS hoạt động <strong>không cần internet</strong> (dựa vào vệ tinh). Do đó, ngay cả khi mất mạng hoàn toàn, <code>Geofence Engine</code> vẫn xác định được vị trí và trigger narration từ audio cache. Du khách vẫn có trải nghiệm nghe thuyết minh tự động, chỉ không có bản đồ trực quan.
+    </div>
+  </section>
+
+  <!-- ========== 17. DEPLOYMENT ========== -->
+  <section id="deployment">
+    <h2>17. Deployment & Environment</h2>
+    <div class="grid-3">
+      <div class="card">
+        <h3>Local Development</h3>
+        <ul>
+          <li>.NET 8 SDK</li>
+          <li>PostgreSQL local</li>
+          <li>Blazor WASM debug</li>
+          <li>Android Emulator / Device</li>
+          <li>dotnet ef migrations</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Web Production</h3>
+        <ul>
+          <li>ASP.NET Core on Linux container</li>
+          <li>nginx reverse proxy</li>
+          <li>Blazor WASM hosted</li>
+          <li>Cloudflare CDN + R2</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Mobile Production</h3>
+        <ul>
+          <li>.NET MAUI Android APK/AAB</li>
+          <li>Google Play / internal distribution</li>
+          <li>Cloudflare R2 cho audio delivery</li>
+          <li>Foreground Service cho GPS</li>
+        </ul>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <tr><th>Config</th><th>Local</th><th>Staging</th><th>Production</th></tr>
+        <tr><td>Database</td><td>localhost:5432</td><td>staging-db.internal</td><td>prod-db.internal</td></tr>
+        <tr><td>API URL</td><td>localhost:5000</td><td>api.staging.narration.app</td><td>api.narration.app</td></tr>
+        <tr><td>Web URL</td><td>localhost:5001</td><td>staging.narration.app</td><td>narration.app</td></tr>
+        <tr><td>SignalR</td><td>/hubs/notification</td><td>/hubs/notification</td><td>/hubs/notification</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3>Secrets & API Keys</h3>
+      <div class="table-wrap">
+        <table>
+          <tr><th>Secret</th><th>Nơi sử dụng</th><th>Cách lưu</th></tr>
+          <tr><td>Database Connection String</td><td>Server, EF Core</td><td>Environment variable / Secret Manager</td></tr>
+          <tr><td>JWT Secret Key</td><td>Auth Module</td><td>Secret Manager (không commit)</td></tr>
+          <tr><td>Mapbox Access Token</td><td>Map (web + mobile)</td><td>Environment variable</td></tr>
+          <tr><td>Google Cloud Service Account</td><td>TTS, Translation</td><td>JSON file, không commit</td></tr>
+          <tr><td>Cloudflare R2 Config</td><td>Audio pipeline</td><td>Environment variable</td></tr>
+        </table>
+      </div>
+    </div>
+    <div class="alert warn">
+      <strong>Lưu ý bảo mật:</strong> KHÔNG commit secrets vào git. Sử dụng .gitignore và .NET Secret Manager tool.
+    </div>
+  </section>
+
+  <!-- ===================== UML ===================== -->
+
+  <!-- ========== 17. USE CASE ========== -->
+  <section id="uml-usecase">
+    <h2>18. UML — Use Case</h2>
+    <div class="diagram">
+      <pre class="mermaid">
+flowchart LR
+  T["🧳 Tourist"]
+  O["🏢 POI Owner"]
+  A["🛡️ Admin"]
+
+  subgraph ADMIN_FUNCS["Nhóm chức năng Admin"]
+    A_POI(("POI Moderation"))
+    A_AUDIO(("Audio Mgmt"))
+    A_TRANS(("Translation Review"))
+    A_ANALYTICS(("Analytics"))
+    A_TOUR(("Tour Mgmt"))
+    A_MOD(("Moderation Queue"))
+  end
+
+  subgraph OWNER_FUNCS["Nhóm chức năng POI Owner"]
+    O_POI(("POI CRUD"))
+    O_AUDIO(("Audio CRUD"))
+    O_TRANS(("Translation CRUD"))
+  end
+
+  subgraph TOURIST_FUNCS["Nhóm chức năng Tourist"]
+    T_LANG(("Chọn ngôn ngữ"))
+    T_MAP(("Map Discovery"))
+    T_GEO(("Geofence Narration"))
+    T_QR(("Quét QR"))
+    T_TOUR(("Tour"))
+  end
+
+  A --- A_POI
+  A --- A_AUDIO
+  A --- A_TRANS
+  A --- A_ANALYTICS
+  A --- A_TOUR
+  A --- A_MOD
+
+  O --- O_POI
+  O --- O_AUDIO
+  O --- O_TRANS
+
+  T --- T_LANG
+  T --- T_MAP
+  T --- T_GEO
+  T --- T_QR
+  T --- T_TOUR
+      </pre>
+    </div>
+  </section>
+
+  <!-- ========== 18. CLASS DIAGRAM ========== -->
+  <section id="uml-class">
+    <h2>19. UML — Class Diagram</h2>
+    <div class="diagram">
+      <pre class="mermaid">
+classDiagram
+  class AppUser {
+    +Guid Id
+    +string Email
+    +string PasswordHash
+    +string PreferredLanguage
+    +Guid RoleId
+    +bool IsActive
+    +DateTime CreatedAt
+  }
+
+  class Role {
+    +Guid Id
+    +string Name
+    +string Description
+  }
+
+  class POI {
+    +int Id
+    +string Name
+    +string Slug
+    +Guid OwnerId
+    +double Latitude
+    +double Longitude
+    +int Priority
+    +string NarrationMode
+    +string MapLink
+    +string ImageUrl
+    +string Status
+    +DateTime CreatedAt
+  }
+
+  class POITranslation {
+    +int Id
+    +int PoiId
+    +string LanguageCode
+    +string Title
+    +string Description
+    +string Story
+    +string Highlight
+    +bool IsFallback
+  }
+
+  class AudioAsset {
+    +int Id
+    +int PoiId
+    +string LanguageCode
+    +string SourceType
+    +string Provider
+    +string StoragePath
+    +string Url
+    +string Status
+    +int DurationSeconds
+    +DateTime GeneratedAt
+  }
+
+  class Geofence {
+    +int Id
+    +int PoiId
+    +string Name
+    +int RadiusMeters
+    +int Priority
+    +int DebounceSeconds
+    +int CooldownSeconds
+    +bool IsActive
+    +string TriggerAction
+    +bool NearestOnly
+  }
+
+  class Tour {
+    +int Id
+    +string Title
+    +string Description
+    +int EstimatedMinutes
+    +string CoverImage
+    +string Status
+  }
+
+  class TourStop {
+    +int Id
+    +int TourId
+    +int PoiId
+    +int Sequence
+    +int RadiusMeters
+  }
+
+  class QRCode {
+    +int Id
+    +string Code
+    +string TargetType
+    +int TargetId
+    +string LocationHint
+    +DateTime ExpiresAt
+  }
+
+  class VisitEvent {
+    +long Id
+    +Guid UserId
+    +int PoiId
+    +string EventType
+    +string Source
+    +int ListenDurationSeconds
+    +double Lat
+    +double Lng
+    +DateTime CreatedAt
+  }
+
+  class Notification {
+    +int Id
+    +Guid UserId
+    +string Type
+    +string Title
+    +string Message
+    +bool IsRead
+    +DateTime CreatedAt
+  }
+
+  class ModerationRequest {
+    +int Id
+    +string EntityType
+    +int EntityId
+    +string Status
+    +Guid RequestedBy
+    +Guid ReviewedBy
+    +string ReviewNote
+    +DateTime CreatedAt
+  }
+
+  class LocalAudioCache {
+    +int Id
+    +int AudioAssetId
+    +string LocalFilePath
+    +bool IsCached
+    +DateTime CachedAt
+    +DateTime ExpiresAt
+  }
+
+  AppUser "1" --> "1" Role
+  AppUser "1" --> "*" POI : owns
+  POI "1" --> "*" POITranslation
+  POI "1" --> "*" AudioAsset
+  POI "1" --> "1" Geofence
+  POI "1" --> "*" QRCode
+  POI "1" --> "*" VisitEvent
+  AudioAsset "1" --> "*" LocalAudioCache : cached on device
+  Tour "1" --> "*" TourStop
+  TourStop "*" --> "1" POI
+  AppUser "1" --> "*" VisitEvent
+  AppUser "1" --> "*" Notification
+  AppUser "1" --> "*" ModerationRequest : requested
+      </pre>
+    </div>
+  </section>
+
+  <!-- ========== 19. SEQUENCE DIAGRAMS ========== -->
+  <section id="uml-sequence">
+    <h2>20. UML — Sequence Diagrams</h2>
+    <div class="alert info">
+      Sequence chia theo <strong>role → nhóm chức năng</strong>. Mỗi nhóm chức năng chỉ có <strong>1 sequence</strong> duy nhất.
+    </div>
+
+    <h3>Admin</h3>
+
+    <h4>20.1 Admin — POI Moderation</h4>
+    <div class="diagram">
+      <pre class="mermaid">
+sequenceDiagram
+  actor Admin
+  participant Portal as Web Portal
+  participant API
+  participant DB
+
+  Admin->>Portal: Mở chức năng POI Moderation
+  Portal->>API: GET /api/admin/moderation/pending
+  API->>DB: Lấy danh sách POI cần duyệt
+  DB-->>API: Danh sách POI
+  API-->>Portal: Trả dữ liệu POI
+  alt Duyệt POI
+    Admin->>Portal: Chọn duyệt
+    Portal->>API: POST /api/admin/moderation/{id}/approve
+    API->>DB: Cập nhật status = Published
+  else Từ chối POI
+    Admin->>Portal: Chọn từ chối + ghi lý do
+    Portal->>API: POST /api/admin/moderation/{id}/reject
+    API->>DB: Cập nhật status = Rejected
+  else Xóa POI
+    Admin->>Portal: Chọn xóa
+    Portal->>API: DELETE /api/pois/{id}
+    API->>DB: Xóa hoặc archive POI
+  end
+  API-->>Portal: 200 OK
+  Portal-->>Admin: Cập nhật danh sách
+      </pre>
+    </div>
+
+    <h4>20.2 Admin — Audio Management</h4>
+    <div class="diagram">
+      <pre class="mermaid">
+sequenceDiagram
+  actor Admin
+  participant Portal as Web Portal
+  participant API
+  participant DB
+
+  Admin->>Portal: Mở chức năng Audio Management
+  Portal->>API: GET /api/audio?status=all
+  API->>DB: Lấy audio_assets
+  DB-->>API: Danh sách audio
+  API-->>Portal: Trả dữ liệu audio
+  alt Nghe thử audio
+    Admin->>Portal: Chọn một audio
+    Portal->>API: GET /api/audio/{id}/stream
+    API-->>Portal: Audio stream
+  else Ẩn hoặc xóa audio lỗi
+    Admin->>Portal: Chọn audio lỗi
+    Portal->>API: DELETE /api/audio/{id}
+    API->>DB: Soft delete audio
+    API-->>Portal: 200 OK
+  end
+  Portal-->>Admin: Cập nhật trạng thái audio
+      </pre>
+    </div>
+
+    <h4>20.3 Admin — Translation Review</h4>
+    <div class="diagram">
+      <pre class="mermaid">
+sequenceDiagram
+  actor Admin
+  participant Portal as Web Portal
+  participant API
+  participant DB
+
+  Admin->>Portal: Mở chức năng Translation Review
+  Portal->>API: GET /api/translations/poi/{id}
+  API->>DB: Lấy translations
+  DB-->>API: Danh sách translation
+  API-->>Portal: Trả dữ liệu
+  alt Kiểm tra chi tiết
+    Admin->>Portal: Mở translation cụ thể
+    Portal-->>Admin: Hiển thị nội dung đầy đủ
+  else Xóa translation không hợp lệ
+    Portal->>API: DELETE /api/translations/{id}
+    API->>DB: Đánh dấu xóa
+    API-->>Portal: 200 OK
+  end
+  Portal-->>Admin: Cập nhật danh sách
+      </pre>
+    </div>
+
+    <h4>20.4 Admin — Analytics Dashboard</h4>
+    <div class="diagram">
+      <pre class="mermaid">
+sequenceDiagram
+  actor Admin
+  participant Portal as Web Portal
+  participant API
+  participant DB
+
+  Admin->>Portal: Mở Analytics Dashboard
+  Portal->>API: GET /api/analytics/dashboard
+  API->>DB: Tổng hợp visit_events, audio_plays, top_pois
+  DB-->>API: Số liệu analytics
+  API-->>Portal: Dashboard data
+  opt Lọc theo thời gian hoặc POI
+    Admin->>Portal: Chọn bộ lọc
+    Portal->>API: GET /api/analytics/poi/{id}
+    API->>DB: Lấy log chi tiết
+    DB-->>API: Log sử dụng
+    API-->>Portal: Dữ liệu đã lọc
+  end
+  opt Xem heatmap
+    Portal->>API: GET /api/analytics/heatmap
+    API-->>Portal: Heatmap data (lat/lng clusters)
+  end
+  Portal-->>Admin: Hiển thị biểu đồ và thống kê
+      </pre>
+    </div>
+
+    <h4>20.5 Admin — Tour Management</h4>
+    <div class="diagram">
+      <pre class="mermaid">
+sequenceDiagram
+  actor Admin
+  participant Portal as Web Portal
+  participant API
+  participant DB
+
+  Admin->>Portal: Mở Tour Management
+  Portal->>API: GET /api/tours
+  API->>DB: Lấy danh sách tour
+  DB-->>API: Tour list
+  API-->>Portal: Trả dữ liệu
+  alt Tạo / cập nhật tour
+    Admin->>Portal: Nhập thông tin tour + chọn POI stops
+    Portal->>API: POST/PUT /api/tours
+    API->>DB: Lưu tour và tour_stops
+  else Xuất bản tour
+    Admin->>Portal: Chọn xuất bản
+    Portal->>API: PUT /api/tours/{id}
+    API->>DB: status = Published
+  end
+  API-->>Portal: 200 OK
+  Portal-->>Admin: Cập nhật danh sách tour
+      </pre>
+    </div>
+
+    <h4>20.6 Admin — Moderation Queue</h4>
+    <div class="diagram">
+      <pre class="mermaid">
+sequenceDiagram
+  actor Admin
+  participant Portal as Web Portal
+  participant API
+  participant DB
+  participant Hub as SignalR
+
+  Admin->>Portal: Mở Moderation Queue
+  Portal->>API: GET /api/admin/moderation/pending
+  API->>DB: Lấy moderation_requests pending
+  DB-->>API: Danh sách yêu cầu
+  API-->>Portal: Trả dữ liệu
+  Admin->>Portal: Xem chi tiết thay đổi từ Owner
+  alt Duyệt yêu cầu
+    Portal->>API: POST /api/admin/moderation/{id}/approve
+    API->>DB: Áp dụng thay đổi, status = Approved
+  else Từ chối yêu cầu
+    Portal->>API: POST /api/admin/moderation/{id}/reject
+    API->>DB: status = Rejected
+  end
+  API->>Hub: Gửi thông báo cho Owner
+  API-->>Portal: 200 OK
+  Portal-->>Admin: Cập nhật queue
+      </pre>
+    </div>
+
+    <h3>POI Owner</h3>
+
+    <h4>20.7 Owner — POI CRUD</h4>
+    <div class="diagram">
+      <pre class="mermaid">
+sequenceDiagram
+  actor Owner
+  participant Portal as Web Portal
+  participant API
+  participant DB
+
+  Owner->>Portal: Mở POI Management
+  Portal->>API: GET /api/owner/pois
+  API->>DB: Lấy POI của owner
+  DB-->>API: Danh sách POI
+  API-->>Portal: Trả dữ liệu
+  alt Thêm / sửa POI
+    Owner->>Portal: Nhập thông tin POI (tên, tọa độ, ảnh, mô tả)
+    Portal->>API: POST/PUT /api/pois
+    API->>DB: Lưu draft
+  else Xóa POI
+    Owner->>Portal: Chọn xóa
+    Portal->>API: DELETE /api/pois/{id}
+    API->>DB: Đánh dấu draft delete
+  end
+  opt Gửi duyệt
+    Owner->>Portal: Chọn gửi duyệt
+    Portal->>API: POST /api/moderation-requests
+    API->>DB: Tạo moderation_request (pending)
+  end
+  API-->>Portal: Trạng thái hiện tại
+  Portal-->>Owner: Hiển thị draft / pending review
+      </pre>
+    </div>
+
+    <h4>20.8 Owner — Audio CRUD</h4>
+    <div class="diagram">
+      <pre class="mermaid">
+sequenceDiagram
+  actor Owner
+  participant Portal as Web Portal
+  participant API
+  participant DB
+  participant GTrans as Google Translation
+  participant GTTS as Google TTS
+  participant R2 as Cloudflare R2
+
+  Owner->>Portal: Mở Audio Management
+  alt Upload file audio thu sẵn
+    Owner->>Portal: Chọn file .mp3/.wav
+    Portal->>API: POST /api/audio/upload
+    API->>R2: Upload file media
+    R2-->>API: Public URL
+    API->>DB: Lưu audio_asset (source_type=recorded)
+  else Tạo audio từ script TTS
+    Owner->>Portal: Nhập script tiếng Việt
+    Portal->>API: POST /api/audio/tts
+    loop Mỗi ngôn ngữ mục tiêu
+      API->>GTrans: Translate(script, lang)
+      GTrans-->>API: translatedScript
+      API->>GTTS: Synthesize(translatedScript, lang)
+      GTTS-->>API: mp3 bytes
+      API->>R2: Upload mp3
+      R2-->>API: Public URL
+    end
+    API->>DB: Lưu audio_assets (source_type=tts)
+  end
+  opt Gửi duyệt audio
+    Owner->>Portal: Chọn gửi duyệt
+    Portal->>API: POST /api/moderation-requests
+    API->>DB: Tạo moderation_request (pending)
+  end
+  API-->>Portal: Trạng thái audio
+  Portal-->>Owner: Hiển thị kết quả
+      </pre>
+    </div>
+
+    <h4>20.9 Owner — Translation CRUD</h4>
+    <div class="diagram">
+      <pre class="mermaid">
+sequenceDiagram
+  actor Owner
+  participant Portal as Web Portal
+  participant API
+  participant DB
+
+  Owner->>Portal: Mở Translation Management
+  Portal->>API: GET /api/translations/poi/{id}
+  API->>DB: Lấy translations
+  DB-->>API: Danh sách translation
+  API-->>Portal: Trả dữ liệu
+  alt Thêm / sửa translation
+    Owner->>Portal: Nhập nội dung bản dịch
+    Portal->>API: POST/PUT /api/translations
+    API->>DB: Lưu translation draft
+  else Auto-translate
+    Owner->>Portal: Chọn dịch tự động
+    Portal->>API: POST /api/translations/auto-translate
+    API->>DB: Lưu translation (is_fallback=true)
+  else Xóa translation
+    Portal->>API: DELETE /api/translations/{id}
+    API->>DB: Đánh dấu xóa
+  end
+  opt Gửi duyệt
+    Portal->>API: POST /api/moderation-requests
+    API->>DB: Tạo moderation_request (pending)
+  end
+  API-->>Portal: Trạng thái
+  Portal-->>Owner: Hiển thị kết quả
+      </pre>
+    </div>
+
+    <h3>Tourist (App Android)</h3>
+
+    <h4>20.10 Tourist — Chọn ngôn ngữ</h4>
+    <div class="diagram">
+      <pre class="mermaid">
+sequenceDiagram
+  actor Tourist
+  participant App as Android App
+  participant API
+  participant DB
+
+  Tourist->>App: Mở Settings / Chọn ngôn ngữ
+  Tourist->>App: Chọn ngôn ngữ ưu tiên (ví dụ: en)
+  App->>App: Lưu preference local
+  opt Đã đăng nhập
+    App->>API: PUT /api/auth/update-profile
+    API->>DB: Lưu preferred_language
+  end
+  App->>API: GET /api/pois?lang=en
+  API-->>App: Dữ liệu POI theo ngôn ngữ
+  App-->>Tourist: Cập nhật UI + narration preference
+      </pre>
+    </div>
+
+    <h4>20.11 Tourist — Map Discovery</h4>
+    <div class="diagram">
+      <pre class="mermaid">
+sequenceDiagram
+  actor Tourist
+  participant App as Android App
+  participant GPS as FusedLocation
+  participant API
+  participant DB
+  participant Map as Mapbox SDK
+
+  Tourist->>App: Mở bản đồ
+  App->>GPS: Request current location
+  GPS-->>App: (lat, lng)
+  App->>API: GET /api/pois/near?lat=...&lng=...&radius=500
+  API->>DB: Tìm POI gần vị trí
+  DB-->>API: Danh sách POI + khoảng cách
+  API-->>App: POI data
+  App->>Map: Render markers + user location
+  App->>App: Highlight nearest POI
+  App-->>Tourist: Hiển thị bản đồ với markers
+      </pre>
+    </div>
+
+    <h4>20.12 Tourist — Geofence → Auto Narration</h4>
+    <div class="diagram">
+      <pre class="mermaid">
+sequenceDiagram
+  actor Tourist
+  participant App as Android App
+  participant GPS as FusedLocation
+  participant GeoEngine as Geofence Engine
+  participant NarrEngine as Narration Engine
+  participant LocalDB as SQLite Cache
+  participant API
+  participant Player as Audio Player
+
+  Note over GPS: Background Service chạy liên tục
+  GPS->>GeoEngine: Location update (lat, lng)
+  GeoEngine->>GeoEngine: Tính khoảng cách Haversine tới tất cả POI
+  GeoEngine->>GeoEngine: Lọc POI trong bán kính geofence
+
+  alt Có POI trong vùng
+    GeoEngine->>GeoEngine: Chọn nearest + highest priority
+    GeoEngine->>GeoEngine: Kiểm tra debounce (10s) + cooldown (30 phút)
+    alt Chưa hết cooldown
+      GeoEngine-->>App: Bỏ qua trigger
+    else Hợp lệ
+      GeoEngine->>NarrEngine: Trigger narration cho POI
+      NarrEngine->>LocalDB: Kiểm tra audio cache
+      alt Cache hit
+        LocalDB-->>NarrEngine: Local audio path
+        NarrEngine->>Player: Phát từ cache
+      else Cache miss
+        NarrEngine->>API: GET /api/audio?poiId={id}&lang=selected
+        API-->>NarrEngine: Audio URL hoặc text fallback
+        alt Có audio
+          NarrEngine->>Player: Stream + cache local
+          NarrEngine->>LocalDB: Lưu vào mobile_audio_cache
+        else Không có audio
+          NarrEngine-->>App: Hiển thị text fallback
+        end
+      end
+      Player-->>Tourist: Phát thuyết minh
+      App->>API: POST /api/visit-events (geofence_enter)
+    end
+  end
+      </pre>
+    </div>
+
+    <h4>20.13 Tourist — Quét QR</h4>
+    <div class="diagram">
+      <pre class="mermaid">
+sequenceDiagram
+  actor Tourist
+  participant App as Android App
+  participant API
+  participant DB
+  participant NarrEngine as Narration Engine
+
+  Tourist->>App: Mở camera quét QR
+  Tourist->>App: Quét mã QR
+  App->>API: GET /api/qr/{code}
+  API->>DB: Resolve target
+  alt QR hợp lệ
+    DB-->>API: Target POI data
+    API-->>App: POI payload
+    App->>API: POST /api/qr/{code}/scan
+    Note right of API: Ghi visit_event (event_type=qr_scan)
+    App->>NarrEngine: Trigger narration cho POI
+    NarrEngine-->>Tourist: Phát thuyết minh
+    App-->>Tourist: Hiển thị chi tiết POI
+  else QR không hợp lệ / hết hạn
+    API-->>App: Error 404/410
+    App-->>Tourist: Thông báo lỗi + gợi ý quét lại hoặc tìm thủ công
+  end
+      </pre>
+    </div>
+
+    <h4>20.14 Tourist — Tour</h4>
+    <div class="diagram">
+      <pre class="mermaid">
+sequenceDiagram
+  actor Tourist
+  participant App as Android App
+  participant API
+  participant DB
+
+  Tourist->>App: Mở danh sách Tour
+  App->>API: GET /api/tours
+  API->>DB: Lấy tour published
+  DB-->>API: Tour list
+  API-->>App: Danh sách tour
+  Tourist->>App: Chọn tour
+  App->>API: GET /api/tours/{id}
+  API->>DB: Tour detail + stops
+  API-->>App: Tour data
+  alt Đã login → Start/Resume tour
+    Tourist->>App: Bấm Start Tour
+    App->>API: POST /api/tours/{id}/start
+    API->>DB: Tạo tour_session
+    API-->>App: Session data
+    Note over App: Geofence Engine tự động trigger<br/>narration cho từng tour_stop
+    loop Mỗi khi đến tour_stop
+      App->>API: POST /api/tours/{id}/progress
+      API->>DB: Cập nhật current_stop
+    end
+    App-->>Tourist: Hiển thị tiến trình tour
+  else Guest mode → chỉ xem
+    App-->>Tourist: Hiển thị tour read-only
+  end
+      </pre>
+    </div>
+  </section>
+
+  <!-- ========== 20. ACTIVITY DIAGRAM ========== -->
+  <section id="uml-activity">
+    <h2>21. UML — Activity Diagram</h2>
+    <h3>Luồng chính: Tourist sử dụng app</h3>
+    <div class="diagram">
+      <pre class="mermaid">
+flowchart TD
+  A[Mở app] --> B{Đã đăng nhập?}
+  B -->|No| C{Cần tính năng cá nhân?}
+  C -->|No| D[Vào Guest mode]
+  C -->|Yes| E[Login]
+  B -->|Yes| F[Chọn ngôn ngữ]
+  D --> F
+  E --> F
+
+  F --> G[Load bản đồ + POI từ API]
+  G --> H{Người dùng thao tác?}
+
+  H -->|Xem POI trên map| I[Mở chi tiết POI]
+  H -->|Quét QR| J[Resolve QR + Log scan]
+  H -->|Xem tour| K[Xem tour read-only]
+  H -->|Start tour| L{Đã login?}
+  H -->|Di chuyển| M1{GPS cập nhật vị trí}
+
+  M1 --> M2{Có POI trong geofence?}
+  M2 -->|No| H
+  M2 -->|Yes| M3{Còn trong cooldown?}
+  M3 -->|Yes| H
+  M3 -->|No| M4[Chọn POI nearest + priority cao nhất]
+
+  L -->|No| E
+  L -->|Yes| N[Start/Resume tour session]
+
+  I --> O[Lấy translation theo ngôn ngữ]
+  J --> O
+  N --> O
+  M4 --> O
+
+  O --> P{Audio ready?}
+  P -->|Cache hit| Q1[Phát từ local cache]
+  P -->|Cache miss + online| Q2[Tải từ R2 + cache + phát]
+  P -->|No audio| R[Hiển thị text fallback]
+
+  Q1 --> S[Ghi visit_event]
+  Q2 --> S
+  R --> S
+  S --> T[Refresh UI]
+  T --> H
+
+  K --> H
+      </pre>
+    </div>
+  </section>
+
+  <!-- ========== 21. STATE DIAGRAMS ========== -->
+  <section id="uml-state">
+    <h2>22. UML — State Diagrams</h2>
+
+    <h3>22.1 Vòng đời POI</h3>
+    <div class="diagram">
+      <pre class="mermaid">
+stateDiagram-v2
+  [*] --> Draft : Owner tạo mới
+  Draft --> PendingReview : Owner gửi duyệt
+  PendingReview --> Published : Admin duyệt
+  PendingReview --> Rejected : Admin từ chối
+  Rejected --> Draft : Owner sửa lại
+  Published --> Updated : Owner chỉnh sửa
+  Updated --> PendingReview : Gửi duyệt lại
+  Published --> Archived : Admin ẩn
+  Archived --> [*]
+      </pre>
+    </div>
+
+    <h3>22.2 Vòng đời Audio Asset</h3>
+    <div class="diagram">
+      <pre class="mermaid">
+stateDiagram-v2
+  [*] --> Requested : Owner yêu cầu tạo audio
+  Requested --> Generating : Background job xử lý
+  Generating --> Ready : TTS thành công + upload R2
+  Generating --> Failed : Lỗi TTS hoặc upload
+  Failed --> Requested : Retry
+  Ready --> Replaced : Nội dung POI thay đổi
+  Replaced --> Requested : Generate lại
+  Ready --> Deleted : Admin/Owner xóa
+  Deleted --> [*]
+      </pre>
+    </div>
+
+    <h3>22.3 Vòng đời Narration (Client-side)</h3>
+    <div class="diagram">
+      <pre class="mermaid">
+stateDiagram-v2
+  [*] --> Idle : App khởi động
+  Idle --> Triggered : Geofence Engine detect POI
+  Triggered --> CheckingCache : Narration Engine kiểm tra
+  CheckingCache --> PlayingFromCache : Cache hit
+  CheckingCache --> Downloading : Cache miss
+  Downloading --> Playing : Audio tải xong
+  Downloading --> TextFallback : Network error
+  PlayingFromCache --> Completed : Audio phát xong
+  Playing --> Completed : Audio phát xong
+  Playing --> Paused : System notification / incoming call
+  Paused --> Playing : Resume
+  Completed --> LoggingEvent : Ghi visit_event
+  TextFallback --> LoggingEvent
+  LoggingEvent --> Cooldown : Bắt đầu cooldown timer
+  Cooldown --> Idle : Cooldown hết hạn
+      </pre>
+    </div>
+
+    <h3>21.4 Vòng đời Moderation Request</h3>
+    <div class="diagram">
+      <pre class="mermaid">
+stateDiagram-v2
+  [*] --> Pending : Owner gửi duyệt
+  Pending --> Approved : Admin duyệt
+  Pending --> Rejected : Admin từ chối
+  Approved --> [*] : Áp dụng thay đổi
+  Rejected --> Revised : Owner sửa lại
+  Revised --> Pending : Gửi duyệt lại
+      </pre>
+    </div>
+
+    <h3>21.5 Vòng đời Tour Session</h3>
+    <div class="diagram">
+      <pre class="mermaid">
+stateDiagram-v2
+  [*] --> NotStarted
+  NotStarted --> InProgress : User start tour
+  InProgress --> Paused : User pause
+  Paused --> InProgress : User resume
+  InProgress --> Completed : All stops done
+  InProgress --> Abandoned : User cancel
+  Completed --> [*]
+  Abandoned --> [*]
+      </pre>
+    </div>
+  </section>
+
+  <!-- ========== FOOTER ========== -->
+  <div class="footer">
+    PRD & UML v1.1 — Ứng dụng Thuyết Minh Tự Động &bull; Cập nhật: 15/04/2026 &bull; Tech Stack: .NET 8 / MAUI Android / Blazor WASM / PostgreSQL / Mapbox / Google Cloud TTS / Cloudflare R2
+  </div>
+</main>
+
+<script>
+  mermaid.initialize({ 
+    startOnLoad: true, 
+    theme: 'dark',
+    themeVariables: {
+      primaryColor: '#13233b',
+      primaryTextColor: '#e2e8f0',
+      lineColor: '#10b981',
+      secondaryColor: '#172b48'
+    }
+  });
+  // Active nav link
+  document.querySelectorAll('.nav-link').forEach(link => {
+    link.addEventListener('click', () => {
+      document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+      link.classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>
