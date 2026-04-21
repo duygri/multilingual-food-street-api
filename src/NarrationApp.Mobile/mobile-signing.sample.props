@@ -1,0 +1,16 @@
+<Project>
+    <PropertyGroup>
+        <!-- Copy this file to mobile-signing.local.props and fill in your real local values. -->
+        <ANDROID_KEYSTORE_PATH>C:\secrets\foodstreet-upload.keystore</ANDROID_KEYSTORE_PATH>
+        <ANDROID_KEYSTORE_PASSWORD>replace-me</ANDROID_KEYSTORE_PASSWORD>
+        <ANDROID_KEY_ALIAS>foodstreet-upload</ANDROID_KEY_ALIAS>
+        <ANDROID_KEY_PASSWORD>replace-me</ANDROID_KEY_PASSWORD>
+
+        <!-- Optional build metadata overrides -->
+        <MOBILE_VERSION_NAME>1.0.0</MOBILE_VERSION_NAME>
+        <MOBILE_VERSION_CODE>1</MOBILE_VERSION_CODE>
+
+        <!-- Optional: package a different API config JSON file as tourist-api.json -->
+        <TouristApiConfigFile>C:\configs\foodstreet\tourist-api.production.json</TouristApiConfigFile>
+    </PropertyGroup>
+</Project>

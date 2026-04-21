@@ -1,0 +1,66 @@
+.system-status-rail {
+    padding: 1rem 1.05rem;
+    border-radius: 1rem;
+    background: rgba(12, 23, 39, 0.82);
+    border: 1px solid rgba(80, 137, 168, 0.16);
+}
+
+.system-status-rail__header p,
+.system-status-rail__key,
+.system-status-rail strong {
+    margin: 0;
+}
+
+.system-status-rail__header p {
+    color: var(--vk-accent-soft);
+    font-family: var(--vk-font-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.system-status-rail__items {
+    margin-top: 0.8rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+}
+
+.system-status-rail__item {
+    min-width: 9rem;
+    padding: 0.75rem 0.85rem;
+    border-radius: 0.9rem;
+    border: 1px solid rgba(148, 163, 184, 0.12);
+    background: rgba(8, 17, 31, 0.46);
+}
+
+.system-status-rail__key {
+    display: block;
+    color: var(--vk-muted);
+    font-family: var(--vk-font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.system-status-rail strong {
+    display: block;
+    margin-top: 0.3rem;
+    font-size: 0.95rem;
+}
+
+.system-status-rail__item.is-good strong {
+    color: #8ff2c9;
+}
+
+.system-status-rail__item.is-info strong {
+    color: #8fd9ff;
+}
+
+.system-status-rail__item.is-warn strong {
+    color: #ffcf76;
+}
+
+.system-status-rail__item.is-critical strong {
+    color: #ff9f9f;
+}

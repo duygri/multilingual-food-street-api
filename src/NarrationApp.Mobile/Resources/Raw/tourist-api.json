@@ -1,0 +1,14 @@
+{
+  "development": {
+    "default": "https://localhost:5001/",
+    "android": "https://10.0.2.2:5001/"
+  },
+  "staging": {
+    "default": "https://staging-api.foodstreet.example/",
+    "android": "https://staging-api.foodstreet.example/"
+  },
+  "production": {
+    "default": "https://api.foodstreet.example/",
+    "android": "https://api.foodstreet.example/"
+  }
+}

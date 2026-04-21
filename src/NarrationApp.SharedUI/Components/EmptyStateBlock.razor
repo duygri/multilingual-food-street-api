@@ -1,0 +1,27 @@
+<section class="empty-state-block">
+    @if (!string.IsNullOrWhiteSpace(Eyebrow))
+    {
+        <p class="empty-state-block__eyebrow">@Eyebrow</p>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(Title))
+    {
+        <h3>@Title</h3>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(Message))
+    {
+        <p>@Message</p>
+    }
+</section>
+
+@code {
+    [Parameter]
+    public string? Eyebrow { get; set; }
+
+    [Parameter]
+    public string? Title { get; set; }
+
+    [Parameter]
+    public string? Message { get; set; }
+}

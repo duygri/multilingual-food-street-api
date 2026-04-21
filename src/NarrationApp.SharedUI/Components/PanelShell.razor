@@ -1,0 +1,74 @@
+<section class="@CssClass">
+    @if (HasHeader)
+    {
+        <div class="panel-shell__header">
+            <div class="panel-shell__heading">
+                @if (!string.IsNullOrWhiteSpace(Eyebrow))
+                {
+                    <p class="panel-shell__eyebrow">@Eyebrow</p>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(Title))
+                {
+                    <h2>@Title</h2>
+                }
+            </div>
+
+            @if (HeaderActions is not null || !string.IsNullOrWhiteSpace(BadgeLabel))
+            {
+                <div class="panel-shell__aside">
+                    @if (!string.IsNullOrWhiteSpace(BadgeLabel))
+                    {
+                        <StatusBadge Label="@BadgeLabel" Tone="@BadgeTone" />
+                    }
+
+                    @HeaderActions
+                </div>
+            }
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(Description))
+    {
+        <p class="panel-shell__copy panel-shell__description">@Description</p>
+    }
+
+    @if (ChildContent is not null)
+    {
+        <div class="panel-shell__body">
+            @ChildContent
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter]
+    public string? Eyebrow { get; set; }
+
+    [Parameter]
+    public string? Title { get; set; }
+
+    [Parameter]
+    public string? Description { get; set; }
+
+    [Parameter]
+    public string? BadgeLabel { get; set; }
+
+    [Parameter]
+    public StatusTone BadgeTone { get; set; } = StatusTone.Info;
+
+    [Parameter]
+    public RenderFragment? HeaderActions { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public string? ClassName { get; set; }
+
+    private bool HasHeader => !string.IsNullOrWhiteSpace(Eyebrow) || !string.IsNullOrWhiteSpace(Title);
+
+    private string CssClass => string.IsNullOrWhiteSpace(ClassName)
+        ? "panel-shell panel-shell--shared"
+        : $"panel-shell panel-shell--shared {ClassName}";
+}

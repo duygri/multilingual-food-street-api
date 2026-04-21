@@ -1,0 +1,1146 @@
+@page "/admin/audio-management"
+@using System.Globalization
+@using System.Linq
+@using NarrationApp.Shared.DTOs.Languages
+@implements IAsyncDisposable
+@attribute [Authorize(Roles = "admin")]
+
+@inject IAdminPortalService AdminPortalService
+@inject IAudioPortalService AudioPortalService
+@inject ITranslationPortalService TranslationPortalService
+@inject ILanguagePortalService LanguagePortalService
+@inject IAudioRefreshPump AudioRefreshPump
+
+<PageTitle>Audio Management</PageTitle>
+
+@if (_isLoading)
+{
+    <section class="panel-shell">
+        <p class="panel-shell__eyebrow">Audio</p>
+        <h2>Đang tải điều phối audio...</h2>
+    </section>
+}
+else if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <section class="panel-shell">
+        <p class="panel-shell__eyebrow">Audio</p>
+        <h2>Không thể tải điều phối audio</h2>
+        <p class="panel-shell__copy">@_errorMessage</p>
+    </section>
+}
+else
+{
+    <div class="dashboard-stack audio-admin">
+        @if (!string.IsNullOrWhiteSpace(_statusMessage))
+        {
+            <section class="panel-shell">
+                <p class="panel-shell__copy">@_statusMessage</p>
+            </section>
+        }
+
+        <section class="panel-shell audio-command">
+            <div class="audio-command__header">
+                <div class="audio-command__copy">
+                    <p class="panel-shell__eyebrow">Google stack audio room</p>
+                    <h1>Audio Management</h1>
+                    <p class="panel-shell__copy">Quản lý audio nguồn tiếng Việt và generate đa ngôn ngữ cho từng POI.</p>
+                    @if (HasProcessingAudio)
+                    {
+                        <p class="audio-command__polling">Tự động cập nhật khi audio đang được tạo nền.</p>
+                    }
+                </div>
+
+                <div class="audio-command__actions">
+                    <button class="app-button app-button--ghost"
+                            data-action="retry-all-failed-audio"
+                            data-failed-pois="@FilteredFailedPoiCount"
+                            type="button"
+                            @onclick="RetryAllFailedAudioAsync"
+                            disabled="@(FilteredFailedPoiCount == 0)">
+                        Retry tất cả lỗi
+                    </button>
+                    <button class="app-button app-button--ghost"
+                            data-action="open-batch-generate"
+                            type="button"
+                            @onclick="() => OpenGenerateModal()"
+                            disabled="@(!HasAnyPoi)">
+                        Batch Generate
+                    </button>
+                </div>
+            </div>
+
+            <div class="audio-kpi-grid">
+                <article class="audio-kpi-card audio-kpi-card--good">
+                    <strong>@ReadyAudioCount</strong>
+                    <h2>Audio sẵn sàng</h2>
+                    <p>ready / toàn hệ thống</p>
+                    <div class="audio-kpi-card__progress">
+                        <span style="width:@FormatPercent(GetAssetRatio(ReadyAudioCount), 0.32d)"></span>
+                    </div>
+                </article>
+
+                <article class="audio-kpi-card audio-kpi-card--warn">
+                    <strong>@ProcessingAudioCount</strong>
+                    <h2>Đang xử lý</h2>
+                    <p>generating / pending</p>
+                    <div class="audio-kpi-card__progress">
+                        <span style="width:@FormatPercent(GetAssetRatio(ProcessingAudioCount), 0.18d)"></span>
+                    </div>
+                </article>
+
+                <article class="audio-kpi-card audio-kpi-card--danger">
+                    <strong>@FailedAudioCount</strong>
+                    <h2>Lỗi generate</h2>
+                    <p>cần retry thủ công</p>
+                    <div class="audio-kpi-card__progress">
+                        <span style="width:@FormatPercent(GetAssetRatio(FailedAudioCount), 0.12d)"></span>
+                    </div>
+                </article>
+
+                <article class="audio-kpi-card audio-kpi-card--info">
+                    <strong>@TotalAudioCount</strong>
+                    <h2>Tổng audio assets</h2>
+                    <p>@DistinctLanguageCount ngôn ngữ × @_pois.Count POI</p>
+                    <div class="audio-kpi-card__progress">
+                        <span style="width:@FormatPercent(GetCoverageRatio(), 0.22d)"></span>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="panel-shell audio-table">
+            <div class="audio-table__header">
+                <div>
+                    <h2>Danh sách Audio Assets</h2>
+                    <p>@FilteredPois.Count POI · @PoisWithVietnameseSourceCount có audio nguồn tiếng Việt</p>
+                </div>
+            </div>
+
+            <div class="audio-table__controls">
+                <label class="audio-toolbar__search">
+                    <span>🔎</span>
+                    <InputText data-field="search-audio"
+                               @bind-Value="_searchTerm"
+                               placeholder="Tìm theo tên POI..." />
+                </label>
+
+                <div class="audio-toolbar__filters">
+                    <InputSelect class="audio-toolbar__select" data-field="status-filter" @bind-Value="_statusFilter">
+                        <option value="all">Tất cả trạng thái</option>
+                        <option value="ready">Audio sẵn sàng</option>
+                        <option value="processing">Đang xử lý</option>
+                        <option value="failed">Lỗi generate</option>
+                        <option value="missing">Chưa có audio</option>
+                    </InputSelect>
+
+                    <InputSelect class="audio-toolbar__select" data-field="source-filter" @bind-Value="_sourceFilter">
+                        <option value="all">Tất cả nguồn</option>
+                        <option value="recorded">Upload audio</option>
+                        <option value="tts">Google TTS</option>
+                        <option value="missing">Chưa có nguồn VI</option>
+                    </InputSelect>
+
+                    <InputSelect class="audio-toolbar__select" data-field="category-filter" @bind-Value="_categoryFilter">
+                        <option value="all">Tất cả danh mục</option>
+                        @foreach (var category in CategoryOptions)
+                        {
+                            <option value="@category">@category</option>
+                        }
+                    </InputSelect>
+
+                    <button class="app-button app-button--ghost" data-action="reset-filters" type="button" @onclick="ResetFilters">
+                        Reset
+                    </button>
+                </div>
+            </div>
+
+            @if (_pois.Count == 0)
+            {
+                <EmptyStateBlock Eyebrow="Audio"
+                                 Title="Chưa có POI nào"
+                                 Message="Khi owner tạo POI và gửi duyệt, admin có thể vào đây để chuẩn bị audio nguồn và audio đa ngôn ngữ." />
+            }
+            else if (FilteredPois.Count == 0)
+            {
+                <EmptyStateBlock Eyebrow="Bộ lọc"
+                                 Title="Không có dòng nào khớp"
+                                 Message="Hãy nới bộ lọc hoặc xóa từ khóa tìm kiếm để xem lại toàn bộ audio asset." />
+            }
+            else
+            {
+                <div class="audio-table__scroller">
+                    <table class="audio-table__grid">
+                        <thead>
+                            <tr>
+                                <th>POI</th>
+                                <th>Nguồn (VI)</th>
+                                <th>Trạng thái</th>
+                                <th>Ngôn ngữ</th>
+                                <th>Nghe thử</th>
+                                <th>Cập nhật</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var poi in FilteredPois)
+                            {
+                                var items = GetAudioItems(poi.Id);
+                                var previewAudio = GetPreviewAudio(items);
+                                var latestAudio = GetLatestAudio(items);
+                                var sourceAudio = GetVietnameseSource(items);
+                                var status = GetOverallAudioStatus(items);
+                                var failedLanguageCodes = GetFailedLanguageCodes(items);
+
+                                <tr class="@GetRowClass(poi)"
+                                    data-row-poi="@poi.Id"
+                                    @onclick="() => SelectPoi(poi)">
+                                    <td>
+                                        <div class="audio-table__poi">
+                                            <strong>@poi.Name</strong>
+                                            <p>ID: @poi.Slug · @(poi.CategoryName ?? poi.OwnerEmail)</p>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="audio-tag @GetSourceTagClass(sourceAudio)">
+                                            @GetSourceTagLabel(sourceAudio)
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="audio-table__status">
+                                            <span class="audio-tag @GetStatusTagClass(status)">
+                                                @GetStatusLabel(status)
+                                            </span>
+                                            @if (failedLanguageCodes.Count > 0)
+                                            {
+                                                <small class="audio-table__muted">Lỗi: @string.Join(", ", failedLanguageCodes)</small>
+                                            }
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="audio-language-chips">
+                                            @foreach (var language in ActiveLanguageOptions)
+                                            {
+                                                <span class="audio-language-chip @GetLanguageChipClass(items, language.Code)">
+                                                    @language.Code
+                                                </span>
+                                            }
+                                        </div>
+                                    </td>
+                                    <td>
+                                        @if (previewAudio is null)
+                                        {
+                                            <span class="audio-table__muted">Chưa có file nghe thử</span>
+                                        }
+                                        else
+                                        {
+                                            <a class="audio-preview"
+                                               href="@previewAudio.Url"
+                                               target="_blank"
+                                               rel="noopener noreferrer"
+                                               @onclick:stopPropagation="true">
+                                                <span class="audio-preview__play">▶</span>
+                                                <span class="audio-preview__wave">
+                                                    <span></span>
+                                                </span>
+                                                <span class="audio-preview__time">@FormatDuration(previewAudio.DurationSeconds)</span>
+                                            </a>
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="audio-table__muted">@GetRelativeTimeLabel(latestAudio?.GeneratedAtUtc ?? poi.CreatedAtUtc)</span>
+                                    </td>
+                                    <td>
+                                        <div class="audio-row-actions">
+                                            <button class="audio-row-button audio-row-button--accent"
+                                                    data-action="row-open-generate-@poi.Id"
+                                                    title="Generate audio"
+                                                    type="button"
+                                                    @onclick:stopPropagation="true"
+                                                    @onclick="() => OpenGenerateModal(poi)">
+                                                Generate
+                                            </button>
+                                            <button class="audio-row-button"
+                                                    data-action="row-open-upload-@poi.Id"
+                                                    title="Upload audio"
+                                                    type="button"
+                                                    @onclick:stopPropagation="true"
+                                                    @onclick="() => OpenUploadModal(poi)">
+                                                Upload
+                                            </button>
+                                            <button class="audio-row-button audio-row-button--ghost"
+                                                    data-action="row-refresh-poi-@poi.Id"
+                                                    title="Refresh row"
+                                                    type="button"
+                                                    @onclick:stopPropagation="true"
+                                                    @onclick="() => RefreshPoiAudioAsync(poi)">
+                                                Refresh
+                                            </button>
+                                            @if (failedLanguageCodes.Count > 0)
+                                            {
+                                                <button class="audio-row-button audio-row-button--danger"
+                                                        data-action="row-retry-failed-@poi.Id"
+                                                        title="Retry failed audio"
+                                                        type="button"
+                                                        @onclick:stopPropagation="true"
+                                                        @onclick="() => RetryFailedAudioAsync(poi)">
+                                                    Retry lỗi
+                                                </button>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+    </div>
+}
+
+@if (_isGenerateModalOpen && _modalPoi is not null)
+{
+    <div class="audio-modal-backdrop" @onclick="CloseGenerateModal">
+        <section class="audio-modal" role="dialog" aria-label="Generate Audio Đa Ngôn Ngữ" @onclick:stopPropagation="true">
+            <div class="audio-modal__header">
+                <div>
+                    <p class="panel-shell__eyebrow">⚡ Generate</p>
+                    <h2>Generate Audio Đa Ngôn Ngữ</h2>
+                </div>
+
+                <button class="audio-modal__close" data-action="close-generate-modal" type="button" @onclick="CloseGenerateModal">×</button>
+            </div>
+
+            <article class="audio-modal__poi-card">
+                <strong>@_modalPoi.Name</strong>
+                <p>ID: @_modalPoi.Slug · @(_modalPoi.CategoryName ?? _modalPoi.OwnerEmail)</p>
+            </article>
+
+            <article class="audio-modal__banner">
+                <p>
+                    Hệ thống dùng <strong>Google Cloud TTS</strong> để tạo audio. Với các ngôn ngữ ngoài tiếng Việt,
+                    audio chỉ được generate khi POI đã có bản dịch lưu sẵn.
+                </p>
+            </article>
+
+            <div class="audio-modal__section">
+                <p class="panel-shell__eyebrow">Chọn ngôn ngữ</p>
+                <div class="audio-language-grid">
+                    @foreach (var language in ActiveLanguageOptions)
+                    {
+                        <label class="audio-language-option @(_selectedLanguages.Contains(language.Code) ? "is-selected" : string.Empty)">
+                            <input type="checkbox"
+                                   data-field="language-@language.Code"
+                                   checked="@_selectedLanguages.Contains(language.Code)"
+                                   @onchange="args => ToggleLanguage(language.Code, args.Value)" />
+                            <span>@language.Flag @language.Code</span>
+                        </label>
+                    }
+                </div>
+            </div>
+
+            <div class="audio-modal__section">
+                <label class="editor-field" for="voice-profile">
+                    <span>Giọng đọc (mỗi ngôn ngữ)</span>
+                    <InputSelect id="voice-profile" class="audio-modal__select" data-field="voice-profile" @bind-Value="_selectedVoiceProfile">
+                        @foreach (var profile in VoiceProfiles)
+                        {
+                            <option value="@profile.Value">@profile.Label</option>
+                        }
+                    </InputSelect>
+                </label>
+            </div>
+
+            <div class="audio-modal__actions">
+                <button class="app-button app-button--ghost" type="button" @onclick="CloseGenerateModal">Đóng</button>
+                <button class="app-button app-button--primary"
+                        data-action="generate-selected-audio"
+                        type="button"
+                        disabled="@(_isGenerating || _selectedLanguages.Count == 0)"
+                        @onclick="GenerateSelectedAudioAsync">
+                    @(_isGenerating ? "Đang generate..." : $"Generate {_selectedLanguages.Count} ngôn ngữ")
+                </button>
+            </div>
+        </section>
+    </div>
+}
+
+@if (_isUploadModalOpen && _uploadPoi is not null)
+{
+    <div class="audio-modal-backdrop" @onclick="CloseUploadModal">
+        <section class="audio-modal audio-modal--compact" role="dialog" aria-label="Upload Audio" @onclick:stopPropagation="true">
+            <div class="audio-modal__header">
+                <div>
+                    <p class="panel-shell__eyebrow">↑ Upload</p>
+                    <h2>Tải audio nguồn tiếng Việt</h2>
+                </div>
+
+                <button class="audio-modal__close" data-action="close-upload-modal" type="button" @onclick="CloseUploadModal">×</button>
+            </div>
+
+            <article class="audio-modal__poi-card">
+                <strong>@_uploadPoi.Name</strong>
+                <p>Tải file nguồn VI để ưu tiên phát audio gốc trước khi generate thêm ngôn ngữ.</p>
+            </article>
+
+            <label class="editor-field audio-upload-field" for="audio-upload-file">
+                <span>Chọn file MP3/WAV</span>
+                <InputFile id="audio-upload-file" OnChange="HandleUploadSelection" />
+            </label>
+
+            @if (_selectedUploadFile is not null)
+            {
+                <p class="panel-shell__copy">Đã chọn: @_selectedUploadFile.Name</p>
+            }
+
+            <div class="audio-modal__actions">
+                <button class="app-button app-button--ghost" type="button" @onclick="CloseUploadModal">Đóng</button>
+                <button class="app-button app-button--primary"
+                        data-action="upload-selected-audio"
+                        type="button"
+                        disabled="@(_isUploading || _selectedUploadFile is null)"
+                        @onclick="UploadSelectedAudioAsync">
+                    @(_isUploading ? "Đang tải..." : "Upload Audio")
+                </button>
+            </div>
+        </section>
+    </div>
+}
+
+@code {
+    private const long MaxUploadBytes = 20_000_000;
+    private static readonly TimeSpan AutoRefreshInterval = TimeSpan.FromSeconds(4);
+
+    private static readonly VoiceProfileOption[] VoiceProfiles =
+    [
+        new("standard", "Standard (Tiêu chuẩn — tiết kiệm)"),
+        new("wavenet", "WaveNet (Tự nhiên — cao cấp)"),
+        new("neural2", "Neural2 (Tiên tiến nhất)")
+    ];
+
+    private bool _isLoading = true;
+    private bool _isGenerateModalOpen;
+    private bool _isUploadModalOpen;
+    private bool _isGenerating;
+    private bool _isUploading;
+    private bool _isAutoRefreshing;
+    private string? _errorMessage;
+    private string? _statusMessage;
+    private string _searchTerm = string.Empty;
+    private string _statusFilter = "all";
+    private string _sourceFilter = "all";
+    private string _categoryFilter = "all";
+    private string _selectedVoiceProfile = "standard";
+    private HashSet<string> _selectedLanguages = new(StringComparer.OrdinalIgnoreCase);
+    private IReadOnlyList<ManagedLanguageDto> _languages = Array.Empty<ManagedLanguageDto>();
+    private IReadOnlyList<AdminPoiDto> _pois = Array.Empty<AdminPoiDto>();
+    private Dictionary<int, IReadOnlyList<AudioDto>> _audioByPoi = [];
+    private Dictionary<int, IReadOnlyList<TranslationDto>> _translationsByPoi = [];
+    private AdminPoiDto? _selectedPoi;
+    private AdminPoiDto? _modalPoi;
+    private AdminPoiDto? _uploadPoi;
+    private IBrowserFile? _selectedUploadFile;
+    private IAsyncDisposable? _refreshSubscription;
+
+    private IReadOnlyList<AudioLanguageOption> ActiveLanguageOptions => _languages
+        .Where(item => item.IsActive)
+        .OrderBy(item => item.Role)
+        .ThenBy(item => item.Code, StringComparer.OrdinalIgnoreCase)
+        .Select(item => new AudioLanguageOption(item.Code, item.FlagCode))
+        .ToArray();
+
+    private bool HasAnyPoi => _pois.Count > 0;
+
+    private int TotalAudioCount => AllAudioItems.Count();
+
+    private int ReadyAudioCount => AllAudioItems.Count(item => item.Status == AudioStatus.Ready);
+
+    private int ProcessingAudioCount => AllAudioItems.Count(item => item.Status is AudioStatus.Requested or AudioStatus.Generating);
+
+    private int FailedAudioCount => AllAudioItems.Count(item => item.Status == AudioStatus.Failed);
+
+    private int DistinctLanguageCount => AllAudioItems
+        .Select(item => item.LanguageCode)
+        .Where(code => !string.IsNullOrWhiteSpace(code))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .Count();
+
+    private bool HasProcessingAudio => AllAudioItems.Any(item => item.Status is AudioStatus.Requested or AudioStatus.Generating);
+
+    private int PoisWithVietnameseSourceCount => _pois.Count(poi => GetVietnameseSource(GetAudioItems(poi.Id)) is not null);
+
+    private IEnumerable<AudioDto> AllAudioItems => _audioByPoi.Values.SelectMany(items => items);
+
+    private IReadOnlyList<string> CategoryOptions => _pois
+        .Select(poi => poi.CategoryName)
+        .Where(category => !string.IsNullOrWhiteSpace(category))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .OrderBy(category => category, StringComparer.CurrentCultureIgnoreCase)
+        .Cast<string>()
+        .ToArray();
+
+    private IReadOnlyList<AdminPoiDto> FilteredPois => _pois
+        .Where(MatchesSearch)
+        .Where(MatchesStatus)
+        .Where(MatchesSource)
+        .Where(MatchesCategory)
+        .OrderByDescending(poi => poi.Id == _selectedPoi?.Id)
+        .ThenBy(poi => poi.Name, StringComparer.CurrentCultureIgnoreCase)
+        .ToArray();
+
+    private int FilteredFailedPoiCount => FilteredPois.Count(poi => GetFailedLanguageCodes(GetAudioItems(poi.Id)).Count > 0);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDashboardAsync();
+        _refreshSubscription = AudioRefreshPump.Start(HandleAutoRefreshTickAsync, AutoRefreshInterval);
+    }
+
+    private async Task LoadDashboardAsync()
+    {
+        try
+        {
+            _pois = await AdminPortalService.GetPoisAsync();
+            _languages = await LanguagePortalService.GetAsync();
+            var audioTasks = _pois.Select(async poi => new
+            {
+                poi.Id,
+                Items = await AudioPortalService.GetByPoiAsync(poi.Id)
+            });
+            var translationTasks = _pois.Select(async poi => new
+            {
+                poi.Id,
+                Items = await TranslationPortalService.GetByPoiAsync(poi.Id)
+            });
+
+            var rows = await Task.WhenAll(audioTasks);
+            var translationRows = await Task.WhenAll(translationTasks);
+            _audioByPoi = rows.ToDictionary(item => item.Id, item => item.Items);
+            _translationsByPoi = translationRows.ToDictionary(item => item.Id, item => item.Items);
+            _selectedPoi = _pois.FirstOrDefault(poi => poi.Id == _selectedPoi?.Id) ?? _pois.FirstOrDefault();
+            _errorMessage = null;
+        }
+        catch (ApiException exception)
+        {
+            _errorMessage = exception.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_refreshSubscription is not null)
+        {
+            await _refreshSubscription.DisposeAsync();
+        }
+    }
+
+    private IReadOnlyList<AudioDto> GetAudioItems(int poiId)
+    {
+        return _audioByPoi.TryGetValue(poiId, out var items) ? items : Array.Empty<AudioDto>();
+    }
+
+    private IReadOnlyList<TranslationDto> GetTranslations(int poiId)
+    {
+        return _translationsByPoi.TryGetValue(poiId, out var items) ? items : Array.Empty<TranslationDto>();
+    }
+
+    private void SelectPoi(AdminPoiDto poi)
+    {
+        _selectedPoi = poi;
+    }
+
+    private async Task RefreshAllAsync()
+    {
+        _statusMessage = null;
+        await LoadDashboardAsync();
+    }
+
+    private async Task HandleAutoRefreshTickAsync(CancellationToken cancellationToken)
+    {
+        if (_isLoading || _isGenerating || _isUploading || _isAutoRefreshing || !HasProcessingAudio)
+        {
+            return;
+        }
+
+        await InvokeAsync(() => RefreshProcessingAudioAsync(cancellationToken));
+    }
+
+    private async Task RefreshProcessingAudioAsync(CancellationToken cancellationToken = default)
+    {
+        var processingPoiIds = _audioByPoi
+            .Where(entry => entry.Value.Any(item => item.Status is AudioStatus.Requested or AudioStatus.Generating))
+            .Select(entry => entry.Key)
+            .ToArray();
+
+        if (processingPoiIds.Length == 0)
+        {
+            return;
+        }
+
+        _isAutoRefreshing = true;
+
+        try
+        {
+            foreach (var poiId in processingPoiIds)
+            {
+                _audioByPoi[poiId] = await AudioPortalService.GetByPoiAsync(poiId, cancellationToken: cancellationToken);
+            }
+        }
+        catch (ApiException)
+        {
+        }
+        finally
+        {
+            _isAutoRefreshing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RefreshPoiAudioAsync(AdminPoiDto poi)
+    {
+        try
+        {
+            _audioByPoi[poi.Id] = await AudioPortalService.GetByPoiAsync(poi.Id);
+            _selectedPoi = poi;
+            _statusMessage = $"Đã làm mới audio của {poi.Name}.";
+        }
+        catch (ApiException exception)
+        {
+            _statusMessage = exception.Message;
+        }
+    }
+
+    private async Task RetryFailedAudioAsync(AdminPoiDto poi)
+    {
+        var failedLanguageCodes = GetFailedLanguageCodes(GetAudioItems(poi.Id));
+        if (failedLanguageCodes.Count == 0)
+        {
+            _statusMessage = $"Không có audio lỗi để retry cho {poi.Name}.";
+            return;
+        }
+
+        try
+        {
+            var retriedCount = await RetryFailedLanguagesAsync(poi, failedLanguageCodes);
+
+            _selectedPoi = poi;
+            _statusMessage = retriedCount > 0
+                ? $"Đã retry {retriedCount} audio lỗi cho {poi.Name}."
+                : $"Không có audio lỗi có thể retry cho {poi.Name}.";
+        }
+        catch (ApiException exception)
+        {
+            _statusMessage = exception.Message;
+        }
+    }
+
+    private async Task RetryAllFailedAudioAsync()
+    {
+        var backlogPois = FilteredPois
+            .Select(poi => (Poi: poi, FailedLanguages: GetFailedLanguageCodes(GetAudioItems(poi.Id))))
+            .Where(entry => entry.FailedLanguages.Count > 0)
+            .ToArray();
+
+        if (backlogPois.Length == 0)
+        {
+            _statusMessage = "Không có audio lỗi trong danh sách hiện tại.";
+            return;
+        }
+
+        try
+        {
+            var retriedCount = 0;
+
+            foreach (var entry in backlogPois)
+            {
+                retriedCount += await RetryFailedLanguagesAsync(entry.Poi, entry.FailedLanguages);
+            }
+
+            _statusMessage = retriedCount > 0
+                ? $"Đã retry {retriedCount} audio lỗi trên {backlogPois.Length} POI."
+                : "Không có audio lỗi có thể retry trong danh sách hiện tại.";
+        }
+        catch (ApiException exception)
+        {
+            _statusMessage = exception.Message;
+        }
+    }
+
+    private void ResetFilters()
+    {
+        _searchTerm = string.Empty;
+        _statusFilter = "all";
+        _sourceFilter = "all";
+        _categoryFilter = "all";
+    }
+
+    private bool MatchesSearch(AdminPoiDto poi)
+    {
+        if (string.IsNullOrWhiteSpace(_searchTerm))
+        {
+            return true;
+        }
+
+        var search = _searchTerm.Trim();
+        return ContainsIgnoreCase(poi.Name, search)
+            || ContainsIgnoreCase(poi.Slug, search)
+            || ContainsIgnoreCase(poi.CategoryName, search)
+            || ContainsIgnoreCase(poi.OwnerEmail, search);
+    }
+
+    private bool MatchesStatus(AdminPoiDto poi)
+    {
+        if (_statusFilter == "all")
+        {
+            return true;
+        }
+
+        var status = GetOverallAudioStatus(GetAudioItems(poi.Id));
+        return _statusFilter switch
+        {
+            "ready" => status == AudioStatus.Ready,
+            "processing" => status is AudioStatus.Requested or AudioStatus.Generating,
+            "failed" => status == AudioStatus.Failed,
+            "missing" => status is null,
+            _ => true
+        };
+    }
+
+    private bool MatchesSource(AdminPoiDto poi)
+    {
+        if (_sourceFilter == "all")
+        {
+            return true;
+        }
+
+        var source = GetVietnameseSource(GetAudioItems(poi.Id));
+        return _sourceFilter switch
+        {
+            "recorded" => source?.SourceType == AudioSourceType.Recorded,
+            "tts" => source?.SourceType == AudioSourceType.Tts,
+            "missing" => source is null,
+            _ => true
+        };
+    }
+
+    private bool MatchesCategory(AdminPoiDto poi)
+    {
+        return _categoryFilter == "all"
+            || string.Equals(poi.CategoryName, _categoryFilter, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void OpenGenerateModal(AdminPoiDto? poi = null)
+    {
+        var targetPoi = poi ?? _selectedPoi ?? FilteredPois.FirstOrDefault();
+        if (targetPoi is null)
+        {
+            return;
+        }
+
+        _selectedPoi = targetPoi;
+        _modalPoi = targetPoi;
+        _selectedLanguages = new HashSet<string>(
+            ActiveLanguageOptions
+                .Where(item => string.Equals(item.Code, "vi", StringComparison.OrdinalIgnoreCase)
+                    || GetTranslations(targetPoi.Id).Any(translation => translation.LanguageCode == item.Code))
+                .Select(item => item.Code),
+            StringComparer.OrdinalIgnoreCase);
+        _selectedVoiceProfile = "standard";
+        _isGenerateModalOpen = true;
+    }
+
+    private void CloseGenerateModal()
+    {
+        _isGenerateModalOpen = false;
+        _modalPoi = null;
+        _isGenerating = false;
+    }
+
+    private void ToggleLanguage(string languageCode, object? value)
+    {
+        var isChecked = value switch
+        {
+            bool booleanValue => booleanValue,
+            string stringValue => string.Equals(stringValue, "true", StringComparison.OrdinalIgnoreCase),
+            _ => false
+        };
+
+        if (isChecked)
+        {
+            _selectedLanguages.Add(languageCode);
+            return;
+        }
+
+        _selectedLanguages.Remove(languageCode);
+    }
+
+    private async Task GenerateSelectedAudioAsync()
+    {
+        if (_modalPoi is null || _selectedLanguages.Count == 0)
+        {
+            return;
+        }
+
+        _isGenerating = true;
+
+        try
+        {
+            var generatedCount = 0;
+
+            foreach (var language in ActiveLanguageOptions.Where(item => _selectedLanguages.Contains(item.Code)))
+            {
+                if (string.Equals(language.Code, "vi", StringComparison.OrdinalIgnoreCase))
+                {
+                    var created = await AudioPortalService.GenerateTtsAsync(new TtsGenerateRequest
+                    {
+                        PoiId = _modalPoi.Id,
+                        LanguageCode = language.Code,
+                        Script = _modalPoi.TtsScript,
+                        VoiceProfile = _selectedVoiceProfile
+                    });
+
+                    AppendAudio(created);
+                    generatedCount++;
+                    continue;
+                }
+
+                if (!GetTranslations(_modalPoi.Id).Any(item => item.LanguageCode == language.Code))
+                {
+                    continue;
+                }
+
+                var generatedAudio = await AudioPortalService.GenerateFromTranslationAsync(new GenerateAudioFromTranslationRequest
+                {
+                    PoiId = _modalPoi.Id,
+                    LanguageCode = language.Code,
+                    VoiceProfile = _selectedVoiceProfile
+                });
+
+                AppendAudio(generatedAudio);
+                generatedCount++;
+            }
+
+            _statusMessage = $"Đã tạo {generatedCount} audio cho {_modalPoi.Name}.";
+            CloseGenerateModal();
+        }
+        catch (ApiException exception)
+        {
+            _statusMessage = exception.Message;
+        }
+        finally
+        {
+            _isGenerating = false;
+        }
+    }
+
+    private void OpenUploadModal(AdminPoiDto? poi = null)
+    {
+        var targetPoi = poi ?? _selectedPoi ?? FilteredPois.FirstOrDefault();
+        if (targetPoi is null)
+        {
+            return;
+        }
+
+        _selectedPoi = targetPoi;
+        _uploadPoi = targetPoi;
+        _selectedUploadFile = null;
+        _isUploadModalOpen = true;
+    }
+
+    private void CloseUploadModal()
+    {
+        _isUploadModalOpen = false;
+        _uploadPoi = null;
+        _selectedUploadFile = null;
+        _isUploading = false;
+    }
+
+    private void HandleUploadSelection(InputFileChangeEventArgs args)
+    {
+        _selectedUploadFile = args.File;
+    }
+
+    private async Task UploadSelectedAudioAsync()
+    {
+        if (_uploadPoi is null || _selectedUploadFile is null)
+        {
+            return;
+        }
+
+        _isUploading = true;
+
+        try
+        {
+            await using var stream = _selectedUploadFile.OpenReadStream(MaxUploadBytes);
+            var created = await AudioPortalService.UploadAsync(new UploadAudioRequest
+            {
+                PoiId = _uploadPoi.Id,
+                LanguageCode = "vi",
+                FileName = _selectedUploadFile.Name
+            }, stream);
+
+            AppendAudio(created);
+            _statusMessage = $"Đã tải audio nguồn tiếng Việt cho {_uploadPoi.Name}.";
+            CloseUploadModal();
+        }
+        catch (ApiException exception)
+        {
+            _statusMessage = exception.Message;
+        }
+        finally
+        {
+            _isUploading = false;
+        }
+    }
+
+    private void AppendAudio(AudioDto audio)
+    {
+        var existing = GetAudioItems(audio.PoiId)
+            .Where(item => item.Id != audio.Id)
+            .Append(audio)
+            .OrderByDescending(item => item.GeneratedAtUtc ?? DateTime.MinValue)
+            .ToArray();
+
+        _audioByPoi[audio.PoiId] = existing;
+    }
+
+    private async Task<int> RetryFailedLanguagesAsync(AdminPoiDto poi, IReadOnlyList<string> languageCodes)
+    {
+        var retriedCount = 0;
+
+        foreach (var languageCode in languageCodes)
+        {
+            if (string.Equals(languageCode, "vi", StringComparison.OrdinalIgnoreCase))
+            {
+                if (string.IsNullOrWhiteSpace(poi.TtsScript))
+                {
+                    continue;
+                }
+
+                var created = await AudioPortalService.GenerateTtsAsync(new TtsGenerateRequest
+                {
+                    PoiId = poi.Id,
+                    LanguageCode = "vi",
+                    Script = poi.TtsScript,
+                    VoiceProfile = "standard"
+                });
+
+                AppendAudio(created);
+                retriedCount++;
+                continue;
+            }
+
+            if (!GetTranslations(poi.Id).Any(item => string.Equals(item.LanguageCode, languageCode, StringComparison.OrdinalIgnoreCase)))
+            {
+                continue;
+            }
+
+            var generatedAudio = await AudioPortalService.GenerateFromTranslationAsync(new GenerateAudioFromTranslationRequest
+            {
+                PoiId = poi.Id,
+                LanguageCode = languageCode,
+                VoiceProfile = "standard"
+            });
+
+            AppendAudio(generatedAudio);
+            retriedCount++;
+        }
+
+        return retriedCount;
+    }
+
+    private static AudioDto? GetVietnameseSource(IEnumerable<AudioDto> items)
+    {
+        return items
+            .Where(item => string.Equals(item.LanguageCode, "vi", StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(item => item.GeneratedAtUtc ?? DateTime.MinValue)
+            .FirstOrDefault();
+    }
+
+    private static AudioDto? GetPreviewAudio(IEnumerable<AudioDto> items)
+    {
+        return GetCurrentAudioItems(items)
+            .Where(item => item.Status == AudioStatus.Ready)
+            .OrderByDescending(item => string.Equals(item.LanguageCode, "vi", StringComparison.OrdinalIgnoreCase))
+            .ThenByDescending(item => item.GeneratedAtUtc ?? DateTime.MinValue)
+            .FirstOrDefault();
+    }
+
+    private static AudioDto? GetLatestAudio(IEnumerable<AudioDto> items)
+    {
+        return items
+            .OrderByDescending(item => item.GeneratedAtUtc ?? DateTime.MinValue)
+            .FirstOrDefault();
+    }
+
+    private static AudioStatus? GetOverallAudioStatus(IEnumerable<AudioDto> items)
+    {
+        var audioItems = GetCurrentAudioItems(items).ToArray();
+        if (audioItems.Any(item => item.Status == AudioStatus.Failed))
+        {
+            return AudioStatus.Failed;
+        }
+
+        if (audioItems.Any(item => item.Status is AudioStatus.Requested or AudioStatus.Generating))
+        {
+            return AudioStatus.Generating;
+        }
+
+        if (audioItems.Any(item => item.Status == AudioStatus.Ready))
+        {
+            return AudioStatus.Ready;
+        }
+
+        return null;
+    }
+
+    private static IReadOnlyList<string> GetFailedLanguageCodes(IEnumerable<AudioDto> items)
+    {
+        return GetCurrentAudioItems(items)
+            .Where(item => item.Status == AudioStatus.Failed)
+            .Select(item => item.LanguageCode)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(code => code, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private string GetRowClass(AdminPoiDto poi)
+    {
+        return poi.Id == _selectedPoi?.Id ? "is-active" : string.Empty;
+    }
+
+    private static string GetSourceTagLabel(AudioDto? sourceAudio)
+    {
+        return sourceAudio?.SourceType switch
+        {
+            AudioSourceType.Recorded => "Upload",
+            AudioSourceType.Tts => "TTS",
+            _ => "Chưa có"
+        };
+    }
+
+    private static string GetSourceTagClass(AudioDto? sourceAudio)
+    {
+        return sourceAudio?.SourceType switch
+        {
+            AudioSourceType.Recorded => "audio-tag--recorded",
+            AudioSourceType.Tts => "audio-tag--tts",
+            _ => "audio-tag--muted"
+        };
+    }
+
+    private static string GetStatusLabel(AudioStatus? status)
+    {
+        return status switch
+        {
+            AudioStatus.Ready => "ready",
+            AudioStatus.Requested or AudioStatus.Generating => "generating",
+            AudioStatus.Failed => "failed",
+            _ => "empty"
+        };
+    }
+
+    private static string GetStatusTagClass(AudioStatus? status)
+    {
+        return status switch
+        {
+            AudioStatus.Ready => "audio-tag--ready",
+            AudioStatus.Requested or AudioStatus.Generating => "audio-tag--generating",
+            AudioStatus.Failed => "audio-tag--failed",
+            _ => "audio-tag--muted"
+        };
+    }
+
+    private static string GetLanguageChipClass(IEnumerable<AudioDto> items, string languageCode)
+    {
+        var latest = GetCurrentAudioItems(items)
+            .Where(item => string.Equals(item.LanguageCode, languageCode, StringComparison.OrdinalIgnoreCase))
+            .FirstOrDefault();
+
+        return latest?.Status switch
+        {
+            AudioStatus.Ready => "is-ready",
+            AudioStatus.Requested or AudioStatus.Generating => "is-generating",
+            AudioStatus.Failed => "is-failed",
+            _ => "is-empty"
+        };
+    }
+
+    private static IEnumerable<AudioDto> GetCurrentAudioItems(IEnumerable<AudioDto> items)
+    {
+        return items
+            .Where(item => item.Status is not AudioStatus.Deleted and not AudioStatus.Replaced)
+            .GroupBy(item => item.LanguageCode, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group
+                .OrderByDescending(item => item.GeneratedAtUtc ?? DateTime.MinValue)
+                .ThenByDescending(item => item.Id)
+                .First());
+    }
+
+    private static string GetRelativeTimeLabel(DateTime? timestamp)
+    {
+        if (timestamp is null)
+        {
+            return "Chưa cập nhật";
+        }
+
+        var now = DateTime.UtcNow;
+        var diff = now - timestamp.Value.ToUniversalTime();
+        if (diff.TotalMinutes < 60)
+        {
+            var minutes = Math.Max(1, (int)Math.Round(diff.TotalMinutes));
+            return $"{minutes} phút trước";
+        }
+
+        if (diff.TotalHours < 24)
+        {
+            var hours = Math.Max(1, (int)Math.Round(diff.TotalHours));
+            return $"{hours} giờ trước";
+        }
+
+        var days = Math.Max(1, (int)Math.Round(diff.TotalDays));
+        return $"{days} ngày trước";
+    }
+
+    private static string FormatDuration(int durationSeconds)
+    {
+        var duration = TimeSpan.FromSeconds(Math.Max(0, durationSeconds));
+        return duration.ToString(duration.TotalHours >= 1 ? @"h\:mm\:ss" : @"m\:ss", CultureInfo.InvariantCulture);
+    }
+
+    private double GetCoverageRatio()
+    {
+        if (_pois.Count == 0)
+        {
+            return 0;
+        }
+
+        var maxAssets = _pois.Count * Math.Max(ActiveLanguageOptions.Count, 1);
+        return maxAssets == 0 ? 0 : (double)TotalAudioCount / maxAssets;
+    }
+
+    private double GetAssetRatio(int count)
+    {
+        return TotalAudioCount == 0 ? 0 : (double)count / TotalAudioCount;
+    }
+
+    private static string FormatPercent(double ratio, double floor = 0d)
+    {
+        var normalized = Math.Clamp(Math.Max(ratio, floor), 0d, 1d);
+        return $"{normalized.ToString("P0", CultureInfo.InvariantCulture).Replace("%", string.Empty, StringComparison.Ordinal)}%";
+    }
+
+    private static bool ContainsIgnoreCase(string? source, string value)
+    {
+        return !string.IsNullOrWhiteSpace(source)
+            && source.Contains(value, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private sealed record AudioLanguageOption(string Code, string Flag);
+
+    private sealed record VoiceProfileOption(string Value, string Label);
+}

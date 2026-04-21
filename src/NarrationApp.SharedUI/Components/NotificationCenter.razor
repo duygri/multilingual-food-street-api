@@ -1,0 +1,96 @@
+@implements IDisposable
+@inject INotificationCenterService NotificationCenterService
+
+<section class="notification-center @( _isOpen ? "is-open" : string.Empty )">
+    <button class="notification-center__toggle"
+            data-action="toggle"
+            type="button"
+            aria-label="Thông báo"
+            aria-haspopup="dialog"
+            aria-expanded="@_isOpen.ToString().ToLowerInvariant()"
+            title="Thông báo"
+            @onclick="Toggle">
+        <span class="notification-center__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M15 17h5l-1.4-1.4a2 2 0 0 1-.6-1.4V10a6 6 0 1 0-12 0v4.2a2 2 0 0 1-.6 1.4L4 17h5" />
+                <path d="M9 17a3 3 0 0 0 6 0" />
+            </svg>
+        </span>
+        @if (_unreadCount > 0)
+        {
+            <span class="notification-center__badge">@_unreadCount</span>
+        }
+    </button>
+
+    @if (_isOpen)
+    {
+        <div class="notification-center__panel" role="dialog" aria-label="Thông báo">
+            <header class="notification-center__header">
+                <strong>Thông báo</strong>
+                <button class="notification-center__mark-all" data-action="mark-all" type="button" @onclick="MarkAllReadAsync">
+                    Đánh dấu đã đọc
+                </button>
+            </header>
+
+            <div class="notification-center__list">
+                @if (_items.Count == 0)
+                {
+                    <p class="notification-center__empty">Chưa có thông báo mới.</p>
+                }
+                else
+                {
+                    @foreach (var item in _items)
+                    {
+                        <article class="notification-center__item @(item.IsRead ? "is-read" : "is-unread")">
+                            <h4>@item.Title</h4>
+                            <p>@item.Message</p>
+                        </article>
+                    }
+                }
+            </div>
+        </div>
+    }
+</section>
+
+@code {
+    private bool _isOpen;
+    private List<NotificationDto> _items = [];
+    private int _unreadCount;
+
+    protected override async Task OnInitializedAsync()
+    {
+        NotificationCenterService.Changed += HandleChanged;
+        await ReloadAsync();
+    }
+
+    public void Dispose()
+    {
+        NotificationCenterService.Changed -= HandleChanged;
+    }
+
+    private void Toggle()
+    {
+        _isOpen = !_isOpen;
+    }
+
+    private async Task MarkAllReadAsync()
+    {
+        await NotificationCenterService.MarkAllReadAsync();
+        await ReloadAsync();
+    }
+
+    private async void HandleChanged()
+    {
+        await InvokeAsync(async () =>
+        {
+            await ReloadAsync();
+            StateHasChanged();
+        });
+    }
+
+    private async Task ReloadAsync()
+    {
+        _items = (await NotificationCenterService.GetAsync()).ToList();
+        _unreadCount = await NotificationCenterService.GetUnreadCountAsync();
+    }
+}

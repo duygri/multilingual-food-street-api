@@ -1,0 +1,31 @@
+<article class="audio-player">
+    <div class="audio-player__meta">
+        <div>
+            <p class="audio-player__eyebrow">@LanguageCode</p>
+            <h3>@Title</h3>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Caption))
+        {
+            <p class="audio-player__caption">@Caption</p>
+        }
+    </div>
+
+    <audio class="audio-player__control" controls preload="none" src="@Source">
+        Trình duyệt hiện tại không hỗ trợ phát audio.
+    </audio>
+</article>
+
+@code {
+    [Parameter]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public string LanguageCode { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Source { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Caption { get; set; }
+}

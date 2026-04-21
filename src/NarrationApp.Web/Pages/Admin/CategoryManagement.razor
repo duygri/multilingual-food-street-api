@@ -1,0 +1,320 @@
+@page "/admin/category-management"
+@using System.Linq
+@attribute [Authorize(Roles = "admin")]
+
+@inject ICategoryPortalService CategoryPortalService
+
+<PageTitle>Quản lý danh mục</PageTitle>
+
+@if (_isLoading)
+{
+    <section class="panel-shell">
+        <p class="panel-shell__eyebrow">Danh mục</p>
+        <h2>Đang tải danh mục...</h2>
+    </section>
+}
+else if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <section class="panel-shell">
+        <p class="panel-shell__eyebrow">Danh mục</p>
+        <h2>Không thể tải quản lý danh mục</h2>
+        <p class="panel-shell__copy">@_errorMessage</p>
+    </section>
+}
+else
+{
+    <div class="dashboard-stack category-page">
+        <section class="sample-page-title">
+            <h1>Danh mục</h1>
+            <p>Admin / Quản lý nội dung &gt; Danh mục</p>
+        </section>
+
+        @if (!string.IsNullOrWhiteSpace(_statusMessage))
+        {
+            <section class="panel-shell">
+                <p class="panel-shell__copy">@_statusMessage</p>
+            </section>
+        }
+
+        <section class="panel-shell category-table-shell">
+            <div class="category-table-shell__header">
+                <div>
+                    <h2>Quản lý danh mục POI</h2>
+                </div>
+                <button class="app-button app-button--primary"
+                        data-action="new-category"
+                        type="button"
+                        @onclick="BeginCreate">
+                    + Tạo danh mục
+                </button>
+            </div>
+
+            @if (_categories.Count == 0)
+            {
+                <EmptyStateBlock Eyebrow="Danh mục"
+                                 Title="Chưa có danh mục nào"
+                                 Message="Hãy tạo nhóm đầu tiên để owner có thể phân loại POI." />
+            }
+            else
+            {
+                <div class="table-wrap">
+                    <table class="app-table category-table">
+                        <thead>
+                            <tr>
+                                <th>Icon</th>
+                                <th>Tên danh mục</th>
+                                <th>Slug</th>
+                                <th>Thứ tự</th>
+                                <th>Trạng thái</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var category in _categories)
+                            {
+                                <tr @key="category.Id">
+                                    <td class="category-table__icon">@GetIcon(category)</td>
+                                    <td>
+                                        <div class="category-table__name">
+                                            <strong>@category.Name</strong>
+                                            <span>@category.Description</span>
+                                        </div>
+                                    </td>
+                                    <td>@category.Slug</td>
+                                    <td>@category.DisplayOrder</td>
+                                    <td>
+                                        <StatusBadge Label="@(category.IsActive ? "Active" : "Inactive")"
+                                                     Tone="@(category.IsActive ? StatusTone.Good : StatusTone.Neutral)" />
+                                    </td>
+                                    <td>
+                                        <div class="category-actions">
+                                            <button class="category-action"
+                                                    data-action="edit-category-@category.Id"
+                                                    type="button"
+                                                    @onclick="() => SelectCategory(category)">
+                                                Sửa
+                                            </button>
+                                            <button class="category-action category-action--danger"
+                                                    data-action="delete-category-@category.Id"
+                                                    type="button"
+                                                    @onclick="() => DeleteAsync(category)">
+                                                Xóa
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+
+        @if (_isEditorOpen)
+        {
+            <div class="admin-overlay-backdrop" @onclick="CloseEditor">
+                <section class="panel-shell admin-overlay-shell category-editor-shell"
+                         data-panel="category-editor"
+                         @onclick:stopPropagation="true">
+                    <div class="admin-overlay-shell__header">
+                        <div>
+                            <p class="panel-shell__eyebrow">Trình biên tập</p>
+                            <h2>@(_isCreateMode ? "Tạo danh mục mới" : _selectedCategory?.Name ?? "Biên tập danh mục")</h2>
+                        </div>
+                        <button class="app-button app-button--ghost" type="button" @onclick="CloseEditor">
+                            Đóng
+                        </button>
+                    </div>
+
+                    <div class="editor-grid">
+                        <div class="editor-field">
+                            <label for="category-name">Tên danh mục</label>
+                            <InputText id="category-name" data-field="category-name" @bind-Value="_editor.Name" />
+                        </div>
+
+                        <div class="editor-field">
+                            <label for="category-slug">Slug</label>
+                            <InputText id="category-slug" data-field="category-slug" @bind-Value="_editor.Slug" />
+                        </div>
+
+                        <div class="editor-field">
+                            <label for="category-icon">Biểu tượng</label>
+                            <InputText id="category-icon" data-field="category-icon" @bind-Value="_editor.Icon" />
+                        </div>
+
+                        <div class="editor-field">
+                            <label for="category-order">Thứ tự hiển thị</label>
+                            <InputNumber id="category-order" data-field="category-order" @bind-Value="_editor.DisplayOrder" />
+                        </div>
+
+                        <div class="editor-field editor-field--toggle">
+                            <label for="category-active">Đang hoạt động</label>
+                            <InputCheckbox id="category-active" data-field="category-active" @bind-Value="_editor.IsActive" />
+                        </div>
+
+                        <div class="editor-field editor-field--full">
+                            <label for="category-description">Mô tả</label>
+                            <InputTextArea id="category-description" data-field="category-description" @bind-Value="_editor.Description" />
+                        </div>
+                    </div>
+
+                    <div class="action-row">
+                        <button class="app-button app-button--primary" data-action="save-category" type="button" @onclick="SaveAsync">
+                            @(_isCreateMode ? "Tạo danh mục" : "Lưu danh mục")
+                        </button>
+                    </div>
+                </section>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private bool _isLoading = true;
+    private bool _isCreateMode;
+    private bool _isEditorOpen;
+    private string? _errorMessage;
+    private string? _statusMessage;
+    private IReadOnlyList<CategoryDto> _categories = Array.Empty<CategoryDto>();
+    private CategoryDto? _selectedCategory;
+    private CategoryEditorModel _editor = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _categories = await CategoryPortalService.GetAsync(includeInactive: true);
+            if (_categories.Count == 0)
+            {
+                BeginCreate();
+            }
+        }
+        catch (ApiException exception)
+        {
+            _errorMessage = exception.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void BeginCreate()
+    {
+        _isCreateMode = true;
+        _isEditorOpen = true;
+        _selectedCategory = null;
+        _editor = new CategoryEditorModel();
+        _statusMessage = null;
+    }
+
+    private void SelectCategory(CategoryDto category)
+    {
+        _isCreateMode = false;
+        _isEditorOpen = true;
+        _selectedCategory = category;
+        _editor = CategoryEditorModel.FromDto(category);
+        _statusMessage = null;
+    }
+
+    private void CloseEditor()
+    {
+        _isEditorOpen = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        try
+        {
+            if (_isCreateMode)
+            {
+                var created = await CategoryPortalService.CreateAsync(_editor.ToRequest());
+                _categories = _categories.Append(created).OrderBy(item => item.DisplayOrder).ThenBy(item => item.Name).ToArray();
+                SelectCategory(created);
+                _statusMessage = $"Đã tạo danh mục mới: {created.Name}.";
+                return;
+            }
+
+            if (_selectedCategory is null)
+            {
+                return;
+            }
+
+            var updated = await CategoryPortalService.UpdateAsync(_selectedCategory.Id, _editor.ToRequest());
+            _categories = _categories.Select(item => item.Id == updated.Id ? updated : item).OrderBy(item => item.DisplayOrder).ThenBy(item => item.Name).ToArray();
+            SelectCategory(updated);
+            _statusMessage = $"Đã cập nhật danh mục: {updated.Name}.";
+        }
+        catch (ApiException exception)
+        {
+            _statusMessage = exception.Message;
+        }
+    }
+
+    private async Task DeleteAsync(CategoryDto category)
+    {
+        try
+        {
+            await CategoryPortalService.DeleteAsync(category.Id);
+            _categories = _categories.Where(item => item.Id != category.Id).ToArray();
+
+            if (_selectedCategory?.Id == category.Id)
+            {
+                _selectedCategory = null;
+                _isEditorOpen = false;
+            }
+
+            _statusMessage = "Đã xóa danh mục.";
+        }
+        catch (ApiException exception)
+        {
+            _statusMessage = exception.Message;
+        }
+    }
+
+    private static string GetIcon(CategoryDto category)
+    {
+        return string.IsNullOrWhiteSpace(category.Icon) ? "•" : category.Icon;
+    }
+
+    private sealed class CategoryEditorModel
+    {
+        public string Name { get; set; } = string.Empty;
+
+        public string Slug { get; set; } = string.Empty;
+
+        public string Description { get; set; } = string.Empty;
+
+        public string Icon { get; set; } = string.Empty;
+
+        public int DisplayOrder { get; set; } = 1;
+
+        public bool IsActive { get; set; } = true;
+
+        public static CategoryEditorModel FromDto(CategoryDto dto)
+        {
+            return new CategoryEditorModel
+            {
+                Name = dto.Name,
+                Slug = dto.Slug,
+                Description = dto.Description,
+                Icon = dto.Icon,
+                DisplayOrder = dto.DisplayOrder,
+                IsActive = dto.IsActive
+            };
+        }
+
+        public SaveCategoryRequest ToRequest()
+        {
+            return new SaveCategoryRequest
+            {
+                Name = Name.Trim(),
+                Slug = Slug.Trim(),
+                Description = Description.Trim(),
+                Icon = Icon.Trim(),
+                DisplayOrder = DisplayOrder,
+                IsActive = IsActive
+            };
+        }
+    }
+}

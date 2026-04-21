@@ -1,0 +1,23 @@
+# Build outputs
+bin/
+obj/
+artifacts/
+
+# IDE
+.vs/
+*.user
+*.suo
+
+# .NET tools & caches
+.dotnet/
+.dotnet-cli/
+.dotnet-home/
+.nuget/
+.appdata/
+.artifacts/
+
+# Logs
+*.log
+
+# NuGet
+NuGet/

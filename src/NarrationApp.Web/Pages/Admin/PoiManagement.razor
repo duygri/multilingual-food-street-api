@@ -1,0 +1,662 @@
+@page "/admin/poi-management"
+@using System.Globalization
+@using System.Linq
+@attribute [Authorize(Roles = "admin")]
+
+@inject IAdminPortalService AdminPortalService
+@inject IAdminPoiOperationsService AdminPoiOperationsService
+
+<PageTitle>Quản lý POI</PageTitle>
+
+@if (_isLoading)
+{
+    <section class="panel-shell">
+        <p class="panel-shell__eyebrow">POI</p>
+        <h2>Đang tải POI toàn hệ thống...</h2>
+    </section>
+}
+else if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <section class="panel-shell">
+        <p class="panel-shell__eyebrow">POI</p>
+        <h2>Không thể tải POI management</h2>
+        <p class="panel-shell__copy">@_errorMessage</p>
+    </section>
+}
+else
+{
+    <div class="dashboard-stack admin-poi-page">
+        <section class="admin-poi-page__intro">
+            <p class="admin-poi-page__crumb">Admin / <strong>Quản lý POI</strong></p>
+
+            <div class="admin-poi-page__title-wrap">
+                <span class="admin-poi-page__title-mark" aria-hidden="true">◎</span>
+
+                <div class="admin-poi-page__title-copy">
+                    <h2>Quản lý POI</h2>
+                    <p>Duyệt, từ chối và quản lý toàn bộ điểm tham quan</p>
+                </div>
+            </div>
+        </section>
+
+        @if (PendingPoiCount > 0)
+        {
+            <section class="admin-poi-banner">
+                <strong>@PendingPoiCount POI đang chờ duyệt</strong>
+                <span>kiểm tra và xử lý trong tab Moderation</span>
+            </section>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(_statusMessage))
+        {
+            <section class="panel-shell admin-poi-status">
+                <p class="panel-shell__copy">@_statusMessage</p>
+            </section>
+        }
+
+        <section class="admin-poi-toolbar">
+            <div class="admin-poi-filters" role="tablist" aria-label="Bộ lọc POI">
+                @foreach (var filter in FilterTabs)
+                {
+                    <button class="admin-poi-filter @(filter == _activeFilter ? "is-active" : string.Empty)"
+                            data-action="@($"filter-{GetFilterActionName(filter)}")"
+                            type="button"
+                            @onclick="() => SetFilter(filter)">
+                        @($"{GetFilterLabel(filter)} ({GetFilterCount(filter)})")
+                    </button>
+                }
+            </div>
+
+            <label class="admin-poi-search">
+                <span class="admin-poi-search__icon" aria-hidden="true">⌕</span>
+                <input class="admin-poi-search__input"
+                       data-field="poi-search"
+                       type="text"
+                       placeholder="Tìm kiếm POI..."
+                       value="@_searchText"
+                       @oninput="HandleSearchChanged"
+                       @onchange="HandleSearchChanged" />
+            </label>
+        </section>
+
+        <section class="panel-shell admin-poi-table-shell">
+            @if (VisibleRows.Count == 0)
+            {
+                <EmptyStateBlock Eyebrow="POI"
+                                 Title="Không có POI phù hợp"
+                                 Message="Bộ lọc hiện tại chưa có bản ghi nào khớp để hiển thị." />
+            }
+            else
+            {
+                <div class="admin-poi-table__scroll">
+                    <table class="app-table admin-poi-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Tên POI</th>
+                                <th>Tọa độ</th>
+                                <th>Trạng thái</th>
+                                <th>Ngôn ngữ</th>
+                                <th>Audio</th>
+                                <th>Ngày tạo</th>
+                                <th>Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var row in VisibleRows)
+                            {
+                                <tr class="@(IsSelected(row.Item) ? "admin-poi-table__row--selected" : string.Empty)"
+                                    @key="row.Item.Id">
+                                    <td>@row.Number.ToString("00", CultureInfo.InvariantCulture)</td>
+                                    <td>
+                                        <div class="admin-poi-table__poi">
+                                            <strong>@row.Item.Name</strong>
+                                            <span>@row.Item.Slug</span>
+                                            <small>@row.Item.OwnerEmail</small>
+                                        </div>
+                                    </td>
+                                    <td>@FormatCoordinates(row.Item)</td>
+                                    <td>
+                                        <StatusBadge Label="@GetStatusLabel(row.Item.Status)"
+                                                     Tone="@GetStatusTone(row.Item.Status)" />
+                                    </td>
+                                    <td>
+                                        <StatusBadge Label="@GetLanguageLabel(row.Item.TranslationCount)"
+                                                     Tone="StatusTone.Info" />
+                                    </td>
+                                    <td>
+                                        <StatusBadge Label="@GetAudioLabel(row.Item)"
+                                                     Tone="@GetAudioTone(row.Item)" />
+                                    </td>
+                                    <td>@row.Item.CreatedAtUtc.ToLocalTime().ToString("dd/MM/yyyy", CultureInfo.InvariantCulture)</td>
+                                    <td>
+                                        <div class="admin-poi-actions">
+                                            @if (row.Item.PendingModerationId is int moderationRequestId)
+                                            {
+                                                <button class="admin-poi-action"
+                                                        data-action="view-poi-@row.Item.Id"
+                                                        type="button"
+                                                        @onclick="() => SelectPoi(row.Item)"
+                                                        @onclick:stopPropagation="true">
+                                                    Xem
+                                                </button>
+                                                <button class="admin-poi-action admin-poi-action--approve"
+                                                        data-action="approve-poi-@row.Item.Id"
+                                                        type="button"
+                                                        @onclick="() => ApprovePoiAsync(row.Item, moderationRequestId)"
+                                                        @onclick:stopPropagation="true">
+                                                    ✓ Duyệt
+                                                </button>
+                                                <button class="admin-poi-action admin-poi-action--reject"
+                                                        data-action="reject-poi-@row.Item.Id"
+                                                        type="button"
+                                                        @onclick="() => RejectPoiAsync(row.Item, moderationRequestId)"
+                                                        @onclick:stopPropagation="true">
+                                                    × Từ chối
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <button class="admin-poi-action"
+                                                        data-action="view-poi-@row.Item.Id"
+                                                        type="button"
+                                                        @onclick="() => SelectPoi(row.Item)"
+                                                        @onclick:stopPropagation="true">
+                                                    Xem
+                                                </button>
+
+                                                @if (CanEdit(row.Item))
+                                                {
+                                                    <button class="admin-poi-action"
+                                                            data-action="edit-poi-@row.Item.Id"
+                                                            type="button"
+                                                            @onclick="() => SelectPoi(row.Item)"
+                                                            @onclick:stopPropagation="true">
+                                                        Sửa
+                                                    </button>
+                                                }
+
+                                                <button class="admin-poi-action admin-poi-action--danger"
+                                                        data-action="delete-poi-@row.Item.Id"
+                                                        type="button"
+                                                        @onclick="() => DeletePoiAsync(row.Item)"
+                                                        @onclick:stopPropagation="true">
+                                                    Xóa
+                                                </button>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="admin-poi-table__footer">
+                    <span>Hiển thị @VisibleRangeLabel</span>
+
+                    @if (PageCount > 1)
+                    {
+                        <div class="admin-poi-pagination">
+                            <button class="admin-poi-pagination__button"
+                                    data-action="page-prev"
+                                    type="button"
+                                    disabled="@(CurrentPage <= 1)"
+                                    @onclick="PreviousPage">
+                                ‹ Trước
+                            </button>
+
+                            @foreach (var pageNumber in PageNumbers)
+                            {
+                                <button class="admin-poi-pagination__button @(pageNumber == CurrentPage ? "is-active" : string.Empty)"
+                                        data-action="@($"page-{pageNumber}")"
+                                        type="button"
+                                        @onclick="() => GoToPage(pageNumber)">
+                                    @pageNumber
+                                </button>
+                            }
+
+                            <button class="admin-poi-pagination__button"
+                                    data-action="page-next"
+                                    type="button"
+                                    disabled="@(CurrentPage >= PageCount)"
+                                    @onclick="NextPage">
+                                Tiếp ›
+                            </button>
+                        </div>
+                    }
+                </div>
+            }
+        </section>
+
+        @if (_selectedPoi is not null)
+        {
+            <div class="admin-overlay-backdrop" @onclick="ClosePoiDetail">
+                <section class="panel-shell admin-overlay-shell admin-overlay-shell--wide admin-poi-detail-shell"
+                         data-panel="poi-detail"
+                         @onclick:stopPropagation="true">
+                    <div class="admin-overlay-shell__header">
+                        <div>
+                            <p class="panel-shell__eyebrow">POI detail</p>
+                            <h2>@_selectedPoi.Name</h2>
+                            <p class="panel-shell__copy">@_selectedPoi.OwnerName · @_selectedPoi.OwnerEmail</p>
+                        </div>
+
+                        <button class="app-button app-button--ghost" type="button" @onclick="ClosePoiDetail">
+                            Đóng
+                        </button>
+                    </div>
+
+                    <div class="admin-poi-detail__header">
+                        <StatusBadge Label="@GetStatusLabel(_selectedPoi.Status)"
+                                     Tone="@GetStatusTone(_selectedPoi.Status)" />
+                    </div>
+
+                    <div class="admin-poi-detail__grid">
+                        <article class="admin-poi-detail__card">
+                            <span>Danh mục</span>
+                            <strong>@(_selectedPoi.CategoryName ?? "Chưa gán danh mục")</strong>
+                            <p>@_selectedPoi.Slug</p>
+                        </article>
+
+                        <article class="admin-poi-detail__card">
+                            <span>Tọa độ</span>
+                            <strong>@FormatCoordinates(_selectedPoi)</strong>
+                            <p>Priority @_selectedPoi.Priority</p>
+                        </article>
+
+                        <article class="admin-poi-detail__card">
+                            <span>Ngôn ngữ</span>
+                            <strong>@GetLanguageLabel(_selectedPoi.TranslationCount)</strong>
+                            <p>@_selectedPoi.GeofenceCount geofence</p>
+                        </article>
+
+                        <article class="admin-poi-detail__card">
+                            <span>Audio</span>
+                            <strong>@GetAudioLabel(_selectedPoi)</strong>
+                            <p>@_selectedPoi.AudioAssetCount asset</p>
+                        </article>
+                    </div>
+
+                    <div class="admin-poi-detail__story-grid">
+                        <article class="admin-poi-detail__story">
+                            <span>Mô tả văn bản</span>
+                            <p>@_selectedPoi.Description</p>
+                        </article>
+
+                        <article class="admin-poi-detail__story">
+                            <span>Kịch bản nguồn</span>
+                            <p>@_selectedPoi.TtsScript</p>
+                        </article>
+                    </div>
+                </section>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private const int PageSize = 5;
+
+    private static readonly IReadOnlyList<PoiFilterTab> FilterTabs = Enum.GetValues<PoiFilterTab>();
+
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private string? _statusMessage;
+    private IReadOnlyList<AdminPoiDto> _pois = Array.Empty<AdminPoiDto>();
+    private AdminPoiDto? _selectedPoi;
+    private PoiFilterTab _activeFilter = PoiFilterTab.All;
+    private string _searchText = string.Empty;
+
+    private int CurrentPage { get; set; } = 1;
+
+    private IReadOnlyList<AdminPoiDto> FilteredPois => _pois
+        .Where(MatchesActiveFilter)
+        .Where(MatchesSearch)
+        .ToArray();
+
+    private IReadOnlyList<AdminPoiDto> VisiblePois => FilteredPois
+        .Skip((CurrentPage - 1) * PageSize)
+        .Take(PageSize)
+        .ToArray();
+
+    private IReadOnlyList<PoiRow> VisibleRows => VisiblePois
+        .Select((item, index) => new PoiRow(((CurrentPage - 1) * PageSize) + index + 1, item))
+        .ToArray();
+
+    private int PendingPoiCount => _pois.Count(item => item.Status == PoiStatus.PendingReview || item.PendingModerationId.HasValue);
+
+    private int FilteredCount => FilteredPois.Count;
+
+    private int PageCount => Math.Max(1, (int)Math.Ceiling(FilteredCount / (double)PageSize));
+
+    private IEnumerable<int> PageNumbers => Enumerable.Range(1, PageCount);
+
+    private string VisibleRangeLabel
+    {
+        get
+        {
+            if (FilteredCount == 0)
+            {
+                return "0-0 / 0 POI";
+            }
+
+            var start = ((CurrentPage - 1) * PageSize) + 1;
+            var end = start + VisibleRows.Count - 1;
+            return $"{start}-{end} / {FilteredCount} POI";
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _pois = await AdminPortalService.GetPoisAsync();
+            NormalizePageAndSelection();
+        }
+        catch (ApiException exception)
+        {
+            _errorMessage = exception.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void SetFilter(PoiFilterTab filter)
+    {
+        _activeFilter = filter;
+        CurrentPage = 1;
+        NormalizePageAndSelection();
+    }
+
+    private void HandleSearchChanged(ChangeEventArgs args)
+    {
+        _searchText = args.Value?.ToString()?.Trim() ?? string.Empty;
+        CurrentPage = 1;
+        NormalizePageAndSelection();
+    }
+
+    private void GoToPage(int page)
+    {
+        CurrentPage = Math.Clamp(page, 1, PageCount);
+        NormalizePageAndSelection();
+    }
+
+    private void PreviousPage()
+    {
+        GoToPage(CurrentPage - 1);
+    }
+
+    private void NextPage()
+    {
+        GoToPage(CurrentPage + 1);
+    }
+
+    private void SelectPoi(AdminPoiDto poi)
+    {
+        _selectedPoi = poi;
+        _statusMessage = null;
+    }
+
+    private void ClosePoiDetail()
+    {
+        _selectedPoi = null;
+    }
+
+    private bool IsSelected(AdminPoiDto poi)
+    {
+        return _selectedPoi?.Id == poi.Id;
+    }
+
+    private bool CanEdit(AdminPoiDto poi)
+    {
+        return poi.Status is PoiStatus.Draft or PoiStatus.Published or PoiStatus.Updated;
+    }
+
+    private int GetFilterCount(PoiFilterTab filter)
+    {
+        return _pois.Count(item => MatchesFilter(item, filter));
+    }
+
+    private static string GetFilterLabel(PoiFilterTab filter)
+    {
+        return filter switch
+        {
+            PoiFilterTab.Published => "Đã xuất bản",
+            PoiFilterTab.Pending => "Chờ duyệt",
+            PoiFilterTab.Archived => "Lưu trữ",
+            _ => "Tất cả"
+        };
+    }
+
+    private static string GetFilterActionName(PoiFilterTab filter)
+    {
+        return filter switch
+        {
+            PoiFilterTab.Published => "published",
+            PoiFilterTab.Pending => "pending",
+            PoiFilterTab.Archived => "archived",
+            _ => "all"
+        };
+    }
+
+    private static string GetStatusLabel(PoiStatus status)
+    {
+        return status switch
+        {
+            PoiStatus.Draft => "Nháp",
+            PoiStatus.PendingReview => "Chờ duyệt",
+            PoiStatus.Published => "Đã xuất bản",
+            PoiStatus.Rejected => "Từ chối",
+            PoiStatus.Updated => "Đã cập nhật",
+            PoiStatus.Archived => "Lưu trữ",
+            _ => status.ToString()
+        };
+    }
+
+    private static StatusTone GetStatusTone(PoiStatus status)
+    {
+        return status switch
+        {
+            PoiStatus.Published => StatusTone.Good,
+            PoiStatus.PendingReview => StatusTone.Warn,
+            PoiStatus.Rejected => StatusTone.Critical,
+            PoiStatus.Updated => StatusTone.Info,
+            _ => StatusTone.Neutral
+        };
+    }
+
+    private static string GetLanguageLabel(int translationCount)
+    {
+        return translationCount == 1
+            ? "1 ngôn ngữ"
+            : $"{translationCount} ngôn ngữ";
+    }
+
+    private static string GetAudioLabel(AdminPoiDto poi)
+    {
+        if (poi.AudioAssetCount > 0)
+        {
+            return "Có sẵn";
+        }
+
+        return poi.Status switch
+        {
+            PoiStatus.PendingReview or PoiStatus.Updated => "Đang tạo",
+            PoiStatus.Archived or PoiStatus.Rejected => "Lỗi",
+            _ => "Chưa có"
+        };
+    }
+
+    private static StatusTone GetAudioTone(AdminPoiDto poi)
+    {
+        if (poi.AudioAssetCount > 0)
+        {
+            return StatusTone.Good;
+        }
+
+        return poi.Status switch
+        {
+            PoiStatus.PendingReview or PoiStatus.Updated => StatusTone.Warn,
+            PoiStatus.Archived or PoiStatus.Rejected => StatusTone.Critical,
+            _ => StatusTone.Neutral
+        };
+    }
+
+    private static string FormatCoordinates(AdminPoiDto poi)
+    {
+        return FormattableString.Invariant($"{poi.Lat:0.0000}, {poi.Lng:0.0000}");
+    }
+
+    private bool MatchesActiveFilter(AdminPoiDto poi)
+    {
+        return MatchesFilter(poi, _activeFilter);
+    }
+
+    private bool MatchesSearch(AdminPoiDto poi)
+    {
+        if (string.IsNullOrWhiteSpace(_searchText))
+        {
+            return true;
+        }
+
+        var query = _searchText.Trim();
+        return ContainsIgnoreCase(poi.Name, query)
+            || ContainsIgnoreCase(poi.Slug, query)
+            || ContainsIgnoreCase(poi.OwnerEmail, query)
+            || ContainsIgnoreCase(poi.CategoryName, query);
+    }
+
+    private static bool MatchesFilter(AdminPoiDto poi, PoiFilterTab filter)
+    {
+        return filter switch
+        {
+            PoiFilterTab.Published => poi.Status is PoiStatus.Published or PoiStatus.Updated,
+            PoiFilterTab.Pending => poi.Status == PoiStatus.PendingReview || poi.PendingModerationId.HasValue,
+            PoiFilterTab.Archived => poi.Status is PoiStatus.Archived or PoiStatus.Rejected,
+            _ => true
+        };
+    }
+
+    private static bool ContainsIgnoreCase(string? source, string query)
+    {
+        return !string.IsNullOrWhiteSpace(source)
+            && source.Contains(query, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task ApprovePoiAsync(AdminPoiDto poi, int moderationRequestId)
+    {
+        try
+        {
+            await AdminPortalService.ApproveModerationAsync(moderationRequestId, new ReviewModerationRequest
+            {
+                ReviewNote = "Approved from admin POI workspace."
+            });
+
+            ReplacePoi(CloneWithStatus(poi, PoiStatus.Published));
+            _statusMessage = $"Đã duyệt POI {poi.Name}.";
+        }
+        catch (ApiException exception)
+        {
+            _statusMessage = exception.Message;
+        }
+        catch (Exception exception)
+        {
+            _statusMessage = exception.Message;
+        }
+    }
+
+    private async Task RejectPoiAsync(AdminPoiDto poi, int moderationRequestId)
+    {
+        try
+        {
+            await AdminPortalService.RejectModerationAsync(moderationRequestId, new ReviewModerationRequest
+            {
+                ReviewNote = "Rejected from admin POI workspace."
+            });
+
+            ReplacePoi(CloneWithStatus(poi, PoiStatus.Rejected));
+            _statusMessage = $"Đã từ chối POI {poi.Name}.";
+        }
+        catch (ApiException exception)
+        {
+            _statusMessage = exception.Message;
+        }
+        catch (Exception exception)
+        {
+            _statusMessage = exception.Message;
+        }
+    }
+
+    private async Task DeletePoiAsync(AdminPoiDto poi)
+    {
+        try
+        {
+            await AdminPoiOperationsService.DeleteAsync(poi.Id);
+            _pois = _pois.Where(item => item.Id != poi.Id).ToArray();
+            NormalizePageAndSelection();
+            _statusMessage = $"Đã xóa POI {poi.Name}.";
+        }
+        catch (ApiException exception)
+        {
+            _statusMessage = exception.Message;
+        }
+        catch (Exception exception)
+        {
+            _statusMessage = exception.Message;
+        }
+    }
+
+    private void ReplacePoi(AdminPoiDto updatedPoi)
+    {
+        _pois = _pois.Select(item => item.Id == updatedPoi.Id ? updatedPoi : item).ToArray();
+        NormalizePageAndSelection(updatedPoi.Id);
+    }
+
+    private void NormalizePageAndSelection(int? preferredPoiId = null)
+    {
+        CurrentPage = Math.Clamp(CurrentPage, 1, PageCount);
+
+        var candidateId = preferredPoiId ?? _selectedPoi?.Id;
+        _selectedPoi = candidateId is int poiId
+            ? VisiblePois.FirstOrDefault(item => item.Id == poiId)
+            : null;
+    }
+
+    private static AdminPoiDto CloneWithStatus(AdminPoiDto poi, PoiStatus status)
+    {
+        return new AdminPoiDto
+        {
+            Id = poi.Id,
+            Name = poi.Name,
+            Slug = poi.Slug,
+            OwnerName = poi.OwnerName,
+            OwnerEmail = poi.OwnerEmail,
+            Lat = poi.Lat,
+            Lng = poi.Lng,
+            Priority = poi.Priority,
+            CategoryId = poi.CategoryId,
+            CategoryName = poi.CategoryName,
+            Description = poi.Description,
+            TtsScript = poi.TtsScript,
+            Status = status,
+            AudioAssetCount = poi.AudioAssetCount,
+            TranslationCount = poi.TranslationCount,
+            GeofenceCount = poi.GeofenceCount,
+            PendingModerationId = null,
+            CreatedAtUtc = poi.CreatedAtUtc
+        };
+    }
+
+    private sealed record PoiRow(int Number, AdminPoiDto Item);
+
+    private enum PoiFilterTab
+    {
+        All,
+        Published,
+        Pending,
+        Archived
+    }
+}

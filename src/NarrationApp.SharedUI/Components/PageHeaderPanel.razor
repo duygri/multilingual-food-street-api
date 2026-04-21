@@ -1,0 +1,65 @@
+<section class="page-header-panel">
+    <div class="page-header-panel__main">
+        <div class="page-header-panel__heading">
+            <p class="page-header-panel__eyebrow">@Eyebrow</p>
+            <h2>@ResolvedTitle</h2>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Description))
+        {
+            <p class="page-header-panel__description">@Description</p>
+        }
+
+        @if (ResolvedMetaItems.Count > 0)
+        {
+            <div class="page-header-panel__meta">
+                @foreach (var item in ResolvedMetaItems)
+                {
+                    <span class="page-header-panel__meta-item">@item</span>
+                }
+            </div>
+        }
+    </div>
+
+    @if (PrimaryAction is not null)
+    {
+        <div class="page-header-panel__actions">
+            <a class="page-header-panel__action @(PrimaryAction.IsPrimary ? "is-primary" : "is-secondary")" href="@PrimaryAction.Href">
+                @PrimaryAction.Label
+            </a>
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter]
+    public string Eyebrow { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public string TitleLead { get; set; } = string.Empty;
+
+    [Parameter]
+    public string TitleAccent { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Description { get; set; } = string.Empty;
+
+    [Parameter]
+    public IReadOnlyList<string> MetaItems { get; set; } = Array.Empty<string>();
+
+    [Parameter]
+    public IReadOnlyList<string> Badges { get; set; } = Array.Empty<string>();
+
+    [Parameter]
+    public HeroAction? PrimaryAction { get; set; }
+
+    private string ResolvedTitle =>
+        !string.IsNullOrWhiteSpace(Title)
+            ? Title
+            : $"{TitleLead} {TitleAccent}".Trim();
+
+    private IReadOnlyList<string> ResolvedMetaItems => MetaItems.Count > 0 ? MetaItems : Badges;
+}

@@ -1,0 +1,88 @@
+<div class="portal-shell">
+    <aside class="portal-shell__sidebar">
+        <div class="portal-shell__brand">
+            <h1>@Brand</h1>
+            @if (!string.IsNullOrWhiteSpace(Eyebrow))
+            {
+                <p class="portal-shell__brand-meta">@Eyebrow</p>
+            }
+            @if (!string.IsNullOrWhiteSpace(Tagline))
+            {
+                <p class="portal-shell__brand-copy">@Tagline</p>
+            }
+        </div>
+
+        @if (NavigationItems.Count > 0)
+        {
+            <nav class="portal-shell__nav" aria-label="Primary">
+                @foreach (var group in NavigationGroups)
+                {
+                    <section class="portal-shell__nav-group">
+                        @if (!string.IsNullOrWhiteSpace(group.Key))
+                        {
+                            <p class="portal-shell__nav-group-title">@group.Key</p>
+                        }
+
+                        <div class="portal-shell__nav-items">
+                            @foreach (var item in group.Items)
+                            {
+                                <NavLink href="@item.Href"
+                                         Match="@(item.MatchAll ? NavLinkMatch.All : NavLinkMatch.Prefix)"
+                                         ActiveClass="active portal-shell__nav-link--active"
+                                         class="portal-shell__nav-link--plain portal-shell__nav-link">
+                                    <span class="portal-shell__nav-label">@item.Label</span>
+                                    @if (!string.IsNullOrWhiteSpace(item.BadgeText))
+                                    {
+                                        <span class="portal-shell__nav-badge">@item.BadgeText</span>
+                                    }
+                                </NavLink>
+                            }
+                        </div>
+                    </section>
+                }
+            </nav>
+        }
+
+        <div class="portal-shell__sidebar-foot">
+            <span>Portal status</span>
+            <strong>ONLINE</strong>
+        </div>
+    </aside>
+
+    <div class="portal-shell__main">
+        <header class="portal-shell__header">
+            @HeaderContent
+        </header>
+
+        <main class="portal-shell__content">
+            @ChildContent
+        </main>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string Brand { get; set; } = "Narration Portal";
+
+    [Parameter]
+    public string Eyebrow { get; set; } = "Vinh Khanh Food Street";
+
+    [Parameter]
+    public string Tagline { get; set; } = "Multilingual audio narration control room.";
+
+    [Parameter]
+    public IReadOnlyList<ShellNavItem> NavigationItems { get; set; } = Array.Empty<ShellNavItem>();
+
+    [Parameter]
+    public RenderFragment? HeaderContent { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private IReadOnlyList<NavGroup> NavigationGroups => NavigationItems
+        .GroupBy(item => item.Group ?? string.Empty)
+        .Select(group => new NavGroup(group.Key, group.ToArray()))
+        .ToArray();
+
+    private sealed record NavGroup(string Key, IReadOnlyList<ShellNavItem> Items);
+}

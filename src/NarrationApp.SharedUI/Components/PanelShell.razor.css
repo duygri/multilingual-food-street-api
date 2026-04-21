@@ -1,0 +1,37 @@
+.panel-shell--shared .panel-shell__header {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.panel-shell--shared .panel-shell__heading h2,
+.panel-shell--shared .panel-shell__heading p {
+    margin: 0;
+}
+
+.panel-shell--shared .panel-shell__heading h2 {
+    margin-top: 0.55rem;
+}
+
+.panel-shell--shared .panel-shell__aside {
+    display: flex;
+    align-items: start;
+    justify-content: end;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+}
+
+.panel-shell--shared .panel-shell__description {
+    max-width: 68ch;
+}
+
+.panel-shell--shared .panel-shell__body {
+    margin-top: 1rem;
+}
+
+@media (max-width: 720px) {
+    .panel-shell--shared .panel-shell__header {
+        flex-direction: column;
+    }
+}

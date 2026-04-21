@@ -1,0 +1,218 @@
+@page "/owner/dashboard"
+@attribute [Authorize(Roles = "poi_owner")]
+@inject IOwnerPortalService OwnerPortalService
+
+<PageTitle>Bảng theo dõi POI</PageTitle>
+
+@if (_isLoading)
+{
+    <section class="panel-shell">
+        <p class="panel-shell__eyebrow">Owner</p>
+        <h2>Đang tải dữ liệu POI...</h2>
+    </section>
+}
+else if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <section class="panel-shell">
+        <p class="panel-shell__eyebrow">Owner</p>
+        <h2>Không thể tải bảng theo dõi POI</h2>
+        <p class="panel-shell__copy">@_errorMessage</p>
+    </section>
+}
+else
+{
+    <div class="dashboard-stack">
+        <section class="metric-grid">
+            <MetricCard Label="POI quản lý" Value="@_dashboard.TotalPois.ToString()" Hint="Tổng tài nguyên" />
+            <MetricCard Label="Đã xuất bản" Value="@_dashboard.PublishedPois.ToString()" Hint="Đang phục vụ" />
+            <MetricCard Label="Nháp" Value="@_dashboard.DraftPois.ToString()" Hint="Đang biên tập" />
+            <MetricCard Label="Chờ duyệt" Value="@_dashboard.PendingReviewPois.ToString()" Hint="Chờ admin phản hồi" />
+            <MetricCard Label="Audio hiện có" Value="@_dashboard.TotalAudioAssets.ToString()" Hint="Kho audio" />
+            <MetricCard Label="Cảnh báo chưa đọc" Value="@_dashboard.UnreadNotifications.ToString()" Hint="Notification center" />
+        </section>
+
+        <section class="owner-dashboard-grid">
+            <div class="owner-dashboard-grid__main">
+                <DataTableShell Eyebrow="Mức sẵn sàng POI"
+                                Title="Bảng sẵn sàng POI"
+                                BadgeLabel="@($"{_dashboard.PublishedPois} đang xuất bản")"
+                                BadgeTone="StatusTone.Good"
+                                IsEmpty="@(_pois.Count == 0)">
+                    <TableContent>
+                        <thead>
+                            <tr>
+                                <th>POI</th>
+                                <th>Trạng thái</th>
+                                <th>Vùng kích hoạt</th>
+                                <th>Ngôn ngữ</th>
+                                <th>Narration</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var poi in _pois)
+                            {
+                                <tr>
+                                    <td>@poi.Name</td>
+                                    <td><StatusBadge Label="@GetPoiStatusLabel(poi.Status)" Tone="@GetPoiStatusTone(poi.Status)" /></td>
+                                    <td>@GetGeofenceSummary(poi)</td>
+                                    <td>@GetTranslationSummary(poi)</td>
+                                    <td><StatusBadge Label="@GetNarrationLabel(poi.NarrationMode)" Tone="@GetNarrationTone(poi.NarrationMode)" /></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </TableContent>
+                    <EmptyStateContent>
+                        <EmptyStateBlock Eyebrow="POI"
+                                         Title="Chưa có POI"
+                                         Message="Owner hiện chưa có POI nào để theo dõi mức sẵn sàng vận hành." />
+                    </EmptyStateContent>
+                </DataTableShell>
+
+                <PanelShell Eyebrow="Sẵn sàng audio"
+                            Title="Kỷ luật phát hành audio"
+                            BadgeLabel="@($"{_dashboard.TotalAudioAssets} audio")"
+                            BadgeTone="StatusTone.Info">
+                    @if (_pois.Count == 0)
+                    {
+                        <EmptyStateBlock Eyebrow="Audio"
+                                         Title="Chưa có theo dõi audio"
+                                         Message="POI sẽ xuất hiện tại đây khi owner có dữ liệu để theo dõi tình trạng phát hành audio." />
+                    }
+                    else
+                    {
+                        <div class="owner-audio-list">
+                            @foreach (var poi in _pois.Take(4))
+                            {
+                                <article class="owner-audio-item">
+                                    <div>
+                                        <strong>@poi.Name</strong>
+                                        <p>@GetTranslationSummary(poi) • @GetGeofenceSummary(poi)</p>
+                                    </div>
+                                    <div class="owner-audio-item__meta">
+                                        <StatusBadge Label="@GetNarrationLabel(poi.NarrationMode)" Tone="@GetNarrationTone(poi.NarrationMode)" />
+                                        <small>@GetPoiStatusLabel(poi.Status)</small>
+                                    </div>
+                                </article>
+                            }
+                        </div>
+                    }
+                </PanelShell>
+            </div>
+
+            <div class="owner-dashboard-grid__side">
+                <SystemStatusRail Label="Trạng thái owner" Items="StatusItems" />
+
+                <PanelShell Eyebrow="Theo dõi moderation"
+                            Title="Theo dõi kiểm duyệt">
+                    <div class="owner-watch-list">
+                        <div class="owner-watch-row">
+                            <div>
+                                <strong>POI chờ duyệt</strong>
+                                <p>Các POI đã gửi admin và đang chờ phản hồi.</p>
+                            </div>
+                            <StatusBadge Label="@($"{_dashboard.PendingReviewPois} mục")" Tone="StatusTone.Warn" />
+                        </div>
+
+                        <div class="owner-watch-row">
+                            <div>
+                                <strong>Yêu cầu moderation</strong>
+                                <p>Yêu cầu cần tiếp tục theo dõi trong queue của admin.</p>
+                            </div>
+                            <StatusBadge Label="@($"{_dashboard.PendingModerationRequests} chờ xử lý")" Tone="StatusTone.Warn" />
+                        </div>
+
+                        <div class="owner-watch-row">
+                            <div>
+                                <strong>Trung tâm thông báo</strong>
+                                <p>Thông báo vận hành và phản hồi vừa trả về owner portal.</p>
+                            </div>
+                            <StatusBadge Label="@($"{_dashboard.UnreadNotifications} chưa đọc")" Tone="StatusTone.Info" />
+                        </div>
+
+                        <div class="owner-watch-row">
+                            <div>
+                                <strong>Kho audio</strong>
+                                <p>Kho audio hiện hành sẵn sàng cho narration và playback.</p>
+                            </div>
+                            <StatusBadge Label="@($"{_dashboard.TotalAudioAssets} tài sản")" Tone="StatusTone.Good" />
+                        </div>
+                    </div>
+                </PanelShell>
+            </div>
+        </section>
+    </div>
+}
+
+@code {
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private OwnerDashboardDto _dashboard = new();
+    private IReadOnlyList<PoiDto> _pois = Array.Empty<PoiDto>();
+
+    private IReadOnlyList<SystemStatusItem> StatusItems =>
+    [
+        new() { Label = "Owner", Value = "Đồng bộ", Tone = StatusTone.Good },
+        new() { Label = "Xuất bản", Value = $"{_dashboard.PublishedPois} POI", Tone = StatusTone.Good },
+        new() { Label = "Chờ duyệt", Value = $"{_dashboard.PendingReviewPois} mục", Tone = _dashboard.PendingReviewPois > 0 ? StatusTone.Warn : StatusTone.Good },
+        new() { Label = "Thông báo", Value = $"{_dashboard.UnreadNotifications} chưa đọc", Tone = _dashboard.UnreadNotifications > 0 ? StatusTone.Info : StatusTone.Good }
+    ];
+
+    private static string GetPoiStatusLabel(PoiStatus status) => status switch
+    {
+        PoiStatus.Published => "Đã xuất bản",
+        PoiStatus.PendingReview => "Chờ duyệt",
+        PoiStatus.Draft => "Nháp",
+        PoiStatus.Rejected => "Bị từ chối",
+        PoiStatus.Updated => "Đã cập nhật",
+        PoiStatus.Archived => "Lưu trữ",
+        _ => status.ToString()
+    };
+
+    private static StatusTone GetPoiStatusTone(PoiStatus status) => status switch
+    {
+        PoiStatus.Published => StatusTone.Good,
+        PoiStatus.PendingReview => StatusTone.Warn,
+        PoiStatus.Draft => StatusTone.Neutral,
+        PoiStatus.Rejected => StatusTone.Warn,
+        PoiStatus.Updated => StatusTone.Info,
+        PoiStatus.Archived => StatusTone.Neutral,
+        _ => StatusTone.Neutral
+    };
+
+    private static string GetNarrationLabel(NarrationMode mode) => mode switch
+    {
+        NarrationMode.TtsOnly => "Chỉ TTS",
+        NarrationMode.RecordedOnly => "Chỉ audio nguồn",
+        NarrationMode.Both => "Kết hợp",
+        _ => mode.ToString()
+    };
+
+    private static StatusTone GetNarrationTone(NarrationMode mode) => mode switch
+    {
+        NarrationMode.Both => StatusTone.Good,
+        NarrationMode.TtsOnly => StatusTone.Info,
+        NarrationMode.RecordedOnly => StatusTone.Neutral,
+        _ => StatusTone.Neutral
+    };
+
+    private static string GetGeofenceSummary(PoiDto poi) => $"{poi.Geofences.Count} vùng kích hoạt";
+
+    private static string GetTranslationSummary(PoiDto poi) => $"{poi.Translations.Count} ngôn ngữ";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _dashboard = await OwnerPortalService.GetDashboardAsync();
+            _pois = await OwnerPortalService.GetPoisAsync();
+        }
+        catch (ApiException exception)
+        {
+            _errorMessage = exception.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+}

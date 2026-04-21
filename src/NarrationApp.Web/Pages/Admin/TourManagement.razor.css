@@ -1,0 +1,145 @@
+.tour-surface__metrics {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.tour-table-shell,
+.tour-editor-shell {
+    overflow: hidden;
+}
+
+.sample-surface__header {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.sample-surface__header--compact {
+    margin: 1.25rem 0 1rem;
+}
+
+.sample-surface__header h2,
+.sample-surface__header p,
+.tour-cell strong,
+.tour-cell span {
+    margin: 0;
+}
+
+.tour-cell {
+    display: grid;
+    gap: 0.25rem;
+}
+
+.tour-cell span {
+    color: var(--vk-muted);
+    font-size: 0.84rem;
+}
+
+.table-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+}
+
+.tour-table__row--active {
+    background: rgba(12, 36, 52, 0.28);
+}
+
+.editor-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.editor-grid--compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.editor-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.editor-field--full {
+    grid-column: 1 / -1;
+}
+
+.editor-field label {
+    color: var(--vk-muted);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+}
+
+.editor-field :is(input, textarea, select),
+.editor-select {
+    width: 100%;
+    border-radius: 1rem;
+    border: 1px solid rgba(80, 137, 168, 0.18);
+    background: rgba(8, 17, 31, 0.78);
+    color: var(--vk-text);
+    padding: 0.82rem 0.95rem;
+}
+
+.editor-field textarea {
+    min-height: 7rem;
+    resize: vertical;
+}
+
+.stop-stack {
+    display: grid;
+    gap: 0.9rem;
+}
+
+.stop-editor {
+    border-radius: 1rem;
+    border: 1px solid rgba(80, 137, 168, 0.16);
+    background: rgba(8, 17, 31, 0.56);
+    padding: 1rem;
+}
+
+.stop-editor__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.85rem;
+}
+
+.action-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+}
+
+@media (max-width: 1180px) {
+    .tour-surface__metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 860px) {
+    .editor-grid,
+    .editor-grid--compact,
+    .tour-surface__metrics {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 720px) {
+    .sample-surface__header,
+    .stop-editor__header,
+    .table-actions,
+    .action-row {
+        flex-direction: column;
+    }
+
+    .sample-surface__header .app-button,
+    .table-actions .app-button,
+    .action-row .app-button {
+        width: 100%;
+    }
+}

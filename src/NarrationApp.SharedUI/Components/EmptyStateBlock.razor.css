@@ -1,0 +1,32 @@
+.empty-state-block {
+    padding: 1rem;
+    border-radius: 0.95rem;
+    border: 1px dashed rgba(80, 137, 168, 0.2);
+    background: rgba(8, 17, 31, 0.5);
+}
+
+.empty-state-block__eyebrow {
+    margin: 0;
+    color: var(--vk-accent-soft);
+    font-family: var(--vk-font-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.empty-state-block h3,
+.empty-state-block p {
+    margin: 0;
+}
+
+.empty-state-block h3 {
+    margin-top: 0.55rem;
+    color: var(--vk-text);
+    font-size: 1.05rem;
+}
+
+.empty-state-block p {
+    margin-top: 0.6rem;
+    color: var(--vk-muted);
+    line-height: 1.6;
+}

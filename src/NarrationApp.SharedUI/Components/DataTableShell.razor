@@ -1,0 +1,65 @@
+<PanelShell Eyebrow="@Eyebrow"
+            Title="@Title"
+            Description="@Description"
+            BadgeLabel="@BadgeLabel"
+            BadgeTone="@BadgeTone"
+            HeaderActions="@HeaderActions"
+            ClassName="@CssClass">
+    @if (IsEmpty)
+    {
+        @if (EmptyStateContent is not null)
+        {
+            @EmptyStateContent
+        }
+        else
+        {
+            <EmptyStateBlock Eyebrow="@Eyebrow"
+                             Title="Không có dữ liệu"
+                             Message="Bảng hiện chưa có bản ghi để hiển thị." />
+        }
+    }
+    else if (TableContent is not null)
+    {
+        <div class="table-wrap">
+            <table class="app-table">
+                @TableContent
+            </table>
+        </div>
+    }
+</PanelShell>
+
+@code {
+    [Parameter]
+    public string? Eyebrow { get; set; }
+
+    [Parameter]
+    public string? Title { get; set; }
+
+    [Parameter]
+    public string? Description { get; set; }
+
+    [Parameter]
+    public string? BadgeLabel { get; set; }
+
+    [Parameter]
+    public StatusTone BadgeTone { get; set; } = StatusTone.Info;
+
+    [Parameter]
+    public bool IsEmpty { get; set; }
+
+    [Parameter]
+    public RenderFragment? TableContent { get; set; }
+
+    [Parameter]
+    public RenderFragment? EmptyStateContent { get; set; }
+
+    [Parameter]
+    public RenderFragment? HeaderActions { get; set; }
+
+    [Parameter]
+    public string? ClassName { get; set; }
+
+    private string CssClass => string.IsNullOrWhiteSpace(ClassName)
+        ? "table-shell"
+        : $"table-shell {ClassName}";
+}

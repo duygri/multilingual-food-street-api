@@ -1,0 +1,154 @@
+@using NarrationApp.Mobile.Features.Home
+
+<section class="full-player-screen">
+    <div class="full-player-shell">
+        <header class="full-player-topbar">
+            <button type="button" class="full-player-topbar__button" @onclick="OnClose">←</button>
+            <div class="full-player-topbar__actions">
+                <button type="button" class="full-player-pill" @onclick="OnToggleSpeed">@SpeedLabel</button>
+                <button type="button" class="full-player-pill" @onclick="OnToggleTranscript">
+                    @(ShowTranscript ? "Ẩn transcript" : "Transcript")
+                </button>
+            </div>
+        </header>
+
+        <div class="full-player-hero @GetHeroTone(Poi.CategoryId)">
+            <div class="full-player-hero__icon">@GetPoiIcon()</div>
+        </div>
+
+        <section class="full-player-summary">
+            <div class="full-player-summary__meta">
+                <span class="discover-badge">@GetCategoryLabel()</span>
+                <span class="full-player-summary__status">@CurrentLanguageLabel • @AudioStatusLabel</span>
+            </div>
+            <h1>@Poi.Name</h1>
+            <p>Nghe thuyết minh toàn màn hình với transcript đồng bộ và thao tác nhanh.</p>
+        </section>
+
+        <div class="full-player-progress">
+            <div class="full-player-wave" aria-hidden="true">
+                @for (var index = 0; index < 60; index++)
+                {
+                    <span class="@(index < GetActiveBarCount() ? "is-active" : string.Empty)" style="height:@GetWaveHeight(index)"></span>
+                }
+            </div>
+
+            <div class="full-player-time">
+                <span>@ElapsedLabel</span>
+                <span>@DurationLabel</span>
+            </div>
+        </div>
+
+        <div class="full-player-controls">
+            <button type="button" class="full-player-control" @onclick="OnSeekBackward">⏪</button>
+            <button type="button" class="full-player-control" @onclick="OnRestart">⏮</button>
+            <button type="button" class="full-player-control full-player-control--play full-player-control--primary" @onclick="OnPlayToggle">
+                @(IsPlaying ? "❚❚" : "▶")
+            </button>
+            <button type="button" class="full-player-control" @onclick="OnCycleLanguage">🌐</button>
+            <button type="button" class="full-player-control" @onclick="OnSeekForward">⏩</button>
+        </div>
+
+        <section class="full-player-transcript @(ShowTranscript ? "is-open" : string.Empty)">
+            <div class="full-player-transcript__surface">
+                <div class="full-player-transcript__header">
+                    <strong>Transcript</strong>
+                    <span>@CurrentLanguageLabel</span>
+                </div>
+
+                @if (ShowTranscript)
+                {
+                    <div class="full-player-transcript__body">
+                        <p>@Poi.Description</p>
+                        <p>@Poi.Highlight</p>
+                    </div>
+                }
+            </div>
+        </section>
+    </div>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public TouristPoi Poi { get; set; } = default!;
+    [Parameter] public IReadOnlyList<TouristCategory> Categories { get; set; } = [];
+    [Parameter] public bool IsPlaying { get; set; }
+    [Parameter] public string CurrentLanguageLabel { get; set; } = string.Empty;
+    [Parameter] public string AudioStatusLabel { get; set; } = string.Empty;
+    [Parameter] public string ElapsedLabel { get; set; } = "0:00";
+    [Parameter] public string DurationLabel { get; set; } = "0:00";
+    [Parameter] public double ProgressPercent { get; set; }
+    [Parameter] public string SpeedLabel { get; set; } = "1x";
+    [Parameter] public bool ShowTranscript { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback OnPlayToggle { get; set; }
+    [Parameter] public EventCallback OnSeekBackward { get; set; }
+    [Parameter] public EventCallback OnRestart { get; set; }
+    [Parameter] public EventCallback OnCycleLanguage { get; set; }
+    [Parameter] public EventCallback OnSeekForward { get; set; }
+    [Parameter] public EventCallback OnToggleSpeed { get; set; }
+    [Parameter] public EventCallback OnToggleTranscript { get; set; }
+
+    private string GetCategoryIcon(string categoryId) =>
+        categoryId switch
+        {
+            "food" => "🍜",
+            "history" => "🏛️",
+            "river" => "🌉",
+            "night" => "🍢",
+            _ => "☕"
+        };
+
+    private string GetPoiIcon()
+    {
+        var label = Poi.CategoryLabel.ToLowerInvariant();
+        if (label.Contains("uống") || label.Contains("cà phê") || label.Contains("coffee"))
+        {
+            return "☕";
+        }
+
+        if (label.Contains("bún") || label.Contains("phở") || label.Contains("ẩm") || label.Contains("food"))
+        {
+            return "🍜";
+        }
+
+        if (label.Contains("đêm") || label.Contains("ăn vặt"))
+        {
+            return "🍢";
+        }
+
+        if (label.Contains("sông") || label.Contains("cầu") || label.Contains("ven"))
+        {
+            return "🌉";
+        }
+
+        return GetCategoryIcon(Poi.CategoryId);
+    }
+
+    private string GetHeroTone(string categoryId) =>
+        categoryId switch
+        {
+            "food" => "is-food",
+            "river" => "is-river",
+            "night" => "is-night",
+            _ => "is-history"
+        };
+
+    private string GetCategoryLabel() =>
+        string.IsNullOrWhiteSpace(Poi.CategoryLabel)
+            ? Categories.FirstOrDefault(category => category.Id == Poi.CategoryId)?.Label ?? Poi.District
+            : Poi.CategoryLabel;
+
+    private int GetActiveBarCount() =>
+        Math.Clamp((int)Math.Round(ProgressPercent / 100d * 60d, MidpointRounding.AwayFromZero), 0, 60);
+
+    private static string GetWaveHeight(int index)
+    {
+        var heights = new[]
+        {
+            "28px", "34px", "20px", "42px", "26px", "36px", "22px", "48px", "30px", "40px",
+            "24px", "38px", "18px", "44px", "28px"
+        };
+
+        return heights[index % heights.Length];
+    }
+}

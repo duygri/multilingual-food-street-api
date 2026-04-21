@@ -1,0 +1,837 @@
+@page "/admin/translation-review"
+@using System.Linq
+@using NarrationApp.Shared.DTOs.Audio
+@using NarrationApp.Shared.DTOs.Languages
+@using NarrationApp.Shared.Enums
+@attribute [Authorize(Roles = "admin")]
+
+@inject IAdminPortalService AdminPortalService
+@inject IAudioPortalService AudioPortalService
+@inject ITranslationPortalService TranslationPortalService
+@inject ILanguagePortalService LanguagePortalService
+
+<PageTitle>Rà soát bản dịch</PageTitle>
+
+@if (_isLoading)
+{
+    <section class="panel-shell">
+        <p class="panel-shell__eyebrow">Bản dịch</p>
+        <h2>Đang tải bàn rà soát bản dịch...</h2>
+    </section>
+}
+else if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <section class="panel-shell">
+        <p class="panel-shell__eyebrow">Bản dịch</p>
+        <h2>Không thể tải bàn rà soát bản dịch</h2>
+        <p class="panel-shell__copy">@_errorMessage</p>
+    </section>
+}
+else
+{
+    <div class="dashboard-stack translation-review">
+        @if (!string.IsNullOrWhiteSpace(_statusMessage))
+        {
+            <section class="panel-shell">
+                <p class="panel-shell__copy">@_statusMessage</p>
+            </section>
+        }
+
+        <section class="translation-review__metrics">
+            <article class="translation-review__kpi-card translation-review__kpi-card--info">
+                <strong>@TotalTranslationCount</strong>
+                <h2>Tổng bản dịch</h2>
+                <p>Tổng số translation hiện có</p>
+            </article>
+
+            <article class="translation-review__kpi-card translation-review__kpi-card--good">
+                <strong>@CoveragePercent</strong>
+                <h2>POI có ≥2 ngôn ngữ</h2>
+                <p>@PoiWithMultipleLanguagesCount / @_pois.Count POI đã có coverage đa ngôn ngữ</p>
+            </article>
+
+            <article class="translation-review__kpi-card translation-review__kpi-card--bot">
+                <strong>@AutoTranslatedCount</strong>
+                <h2>Auto-translated</h2>
+                <p>Bản dịch do Google sinh tự động</p>
+            </article>
+
+            <article class="translation-review__kpi-card translation-review__kpi-card--edit">
+                <strong>@ReviewedCount</strong>
+                <h2>Đã biên tập thủ công</h2>
+                <p>Bản dịch đã được admin rà soát</p>
+            </article>
+        </section>
+
+        <section class="panel-shell translation-review__matrix-shell">
+            <div class="translation-review__matrix-header">
+                <div>
+                    <h2>Quản lý bản dịch</h2>
+                </div>
+
+                <div class="translation-review__matrix-actions">
+                    <button class="app-button app-button--ghost"
+                            data-action="toggle-review-panel"
+                            type="button"
+                            @onclick="ToggleReviewPanel"
+                            disabled="@(_pois.Count == 0)">
+                        Kiểm định bản dịch
+                    </button>
+                    <button class="app-button app-button--primary"
+                            data-action="auto-translate-all"
+                            type="button"
+                            @onclick="AutoTranslateAllAsync"
+                            disabled="@(_pois.Count == 0 || _languages.Count <= 1)">
+                        Auto-translate All
+                    </button>
+                </div>
+            </div>
+
+            <div class="translation-review__matrix-wrap">
+                <table class="translation-review__matrix">
+                    <thead>
+                        <tr>
+                            <th>POI</th>
+                            @foreach (var language in _languages)
+                            {
+                                <th>@($"{language.Code.ToUpperInvariant()} {language.FlagCode}")</th>
+                            }
+                            <th>Tiến độ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var poi in _pois)
+                        {
+                            var rowTranslations = GetTranslations(poi.Id);
+                            <tr>
+                                <td>
+                                    <div class="translation-review__poi">
+                                        <strong>@poi.Name</strong>
+                                        <span>@(poi.CategoryName ?? poi.OwnerEmail)</span>
+                                    </div>
+                                </td>
+                                @foreach (var language in _languages)
+                                {
+                                    var translation = rowTranslations.FirstOrDefault(item => item.LanguageCode == language.Code);
+                                    var audio = GetLatestAudio(poi.Id, language.Code);
+                                    <td>
+                                        <button class="translation-review__cell @GetMatrixCellClass(poi, language.Code)"
+                                                data-action="@($"select-poi-{poi.Id}-language-{language.Code}")"
+                                                type="button"
+                                                @onclick="() => SelectPoiLanguage(poi, language.Code)">
+                                            <span class="translation-review__cell-stack">
+                                                <span class="translation-review__matrix-badge @GetMatrixBadgeClass(language, translation)">
+                                                    @GetMatrixLabel(language, translation)
+                                                </span>
+                                                <small class="translation-review__audio-state @GetAudioStateClass(audio)"
+                                                       data-audio-state="@($"{poi.Id}-{language.Code}-{GetAudioStateValue(audio)}")">
+                                                    @GetAudioStateLabel(audio)
+                                                </small>
+                                            </span>
+                                        </button>
+                                    </td>
+                                }
+                                <td>
+                                    <div class="translation-review__progress @GetProgressClass(rowTranslations)">
+                                        <span style="width:@GetProgressWidth(rowTranslations)"></span>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        @if (_isReviewPanelOpen)
+        {
+            <div class="admin-overlay-backdrop" @onclick="ToggleReviewPanel">
+                <section class="panel-shell admin-overlay-shell admin-overlay-shell--wide detail-stack"
+                         data-panel="translation-review"
+                         @onclick:stopPropagation="true">
+                    <div class="admin-overlay-shell__header">
+                        <div>
+                            <p class="panel-shell__eyebrow">Bàn kiểm định bản dịch</p>
+                            <h2>Kiểm định bản dịch đa ngôn ngữ</h2>
+                            <p class="panel-shell__copy">Chọn POI và mã ngôn ngữ, tạo nháp bằng dịch tự động hoặc biên tập lại tiêu đề, mô tả, câu chuyện và điểm nhấn trước khi generate audio.</p>
+                        </div>
+                        <button class="app-button app-button--ghost" type="button" @onclick="ToggleReviewPanel">
+                            Đóng
+                        </button>
+                    </div>
+
+                    <div class="editor-grid">
+                        <div class="editor-field">
+                            <label for="translation-poi">POI</label>
+                            <select id="translation-poi"
+                                    class="editor-select"
+                                    data-field="translation-poi"
+                                    value="@(_selectedPoi?.Id.ToString() ?? string.Empty)"
+                                    @onchange="args => HandlePoiChanged(args.Value?.ToString())">
+                                @foreach (var poi in _pois)
+                                {
+                                    <option value="@poi.Id">@poi.Name</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="editor-field">
+                            <label for="translation-language">Ngôn ngữ</label>
+                            <InputSelect id="translation-language"
+                                         data-field="translation-language"
+                                         @bind-Value="_selectedLanguage"
+                                         @bind-Value:after="HandleLanguageChangedAsync">
+                                @foreach (var language in _languages)
+                                {
+                                    <option value="@language.Code">@($"{language.Code.ToUpperInvariant()} · {language.DisplayName}")</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div class="editor-field">
+                            <label>Tác vụ nhanh</label>
+                            <div class="action-row">
+                                <button class="app-button app-button--ghost" data-action="auto-translate" type="button" @onclick="AutoTranslateAsync" disabled="@(_selectedPoi is null)">
+                                    Dịch tự động
+                                </button>
+                                @if (CanRetrySelectedAudio)
+                                {
+                                    <button class="app-button app-button--primary" data-action="retry-audio" type="button" @onclick="RetrySelectedAudioAsync">
+                                        Retry audio
+                                    </button>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="editor-field editor-field--full">
+                            <article class="translation-review__audio-card" data-selected-audio-state="@GetSelectedAudioStateValue()">
+                                <div class="translation-review__audio-card-copy">
+                                    <span class="translation-review__audio-card-label">Audio ngôn ngữ đang chọn</span>
+                                    <strong>@GetSelectedAudioHeadline()</strong>
+                                    <p>@GetSelectedAudioDescription()</p>
+                                </div>
+                                <span class="translation-review__audio-state @GetAudioStateClass(SelectedAudio)">
+                                    @GetAudioStateLabel(SelectedAudio)
+                                </span>
+                            </article>
+                        </div>
+
+                        <div class="editor-field editor-field--full">
+                            <label for="translation-title">Tiêu đề</label>
+                            <InputText id="translation-title" data-field="translation-title" @bind-Value="_editor.Title" />
+                        </div>
+
+                        <div class="editor-field editor-field--full">
+                            <label for="translation-description">Mô tả</label>
+                            <InputTextArea id="translation-description" data-field="translation-description" @bind-Value="_editor.Description" />
+                        </div>
+
+                        <div class="editor-field editor-field--full">
+                            <label for="translation-story">Câu chuyện</label>
+                            <InputTextArea id="translation-story" data-field="translation-story" @bind-Value="_editor.Story" />
+                        </div>
+
+                        <div class="editor-field editor-field--full">
+                            <label for="translation-highlight">Điểm nhấn</label>
+                            <InputTextArea id="translation-highlight" data-field="translation-highlight" @bind-Value="_editor.Highlight" />
+                        </div>
+                    </div>
+
+                    <div class="action-row">
+                        <button class="app-button app-button--primary" data-action="save-translation" type="button" @onclick="SaveTranslationAsync" disabled="@(_selectedPoi is null)">
+                            Lưu bản dịch
+                        </button>
+                        <button class="app-button app-button--ghost" data-action="delete-translation" type="button" @onclick="DeleteTranslationAsync" disabled="@(_selectedTranslation is null)">
+                            Xóa bản dịch
+                        </button>
+                    </div>
+                </section>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private string? _statusMessage;
+    private bool _isReviewPanelOpen;
+    private string _selectedLanguage = "vi";
+    private IReadOnlyList<ManagedLanguageDto> _languages = Array.Empty<ManagedLanguageDto>();
+    private IReadOnlyList<AdminPoiDto> _pois = Array.Empty<AdminPoiDto>();
+    private Dictionary<int, IReadOnlyList<TranslationDto>> _translationsByPoi = [];
+    private Dictionary<int, IReadOnlyList<AudioDto>> _audioByPoi = [];
+    private IReadOnlyList<TranslationDto> _translations = Array.Empty<TranslationDto>();
+    private AdminPoiDto? _selectedPoi;
+    private TranslationDto? _selectedTranslation;
+    private TranslationEditorModel _editor = TranslationEditorModel.CreateDefault("vi");
+    private AudioDto? SelectedAudio => _selectedPoi is null ? null : GetLatestAudio(_selectedPoi.Id, _selectedLanguage);
+
+    private IEnumerable<TranslationDto> AllTranslations => _translationsByPoi.Values.SelectMany(items => items);
+
+    private int TotalTranslationCount => AllTranslations.Count();
+
+    private int AutoTranslatedCount => AllTranslations.Count(item => item.WorkflowStatus == TranslationWorkflowStatus.AutoTranslated);
+
+    private int ReviewedCount => AllTranslations.Count(item => item.WorkflowStatus == TranslationWorkflowStatus.Reviewed);
+
+    private int PoiWithMultipleLanguagesCount => _pois.Count(poi => GetTranslations(poi.Id).Count >= 2);
+
+    private string CoveragePercent
+    {
+        get
+        {
+            if (_pois.Count == 0)
+            {
+                return "0%";
+            }
+
+            return $"{Math.Round((double)PoiWithMultipleLanguagesCount / _pois.Count * 100d)}%";
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _languages = (await LanguagePortalService.GetAsync())
+                .Where(item => item.IsActive)
+                .OrderBy(item => item.Role)
+                .ThenBy(item => item.Code, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+            _pois = await AdminPortalService.GetPoisAsync();
+            await LoadPoiRowsAsync();
+
+            if (_pois.Count > 0)
+            {
+                SelectPoiLanguage(_pois[0], "vi", false);
+            }
+        }
+        catch (ApiException exception)
+        {
+            _errorMessage = exception.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private IReadOnlyList<TranslationDto> GetTranslations(int poiId)
+    {
+        return _translationsByPoi.TryGetValue(poiId, out var items) ? items : Array.Empty<TranslationDto>();
+    }
+
+    private IReadOnlyList<AudioDto> GetAudioItems(int poiId)
+    {
+        return _audioByPoi.TryGetValue(poiId, out var items) ? items : Array.Empty<AudioDto>();
+    }
+
+    private AudioDto? GetLatestAudio(int poiId, string languageCode)
+    {
+        return GetAudioItems(poiId)
+            .Where(item => string.Equals(item.LanguageCode, languageCode, StringComparison.OrdinalIgnoreCase))
+            .Where(item => item.Status is not AudioStatus.Deleted and not AudioStatus.Replaced)
+            .OrderByDescending(item => item.GeneratedAtUtc ?? DateTime.MinValue)
+            .ThenByDescending(item => item.Id)
+            .FirstOrDefault();
+    }
+
+    private void ToggleReviewPanel()
+    {
+        if (_isReviewPanelOpen)
+        {
+            _isReviewPanelOpen = false;
+            return;
+        }
+
+        if (_selectedPoi is null && _pois.Count > 0)
+        {
+            SelectPoiLanguage(_pois[0], _selectedLanguage, false);
+        }
+
+        _isReviewPanelOpen = true;
+    }
+
+    private void HandlePoiChanged(string? value)
+    {
+        if (!int.TryParse(value, out var poiId))
+        {
+            return;
+        }
+
+        var poi = _pois.FirstOrDefault(item => item.Id == poiId);
+        if (poi is null)
+        {
+            return;
+        }
+
+        SelectPoiLanguage(poi, _selectedLanguage, false);
+    }
+
+    private void SelectPoiLanguage(AdminPoiDto poi, string languageCode, bool openPanel = true)
+    {
+        _selectedPoi = poi;
+        _selectedLanguage = languageCode;
+        _translations = GetTranslations(poi.Id);
+        LoadEditorForLanguage(languageCode);
+        if (openPanel)
+        {
+            _isReviewPanelOpen = true;
+        }
+    }
+
+    private Task HandleLanguageChangedAsync()
+    {
+        _selectedLanguage = _selectedLanguage.Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(_selectedLanguage))
+        {
+            _selectedLanguage = "vi";
+        }
+
+        LoadEditorForLanguage(_selectedLanguage);
+        return Task.CompletedTask;
+    }
+
+    private void LoadEditorForLanguage(string languageCode)
+    {
+        var existing = _translations.FirstOrDefault(item => string.Equals(item.LanguageCode, languageCode, StringComparison.OrdinalIgnoreCase));
+        _selectedTranslation = existing;
+        _editor = existing is null
+            ? TranslationEditorModel.CreateDefault(languageCode)
+            : TranslationEditorModel.FromDto(existing);
+    }
+
+    private async Task AutoTranslateAsync()
+    {
+        if (_selectedPoi is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var generated = await TranslationPortalService.AutoTranslateAsync(_selectedPoi.Id, _selectedLanguage);
+            UpsertTranslation(generated);
+            await RefreshAudioForPoiAsync(_selectedPoi.Id);
+            _statusMessage = $"Đã tạo bản dịch nháp cho ngôn ngữ {_selectedLanguage}.";
+        }
+        catch (ApiException exception)
+        {
+            _statusMessage = exception.Message;
+        }
+    }
+
+    private async Task AutoTranslateAllAsync()
+    {
+        var createdCount = 0;
+        HashSet<int> touchedPoiIds = [];
+
+        foreach (var poi in _pois)
+        {
+            var rowTranslations = GetTranslations(poi.Id);
+
+            foreach (var language in _languages.Where(item => item.Code != "vi"))
+            {
+                if (rowTranslations.Any(item => item.LanguageCode == language.Code))
+                {
+                    continue;
+                }
+
+                try
+                {
+                    var generated = await TranslationPortalService.AutoTranslateAsync(poi.Id, language.Code);
+                    UpsertTranslationForPoi(poi.Id, generated);
+                    createdCount++;
+                    touchedPoiIds.Add(poi.Id);
+                }
+                catch (ApiException)
+                {
+                }
+            }
+        }
+
+        await RefreshAudioForPoisAsync(touchedPoiIds);
+
+        if (_selectedPoi is not null)
+        {
+            _translations = GetTranslations(_selectedPoi.Id);
+            LoadEditorForLanguage(_selectedLanguage);
+        }
+
+        _statusMessage = $"Đã tự động bổ sung {createdCount} bản dịch.";
+    }
+
+    private async Task SaveTranslationAsync()
+    {
+        if (_selectedPoi is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var saved = await TranslationPortalService.SaveAsync(_editor.ToRequest(_selectedPoi.Id));
+            UpsertTranslation(saved);
+            await RefreshAudioForPoiAsync(_selectedPoi.Id);
+            _statusMessage = $"Đã lưu bản dịch {_selectedLanguage}.";
+        }
+        catch (ApiException exception)
+        {
+            _statusMessage = exception.Message;
+        }
+    }
+
+    private async Task DeleteTranslationAsync()
+    {
+        if (_selectedTranslation is null || _selectedPoi is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await TranslationPortalService.DeleteAsync(_selectedTranslation.Id);
+            _translationsByPoi[_selectedPoi.Id] = _translations.Where(item => item.Id != _selectedTranslation.Id).ToArray();
+            _translations = GetTranslations(_selectedPoi.Id);
+            _selectedTranslation = null;
+            _editor = TranslationEditorModel.CreateDefault(_selectedLanguage);
+            _statusMessage = $"Đã xóa bản dịch {_selectedLanguage}.";
+        }
+        catch (ApiException exception)
+        {
+            _statusMessage = exception.Message;
+        }
+    }
+
+    private void UpsertTranslation(TranslationDto translation)
+    {
+        if (_selectedPoi is null)
+        {
+            return;
+        }
+
+        UpsertTranslationForPoi(_selectedPoi.Id, translation);
+        _translations = GetTranslations(_selectedPoi.Id);
+        _selectedLanguage = translation.LanguageCode;
+        LoadEditorForLanguage(translation.LanguageCode);
+    }
+
+    private void UpsertTranslationForPoi(int poiId, TranslationDto translation)
+    {
+        _translationsByPoi[poiId] = GetTranslations(poiId)
+            .Where(item => !string.Equals(item.LanguageCode, translation.LanguageCode, StringComparison.OrdinalIgnoreCase))
+            .Append(translation)
+            .OrderBy(item => item.LanguageCode)
+            .ToArray();
+    }
+
+    private static string GetMatrixLabel(ManagedLanguageDto language, TranslationDto? translation)
+    {
+        if (translation is null)
+        {
+            return "—";
+        }
+
+        if (language.Code == "vi")
+        {
+            return "Gốc";
+        }
+
+        return translation.WorkflowStatus switch
+        {
+            TranslationWorkflowStatus.AutoTranslated => "Auto",
+            TranslationWorkflowStatus.Reviewed => "✓",
+            _ => "✓"
+        };
+    }
+
+    private static string GetAudioStateValue(AudioDto? audio)
+    {
+        if (audio is null)
+        {
+            return "missing";
+        }
+
+        return audio.Status switch
+        {
+            AudioStatus.Ready => "ready",
+            AudioStatus.Requested or AudioStatus.Generating => "generating",
+            AudioStatus.Failed => "failed",
+            _ => "missing"
+        };
+    }
+
+    private static string GetAudioStateLabel(AudioDto? audio)
+    {
+        return GetAudioStateValue(audio) switch
+        {
+            "ready" => "Audio sẵn",
+            "generating" => "Đang tạo",
+            "failed" => "Lỗi audio",
+            _ => "Chưa có"
+        };
+    }
+
+    private static string GetAudioStateClass(AudioDto? audio)
+    {
+        return $"translation-review__audio-state--{GetAudioStateValue(audio)}";
+    }
+
+    private bool CanRetrySelectedAudio =>
+        _selectedPoi is not null
+        && string.Equals(GetSelectedAudioStateValue(), "failed", StringComparison.OrdinalIgnoreCase)
+        && CanGenerateAudioForSelectedLanguage();
+
+    private string GetSelectedAudioStateValue()
+    {
+        return GetAudioStateValue(SelectedAudio);
+    }
+
+    private string GetSelectedAudioHeadline()
+    {
+        return GetSelectedAudioStateValue() switch
+        {
+            "ready" => $"Audio {_selectedLanguage.ToUpperInvariant()} đã sẵn sàng",
+            "generating" => $"Audio {_selectedLanguage.ToUpperInvariant()} đang được xử lý",
+            "failed" => $"Audio {_selectedLanguage.ToUpperInvariant()} bị lỗi generate",
+            _ => $"Chưa có audio {_selectedLanguage.ToUpperInvariant()}"
+        };
+    }
+
+    private string GetSelectedAudioDescription()
+    {
+        if (_selectedPoi is null)
+        {
+            return "Chọn một POI và ngôn ngữ để xem trạng thái audio.";
+        }
+
+        return GetSelectedAudioStateValue() switch
+        {
+            "ready" => "Có thể phát hoặc dùng làm tín hiệu kiểm tra trước khi rà soát tiếp.",
+            "generating" => "Hệ thống đang tạo lại file nền. Ma trận sẽ đổi trạng thái ngay khi có kết quả mới.",
+            "failed" => "Bản dịch đã có nhưng lần generate gần nhất lỗi. Có thể retry ngay từ đây.",
+            _ when string.Equals(_selectedLanguage, "vi", StringComparison.OrdinalIgnoreCase)
+                => "Tiếng Việt dùng script nguồn của POI để tạo lại audio khi cần.",
+            _ => "Ngôn ngữ này cần bản dịch lưu sẵn trước khi generate audio."
+        };
+    }
+
+    private bool CanGenerateAudioForSelectedLanguage()
+    {
+        if (_selectedPoi is null)
+        {
+            return false;
+        }
+
+        if (string.Equals(_selectedLanguage, "vi", StringComparison.OrdinalIgnoreCase))
+        {
+            return !string.IsNullOrWhiteSpace(_selectedPoi.TtsScript);
+        }
+
+        return _selectedTranslation is not null;
+    }
+
+    private async Task RetrySelectedAudioAsync()
+    {
+        if (_selectedPoi is null || !CanGenerateAudioForSelectedLanguage())
+        {
+            return;
+        }
+
+        try
+        {
+            AudioDto created;
+
+            if (string.Equals(_selectedLanguage, "vi", StringComparison.OrdinalIgnoreCase))
+            {
+                created = await AudioPortalService.GenerateTtsAsync(new TtsGenerateRequest
+                {
+                    PoiId = _selectedPoi.Id,
+                    LanguageCode = "vi",
+                    Script = _selectedPoi.TtsScript,
+                    VoiceProfile = "standard"
+                });
+            }
+            else
+            {
+                created = await AudioPortalService.GenerateFromTranslationAsync(new GenerateAudioFromTranslationRequest
+                {
+                    PoiId = _selectedPoi.Id,
+                    LanguageCode = _selectedLanguage,
+                    VoiceProfile = "standard"
+                });
+            }
+
+            UpsertAudio(created);
+            _statusMessage = $"Đã retry audio {_selectedLanguage} cho {_selectedPoi.Name}.";
+        }
+        catch (ApiException exception)
+        {
+            _statusMessage = exception.Message;
+        }
+    }
+
+    private string GetMatrixCellClass(AdminPoiDto poi, string languageCode)
+    {
+        return poi.Id == _selectedPoi?.Id && string.Equals(languageCode, _selectedLanguage, StringComparison.OrdinalIgnoreCase)
+            ? "is-selected"
+            : string.Empty;
+    }
+
+    private static string GetMatrixBadgeClass(ManagedLanguageDto language, TranslationDto? translation)
+    {
+        if (translation is null)
+        {
+            return "translation-review__matrix-badge--empty";
+        }
+
+        if (string.Equals(language.Code, "vi", StringComparison.OrdinalIgnoreCase))
+        {
+            return "translation-review__matrix-badge--source";
+        }
+
+        return translation.WorkflowStatus switch
+        {
+            TranslationWorkflowStatus.AutoTranslated => "translation-review__matrix-badge--auto",
+            TranslationWorkflowStatus.Reviewed => "translation-review__matrix-badge--reviewed",
+            _ => "translation-review__matrix-badge--reviewed"
+        };
+    }
+
+    private string GetProgressWidth(IReadOnlyList<TranslationDto> translations)
+    {
+        if (_languages.Count == 0)
+        {
+            return "0%";
+        }
+
+        var ratio = (double)translations.Count / _languages.Count;
+        return $"{Math.Round(ratio * 100d)}%";
+    }
+
+    private string GetProgressClass(IReadOnlyList<TranslationDto> translations)
+    {
+        if (_languages.Count == 0)
+        {
+            return "translation-review__progress--empty";
+        }
+
+        var ratio = (double)translations.Count / _languages.Count;
+        if (ratio >= 0.99d)
+        {
+            return "translation-review__progress--complete";
+        }
+
+        if (ratio >= 0.5d)
+        {
+            return "translation-review__progress--medium";
+        }
+
+        return "translation-review__progress--low";
+    }
+
+    private async Task LoadPoiRowsAsync()
+    {
+        var rowTasks = _pois.Select(async poi => new PoiRowState(
+            poi.Id,
+            await TranslationPortalService.GetByPoiAsync(poi.Id),
+            await AudioPortalService.GetByPoiAsync(poi.Id)));
+
+        var rows = await Task.WhenAll(rowTasks);
+        _translationsByPoi = rows.ToDictionary(item => item.PoiId, item => item.Translations);
+        _audioByPoi = rows.ToDictionary(item => item.PoiId, item => item.AudioItems);
+    }
+
+    private async Task RefreshAudioForPoiAsync(int poiId)
+    {
+        await RefreshAudioForPoisAsync([poiId]);
+    }
+
+    private async Task RefreshAudioForPoisAsync(IEnumerable<int> poiIds)
+    {
+        var ids = poiIds.Distinct().ToArray();
+        if (ids.Length == 0)
+        {
+            return;
+        }
+
+        var refreshTasks = ids.Select(async poiId =>
+        {
+            try
+            {
+                return (PoiId: poiId, AudioItems: await AudioPortalService.GetByPoiAsync(poiId));
+            }
+            catch (ApiException)
+            {
+                return (PoiId: poiId, AudioItems: GetAudioItems(poiId));
+            }
+        });
+
+        var refreshedRows = await Task.WhenAll(refreshTasks);
+        foreach (var row in refreshedRows)
+        {
+            _audioByPoi[row.PoiId] = row.AudioItems;
+        }
+    }
+
+    private void UpsertAudio(AudioDto audio)
+    {
+        _audioByPoi[audio.PoiId] = GetAudioItems(audio.PoiId)
+            .Where(item => item.Id != audio.Id)
+            .Append(audio)
+            .OrderByDescending(item => item.GeneratedAtUtc ?? DateTime.MinValue)
+            .ThenByDescending(item => item.Id)
+            .ToArray();
+    }
+
+    private sealed record PoiRowState(int PoiId, IReadOnlyList<TranslationDto> Translations, IReadOnlyList<AudioDto> AudioItems);
+
+    private sealed class TranslationEditorModel
+    {
+        public string LanguageCode { get; set; } = "vi";
+
+        public string Title { get; set; } = string.Empty;
+
+        public string Description { get; set; } = string.Empty;
+
+        public string Story { get; set; } = string.Empty;
+
+        public string Highlight { get; set; } = string.Empty;
+
+        public static TranslationEditorModel CreateDefault(string languageCode)
+        {
+            return new TranslationEditorModel
+            {
+                LanguageCode = languageCode
+            };
+        }
+
+        public static TranslationEditorModel FromDto(TranslationDto dto)
+        {
+            return new TranslationEditorModel
+            {
+                LanguageCode = dto.LanguageCode,
+                Title = dto.Title,
+                Description = dto.Description,
+                Story = dto.Story,
+                Highlight = dto.Highlight
+            };
+        }
+
+        public CreateTranslationRequest ToRequest(int poiId)
+        {
+            return new CreateTranslationRequest
+            {
+                PoiId = poiId,
+                LanguageCode = LanguageCode.Trim().ToLowerInvariant(),
+                Title = Title.Trim(),
+                Description = Description.Trim(),
+                Story = Story.Trim(),
+                Highlight = Highlight.Trim(),
+                IsFallback = false
+            };
+        }
+    }
+}

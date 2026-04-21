@@ -1,0 +1,12 @@
+.table-wrap {
+    overflow-x: auto;
+}
+
+.table-wrap :is(table, th, td) {
+    white-space: nowrap;
+}
+
+.table-wrap td:last-child,
+.table-wrap th:last-child {
+    white-space: normal;
+}

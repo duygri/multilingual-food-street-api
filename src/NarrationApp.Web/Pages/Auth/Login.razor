@@ -1,0 +1,115 @@
+@page "/auth/login"
+@attribute [AllowAnonymous]
+@inject AuthClientService AuthClientService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Đăng nhập</PageTitle>
+
+<section class="auth-stage">
+    <PageHeaderPanel Eyebrow="Truy cập hệ thống"
+                  TitleLead="Điều phối vận hành"
+                  TitleAccent="kiểm soát rõ."
+                  Description="Đăng nhập vào portal để quản trị kiểm duyệt, POI, audio, bản dịch và toàn bộ luồng vận hành dành cho admin và owner."
+                  Badges="HeroBadges"
+                  PrimaryAction="RegisterAction" />
+
+    <section class="auth-shell">
+        <p class="auth-shell__eyebrow">Đăng nhập</p>
+        <h2>Đăng nhập vào portal</h2>
+        <p>Portal web chỉ dành cho admin và owner đã được duyệt. Tài khoản khách du lịch chỉ dùng trên ứng dụng di động.</p>
+
+        @if (!string.IsNullOrWhiteSpace(_statusMessage))
+        {
+            <div class="auth-shell__success">@_statusMessage</div>
+        }
+
+        <EditForm class="auth-form" Model="_model" OnValidSubmit="HandleSubmitAsync">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="auth-form__field">
+                <label for="email">Email</label>
+                <InputText id="email" @bind-Value="_model.Email" />
+            </div>
+
+            <div class="auth-form__field">
+                <label for="password">Mật khẩu</label>
+                <InputText id="password" type="password" @bind-Value="_model.Password" />
+            </div>
+
+            <div class="auth-form__actions">
+                <button class="app-button app-button--primary" type="submit" disabled="@_isSubmitting">Đăng nhập</button>
+                <NavLink class="app-button app-button--ghost" href="/auth/register">Đăng ký owner</NavLink>
+            </div>
+        </EditForm>
+
+        @if (!string.IsNullOrWhiteSpace(_errorMessage))
+        {
+            <div class="auth-shell__error">@_errorMessage</div>
+        }
+    </section>
+</section>
+
+@code {
+    private static readonly HeroAction RegisterAction = new()
+    {
+        Label = "Đăng ký owner",
+        Href = "/auth/register",
+        IsPrimary = false
+    };
+
+    private static readonly string[] HeroBadges =
+    [
+        ".NET 8",
+        "Blazor WASM",
+        "Portal admin",
+        "Owner phê duyệt",
+        "PostgreSQL",
+        "SignalR"
+    ];
+
+    private readonly LoginFormModel _model = new();
+    private bool _isSubmitting;
+    private string? _errorMessage;
+    private string? _statusMessage;
+
+    protected override void OnInitialized()
+    {
+        if (NavigationManager.Uri.Contains("registered=owner-pending", StringComparison.OrdinalIgnoreCase))
+        {
+            _statusMessage = "Đã gửi yêu cầu đăng ký. Vui lòng chờ admin duyệt.";
+        }
+    }
+
+    private async Task HandleSubmitAsync()
+    {
+        _isSubmitting = true;
+        _errorMessage = null;
+
+        try
+        {
+            var session = await AuthClientService.LoginAsync(new LoginRequest
+            {
+                Email = _model.Email,
+                Password = _model.Password
+            });
+
+            NavigationManager.NavigateTo(RouteHelper.GetDefaultRoute(session.Role), replace: true);
+        }
+        catch (ApiException exception)
+        {
+            _errorMessage = exception.Message;
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private sealed class LoginFormModel
+    {
+        public string Email { get; set; } = string.Empty;
+
+        public string Password { get; set; } = string.Empty;
+    }
+}

@@ -1,0 +1,168 @@
+@page "/admin/moderation-queue"
+@attribute [Authorize(Roles = "admin")]
+
+@inject IAdminPortalService AdminPortalService
+
+<PageTitle>Moderation Queue</PageTitle>
+
+@if (_isLoading)
+{
+    <section class="panel-shell">
+        <p class="panel-shell__eyebrow">Admin</p>
+        <h2>Đang tải Moderation Queue...</h2>
+    </section>
+}
+else if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <section class="panel-shell">
+        <p class="panel-shell__eyebrow">Admin</p>
+        <h2>Không thể tải Moderation Queue</h2>
+        <p class="panel-shell__copy">@_errorMessage</p>
+    </section>
+}
+else
+{
+    <div class="dashboard-stack moderation-surface">
+        <section class="sample-page-title">
+            <h1>Moderation Queue</h1>
+            <p>Admin / Vận hành &gt; Moderation</p>
+        </section>
+
+        @if (!string.IsNullOrWhiteSpace(_statusMessage))
+        {
+            <section class="panel-shell">
+                <p class="panel-shell__copy">@_statusMessage</p>
+            </section>
+        }
+
+        <section class="metric-grid moderation-surface__metrics">
+            <MetricCard Label="Chờ duyệt" Value="@_items.Count.ToString("N0")" Hint="Yêu cầu đang trong queue" />
+            <MetricCard Label="Yêu cầu POI" Value="@CountByEntityType("poi").ToString("N0")" Hint="Tạo mới hoặc cập nhật nội dung" />
+            <MetricCard Label="Owner mới" Value="@CountByEntityType("owner_registration").ToString("N0")" Hint="Yêu cầu cấp quyền truy cập" />
+            <MetricCard Label="Yêu cầu cũ nhất" Value="@OldestRequestLabel" Hint="Để ưu tiên xử lý" />
+        </section>
+
+        @if (_items.Count == 0)
+        {
+            <section class="panel-shell">
+                <EmptyStateBlock Eyebrow="Moderation"
+                                 Title="Hàng đợi moderation đã trống"
+                                 Message="Queue hiện chưa có yêu cầu nào cần admin xử lý thêm." />
+            </section>
+        }
+        else
+        {
+            <div class="moderation-list">
+                @foreach (var item in _items)
+                {
+                    <article class="panel-shell moderation-card">
+                        <div class="moderation-card__copy">
+                            <div>
+                                <strong>@GetEntityTitle(item)</strong>
+                                <p>@GetEntityMeta(item)</p>
+                            </div>
+                        </div>
+
+                        <div class="moderation-card__actions">
+                            <button class="app-button app-button--ghost" data-action="view-@item.Id" type="button">
+                                Xem
+                            </button>
+                            <button class="app-button app-button--primary" data-action="approve-@item.Id" type="button" @onclick="() => ReviewAsync(item.Id, true)">
+                                Duyệt
+                            </button>
+                            <button class="app-button app-button--ghost" data-action="reject-@item.Id" type="button" @onclick="() => ReviewAsync(item.Id, false)">
+                                Từ chối
+                            </button>
+                        </div>
+                    </article>
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private string? _statusMessage;
+    private List<ModerationRequestDto> _items = [];
+
+    private string OldestRequestLabel => _items.Count == 0 ? "0 phút" : GetAgeLabel(_items.Min(item => item.CreatedAtUtc));
+
+    private int CountByEntityType(string entityType) =>
+        _items.Count(item => string.Equals(item.EntityType, entityType, StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ReloadAsync();
+        _isLoading = false;
+    }
+
+    private async Task ReloadAsync()
+    {
+        try
+        {
+            _items = (await AdminPortalService.GetPendingModerationAsync()).ToList();
+        }
+        catch (ApiException exception)
+        {
+            _errorMessage = exception.Message;
+        }
+    }
+
+    private async Task ReviewAsync(int requestId, bool approved)
+    {
+        try
+        {
+            var request = new ReviewModerationRequest
+            {
+                ReviewNote = approved ? "Đã duyệt từ hàng chờ kiểm duyệt." : "Đã từ chối từ hàng chờ kiểm duyệt."
+            };
+
+            if (approved)
+            {
+                await AdminPortalService.ApproveModerationAsync(requestId, request);
+                _statusMessage = $"Yêu cầu kiểm duyệt #{requestId} đã được duyệt.";
+            }
+            else
+            {
+                await AdminPortalService.RejectModerationAsync(requestId, request);
+                _statusMessage = $"Yêu cầu kiểm duyệt #{requestId} đã bị từ chối.";
+            }
+
+            _items = _items.Where(item => item.Id != requestId).ToList();
+        }
+        catch (ApiException exception)
+        {
+            _statusMessage = exception.Message;
+        }
+    }
+    private static string GetEntityTitle(ModerationRequestDto item) => item.EntityType switch
+    {
+        "poi" => $"POI #{item.EntityId} — Tạo mới nội dung",
+        "owner_registration" => $"Owner #{item.EntityId} — Yêu cầu cấp quyền",
+        _ => $"{item.EntityType} #{item.EntityId}"
+    };
+
+    private static string GetEntityMeta(ModerationRequestDto item)
+    {
+        return $"{GetAgeLabel(item.CreatedAtUtc)} • {item.EntityType} • {item.RequestedBy.ToString("N")[..8]}";
+    }
+
+    private static string GetAgeLabel(DateTime createdAtUtc)
+    {
+        var elapsed = DateTime.UtcNow - createdAtUtc;
+
+        if (elapsed.TotalMinutes < 60)
+        {
+            return $"{Math.Max(1, (int)Math.Floor(elapsed.TotalMinutes))} phút trước";
+        }
+
+        if (elapsed.TotalHours < 24)
+        {
+            return $"{Math.Max(1, (int)Math.Floor(elapsed.TotalHours))} giờ trước";
+        }
+
+        return $"{Math.Max(1, (int)Math.Floor(elapsed.TotalDays))} ngày trước";
+    }
+}

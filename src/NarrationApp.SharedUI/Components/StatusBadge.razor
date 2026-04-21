@@ -1,0 +1,31 @@
+<span class="@CssClass">@Label</span>
+
+@code {
+    [Parameter]
+    public string Label { get; set; } = string.Empty;
+
+    [Parameter]
+    public StatusTone Tone { get; set; } = StatusTone.Neutral;
+
+    [Parameter]
+    public string? ClassName { get; set; }
+
+    private string CssClass
+    {
+        get
+        {
+            var toneClass = Tone switch
+            {
+                StatusTone.Info => "status-badge--info",
+                StatusTone.Good => "status-badge--good",
+                StatusTone.Warn => "status-badge--warn",
+                StatusTone.Critical => "status-badge--critical",
+                _ => "status-badge--neutral"
+            };
+
+            return string.IsNullOrWhiteSpace(ClassName)
+                ? $"status-badge {toneClass}"
+                : $"status-badge {toneClass} {ClassName}";
+        }
+    }
+}

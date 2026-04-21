@@ -1,0 +1,45 @@
+<article class="@CssClass">
+    <div class="stat-tile__label">@Label</div>
+    <strong class="stat-tile__value">@Value</strong>
+
+    @if (!string.IsNullOrWhiteSpace(Hint))
+    {
+        <div class="stat-tile__hint">@Hint</div>
+    }
+</article>
+
+@code {
+    [Parameter]
+    public string Label { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Value { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Hint { get; set; }
+
+    [Parameter]
+    public StatusTone Tone { get; set; } = StatusTone.Info;
+
+    [Parameter]
+    public string? ClassName { get; set; }
+
+    private string CssClass
+    {
+        get
+        {
+            var toneClass = Tone switch
+            {
+                StatusTone.Good => "stat-tile--good",
+                StatusTone.Warn => "stat-tile--warn",
+                StatusTone.Critical => "stat-tile--critical",
+                StatusTone.Neutral => "stat-tile--neutral",
+                _ => "stat-tile--info"
+            };
+
+            return string.IsNullOrWhiteSpace(ClassName)
+                ? $"stat-tile {toneClass}"
+                : $"stat-tile {toneClass} {ClassName}";
+        }
+    }
+}

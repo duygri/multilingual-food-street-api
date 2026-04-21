@@ -1,0 +1,53 @@
+@using NarrationApp.Mobile.Features.Home
+
+<section class="settings-detail-screen">
+    <header class="settings-detail-header">
+        <button type="button" class="icon-button" @onclick="OnBack">←</button>
+        <div>
+            <span class="eyebrow">Listen history</span>
+            <h2>Lịch sử nghe</h2>
+            <p>Xem lại những POI gần đây bạn đã mở và chạm để quay lại đúng điểm đang nghe dở.</p>
+        </div>
+    </header>
+
+    @if (Days.Count == 0)
+    {
+        <article class="setting-card history-entry history-entry--empty">
+            <strong>Chưa có lịch sử nghe.</strong>
+            <p>Khi bạn bắt đầu một tour hoặc nghe POI, app sẽ lưu lại timeline ở đây.</p>
+        </article>
+    }
+    else
+    {
+        @foreach (var day in Days)
+        {
+            <section class="history-day">
+                <div class="history-day__label">@day.Label</div>
+
+                @foreach (var entry in day.Entries)
+                {
+                    <button type="button" class="setting-card history-entry" @onclick="() => OnOpenPoi.InvokeAsync(entry.PoiId)">
+                        <div class="history-entry__copy">
+                            <strong>@entry.PoiName</strong>
+                            <span>@entry.CategoryLabel • @entry.LanguageCode.ToUpperInvariant() • @entry.TimeLabel</span>
+                            <span>@GetCompletionLabel(entry) • @entry.DurationLabel</span>
+                        </div>
+                        <span class="history-entry__progress">@GetCompactProgress(entry)</span>
+                    </button>
+                }
+            </section>
+        }
+    }
+</section>
+
+@code {
+    [Parameter] public IReadOnlyList<TouristListeningHistoryDay> Days { get; set; } = [];
+    [Parameter] public EventCallback OnBack { get; set; }
+    [Parameter] public EventCallback<string> OnOpenPoi { get; set; }
+
+    private static string GetCompletionLabel(TouristListeningHistoryEntry entry) =>
+        entry.CompletionPercent >= 100 ? "Nghe xong" : $"Đã nghe {entry.CompletionPercent}%";
+
+    private static string GetCompactProgress(TouristListeningHistoryEntry entry) =>
+        entry.CompletionPercent >= 100 ? "✓" : $"{entry.CompletionPercent}%";
+}

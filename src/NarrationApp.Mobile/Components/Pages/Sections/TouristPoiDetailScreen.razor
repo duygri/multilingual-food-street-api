@@ -1,0 +1,276 @@
+@using NarrationApp.Mobile.Features.Home
+
+<section class="poi-detail-screen">
+    <header class="poi-detail-hero @GetHeroTone(Poi.CategoryId)">
+        <div class="poi-detail-hero__actions">
+            <button type="button" class="poi-detail-hero__button" @onclick="OnBack">←</button>
+            <button type="button" class="poi-detail-hero__button" @onclick="OnOpenMap">↗</button>
+        </div>
+        <div class="poi-detail-hero__icon">@GetPoiIcon()</div>
+    </header>
+
+    <section class="poi-detail-content">
+        <div class="poi-detail-headline">
+            <span class="poi-detail-headline__eyebrow">Điểm tham quan nổi bật</span>
+            <h1>@Poi.Name</h1>
+            <div class="poi-detail-headline__chips">
+                <span class="discover-badge">@GetCategoryLabel()</span>
+                <span class="tour-stop-chip">@Poi.StatusLabel</span>
+            </div>
+            <div class="poi-detail-headline__meta">
+                <span class="poi-detail-headline__distance">📍 @Poi.DistanceMeters m • @Poi.District</span>
+            </div>
+        </div>
+
+        <section class="poi-detail-stats">
+            <article class="poi-detail-stat-card">
+                <strong>@Poi.GeofenceRadiusMeters m</strong>
+                <span>Bán kính geofence</span>
+            </article>
+            <article class="poi-detail-stat-card">
+                <strong>@GetPriorityScore()/10</strong>
+                <span>Mức ưu tiên</span>
+            </article>
+            <article class="poi-detail-stat-card">
+                <strong>@AudioAssetCount file</strong>
+                <span>Audio thuyết minh</span>
+            </article>
+            <article class="poi-detail-stat-card">
+                <strong>@Poi.AvailableLanguageCount ngôn ngữ</strong>
+                <span>Hỗ trợ</span>
+            </article>
+        </section>
+
+        <section class="poi-detail-audio-card">
+            <header class="poi-detail-audio-heading">
+                <span class="poi-detail-audio-heading__title">🎧 Thuyết minh</span>
+                <button type="button" class="poi-audio-panel__open poi-detail-audio-heading__action" @onclick="OnOpenFullPlayer">Toàn màn</button>
+            </header>
+            <section class="poi-audio-panel">
+                <div class="poi-audio-panel__player">
+                    <div class="poi-audio-panel__header">
+                        <button type="button" class="poi-audio-play" @onclick="OnPlayToggle">
+                            @(IsPlaying ? "❚❚" : "▶")
+                        </button>
+                        <div>
+                            <strong>Thuyết minh — @GetCurrentLanguageLabel()</strong>
+                            <span>@AudioSubtitle</span>
+                        </div>
+                    </div>
+                    <div class="poi-audio-panel__wave poi-detail-audio-card__wave">
+                        @for (var index = 0; index < 24; index++)
+                        {
+                            <span style="height:@GetWaveHeight(index)"></span>
+                        }
+                    </div>
+                </div>
+                <div class="poi-language-pills">
+                    @foreach (var language in Languages)
+                    {
+                        <button
+                            type="button"
+                            class="poi-language-pill @(language.Code == SelectedLanguageCode ? "is-active" : string.Empty)"
+                            @onclick="() => OnSelectLanguage.InvokeAsync(language.Code)">
+                            <span>@language.ChipLabel</span>
+                            <span>@language.Label</span>
+                        </button>
+                    }
+                </div>
+            </section>
+        </section>
+
+        <section class="poi-detail-copy">
+            <header class="poi-detail-section-header">
+                <span class="sheet-label">Nội dung</span>
+                <strong>Câu chuyện tại điểm dừng</strong>
+            </header>
+            <p>@Poi.Description</p>
+            <p>@Poi.Highlight</p>
+            <div class="poi-detail-copy__tag">@Poi.StoryTag</div>
+        </section>
+
+        <section class="poi-detail-transcript">
+            <header class="poi-detail-section-header">
+                <span class="sheet-label">Transcript</span>
+                <strong>Bản thuyết minh xem nhanh</strong>
+            </header>
+            <div class="poi-detail-transcript__body">
+                @foreach (var paragraph in TranscriptParagraphs)
+                {
+                    <p>@paragraph</p>
+                }
+            </div>
+        </section>
+
+        <section class="poi-detail-related">
+            <div class="poi-detail-related__header">
+                <header class="poi-detail-section-header">
+                    <span class="sheet-label">Liên quan</span>
+                    <strong>Điểm tham quan gần phong cách này</strong>
+                </header>
+            </div>
+            <div class="poi-detail-related__list">
+                @if (RelatedPois.Count == 0)
+                {
+                    <article class="poi-detail-related__empty">
+                        <strong>Chưa có POI liên quan phù hợp.</strong>
+                        <p>Tiếp tục dùng tab Khám phá để xem thêm các điểm gần bạn.</p>
+                    </article>
+                }
+                else
+                {
+                    @foreach (var relatedPoi in RelatedPois)
+                    {
+                        <button
+                            type="button"
+                            class="poi-detail-related__item"
+                            @onclick="() => OnSelectRelatedPoi.InvokeAsync(relatedPoi.Id)">
+                            <div class="poi-detail-related__icon @GetHeroTone(relatedPoi.CategoryId)">
+                                <span>@GetRelatedPoiIcon(relatedPoi)</span>
+                            </div>
+                            <div class="poi-detail-related__copy">
+                                <strong>@relatedPoi.Name</strong>
+                                <span>@GetRelatedPoiLabel(relatedPoi)</span>
+                                <p>@Truncate(relatedPoi.Description, 86)</p>
+                            </div>
+                        </button>
+                    }
+                }
+            </div>
+        </section>
+
+        <div class="poi-detail-sticky-cta">
+            <button type="button" class="secondary-pill poi-detail-map-button" @onclick="() => OnOpenMap.InvokeAsync()">🗺️ Bản đồ</button>
+            <button type="button" class="primary-pill poi-detail-listen-button" @onclick="() => OnPrimaryAction.InvokeAsync()">
+                @(IsPlaying ? "Tạm dừng thuyết minh" : "Nghe thuyết minh")
+            </button>
+        </div>
+    </section>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public TouristPoi Poi { get; set; } = default!;
+    [Parameter] public IReadOnlyList<TouristCategory> Categories { get; set; } = [];
+    [Parameter] public IReadOnlyList<TouristLanguageOption> Languages { get; set; } = [];
+    [Parameter] public IReadOnlyList<TouristPoi> RelatedPois { get; set; } = [];
+    [Parameter] public IReadOnlyList<string> TranscriptParagraphs { get; set; } = [];
+    [Parameter] public string SelectedLanguageCode { get; set; } = "vi";
+    [Parameter] public bool IsPlaying { get; set; }
+    [Parameter] public int AudioAssetCount { get; set; } = 1;
+    [Parameter] public string AudioSubtitle { get; set; } = string.Empty;
+    [Parameter] public EventCallback OnBack { get; set; }
+    [Parameter] public EventCallback OnOpenMap { get; set; }
+    [Parameter] public EventCallback OnOpenFullPlayer { get; set; }
+    [Parameter] public EventCallback OnPlayToggle { get; set; }
+    [Parameter] public EventCallback OnPrimaryAction { get; set; }
+    [Parameter] public EventCallback<string> OnSelectLanguage { get; set; }
+    [Parameter] public EventCallback<string> OnSelectRelatedPoi { get; set; }
+
+    private string GetCategoryIcon(string categoryId) =>
+        categoryId switch
+        {
+            "food" => "🍜",
+            "history" => "🏛️",
+            "river" => "🌉",
+            "night" => "🍢",
+            _ => "☕"
+        };
+
+    private string GetPoiIcon()
+    {
+        var label = Poi.CategoryLabel.ToLowerInvariant();
+        if (label.Contains("uống") || label.Contains("cà phê") || label.Contains("coffee"))
+        {
+            return "☕";
+        }
+
+        if (label.Contains("bún") || label.Contains("phở") || label.Contains("ẩm") || label.Contains("food"))
+        {
+            return "🍜";
+        }
+
+        if (label.Contains("đêm") || label.Contains("ăn vặt"))
+        {
+            return "🍢";
+        }
+
+        if (label.Contains("sông") || label.Contains("cầu") || label.Contains("ven"))
+        {
+            return "🌉";
+        }
+
+        return GetCategoryIcon(Poi.CategoryId);
+    }
+
+    private string GetHeroTone(string categoryId) =>
+        categoryId switch
+        {
+            "food" => "is-food",
+            "river" => "is-river",
+            "night" => "is-night",
+            _ => "is-history"
+        };
+
+    private string GetCategoryLabel() =>
+        string.IsNullOrWhiteSpace(Poi.CategoryLabel)
+            ? Categories.FirstOrDefault(category => category.Id == Poi.CategoryId)?.Label ?? Poi.District
+            : Poi.CategoryLabel;
+
+    private string GetCurrentLanguageLabel() =>
+        Languages.FirstOrDefault(language => language.Code == SelectedLanguageCode)?.Label ?? SelectedLanguageCode.ToUpperInvariant();
+
+    private int GetPriorityScore() =>
+        Poi.Priority <= 10
+            ? Math.Max(1, Poi.Priority)
+            : Math.Clamp((int)Math.Ceiling(Poi.Priority / 10d), 1, 10);
+
+    private string GetRelatedPoiIcon(TouristPoi poi)
+    {
+        var label = poi.CategoryLabel.ToLowerInvariant();
+        if (label.Contains("uống") || label.Contains("cà phê") || label.Contains("coffee"))
+        {
+            return "☕";
+        }
+
+        if (label.Contains("bún") || label.Contains("phở") || label.Contains("ẩm") || label.Contains("food"))
+        {
+            return "🍜";
+        }
+
+        if (label.Contains("đêm") || label.Contains("ăn vặt"))
+        {
+            return "🍢";
+        }
+
+        if (label.Contains("sông") || label.Contains("cầu") || label.Contains("ven"))
+        {
+            return "🌉";
+        }
+
+        return GetCategoryIcon(poi.CategoryId);
+    }
+
+    private string GetRelatedPoiLabel(TouristPoi poi) =>
+        $"{GetCategoryLabel(poi)} • {poi.DistanceMeters}m";
+
+    private string GetCategoryLabel(TouristPoi poi) =>
+        string.IsNullOrWhiteSpace(poi.CategoryLabel)
+            ? Categories.FirstOrDefault(category => category.Id == poi.CategoryId)?.Label ?? poi.District
+            : poi.CategoryLabel;
+
+    private static string GetWaveHeight(int index)
+    {
+        var heights = new[] { "28px", "18px", "34px", "20px", "36px", "24px", "14px", "22px", "42px", "26px", "18px", "32px" };
+        return heights[index % heights.Length];
+    }
+
+    private static string Truncate(string text, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(text) || text.Length <= maxLength)
+        {
+            return text;
+        }
+
+        return $"{text[..maxLength].TrimEnd()}...";
+    }
+}

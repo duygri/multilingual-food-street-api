@@ -1,0 +1,136 @@
+namespace NarrationApp.Mobile.Features.Home;
+
+public sealed record TouristContentSnapshot(
+    IReadOnlyList<TouristPoi> Pois,
+    IReadOnlyList<TouristTourCard> Tours)
+{
+    public static TouristContentSnapshot CreateDemo()
+    {
+        return new TouristContentSnapshot(
+            [
+                new TouristPoi(
+                    "poi-khanh-hoi-bridge",
+                    "Cầu Khánh Hội",
+                    "history",
+                    "Di tích",
+                    "Quận 4",
+                    "Di sản ven sông",
+                    "Điểm nối trung tâm với trục thương cảng xưa của Sài Gòn.",
+                    "Bắt đầu tour ven sông",
+                    18,
+                    52,
+                    180,
+                    "3:12",
+                    "Sẵn sàng",
+                    10.7609,
+                    106.7054,
+                    9,
+                    5),
+                new TouristPoi(
+                    "poi-cho-ben-thanh",
+                    "Chợ Bến Thành",
+                    "food",
+                    "Ẩm thực",
+                    "Quận 1",
+                    "Ẩm thực đặc trưng",
+                    "Chợ biểu tượng với lớp ký ức thương mại và ẩm thực bản địa.",
+                    "Nhiều món street food",
+                    34,
+                    64,
+                    260,
+                    "2:48",
+                    "Đang phát gần đây",
+                    10.7724,
+                    106.6980,
+                    10,
+                    5),
+                new TouristPoi(
+                    "poi-tiem-banh-mi-co-lan",
+                    "Tiệm Bánh Mì Cô Lan",
+                    "food",
+                    "Bánh mì",
+                    "Khánh Hội",
+                    "Điểm ăn sáng",
+                    "Ổ bánh mì nóng giòn, nhân truyền thống và không khí xóm nhỏ.",
+                    "Gợi ý ăn nhanh",
+                    60,
+                    30,
+                    110,
+                    "1:44",
+                    "Tạo audio tự động",
+                    10.7586,
+                    106.7045,
+                    7,
+                    4),
+                new TouristPoi(
+                    "poi-ben-nha-rong",
+                    "Bến Nhà Rồng",
+                    "river",
+                    "Ven sông",
+                    "Quận 4",
+                    "Dấu ấn lịch sử",
+                    "Không gian bảo tàng nhìn ra sông, phù hợp cho tuyến kể chuyện dài.",
+                    "Ngắm sông Sài Gòn",
+                    46,
+                    18,
+                    320,
+                    "4:05",
+                    "Có tour liên kết",
+                    10.7680,
+                    106.7068,
+                    8,
+                    5),
+                new TouristPoi(
+                    "poi-pho-dem-xom-chieu",
+                    "Phố đêm Xóm Chiếu",
+                    "night",
+                    "Đêm",
+                    "Quận 4",
+                    "Khám phá buổi tối",
+                    "Tuyến phố sáng đèn với món ăn, âm thanh và sinh hoạt đường phố nhộn nhịp.",
+                    "Mở sau 18:00",
+                    74,
+                    70,
+                    420,
+                    "2:20",
+                    "Gợi ý tối nay",
+                    10.7597,
+                    106.7008,
+                    6,
+                    4)
+            ],
+            [
+                new TouristTourCard(
+                    "tour-river",
+                    "Ven sông Khánh Hội",
+                    "4 điểm dừng",
+                    "35 phút",
+                    "Dễ đi bộ",
+                    "Câu chuyện thương cảng và cảnh sông.",
+                    ["poi-khanh-hoi-bridge", "poi-ben-nha-rong", "poi-cho-ben-thanh", "poi-pho-dem-xom-chieu"]),
+                new TouristTourCard(
+                    "tour-food",
+                    "Ẩm thực Quận 4",
+                    "5 điểm dừng",
+                    "42 phút",
+                    "Ngon và gần",
+                    "Bánh mì, hủ tiếu, hải sản và các góc ăn đêm.",
+                    ["poi-tiem-banh-mi-co-lan", "poi-cho-ben-thanh", "poi-ben-nha-rong", "poi-pho-dem-xom-chieu", "poi-khanh-hoi-bridge"]),
+                new TouristTourCard(
+                    "tour-night",
+                    "Xóm Chiếu về đêm",
+                    "3 điểm dừng",
+                    "28 phút",
+                    "Buổi tối",
+                    "Phù hợp sau 18:00 với audio ngắn, nhịp nhanh.",
+                    ["poi-pho-dem-xom-chieu", "poi-khanh-hoi-bridge", "poi-ben-nha-rong"])
+            ]);
+    }
+}
+
+public sealed record TouristContentResult(
+    TouristContentSnapshot Content,
+    bool IsFallback,
+    string SourceLabel,
+    string Message,
+    TouristLocationSnapshot Location);

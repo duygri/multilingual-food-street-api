@@ -1,0 +1,71 @@
+@using NarrationApp.Mobile.Features.Home
+
+<section class="settings-detail-screen">
+    <header class="settings-detail-header">
+        <button type="button" class="icon-button" @onclick="OnBack">←</button>
+        <div>
+            <span class="eyebrow">About</span>
+            <h2>Về ứng dụng</h2>
+            <p>Thông tin build mobile, stack đang dùng và các liên kết hỗ trợ khi cần đối chiếu spec.</p>
+        </div>
+    </header>
+
+    <article class="setting-card about-info-card">
+        <span class="sheet-label">NarrationApp Mobile</span>
+        <strong>NarrationApp Mobile</strong>
+        <p>@RuntimeLabel</p>
+        <div class="auth-inline auth-inline--summary">
+            <span>@VersionLabel</span>
+            <span>Build dành cho tourist</span>
+        </div>
+    </article>
+
+    <article class="setting-card about-info-card">
+        <span class="sheet-label">Tech stack</span>
+        <div class="about-stack-list">
+            @foreach (var item in TechStack)
+            {
+                <span class="about-stack-item">@item</span>
+            }
+        </div>
+    </article>
+
+    <article class="setting-card about-info-card">
+        <span class="sheet-label">Ngôn ngữ hỗ trợ</span>
+        <div class="about-stack-list">
+            @foreach (var language in Languages)
+            {
+                <span class="about-stack-item">@language.ChipLabel • @language.Label</span>
+            }
+        </div>
+    </article>
+
+    <div class="about-link-list">
+        @foreach (var link in Links)
+        {
+            <button type="button" class="setting-card about-link-item" @onclick="() => OnOpenLink.InvokeAsync(link.Label)">
+                <div class="settings-row__copy">
+                    <strong class="settings-row__title">@link.Label</strong>
+                    <span class="settings-row__subtitle">@link.Description</span>
+                </div>
+                <span class="settings-row__value">›</span>
+            </button>
+        }
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(StatusMessage))
+    {
+        <div class="auth-feedback auth-feedback--success">@StatusMessage</div>
+    }
+</section>
+
+@code {
+    [Parameter] public string VersionLabel { get; set; } = string.Empty;
+    [Parameter] public string RuntimeLabel { get; set; } = string.Empty;
+    [Parameter] public IReadOnlyList<string> TechStack { get; set; } = [];
+    [Parameter] public IReadOnlyList<TouristLanguageOption> Languages { get; set; } = [];
+    [Parameter] public IReadOnlyList<TouristAboutLinkItem> Links { get; set; } = [];
+    [Parameter] public string? StatusMessage { get; set; }
+    [Parameter] public EventCallback OnBack { get; set; }
+    [Parameter] public EventCallback<string> OnOpenLink { get; set; }
+}

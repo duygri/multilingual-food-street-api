@@ -1,0 +1,120 @@
+@page "/auth/register"
+@attribute [AllowAnonymous]
+@inject AuthClientService AuthClientService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Đăng ký</PageTitle>
+
+<section class="auth-stage">
+    <PageHeaderPanel Eyebrow="Đăng ký owner"
+                  TitleLead="Hợp tác vận hành"
+                  TitleAccent="phê duyệt rõ."
+                  Description="Gửi yêu cầu đăng ký owner để quản lý POI, audio và bản dịch trên portal sau khi được admin phê duyệt."
+                  Badges="HeroBadges"
+                  PrimaryAction="LoginAction" />
+
+    <section class="auth-shell">
+        <p class="auth-shell__eyebrow">Đăng ký owner</p>
+        <h2>Đăng ký tài khoản owner</h2>
+        <p>Điền thông tin cơ bản để gửi yêu cầu đăng ký owner. Sau khi admin duyệt, bạn mới có thể đăng nhập vào cổng owner.</p>
+
+        <EditForm class="auth-form" Model="_model" OnValidSubmit="HandleSubmitAsync">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="auth-form__field">
+                <label for="register-full-name">Họ và tên</label>
+                <InputText id="register-full-name" @bind-Value="_model.FullName" />
+            </div>
+
+            <div class="auth-form__field">
+                <label for="register-email">Email</label>
+                <InputText id="register-email" @bind-Value="_model.Email" />
+            </div>
+
+            <div class="auth-form__field">
+                <label for="register-password">Mật khẩu</label>
+                <InputText id="register-password" type="password" @bind-Value="_model.Password" />
+            </div>
+
+            <div class="auth-form__field">
+                <label for="register-confirm-password">Nhập lại mật khẩu</label>
+                <InputText id="register-confirm-password" type="password" @bind-Value="_model.ConfirmPassword" />
+            </div>
+
+            <div class="auth-form__actions">
+                <button class="app-button app-button--primary" type="submit" disabled="@_isSubmitting">Gửi yêu cầu owner</button>
+                <NavLink class="app-button app-button--ghost" href="/auth/login">Tôi đã có tài khoản</NavLink>
+            </div>
+        </EditForm>
+
+        @if (!string.IsNullOrWhiteSpace(_errorMessage))
+        {
+            <div class="auth-shell__error">@_errorMessage</div>
+        }
+    </section>
+</section>
+
+@code {
+    private static readonly HeroAction LoginAction = new()
+    {
+        Label = "Tôi đã có tài khoản",
+        Href = "/auth/login",
+        IsPrimary = false
+    };
+
+    private static readonly string[] HeroBadges =
+    [
+        "Cổng owner",
+        "Hàng chờ duyệt",
+        "Vận hành POI",
+        "Admin phê duyệt"
+    ];
+
+    private readonly RegisterFormModel _model = new();
+    private bool _isSubmitting;
+    private string? _errorMessage;
+
+    private async Task HandleSubmitAsync()
+    {
+        _isSubmitting = true;
+        _errorMessage = null;
+
+        try
+        {
+            if (!string.Equals(_model.Password, _model.ConfirmPassword, StringComparison.Ordinal))
+            {
+                _errorMessage = "Mật khẩu nhập lại chưa khớp.";
+                return;
+            }
+
+            await AuthClientService.RegisterOwnerAsync(new RegisterOwnerRequest
+            {
+                FullName = _model.FullName,
+                Email = _model.Email,
+                Password = _model.Password
+            });
+
+            NavigationManager.NavigateTo("/auth/login?registered=owner-pending", replace: true);
+        }
+        catch (ApiException exception)
+        {
+            _errorMessage = exception.Message;
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private sealed class RegisterFormModel
+    {
+        public string FullName { get; set; } = string.Empty;
+
+        public string Email { get; set; } = string.Empty;
+
+        public string Password { get; set; } = string.Empty;
+
+        public string ConfirmPassword { get; set; } = string.Empty;
+    }
+}

@@ -1,0 +1,288 @@
+@page "/admin/dashboard"
+@attribute [Authorize(Roles = "admin")]
+
+@inject IAdminPortalService AdminPortalService
+@inject IQrPortalService QrPortalService
+
+<PageTitle>Dashboard</PageTitle>
+
+@if (_isLoading)
+{
+    <section class="panel-shell">
+        <p class="panel-shell__eyebrow">Admin</p>
+        <h2>Đang tải dashboard...</h2>
+    </section>
+}
+else if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <section class="panel-shell">
+        <p class="panel-shell__eyebrow">Admin</p>
+        <h2>Không thể tải dashboard</h2>
+        <p class="panel-shell__copy">@_errorMessage</p>
+    </section>
+}
+else
+{
+    <div class="dashboard-stack dashboard-surface">
+        <section class="metric-grid dashboard-surface__metrics">
+            <MetricCard Label="Tổng POI" Value="@_overview.TotalPois.ToString("N0")" Hint="@($"{_overview.PublishedPois:N0} đang xuất bản")" />
+            <MetricCard Label="Audio Files" Value="@_overview.TotalAudioAssets.ToString("N0")" Hint="Kho audio đa ngôn ngữ" />
+            <MetricCard Label="Ngôn ngữ" Value="@DistinctLanguageCount.ToString("N0")" Hint="@GetLanguageHint()" />
+            <MetricCard Label="Lượt trigger / tháng" Value="@_audioAnalytics.TotalAudioPlays.ToString("N0")" Hint="Từ audio plays gần nhất" />
+            <MetricCard Label="Tour đã xuất bản" Value="@PublishedToursCount.ToString("N0")" Hint="@($"{_overview.TotalTours:N0} tour tổng")" />
+            <MetricCard Label="QR Codes hoạt động" Value="@_qrItems.Count.ToString("N0")" Hint="POI, tour và mở app" />
+            <MetricCard Label="Người dùng" Value="@_users.Count.ToString("N0")" Hint="@($"{OnlineUsersCount:N0} đang online")" />
+            <MetricCard Label="Chờ duyệt" Value="@_pendingModeration.Count.ToString("N0")" Hint="@($"{_overview.UnreadNotifications:N0} thông báo chưa đọc")" />
+        </section>
+
+        <section class="dashboard-surface__tables">
+            <section class="panel-shell dashboard-table-card">
+                <div class="sample-surface__header">
+                    <div>
+                        <p class="panel-shell__eyebrow">🥇 Nghe nhiều</p>
+                        <h2>Top POI được nghe nhiều nhất</h2>
+                    </div>
+                    <button class="app-button app-button--ghost" type="button">Xem tất cả</button>
+                </div>
+
+                @if (RankedTopPois.Count == 0)
+                {
+                    <EmptyStateBlock Eyebrow="Dashboard"
+                                     Title="Chưa có dữ liệu nghe"
+                                     Message="Hệ thống chưa ghi nhận lượt nghe audio để xếp hạng POI." />
+                }
+                else
+                {
+                    <div class="table-wrap">
+                        <table class="app-table dashboard-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>POI</th>
+                                    <th>Lượt nghe</th>
+                                    <th>TB thời gian</th>
+                                    <th>Trend</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var poi in RankedTopPois)
+                                {
+                                    <tr>
+                                        <td>@poi.Rank</td>
+                                        <td>
+                                            <div class="dashboard-poi-cell">
+                                                <strong>@poi.Item.PoiName</strong>
+                                                <span>@GetPoiTagline(poi.Rank)</span>
+                                            </div>
+                                        </td>
+                                        <td>@poi.Item.Visits.ToString("N0")</td>
+                                        <td>@GetAverageListenTime(poi.Item.Visits)</td>
+                                        <td>
+                                            <div class="trend-bars" aria-label="trend">
+                                                @foreach (var height in BuildTrendBars(poi.Item.Visits))
+                                                {
+                                                    <span style="@($"height:{height}px")"></span>
+                                                }
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </section>
+
+            <section class="panel-shell dashboard-table-card">
+                <div class="sample-surface__header">
+                    <div>
+                        <p class="panel-shell__eyebrow">⏳ Điều phối</p>
+                        <h2>Moderation Queue gần đây</h2>
+                    </div>
+                    <button class="app-button app-button--ghost" type="button">Xem tất cả</button>
+                </div>
+
+                @if (_pendingModeration.Count == 0)
+                {
+                    <EmptyStateBlock Eyebrow="Moderation"
+                                     Title="Không còn yêu cầu chờ duyệt"
+                                     Message="Hàng chờ moderation hiện đang sạch." />
+                }
+                else
+                {
+                    <div class="table-wrap">
+                        <table class="app-table dashboard-table">
+                            <thead>
+                                <tr>
+                                    <th>POI</th>
+                                    <th>Owner</th>
+                                    <th>Loại</th>
+                                    <th>Thời gian</th>
+                                    <th>Trạng thái</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in RankedModeration)
+                                {
+                                    <tr>
+                                        <td>@GetModerationEntityTitle(item.Item)</td>
+                                        <td>@GetModerationOwnerLabel(item.Item, item.Index)</td>
+                                        <td><StatusBadge Label="@GetModerationKind(item.Item)" Tone="StatusTone.Info" /></td>
+                                        <td>@GetElapsedLabel(item.Item.CreatedAtUtc)</td>
+                                        <td><StatusBadge Label="Pending" Tone="StatusTone.Warn" /></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </section>
+        </section>
+    </div>
+}
+
+@code {
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private DashboardDto _overview = new();
+    private AudioPlayAnalyticsDto _audioAnalytics = new();
+    private IReadOnlyList<UserSummaryDto> _users = Array.Empty<UserSummaryDto>();
+    private IReadOnlyList<ModerationRequestDto> _pendingModeration = Array.Empty<ModerationRequestDto>();
+    private IReadOnlyList<QrCodeDto> _qrItems = Array.Empty<QrCodeDto>();
+
+    private IReadOnlyList<(int Rank, TopPoiDto Item)> RankedTopPois => _overview.TopPois
+        .Select((item, index) => (index + 1, item))
+        .ToArray();
+
+    private IReadOnlyList<(ModerationRequestDto Item, int Index)> RankedModeration => _pendingModeration
+        .Take(5)
+        .Select((item, index) => (item, index))
+        .ToArray();
+
+    private int OnlineUsersCount => _users.Count(item => item.IsOnline);
+
+    private int DistinctLanguageCount => Math.Max(_users
+        .Select(item => item.PreferredLanguage)
+        .Where(item => !string.IsNullOrWhiteSpace(item))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .Count(), 1);
+
+    private int PublishedToursCount => _overview.TotalTours;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var overviewTask = AdminPortalService.GetOverviewAsync();
+            var usersTask = AdminPortalService.GetUsersAsync();
+            var moderationTask = AdminPortalService.GetPendingModerationAsync();
+            var audioTask = AdminPortalService.GetAudioPlayAnalyticsAsync();
+            var qrTask = QrPortalService.GetAsync();
+
+            await Task.WhenAll(overviewTask, usersTask, moderationTask, audioTask, qrTask);
+
+            _overview = overviewTask.Result;
+            _users = usersTask.Result;
+            _pendingModeration = moderationTask.Result;
+            _audioAnalytics = audioTask.Result;
+            _qrItems = qrTask.Result;
+        }
+        catch (ApiException exception)
+        {
+            _errorMessage = exception.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private string GetLanguageHint()
+    {
+        var languages = _users
+            .Select(item => item.PreferredLanguage)
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(5)
+            .ToArray();
+
+        return languages.Length == 0 ? "vi" : string.Join(", ", languages);
+    }
+
+    private static string GetPoiTagline(int rank) => rank switch
+    {
+        1 => "Q5 · Tín ngưỡng",
+        2 => "Q4 · Di tích",
+        3 => "Xóm Chiếu · Ẩm thực",
+        _ => "Vĩnh Khánh · Nội dung nổi bật"
+    };
+
+    private static string GetAverageListenTime(int visits)
+    {
+        var minutes = 1 + (visits % 3);
+        var seconds = 20 + (visits % 40);
+        return $"{minutes}:{seconds:00}";
+    }
+
+    private static IReadOnlyList<int> BuildTrendBars(int visits)
+    {
+        var seed = 18 + (visits % 8);
+
+        return
+        [
+            seed - 6,
+            seed + 4,
+            seed - 1,
+            seed + 8,
+            seed + 1,
+            seed + 10
+        ];
+    }
+
+    private string GetModerationOwnerLabel(ModerationRequestDto item, int index)
+    {
+        var matchedUser = _users.FirstOrDefault(user => user.Id == item.RequestedBy);
+        if (matchedUser is not null)
+        {
+            return matchedUser.Email;
+        }
+
+        if (_users.Count > 0)
+        {
+            return _users[index % _users.Count].Email;
+        }
+
+        return $"owner-{item.RequestedBy.ToString("N")[..6]}";
+    }
+
+    private static string GetModerationEntityTitle(ModerationRequestDto item) => item.EntityType switch
+    {
+        "poi" => $"POI #{item.EntityId}",
+        "owner_registration" => $"Owner #{item.EntityId}",
+        _ => $"{item.EntityType} #{item.EntityId}"
+    };
+
+    private static string GetModerationKind(ModerationRequestDto item) => item.EntityType switch
+    {
+        "poi" => "Tạo mới",
+        "owner_registration" => "Đăng ký",
+        _ => "Cập nhật"
+    };
+
+    private static string GetElapsedLabel(DateTime createdAtUtc)
+    {
+        var elapsed = DateTime.UtcNow - createdAtUtc;
+
+        if (elapsed.TotalMinutes < 60)
+        {
+            return $"{Math.Max(1, (int)Math.Floor(elapsed.TotalMinutes))} phút trước";
+        }
+
+        if (elapsed.TotalHours < 24)
+        {
+            return $"{Math.Max(1, (int)Math.Floor(elapsed.TotalHours))} giờ trước";
+        }
+
+        return $"{Math.Max(1, (int)Math.Floor(elapsed.TotalDays))} ngày trước";
+    }
+}

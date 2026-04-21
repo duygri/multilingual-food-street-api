@@ -1,0 +1,192 @@
+@page "/admin/analytics"
+@attribute [Authorize(Roles = "admin")]
+
+@inject IAdminPortalService AdminPortalService
+
+<PageTitle>Báo cáo vận hành</PageTitle>
+
+@if (_isLoading)
+{
+    <section class="panel-shell">
+        <p class="panel-shell__eyebrow">Analytics</p>
+        <h2>Đang tải báo cáo vận hành...</h2>
+    </section>
+}
+else if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <section class="panel-shell">
+        <p class="panel-shell__eyebrow">Analytics</p>
+        <h2>Không thể tải báo cáo vận hành</h2>
+        <p class="panel-shell__copy">@_errorMessage</p>
+    </section>
+}
+else
+{
+    <div class="dashboard-stack">
+        <section class="metric-grid">
+            <MetricCard Label="Tổng POI" Value="@_overview.TotalPois.ToString("N0")" Hint="Toàn hệ thống" />
+            <MetricCard Label="Đã xuất bản" Value="@_overview.PublishedPois.ToString("N0")" Hint="Điểm đến đang phục vụ" />
+            <MetricCard Label="Tour" Value="@_overview.TotalTours.ToString("N0")" Hint="Tour đang quản lý" />
+            <MetricCard Label="Tài sản audio" Value="@_overview.TotalAudioAssets.ToString("N0")" Hint="Kho audio hiện tại" />
+            <MetricCard Label="Lượt phát audio" Value="@_audioInsights.TotalAudioPlays.ToString("N0")" Hint="Lượt nghe toàn hệ thống" />
+            <MetricCard Label="Giây lắng nghe" Value="@_audioInsights.TotalListenSeconds.ToString("N0")" Hint="Tổng thời lượng nghe" />
+        </section>
+
+        <section class="analytics-grid">
+            <div class="analytics-grid__main">
+                <PanelShell Eyebrow="Tầng tín hiệu"
+                            Title="Sàn tín hiệu thời gian thực"
+                            BadgeLabel="@($"{_heatmap.Count} điểm tín hiệu")"
+                            BadgeTone="StatusTone.Good">
+                    <div class="ops-info-list">
+                        <div class="ops-info-row">
+                            <div>
+                                <strong>Độ phủ heatmap</strong>
+                                <p>Số lượng điểm tín hiệu đã được ghi nhận trên lớp phân tích hiện tại.</p>
+                            </div>
+                            <StatusBadge Label="@($"{_heatmap.Count:N0} điểm")" Tone="StatusTone.Info" />
+                        </div>
+
+                        <div class="ops-info-row">
+                            <div>
+                                <strong>Khối lượng kiểm duyệt</strong>
+                                <p>Khối lượng công việc admin còn phải xử lý để giữ chất lượng nội dung.</p>
+                            </div>
+                            <StatusBadge Label="@($"{_overview.PendingModerationRequests:N0} chờ duyệt")" Tone="StatusTone.Warn" />
+                        </div>
+
+                        <div class="ops-info-row">
+                            <div>
+                                <strong>Lưu lượng thông báo</strong>
+                                <p>Thông báo chưa đọc đang chờ xác nhận trong notification center.</p>
+                            </div>
+                            <StatusBadge Label="@($"{_overview.UnreadNotifications:N0} chưa đọc")" Tone="StatusTone.Info" />
+                        </div>
+
+                        <div class="ops-info-row">
+                            <div>
+                                <strong>Tín hiệu audio</strong>
+                                <p>Mật độ nghe hiện tại trên toàn bộ lớp thuyết minh của hệ thống.</p>
+                            </div>
+                            <StatusBadge Label="@($"{_audioInsights.TotalAudioPlays:N0} lượt phát")" Tone="StatusTone.Good" />
+                        </div>
+                    </div>
+                </PanelShell>
+
+                <DataTableShell Eyebrow="Nhiệt POI"
+                                Title="Làn nhiệt POI"
+                                BadgeLabel="@($"{_topPois.Count} hotspot")"
+                                BadgeTone="StatusTone.Warn"
+                                IsEmpty="@(_topPois.Count == 0)">
+                    <TableContent>
+                        <thead>
+                            <tr>
+                                <th>Hạng</th>
+                                <th>POI</th>
+                                <th>Lượt ghé</th>
+                                <th>Mức nhiệt</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var poi in RankedTopPois)
+                            {
+                                <tr>
+                                    <td>#@poi.Rank</td>
+                                    <td>@poi.Item.PoiName</td>
+                                    <td>@poi.Item.Visits.ToString("N0")</td>
+                                    <td><StatusBadge Label="@GetHeatLabel(poi.Item.Visits)" Tone="@GetHeatTone(poi.Item.Visits)" /></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </TableContent>
+                    <EmptyStateContent>
+                        <EmptyStateBlock Eyebrow="Heatmap"
+                                         Title="Chưa có hotspot"
+                                         Message="Hệ thống chưa đủ dữ liệu để xếp hạng POI heat trong giai đoạn hiện tại." />
+                    </EmptyStateContent>
+                </DataTableShell>
+            </div>
+
+            <div class="analytics-grid__side">
+                <SystemStatusRail Label="Trạng thái analytics" Items="StatusItems" />
+
+                <PanelShell Eyebrow="Chẩn đoán heatmap"
+                            Title="Phân tích tín hiệu">
+                    <div class="ops-kpi-grid">
+                        <article class="ops-kpi-tile">
+                            <span>Đỉnh tín hiệu</span>
+                            <strong>@HighestHeatWeight.ToString("N0")</strong>
+                        </article>
+                        <article class="ops-kpi-tile">
+                            <span>Lượt phát audio</span>
+                            <strong>@_audioInsights.TotalAudioPlays.ToString("N0")</strong>
+                        </article>
+                        <article class="ops-kpi-tile">
+                            <span>Giây lắng nghe</span>
+                            <strong>@_audioInsights.TotalListenSeconds.ToString("N0")</strong>
+                        </article>
+                        <article class="ops-kpi-tile">
+                            <span>Hàng chờ duyệt</span>
+                            <strong>@_overview.PendingModerationRequests.ToString("N0")</strong>
+                        </article>
+                    </div>
+                </PanelShell>
+            </div>
+        </section>
+    </div>
+}
+
+@code {
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private DashboardDto _overview = new();
+    private AudioPlayAnalyticsDto _audioInsights = new();
+    private IReadOnlyList<TopPoiDto> _topPois = Array.Empty<TopPoiDto>();
+    private IReadOnlyList<HeatmapPointDto> _heatmap = Array.Empty<HeatmapPointDto>();
+    private IReadOnlyList<(int Rank, TopPoiDto Item)> RankedTopPois => _topPois
+        .Select((item, index) => (index + 1, item))
+        .ToArray();
+
+    private int HighestHeatWeight => _heatmap.Count == 0 ? 0 : _heatmap.Max(item => item.Weight);
+
+    private IReadOnlyList<SystemStatusItem> StatusItems =>
+    [
+        new() { Label = "POIs", Value = _overview.TotalPois.ToString("N0"), Tone = StatusTone.Info },
+        new() { Label = "Heatmap", Value = $"{_heatmap.Count} điểm", Tone = _heatmap.Count > 0 ? StatusTone.Good : StatusTone.Neutral },
+        new() { Label = "Audio", Value = _audioInsights.TotalAudioPlays.ToString("N0"), Tone = _audioInsights.TotalAudioPlays > 0 ? StatusTone.Good : StatusTone.Warn },
+        new() { Label = "Queue", Value = $"{_overview.PendingModerationRequests} chờ duyệt", Tone = _overview.PendingModerationRequests > 0 ? StatusTone.Warn : StatusTone.Good }
+    ];
+
+    private static string GetHeatLabel(int visits) => visits switch
+    {
+        >= 900 => "Cao",
+        >= 500 => "Trung bình",
+        _ => "Thấp"
+    };
+
+    private static StatusTone GetHeatTone(int visits) => visits switch
+    {
+        >= 900 => StatusTone.Warn,
+        >= 500 => StatusTone.Info,
+        _ => StatusTone.Neutral
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _overview = await AdminPortalService.GetOverviewAsync();
+            _topPois = await AdminPortalService.GetTopPoisAsync();
+            _heatmap = await AdminPortalService.GetHeatmapAsync();
+            _audioInsights = await AdminPortalService.GetAudioPlayAnalyticsAsync();
+        }
+        catch (ApiException exception)
+        {
+            _errorMessage = exception.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+}

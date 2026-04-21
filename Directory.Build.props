@@ -1,0 +1,7 @@
+<Project>
+  <PropertyGroup>
+    <ArtifactsVersionSuffix>v2</ArtifactsVersionSuffix>
+    <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory).artifacts\obj-$(ArtifactsVersionSuffix)\$(MSBuildProjectName)\</BaseIntermediateOutputPath>
+    <BaseOutputPath>$(MSBuildThisFileDirectory).artifacts\bin-$(ArtifactsVersionSuffix)\$(MSBuildProjectName)\</BaseOutputPath>
+  </PropertyGroup>
+</Project>

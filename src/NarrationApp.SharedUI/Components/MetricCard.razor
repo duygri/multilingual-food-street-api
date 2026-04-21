@@ -1,0 +1,14 @@
+<StatTile Label="@Label"
+          Value="@Value"
+          Hint="@Hint" />
+
+@code {
+    [Parameter]
+    public string Label { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Value { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Hint { get; set; }
+}

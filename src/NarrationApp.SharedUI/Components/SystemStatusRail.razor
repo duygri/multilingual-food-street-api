@@ -1,0 +1,35 @@
+<section class="system-status-rail">
+    <div class="system-status-rail__header">
+        <p>@Label</p>
+    </div>
+
+    <div class="system-status-rail__items">
+        @foreach (var item in Items)
+        {
+            <div class="system-status-rail__item @GetToneClass(item.Tone)">
+                <span class="system-status-rail__key">@item.Label</span>
+                <strong>@item.Value</strong>
+            </div>
+        }
+    </div>
+</section>
+
+@code {
+    [Parameter]
+    public string Label { get; set; } = string.Empty;
+
+    [Parameter]
+    public IReadOnlyList<SystemStatusItem> Items { get; set; } = Array.Empty<SystemStatusItem>();
+
+    private static string GetToneClass(StatusTone tone)
+    {
+        return tone switch
+        {
+            StatusTone.Info => "is-info",
+            StatusTone.Good => "is-good",
+            StatusTone.Warn => "is-warn",
+            StatusTone.Critical => "is-critical",
+            _ => string.Empty
+        };
+    }
+}

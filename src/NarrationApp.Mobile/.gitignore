@@ -1,0 +1,6 @@
+mobile-signing.local.props
+*.keystore
+*.jks
+*.aab
+*.apk
+publish/

@@ -1,0 +1,119 @@
+.user-surface__metrics {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.sample-surface__header {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.sample-surface__header h2,
+.sample-surface__header p {
+    margin: 0;
+}
+
+.user-filter-group {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+}
+
+.user-filter-button {
+    min-height: 2.25rem;
+    padding: 0.45rem 1rem;
+    border-radius: 0.8rem;
+    border: 1px solid rgba(80, 137, 168, 0.18);
+    background: rgba(8, 17, 31, 0.84);
+    color: var(--vk-text);
+    cursor: pointer;
+}
+
+.user-filter-button.is-active {
+    border-color: rgba(45, 212, 191, 0.5);
+    background: rgba(18, 54, 60, 0.82);
+    color: #f8fafc;
+}
+
+.user-identity {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+}
+
+.user-avatar {
+    display: grid;
+    place-items: center;
+    width: 2.8rem;
+    height: 2.8rem;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #22d3ee, #60a5fa);
+    color: #08111f;
+    font-weight: 800;
+    flex: 0 0 auto;
+}
+
+.user-identity__copy {
+    display: grid;
+    gap: 0.18rem;
+}
+
+.user-identity__copy strong,
+.user-identity__copy span {
+    display: block;
+}
+
+.user-identity__copy span {
+    color: var(--vk-muted);
+    font-size: 0.82rem;
+}
+
+.presence-dot {
+    display: inline-flex;
+    width: 0.65rem;
+    height: 0.65rem;
+    border-radius: 999px;
+    margin-right: 0.5rem;
+}
+
+.presence-dot--online {
+    background: #22c55e;
+    box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.16);
+}
+
+.presence-dot--offline {
+    background: #fb7185;
+    box-shadow: 0 0 0 4px rgba(251, 113, 133, 0.12);
+}
+
+.user-activity {
+    display: grid;
+    gap: 0.55rem;
+}
+
+@media (max-width: 1180px) {
+    .user-surface__metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 720px) {
+    .user-surface__metrics {
+        grid-template-columns: 1fr;
+    }
+
+    .sample-surface__header,
+    .user-filter-group,
+    .user-identity {
+        flex-direction: column;
+        align-items: start;
+    }
+
+    .user-filter-button,
+    .user-activity .app-button {
+        width: 100%;
+    }
+}

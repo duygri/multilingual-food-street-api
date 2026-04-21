@@ -1,0 +1,61 @@
+.stat-tile {
+    min-height: 8rem;
+    padding: 1rem 1.05rem;
+    border-radius: 0.95rem;
+    border: 1px solid rgba(80, 137, 168, 0.18);
+    background: linear-gradient(180deg, rgba(19, 35, 59, 0.95), rgba(15, 27, 46, 0.98));
+    box-shadow: 0 16px 28px rgba(4, 10, 20, 0.18);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-tile::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    height: 2px;
+    background: rgba(56, 189, 248, 0.65);
+}
+
+.stat-tile--good::before {
+    background: rgba(16, 185, 129, 0.72);
+}
+
+.stat-tile--warn::before {
+    background: rgba(245, 158, 11, 0.72);
+}
+
+.stat-tile--critical::before {
+    background: rgba(251, 113, 133, 0.72);
+}
+
+.stat-tile--neutral::before {
+    background: rgba(148, 163, 184, 0.48);
+}
+
+.stat-tile__label {
+    color: var(--vk-dim);
+    font-family: var(--vk-font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.stat-tile__value {
+    display: block;
+    margin-top: 0.75rem;
+    font-size: clamp(1.8rem, 4vw, 2.35rem);
+    color: var(--vk-text);
+    line-height: 1;
+}
+
+.stat-tile__hint {
+    margin-top: auto;
+    padding-top: 0.85rem;
+    color: var(--vk-muted);
+    line-height: 1.5;
+    font-size: 0.92rem;
+}

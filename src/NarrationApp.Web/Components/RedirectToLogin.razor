@@ -1,0 +1,17 @@
+@attribute [AllowAnonymous]
+@inject NavigationManager NavigationManager
+
+<section class="panel-shell">
+    <p class="panel-shell__eyebrow">Yêu cầu đăng nhập</p>
+    <h2>Đang chuyển bạn đến trang đăng nhập...</h2>
+</section>
+
+@code {
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            NavigationManager.NavigateTo("/auth/login", replace: true);
+        }
+    }
+}

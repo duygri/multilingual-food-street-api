@@ -1,0 +1,127 @@
+.category-page {
+    gap: 1.4rem;
+}
+
+.category-table-shell,
+.category-editor-shell {
+    overflow: hidden;
+}
+
+.category-table-shell__header,
+.category-editor-shell__header,
+.category-actions,
+.action-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.category-table-shell__header,
+.category-editor-shell__header {
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.category-table-shell__header h2,
+.category-editor-shell__header h2 {
+    margin: 0;
+}
+
+.category-table__icon {
+    font-size: 1.4rem;
+    width: 4rem;
+}
+
+.category-table__name {
+    display: grid;
+    gap: 0.25rem;
+}
+
+.category-table__name strong,
+.category-table__name span {
+    display: block;
+}
+
+.category-table__name span {
+    color: var(--vk-muted);
+    font-size: 0.84rem;
+}
+
+.category-action {
+    min-height: 2.1rem;
+    padding: 0.35rem 0.8rem;
+    border-radius: 0.72rem;
+    border: 1px solid rgba(80, 137, 168, 0.24);
+    background: rgba(14, 29, 50, 0.9);
+    color: #d9ecff;
+    cursor: pointer;
+}
+
+.category-action--danger {
+    color: #ffc3ce;
+    border-color: rgba(251, 113, 133, 0.24);
+}
+
+.editor-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.editor-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.editor-field--full {
+    grid-column: 1 / -1;
+}
+
+.editor-field label {
+    color: var(--vk-muted);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+}
+
+.editor-field :is(input, textarea) {
+    width: 100%;
+    border-radius: 1rem;
+    border: 1px solid rgba(80, 137, 168, 0.18);
+    background: rgba(8, 17, 31, 0.78);
+    color: var(--vk-text);
+    padding: 0.82rem 0.95rem;
+}
+
+.editor-field textarea {
+    min-height: 7rem;
+    resize: vertical;
+}
+
+.editor-field--toggle {
+    justify-content: end;
+}
+
+@media (max-width: 860px) {
+    .editor-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 720px) {
+    .category-table-shell__header,
+    .category-editor-shell__header,
+    .category-actions,
+    .action-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .category-table-shell__header .app-button,
+    .category-editor-shell__header .app-button,
+    .category-actions .category-action,
+    .action-row .app-button {
+        width: 100%;
+    }
+}

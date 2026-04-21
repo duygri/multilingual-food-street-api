@@ -1,0 +1,30 @@
+<CascadingAuthenticationState>
+    <Router AppAssembly="@typeof(App).Assembly">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+                <NotAuthorized>
+                    <RedirectToLogin />
+                </NotAuthorized>
+                <Authorizing>
+                    <LayoutView Layout="@typeof(MainLayout)">
+                        <section class="panel-shell">
+                            <p class="panel-shell__eyebrow">Portal</p>
+                            <h2>Đang xác thực phiên làm việc...</h2>
+                        </section>
+                    </LayoutView>
+                </Authorizing>
+            </AuthorizeRouteView>
+            <FocusOnNavigate RouteData="@routeData" Selector="h2" />
+        </Found>
+        <NotFound>
+            <PageTitle>Not found</PageTitle>
+            <LayoutView Layout="@typeof(MainLayout)">
+                <section class="panel-shell">
+                    <p class="panel-shell__eyebrow">404</p>
+                    <h2>Không tìm thấy trang bạn cần.</h2>
+                    <p class="panel-shell__copy">Liên kết này không tồn tại trong portal hiện tại hoặc chưa được cấp quyền truy cập.</p>
+                </section>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>

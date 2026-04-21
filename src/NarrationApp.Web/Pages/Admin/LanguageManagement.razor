@@ -1,0 +1,303 @@
+@page "/admin/language-management"
+@attribute [Authorize(Roles = "admin")]
+@using NarrationApp.Shared.DTOs.Languages
+@using NarrationApp.Shared.Enums
+
+@inject ILanguagePortalService LanguagePortalService
+
+<PageTitle>Quản lý ngôn ngữ</PageTitle>
+
+@if (_isLoading)
+{
+    <section class="panel-shell">
+        <p class="panel-shell__eyebrow">Ngôn ngữ</p>
+        <h2>Đang tải danh mục ngôn ngữ...</h2>
+    </section>
+}
+else if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <section class="panel-shell">
+        <p class="panel-shell__eyebrow">Ngôn ngữ</p>
+        <h2>Không thể tải danh mục ngôn ngữ</h2>
+        <p class="panel-shell__copy">@_errorMessage</p>
+    </section>
+}
+else
+{
+    <div class="dashboard-stack language-admin">
+        @if (!string.IsNullOrWhiteSpace(_statusMessage))
+        {
+            <section class="panel-shell">
+                <p class="panel-shell__copy">@_statusMessage</p>
+            </section>
+        }
+
+        <section class="language-admin__summary-grid">
+            <article class="language-admin__summary-card language-admin__summary-card--good">
+                <span class="language-admin__summary-icon">◎</span>
+                <strong>@ActiveLanguageCount</strong>
+                <h2>Ngôn ngữ active</h2>
+                <p>Đang mở trong workflow dịch và audio</p>
+            </article>
+
+            <article class="language-admin__summary-card language-admin__summary-card--info">
+                <span class="language-admin__summary-icon">↺</span>
+                <strong>@TranslationLanguageCount</strong>
+                <h2>Ngôn ngữ TTS + Dịch</h2>
+                <p>Lớp ngôn ngữ nhận bản dịch và generate audio</p>
+            </article>
+
+            <article class="language-admin__summary-card language-admin__summary-card--accent">
+                <span class="language-admin__summary-icon">◉</span>
+                <strong>@TotalAudioCount</strong>
+                <h2>Tổng audio</h2>
+                <p>Tổng asset audio đa ngôn ngữ đang theo dõi</p>
+            </article>
+
+            <article class="language-admin__summary-card language-admin__summary-card--warn">
+                <span class="language-admin__summary-icon">%</span>
+                <strong>@AverageCoveragePercent</strong>
+                <h2>Coverage trung bình</h2>
+                <p>Tỷ lệ hoàn thiện bản dịch trên toàn bộ ngôn ngữ active</p>
+            </article>
+        </section>
+
+        <section class="panel-shell language-admin__table-shell">
+            <div class="language-admin__header">
+                <div>
+                    <p class="panel-shell__eyebrow">🌐 Quản lý ngôn ngữ</p>
+                    <h2>Quản lý ngôn ngữ</h2>
+                    <p class="panel-shell__copy">Quản trị ngôn ngữ nguồn chuẩn, coverage bản dịch và số audio đang sẵn sàng cho từng lớp ngôn ngữ.</p>
+                </div>
+
+                <button class="app-button app-button--primary"
+                        data-action="open-language-form"
+                        type="button"
+                        @onclick="ToggleForm">
+                    + Thêm ngôn ngữ mới
+                </button>
+            </div>
+
+            @if (_isFormOpen)
+            {
+                <div class="language-admin__form">
+                    <label>
+                        <span>Mã</span>
+                        <InputText data-field="language-code" @bind-Value="_draft.Code" />
+                    </label>
+                    <label>
+                        <span>Tên hiển thị</span>
+                        <InputText data-field="language-display-name" @bind-Value="_draft.DisplayName" />
+                    </label>
+                    <label>
+                        <span>Tên bản địa</span>
+                        <InputText data-field="language-native-name" @bind-Value="_draft.NativeName" />
+                    </label>
+                    <label>
+                        <span>Mã cờ</span>
+                        <InputText data-field="language-flag-code" @bind-Value="_draft.FlagCode" />
+                    </label>
+                    <div class="language-admin__form-actions">
+                        <button class="app-button app-button--ghost" type="button" @onclick="ToggleForm">Đóng</button>
+                        <button class="app-button app-button--primary" data-action="save-language" type="button" @onclick="SaveAsync">Lưu</button>
+                    </div>
+                </div>
+            }
+
+            <div class="language-admin__table-wrap">
+                <table class="language-admin__table">
+                    <thead>
+                        <tr>
+                            <th>Code</th>
+                            <th>Ngôn ngữ</th>
+                            <th>Số POI có bản dịch</th>
+                            <th>Số audio</th>
+                            <th>Vai trò</th>
+                            <th>Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var language in _languages)
+                        {
+                            <tr>
+                                <td><span class="language-admin__code">@language.Code</span></td>
+                                <td>
+                                    <div class="language-admin__language">
+                                        <strong>@language.FlagCode @language.DisplayName</strong>
+                                        <span>@language.NativeName</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="language-admin__coverage">
+                                        <div class="language-admin__coverage-meta">
+                                            <strong>@language.TranslationCoverageCount / @language.TranslationCoverageTotal</strong>
+                                            <span>@FormatCoverage(language)</span>
+                                        </div>
+                                        <div class="language-admin__coverage-bar @GetCoverageTone(language)">
+                                            <span style="width:@GetCoverageWidth(language)"></span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="language-admin__count-pill">@language.AudioCount</span>
+                                </td>
+                                <td>
+                                    <span class="language-admin__pill @(language.Role == ManagedLanguageRole.Source ? "language-admin__pill--source" : "language-admin__pill--translation")">
+                                        @(language.Role == ManagedLanguageRole.Source ? "Nguồn chuẩn" : "TTS + Dịch")
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="language-admin__pill @(language.IsActive ? "language-admin__pill--active" : "language-admin__pill--inactive")">
+                                        @(language.IsActive ? "Active" : "Inactive")
+                                    </span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="panel-shell">
+            <p class="panel-shell__eyebrow">💡 Ghi chú</p>
+            <p class="panel-shell__copy">
+                Tiếng Việt là ngôn ngữ nguồn chuẩn. Tất cả bản dịch và audio đa ngôn ngữ đều được tạo từ nội dung tiếng Việt gốc thông qua Google Cloud Translation + Google Cloud Text-to-Speech.
+            </p>
+        </section>
+    </div>
+}
+
+@code {
+    private bool _isLoading = true;
+    private bool _isFormOpen;
+    private string? _errorMessage;
+    private string? _statusMessage;
+    private IReadOnlyList<ManagedLanguageDto> _languages = Array.Empty<ManagedLanguageDto>();
+    private LanguageDraft _draft = new();
+
+    private int ActiveLanguageCount => _languages.Count(item => item.IsActive);
+
+    private int TranslationLanguageCount => _languages.Count(item => item.IsActive && item.Role == ManagedLanguageRole.TranslationAudio);
+
+    private int TotalAudioCount => _languages.Sum(item => item.AudioCount);
+
+    private string AverageCoveragePercent
+    {
+        get
+        {
+            if (_languages.Count == 0)
+            {
+                return "0%";
+            }
+
+            var average = _languages.Average(item => GetCoverageRatio(item));
+            return $"{Math.Round(average * 100d)}%";
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            _languages = await LanguagePortalService.GetAsync();
+            _errorMessage = null;
+        }
+        catch (ApiException exception)
+        {
+            _errorMessage = exception.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void ToggleForm()
+    {
+        _isFormOpen = !_isFormOpen;
+        if (_isFormOpen)
+        {
+            _draft = new LanguageDraft();
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        try
+        {
+            var created = await LanguagePortalService.CreateAsync(new CreateManagedLanguageRequest
+            {
+                Code = _draft.Code.Trim().ToLowerInvariant(),
+                DisplayName = _draft.DisplayName.Trim(),
+                NativeName = _draft.NativeName.Trim(),
+                FlagCode = _draft.FlagCode.Trim().ToUpperInvariant()
+            });
+
+            _languages = _languages
+                .Where(item => !string.Equals(item.Code, created.Code, StringComparison.OrdinalIgnoreCase))
+                .Append(created)
+                .OrderBy(item => item.Role)
+                .ThenBy(item => item.Code, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+            _statusMessage = $"Đã thêm ngôn ngữ {created.Code}.";
+            _isFormOpen = false;
+        }
+        catch (ApiException exception)
+        {
+            _statusMessage = exception.Message;
+        }
+    }
+
+    private static string FormatCoverage(ManagedLanguageDto language)
+    {
+        return $"{Math.Round(GetCoverageRatio(language) * 100d)}%";
+    }
+
+    private static double GetCoverageRatio(ManagedLanguageDto language)
+    {
+        if (language.TranslationCoverageTotal == 0)
+        {
+            return 0d;
+        }
+
+        return (double)language.TranslationCoverageCount / language.TranslationCoverageTotal;
+    }
+
+    private static string GetCoverageWidth(ManagedLanguageDto language)
+    {
+        return $"{Math.Round(GetCoverageRatio(language) * 100d)}%";
+    }
+
+    private static string GetCoverageTone(ManagedLanguageDto language)
+    {
+        var ratio = GetCoverageRatio(language);
+        if (ratio >= 0.99d)
+        {
+            return "language-admin__coverage-bar--complete";
+        }
+
+        if (ratio >= 0.6d)
+        {
+            return "language-admin__coverage-bar--medium";
+        }
+
+        return "language-admin__coverage-bar--low";
+    }
+
+    private sealed class LanguageDraft
+    {
+        public string Code { get; set; } = string.Empty;
+
+        public string DisplayName { get; set; } = string.Empty;
+
+        public string NativeName { get; set; } = string.Empty;
+
+        public string FlagCode { get; set; } = string.Empty;
+    }
+}
