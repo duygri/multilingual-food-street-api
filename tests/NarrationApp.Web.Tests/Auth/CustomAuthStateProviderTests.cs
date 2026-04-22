@@ -15,6 +15,7 @@ public sealed class CustomAuthStateProviderTests
             Session = new AuthSession
             {
                 UserId = Guid.NewGuid(),
+                FullName = "System Admin",
                 Email = "admin@narration.app",
                 Role = UserRole.Admin,
                 PreferredLanguage = "vi",
@@ -27,6 +28,7 @@ public sealed class CustomAuthStateProviderTests
 
         Assert.True(state.User.Identity?.IsAuthenticated);
         Assert.Equal("admin@narration.app", state.User.Identity?.Name);
+        Assert.Equal("System Admin", state.User.FindFirst("full_name")?.Value);
         Assert.Equal("admin", state.User.FindFirst(ClaimTypes.Role)?.Value);
     }
 
@@ -38,6 +40,7 @@ public sealed class CustomAuthStateProviderTests
             Session = new AuthSession
             {
                 UserId = Guid.NewGuid(),
+                FullName = "Demo Owner",
                 Email = "owner@narration.app",
                 Role = UserRole.PoiOwner,
                 PreferredLanguage = "vi",

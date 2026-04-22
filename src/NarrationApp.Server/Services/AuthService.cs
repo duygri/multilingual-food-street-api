@@ -214,7 +214,7 @@ public sealed class AuthService(AppDbContext dbContext, IOptions<JwtOptions> jwt
         return new AuthResponse
         {
             UserId = user.Id,
-            FullName = user.FullName,
+            FullName = GetDisplayName(user),
             Email = user.Email,
             PreferredLanguage = user.PreferredLanguage,
             Role = roleName switch
@@ -232,6 +232,11 @@ public sealed class AuthService(AppDbContext dbContext, IOptions<JwtOptions> jwt
     {
         user.LastLoginAtUtc = DateTime.UtcNow;
         await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private static string GetDisplayName(AppUser user)
+    {
+        return string.IsNullOrWhiteSpace(user.FullName) ? user.Email : user.FullName;
     }
 
     private async Task<AuthFlowException> CreateInactiveUserExceptionAsync(AppUser user, string roleName, CancellationToken cancellationToken)

@@ -37,6 +37,7 @@ public sealed class CustomAuthStateProvider(IAuthSessionStore sessionStore) : Au
         [
             new Claim(ClaimTypes.NameIdentifier, session.UserId.ToString()),
             new Claim(ClaimTypes.Name, session.Email),
+            new Claim("full_name", string.IsNullOrWhiteSpace(session.FullName) ? session.Email : session.FullName),
             new Claim(ClaimTypes.Email, session.Email),
             new Claim(ClaimTypes.Role, ToRoleName(session.Role)),
             new Claim("preferred_language", session.PreferredLanguage)

@@ -24,7 +24,8 @@ public sealed class AuthServiceTests
             Email = AppConstants.DefaultAdminEmail,
             Password = AppConstants.DefaultAdminPassword
         });
-        var loggedInUser = await dbContext.AppUsers.SingleAsync(user => user.Email == AppConstants.DefaultAdminEmail);
+        dbContext.ChangeTracker.Clear();
+        var loggedInUser = await dbContext.AppUsers.AsNoTracking().SingleAsync(user => user.Email == AppConstants.DefaultAdminEmail);
 
         Assert.Equal(AppConstants.DefaultAdminEmail, response.Email);
         Assert.Equal("System Admin", response.FullName);
@@ -49,6 +50,7 @@ public sealed class AuthServiceTests
 
         var createdUser = await dbContext.AppUsers.SingleAsync(user => user.Email == "tourist1@narration.app");
 
+        Assert.Equal("tourist1@narration.app", response.FullName);
         Assert.Equal(UserRole.Tourist, response.Role);
         Assert.Equal("en", createdUser.PreferredLanguage);
         Assert.True(BCrypt.Net.BCrypt.Verify("Tourist@123", createdUser.PasswordHash));
@@ -75,9 +77,29 @@ public sealed class AuthServiceTests
         });
 
         Assert.Equal("tourist-mobile@narration.app", response.Email);
+        Assert.Equal("tourist-mobile@narration.app", response.FullName);
         Assert.Equal(UserRole.Tourist, response.Role);
         Assert.Equal("ja", response.PreferredLanguage);
         Assert.False(string.IsNullOrWhiteSpace(response.Token));
+    }
+
+    [Fact]
+    public async Task GetCurrentUserAsync_returns_a_tourist_fallback_display_name()
+    {
+        await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
+        var sut = CreateService(dbContext);
+
+        var registerResponse = await sut.RegisterAsync(new RegisterRequest
+        {
+            Email = "tourist-profile@narration.app",
+            Password = "Tourist@123",
+            PreferredLanguage = "vi"
+        });
+
+        var response = await sut.GetCurrentUserAsync(registerResponse.UserId);
+
+        Assert.Equal("tourist-profile@narration.app", response.FullName);
+        Assert.Equal(UserRole.Tourist, response.Role);
     }
 
     [Fact]
