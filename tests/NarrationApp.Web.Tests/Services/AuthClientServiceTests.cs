@@ -11,6 +11,29 @@ namespace NarrationApp.Web.Tests.Services;
 public sealed class AuthClientServiceTests
 {
     [Fact]
+    public async Task LoginAsync_maps_full_name_into_the_authenticated_session()
+    {
+        var handler = new LoginHandler();
+        var store = new TestAuthSessionStore();
+        var authStateProvider = new CustomAuthStateProvider(store);
+        var apiClient = new ApiClient(new HttpClient(handler)
+        {
+            BaseAddress = new Uri("https://localhost:5001/")
+        }, store);
+        var sut = new AuthClientService(apiClient, authStateProvider);
+
+        var session = await sut.LoginAsync(new LoginRequest
+        {
+            Email = "owner@narration.app",
+            Password = "Owner@123"
+        });
+
+        Assert.Equal("owner@narration.app", session.Email);
+        Assert.Equal("Owner One", session.FullName);
+        Assert.Equal("Owner One", store.Session?.FullName);
+    }
+
+    [Fact]
     public async Task RegisterOwnerAsync_posts_owner_application_without_authenticating_session()
     {
         var handler = new RegisterOwnerHandler();
@@ -54,6 +77,31 @@ public sealed class AuthClientServiceTests
         {
             Session = null;
             return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class LoginHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent.Create(new ApiResponse<AuthResponse>
+                {
+                    Succeeded = true,
+                    Message = "login succeeded",
+                    Data = new AuthResponse
+                    {
+                        UserId = Guid.Parse("11111111-1111-1111-1111-111111111111"),
+                        FullName = "Owner One",
+                        Email = "owner@narration.app",
+                        PreferredLanguage = "vi",
+                        Role = UserRole.PoiOwner,
+                        Token = "token-value",
+                        ExpiresAtUtc = DateTime.UtcNow.AddMinutes(60)
+                    }
+                }, options: new JsonSerializerOptions(JsonSerializerDefaults.Web))
+            });
         }
     }
 

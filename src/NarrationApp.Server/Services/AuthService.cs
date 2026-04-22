@@ -104,6 +104,7 @@ public sealed class AuthService(AppDbContext dbContext, IOptions<JwtOptions> jwt
             throw await CreateInactiveUserExceptionAsync(user, roleName, cancellationToken);
         }
 
+        await RecordLoginAsync(user, cancellationToken);
         return ToAuthResponse(user, roleName);
     }
 
@@ -127,6 +128,7 @@ public sealed class AuthService(AppDbContext dbContext, IOptions<JwtOptions> jwt
                 HttpStatusCode.Forbidden);
         }
 
+        await RecordLoginAsync(user, cancellationToken);
         return ToAuthResponse(user, roleName);
     }
 
@@ -212,6 +214,7 @@ public sealed class AuthService(AppDbContext dbContext, IOptions<JwtOptions> jwt
         return new AuthResponse
         {
             UserId = user.Id,
+            FullName = user.FullName,
             Email = user.Email,
             PreferredLanguage = user.PreferredLanguage,
             Role = roleName switch
@@ -223,6 +226,12 @@ public sealed class AuthService(AppDbContext dbContext, IOptions<JwtOptions> jwt
             Token = new JwtSecurityTokenHandler().WriteToken(token),
             ExpiresAtUtc = expiresAtUtc
         };
+    }
+
+    private async Task RecordLoginAsync(AppUser user, CancellationToken cancellationToken)
+    {
+        user.LastLoginAtUtc = DateTime.UtcNow;
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     private async Task<AuthFlowException> CreateInactiveUserExceptionAsync(AppUser user, string roleName, CancellationToken cancellationToken)

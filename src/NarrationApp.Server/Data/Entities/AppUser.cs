@@ -12,6 +12,8 @@ public sealed class AppUser
 
     public string PreferredLanguage { get; set; } = string.Empty;
 
+    public DateTime? LastLoginAtUtc { get; set; }
+
     public Guid RoleId { get; set; }
 
     public bool IsActive { get; set; }

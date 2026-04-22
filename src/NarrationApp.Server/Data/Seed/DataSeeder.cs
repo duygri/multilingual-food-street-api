@@ -65,6 +65,7 @@ public sealed class DataSeeder(AppDbContext dbContext, ILogger<DataSeeder> logge
                 Email = AppConstants.DefaultAdminEmail,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(AppConstants.DefaultAdminPassword),
                 PreferredLanguage = AppConstants.DefaultLanguage,
+                LastLoginAtUtc = null,
                 RoleId = roles["admin"].Id,
                 IsActive = true
             },
@@ -75,6 +76,7 @@ public sealed class DataSeeder(AppDbContext dbContext, ILogger<DataSeeder> logge
                 Email = AppConstants.DefaultOwnerEmail,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(AppConstants.DefaultOwnerPassword),
                 PreferredLanguage = AppConstants.DefaultLanguage,
+                LastLoginAtUtc = null,
                 RoleId = roles["poi_owner"].Id,
                 IsActive = true
             }

@@ -63,6 +63,7 @@ public sealed class AuthClientService(ApiClient apiClient, CustomAuthStateProvid
         return new AuthSession
         {
             UserId = response.UserId,
+            FullName = response.FullName,
             Email = response.Email,
             PreferredLanguage = response.PreferredLanguage,
             Role = response.Role,

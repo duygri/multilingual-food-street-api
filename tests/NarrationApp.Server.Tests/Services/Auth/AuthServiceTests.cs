@@ -16,6 +16,7 @@ public sealed class AuthServiceTests
     public async Task LoginAsync_returns_a_jwt_for_valid_seed_credentials()
     {
         await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
+        var beforeLoginUtc = DateTime.UtcNow;
         var sut = CreateService(dbContext);
 
         var response = await sut.LoginAsync(new LoginRequest
@@ -23,10 +24,14 @@ public sealed class AuthServiceTests
             Email = AppConstants.DefaultAdminEmail,
             Password = AppConstants.DefaultAdminPassword
         });
+        var loggedInUser = await dbContext.AppUsers.SingleAsync(user => user.Email == AppConstants.DefaultAdminEmail);
 
         Assert.Equal(AppConstants.DefaultAdminEmail, response.Email);
+        Assert.Equal("System Admin", response.FullName);
         Assert.Equal(UserRole.Admin, response.Role);
         Assert.False(string.IsNullOrWhiteSpace(response.Token));
+        Assert.NotNull(loggedInUser.LastLoginAtUtc);
+        Assert.InRange(loggedInUser.LastLoginAtUtc!.Value, beforeLoginUtc, DateTime.UtcNow);
     }
 
     [Fact]
