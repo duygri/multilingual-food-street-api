@@ -31,6 +31,7 @@ internal static class TestAppDbContextFactory
             Email = email,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword("Owner@123"),
             PreferredLanguage = AppConstants.DefaultLanguage,
+            CreatedAtUtc = DateTime.UtcNow,
             LastLoginAtUtc = null,
             RoleId = ownerRole.Id,
             IsActive = true
@@ -51,6 +52,7 @@ internal static class TestAppDbContextFactory
             Email = email,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword("Tourist@123"),
             PreferredLanguage = AppConstants.DefaultLanguage,
+            CreatedAtUtc = DateTime.UtcNow,
             LastLoginAtUtc = null,
             RoleId = touristRole.Id,
             IsActive = true

@@ -31,6 +31,7 @@ public sealed class AuthServiceTests
         Assert.Equal("System Admin", response.FullName);
         Assert.Equal(UserRole.Admin, response.Role);
         Assert.False(string.IsNullOrWhiteSpace(response.Token));
+        Assert.NotEqual(default, loggedInUser.CreatedAtUtc);
         Assert.NotNull(loggedInUser.LastLoginAtUtc);
         Assert.InRange(loggedInUser.LastLoginAtUtc!.Value, beforeLoginUtc, DateTime.UtcNow);
     }
@@ -39,6 +40,7 @@ public sealed class AuthServiceTests
     public async Task RegisterAsync_creates_a_tourist_account_and_returns_a_token()
     {
         await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
+        var beforeCreateUtc = DateTime.UtcNow;
         var sut = CreateService(dbContext);
 
         var response = await sut.RegisterAsync(new RegisterRequest
@@ -53,6 +55,7 @@ public sealed class AuthServiceTests
         Assert.Equal("tourist1@narration.app", response.FullName);
         Assert.Equal(UserRole.Tourist, response.Role);
         Assert.Equal("en", createdUser.PreferredLanguage);
+        Assert.InRange(createdUser.CreatedAtUtc, beforeCreateUtc, DateTime.UtcNow);
         Assert.True(BCrypt.Net.BCrypt.Verify("Tourist@123", createdUser.PasswordHash));
         Assert.False(string.IsNullOrWhiteSpace(response.Token));
     }
@@ -106,6 +109,7 @@ public sealed class AuthServiceTests
     public async Task RegisterOwnerAsync_creates_an_inactive_owner_application_and_pending_moderation_request()
     {
         await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
+        var beforeCreateUtc = DateTime.UtcNow;
         var sut = CreateService(dbContext);
 
         var response = await sut.RegisterOwnerAsync(new RegisterOwnerRequest
@@ -119,6 +123,7 @@ public sealed class AuthServiceTests
         var moderation = await dbContext.ModerationRequests.SingleAsync(item => item.EntityType == "owner_registration" && item.EntityId == createdUser.Id.ToString());
 
         Assert.Equal("Owner Candidate", createdUser.FullName);
+        Assert.InRange(createdUser.CreatedAtUtc, beforeCreateUtc, DateTime.UtcNow);
         Assert.False(createdUser.IsActive);
         Assert.Equal("candidate-owner@narration.app", response.Email);
         Assert.Equal(createdUser.Id, response.UserId);
@@ -138,6 +143,7 @@ public sealed class AuthServiceTests
             Email = "pending-owner@narration.app",
             PasswordHash = BCrypt.Net.BCrypt.HashPassword("Owner@123"),
             PreferredLanguage = "vi",
+            CreatedAtUtc = DateTime.UtcNow,
             RoleId = ownerRoleId,
             IsActive = false
         };

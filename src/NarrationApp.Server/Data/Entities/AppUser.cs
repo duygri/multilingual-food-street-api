@@ -12,6 +12,12 @@ public sealed class AppUser
 
     public string PreferredLanguage { get; set; } = string.Empty;
 
+    public string? Phone { get; set; }
+
+    public string? ManagedArea { get; set; }
+
+    public DateTime CreatedAtUtc { get; set; }
+
     public DateTime? LastLoginAtUtc { get; set; }
 
     public Guid RoleId { get; set; }

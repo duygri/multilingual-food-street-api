@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using NarrationApp.Server.Data;
+using NarrationApp.Server.Data.Entities;
 using NarrationApp.Server.Data.Seed;
 using NarrationApp.Shared.Constants;
 
@@ -30,6 +31,8 @@ public sealed class DataSeederTests
         Assert.True(BCrypt.Net.BCrypt.Verify(AppConstants.DefaultOwnerPassword, owner.PasswordHash));
         Assert.Equal(AppConstants.DefaultLanguage, admin.PreferredLanguage);
         Assert.Equal(AppConstants.DefaultLanguage, owner.PreferredLanguage);
+        Assert.NotEqual(default, admin.CreatedAtUtc);
+        Assert.NotEqual(default, owner.CreatedAtUtc);
     }
 
     [Fact]
@@ -47,6 +50,32 @@ public sealed class DataSeederTests
         Assert.Equal(5, await dbContext.Geofences.CountAsync());
         Assert.Equal(5, await dbContext.PoiTranslations.CountAsync());
         Assert.Equal(5, await dbContext.ManagedLanguages.CountAsync());
+    }
+
+    [Fact]
+    public async Task SeedAsync_does_not_rewrite_blank_names_for_unrelated_existing_users()
+    {
+        await using var dbContext = CreateDbContext();
+        dbContext.AppUsers.Add(new AppUser
+        {
+            Id = Guid.NewGuid(),
+            FullName = string.Empty,
+            Email = "legacy-user@narration.app",
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Legacy@123"),
+            PreferredLanguage = AppConstants.DefaultLanguage,
+            CreatedAtUtc = DateTime.UtcNow,
+            RoleId = Guid.Parse("0D84C6F8-7282-4D89-92A9-60B89B7B3A82"),
+            IsActive = true
+        });
+        await dbContext.SaveChangesAsync();
+
+        var sut = new DataSeeder(dbContext, NullLogger<DataSeeder>.Instance);
+
+        await sut.SeedAsync();
+
+        var legacyUser = await dbContext.AppUsers.SingleAsync(user => user.Email == "legacy-user@narration.app");
+
+        Assert.Equal(string.Empty, legacyUser.FullName);
     }
 
     private static AppDbContext CreateDbContext()

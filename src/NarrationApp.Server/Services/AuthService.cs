@@ -35,6 +35,7 @@ public sealed class AuthService(AppDbContext dbContext, IOptions<JwtOptions> jwt
             PreferredLanguage = string.IsNullOrWhiteSpace(request.PreferredLanguage)
                 ? AppConstants.DefaultLanguage
                 : request.PreferredLanguage.Trim().ToLowerInvariant(),
+            CreatedAtUtc = DateTime.UtcNow,
             RoleId = touristRole.Id,
             Role = touristRole,
             IsActive = true
@@ -62,6 +63,7 @@ public sealed class AuthService(AppDbContext dbContext, IOptions<JwtOptions> jwt
             Email = normalizedEmail,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
             PreferredLanguage = AppConstants.DefaultLanguage,
+            CreatedAtUtc = DateTime.UtcNow,
             RoleId = ownerRole.Id,
             Role = ownerRole,
             IsActive = false

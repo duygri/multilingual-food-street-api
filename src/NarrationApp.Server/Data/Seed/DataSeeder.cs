@@ -55,6 +55,7 @@ public sealed class DataSeeder(AppDbContext dbContext, ILogger<DataSeeder> logge
     {
         var usersByEmail = await dbContext.AppUsers
             .ToDictionaryAsync(user => user.Email, cancellationToken);
+        var now = DateTime.UtcNow;
 
         var seedUsers = new[]
         {
@@ -65,6 +66,7 @@ public sealed class DataSeeder(AppDbContext dbContext, ILogger<DataSeeder> logge
                 Email = AppConstants.DefaultAdminEmail,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(AppConstants.DefaultAdminPassword),
                 PreferredLanguage = AppConstants.DefaultLanguage,
+                CreatedAtUtc = now,
                 LastLoginAtUtc = null,
                 RoleId = roles["admin"].Id,
                 IsActive = true
@@ -76,6 +78,7 @@ public sealed class DataSeeder(AppDbContext dbContext, ILogger<DataSeeder> logge
                 Email = AppConstants.DefaultOwnerEmail,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(AppConstants.DefaultOwnerPassword),
                 PreferredLanguage = AppConstants.DefaultLanguage,
+                CreatedAtUtc = now,
                 LastLoginAtUtc = null,
                 RoleId = roles["poi_owner"].Id,
                 IsActive = true
@@ -88,9 +91,17 @@ public sealed class DataSeeder(AppDbContext dbContext, ILogger<DataSeeder> logge
             usersByEmail[user.Email] = user;
         }
 
-        foreach (var existingUser in usersByEmail.Values.Where(user => string.IsNullOrWhiteSpace(user.FullName)))
+        var baselineDisplayNames = new Dictionary<string, string>
         {
-            existingUser.FullName = existingUser.Email == AppConstants.DefaultAdminEmail ? "System Admin" : "Demo Owner";
+            [AppConstants.DefaultAdminEmail] = "System Admin",
+            [AppConstants.DefaultOwnerEmail] = "Demo Owner"
+        };
+
+        foreach (var existingUser in usersByEmail.Values.Where(user =>
+                     string.IsNullOrWhiteSpace(user.FullName) &&
+                     baselineDisplayNames.ContainsKey(user.Email)))
+        {
+            existingUser.FullName = baselineDisplayNames[existingUser.Email];
         }
 
         if (dbContext.ChangeTracker.HasChanges())

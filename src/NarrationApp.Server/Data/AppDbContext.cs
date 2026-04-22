@@ -73,6 +73,11 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(user => user.Email).HasMaxLength(255).IsRequired();
             entity.Property(user => user.PasswordHash).HasMaxLength(255).IsRequired();
             entity.Property(user => user.PreferredLanguage).HasMaxLength(10).IsRequired();
+            entity.Property(user => user.Phone).HasMaxLength(30);
+            entity.Property(user => user.ManagedArea).HasMaxLength(250);
+            entity.Property(user => user.CreatedAtUtc)
+                .HasColumnType("timestamp with time zone")
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.HasIndex(user => user.Email).IsUnique();
             entity.HasOne(user => user.Role)
                 .WithMany(role => role.Users)
