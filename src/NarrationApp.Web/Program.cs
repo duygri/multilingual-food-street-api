@@ -14,8 +14,12 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 var apiBaseAddress = ApiBaseAddressResolver.Resolve(
     builder.Configuration["ApiBaseUrl"],
     builder.HostEnvironment.BaseAddress);
+var qrPublicBaseAddress = QrPublicBaseAddressResolver.Resolve(
+    builder.Configuration["QrPublicBaseUrl"],
+    builder.HostEnvironment.BaseAddress);
 
 builder.Services.AddScoped(_ => new HttpClient { BaseAddress = apiBaseAddress });
+builder.Services.AddSingleton(new QrPublicUrlOptions { BaseAddress = qrPublicBaseAddress });
 builder.Services.AddAuthorizationCore();
 builder.Services.AddScoped<BrowserAuthSessionStore>();
 builder.Services.AddScoped<IAuthSessionStore>(sp => sp.GetRequiredService<BrowserAuthSessionStore>());
@@ -24,8 +28,10 @@ builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredServ
 builder.Services.AddScoped<ApiClient>();
 builder.Services.AddScoped<AuthClientService>();
 builder.Services.AddScoped<OwnerPortalService>();
+builder.Services.AddScoped<OwnerProfileService>();
 builder.Services.AddScoped<AdminPortalService>();
 builder.Services.AddScoped<IOwnerPortalService>(sp => sp.GetRequiredService<OwnerPortalService>());
+builder.Services.AddScoped<IOwnerProfileService>(sp => sp.GetRequiredService<OwnerProfileService>());
 builder.Services.AddScoped<IAdminPortalService>(sp => sp.GetRequiredService<AdminPortalService>());
 builder.Services.AddScoped<IAdminPoiOperationsService, AdminPoiOperationsService>();
 builder.Services.AddScoped<IAudioPortalService, AudioPortalService>();

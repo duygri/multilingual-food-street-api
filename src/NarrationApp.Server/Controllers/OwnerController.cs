@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NarrationApp.Server.Data;
+using NarrationApp.Server.Data.Entities;
 using NarrationApp.Server.Extensions;
 using NarrationApp.Server.Services;
 using NarrationApp.Shared.DTOs.Common;
@@ -17,6 +18,32 @@ namespace NarrationApp.Server.Controllers;
 [Route("api/owner")]
 public sealed class OwnerController(AppDbContext dbContext, INotificationService notificationService) : ControllerBase
 {
+    [HttpGet("profile")]
+    public async Task<ActionResult<ApiResponse<OwnerProfileDto>>> GetProfileAsync(CancellationToken cancellationToken)
+    {
+        var ownerId = User.GetRequiredUserId();
+        var owner = await dbContext.AppUsers
+            .AsNoTracking()
+            .SingleOrDefaultAsync(item => item.Id == ownerId, cancellationToken);
+
+        if (owner is null)
+        {
+            return NotFound(new ApiResponse<OwnerProfileDto>
+            {
+                Succeeded = false,
+                Message = "Owner profile not found.",
+                Error = new ErrorResponse { Code = "owner_not_found", Message = "Owner profile was not found." }
+            });
+        }
+
+        return Ok(new ApiResponse<OwnerProfileDto>
+        {
+            Succeeded = true,
+            Message = "Owner profile loaded.",
+            Data = await BuildProfileAsync(owner, cancellationToken)
+        });
+    }
+
     [HttpGet("pois")]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<PoiDto>>>> GetPoisAsync(CancellationToken cancellationToken)
     {
@@ -95,5 +122,79 @@ public sealed class OwnerController(AppDbContext dbContext, INotificationService
     {
         var response = await notificationService.GetByUserAsync(User.GetRequiredUserId(), cancellationToken);
         return Ok(new ApiResponse<IReadOnlyList<NotificationDto>> { Succeeded = true, Message = "Owner notifications loaded.", Data = response });
+    }
+
+    [HttpPut("profile")]
+    public async Task<ActionResult<ApiResponse<OwnerProfileDto>>> UpdateProfileAsync(UpdateOwnerProfileRequest request, CancellationToken cancellationToken)
+    {
+        var ownerId = User.GetRequiredUserId();
+        var owner = await dbContext.AppUsers
+            .SingleOrDefaultAsync(item => item.Id == ownerId, cancellationToken);
+
+        if (owner is null)
+        {
+            return NotFound(new ApiResponse<OwnerProfileDto>
+            {
+                Succeeded = false,
+                Message = "Owner profile not found.",
+                Error = new ErrorResponse { Code = "owner_not_found", Message = "Owner profile was not found." }
+            });
+        }
+
+        owner.FullName = string.IsNullOrWhiteSpace(request.FullName) ? owner.FullName : request.FullName.Trim();
+        owner.Phone = NormalizeOptionalField(request.Phone);
+        owner.ManagedArea = NormalizeOptionalField(request.ManagedArea);
+        owner.PreferredLanguage = string.IsNullOrWhiteSpace(request.PreferredLanguage)
+            ? owner.PreferredLanguage
+            : request.PreferredLanguage.Trim().ToLowerInvariant();
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return Ok(new ApiResponse<OwnerProfileDto>
+        {
+            Succeeded = true,
+            Message = "Owner profile updated.",
+            Data = await BuildProfileAsync(owner, cancellationToken)
+        });
+    }
+
+    private async Task<OwnerProfileDto> BuildProfileAsync(AppUser owner, CancellationToken cancellationToken)
+    {
+        var ownerPoiIds = dbContext.Pois
+            .AsNoTracking()
+            .Where(item => item.OwnerId == owner.Id)
+            .Select(item => item.Id);
+
+        return new OwnerProfileDto
+        {
+            UserId = owner.Id,
+            FullName = owner.FullName,
+            Email = owner.Email,
+            Phone = owner.Phone,
+            ManagedArea = owner.ManagedArea,
+            PreferredLanguage = owner.PreferredLanguage,
+            CreatedAtUtc = owner.CreatedAtUtc,
+            LastLoginAtUtc = owner.LastLoginAtUtc,
+            ActivitySummary = new OwnerActivitySummaryDto
+            {
+                TotalPois = await dbContext.Pois.CountAsync(item => item.OwnerId == owner.Id, cancellationToken),
+                PublishedPois = await dbContext.Pois.CountAsync(item => item.OwnerId == owner.Id && item.Status == PoiStatus.Published, cancellationToken),
+                DraftPois = await dbContext.Pois.CountAsync(item => item.OwnerId == owner.Id && item.Status == PoiStatus.Draft, cancellationToken),
+                PendingReviewPois = await dbContext.Pois.CountAsync(item => item.OwnerId == owner.Id && item.Status == PoiStatus.PendingReview, cancellationToken),
+                TotalAudioAssets = await dbContext.AudioAssets.CountAsync(item => ownerPoiIds.Contains(item.PoiId), cancellationToken),
+                TotalVisits = await dbContext.VisitEvents.CountAsync(item => ownerPoiIds.Contains(item.PoiId), cancellationToken),
+                UnreadNotifications = (await notificationService.GetUnreadCountAsync(owner.Id, cancellationToken)).Count
+            }
+        };
+    }
+
+    private static string? NormalizeOptionalField(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        return value.Trim();
     }
 }
