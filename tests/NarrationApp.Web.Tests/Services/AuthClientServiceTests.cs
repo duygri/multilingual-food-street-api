@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using NarrationApp.Shared.DTOs.Auth;
 using NarrationApp.Shared.DTOs.Common;
+using NarrationApp.Shared.Enums;
 using NarrationApp.SharedUI.Auth;
 using NarrationApp.Web.Services;
 
