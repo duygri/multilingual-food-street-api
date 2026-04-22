@@ -182,7 +182,7 @@ public sealed class OwnerController(AppDbContext dbContext, INotificationService
                 DraftPois = await dbContext.Pois.CountAsync(item => item.OwnerId == owner.Id && item.Status == PoiStatus.Draft, cancellationToken),
                 PendingReviewPois = await dbContext.Pois.CountAsync(item => item.OwnerId == owner.Id && item.Status == PoiStatus.PendingReview, cancellationToken),
                 TotalAudioAssets = await dbContext.AudioAssets.CountAsync(item => ownerPoiIds.Contains(item.PoiId), cancellationToken),
-                TotalVisits = await dbContext.VisitEvents.CountAsync(item => ownerPoiIds.Contains(item.PoiId), cancellationToken),
+                TotalAudioPlays = await dbContext.VisitEvents.CountAsync(item => ownerPoiIds.Contains(item.PoiId) && item.EventType == EventType.AudioPlay, cancellationToken),
                 UnreadNotifications = (await notificationService.GetUnreadCountAsync(owner.Id, cancellationToken)).Count
             }
         };

@@ -151,7 +151,7 @@ public sealed class OwnerControllerTests
         Assert.Equal(1, profile.ActivitySummary.DraftPois);
         Assert.Equal(1, profile.ActivitySummary.PendingReviewPois);
         Assert.Equal(2, profile.ActivitySummary.TotalAudioAssets);
-        Assert.Equal(3, profile.ActivitySummary.TotalVisits);
+        Assert.Equal(1, profile.ActivitySummary.TotalAudioPlays);
         Assert.Equal(4, profile.ActivitySummary.UnreadNotifications);
     }
 

@@ -97,7 +97,7 @@ public sealed class OwnerProfileServiceTests
         Assert.Equal(expected.ActivitySummary.DraftPois, actual.ActivitySummary.DraftPois);
         Assert.Equal(expected.ActivitySummary.PendingReviewPois, actual.ActivitySummary.PendingReviewPois);
         Assert.Equal(expected.ActivitySummary.TotalAudioAssets, actual.ActivitySummary.TotalAudioAssets);
-        Assert.Equal(expected.ActivitySummary.TotalVisits, actual.ActivitySummary.TotalVisits);
+        Assert.Equal(expected.ActivitySummary.TotalAudioPlays, actual.ActivitySummary.TotalAudioPlays);
         Assert.Equal(expected.ActivitySummary.UnreadNotifications, actual.ActivitySummary.UnreadNotifications);
     }
 
@@ -142,7 +142,7 @@ public sealed class OwnerProfileServiceTests
                 DraftPois = 1,
                 PendingReviewPois = 0,
                 TotalAudioAssets = 2,
-                TotalVisits = 10,
+                TotalAudioPlays = 1,
                 UnreadNotifications = 5
             }
         };
@@ -164,7 +164,7 @@ public sealed class OwnerProfileServiceTests
                 DraftPois = 1,
                 PendingReviewPois = 1,
                 TotalAudioAssets = 8,
-                TotalVisits = 25,
+                TotalAudioPlays = 2,
                 UnreadNotifications = 2
             }
         };

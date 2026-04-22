@@ -65,7 +65,7 @@ public sealed class OwnerActivitySummaryDto
 
     public int TotalAudioAssets { get; init; }
 
-    public int TotalVisits { get; init; }
+    public int TotalAudioPlays { get; init; }
 
     public int UnreadNotifications { get; init; }
 }
