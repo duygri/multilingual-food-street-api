@@ -14,12 +14,8 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 var apiBaseAddress = ApiBaseAddressResolver.Resolve(
     builder.Configuration["ApiBaseUrl"],
     builder.HostEnvironment.BaseAddress);
-var qrPublicBaseAddress = QrPublicBaseAddressResolver.Resolve(
-    builder.Configuration["QrPublicBaseUrl"],
-    builder.HostEnvironment.BaseAddress);
 
 builder.Services.AddScoped(_ => new HttpClient { BaseAddress = apiBaseAddress });
-builder.Services.AddSingleton(new QrPublicUrlOptions { BaseAddress = qrPublicBaseAddress });
 builder.Services.AddAuthorizationCore();
 builder.Services.AddScoped<BrowserAuthSessionStore>();
 builder.Services.AddScoped<IAuthSessionStore>(sp => sp.GetRequiredService<BrowserAuthSessionStore>());
