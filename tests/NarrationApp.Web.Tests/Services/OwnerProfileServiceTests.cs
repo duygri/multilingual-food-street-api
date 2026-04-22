@@ -38,11 +38,7 @@ public sealed class OwnerProfileServiceTests
         Assert.Equal(HttpMethod.Get, handler.RequestMethod);
         Assert.Equal("/api/owner/profile", handler.RequestPath);
         Assert.Contains("Bearer jwt-token", handler.AuthorizationHeader);
-        Assert.Equal("Owner One", profile.FullName);
-        Assert.Equal("District 1", profile.ManagedArea);
-        Assert.Equal(3, profile.ActivitySummary.TotalPois);
-        Assert.Equal(2, profile.ActivitySummary.TotalAudioAssets);
-        Assert.Equal(5, profile.ActivitySummary.UnreadNotifications);
+        AssertProfile(profile, handler.ExpectedProfile);
     }
 
     [Fact]
@@ -83,9 +79,26 @@ public sealed class OwnerProfileServiceTests
         Assert.Equal("+84 90 333 4444", payload.RootElement.GetProperty("phone").GetString());
         Assert.Equal("New District", payload.RootElement.GetProperty("managedArea").GetString());
         Assert.Equal("en", payload.RootElement.GetProperty("preferredLanguage").GetString());
-        Assert.Equal("Owner Updated", profile.FullName);
-        Assert.Equal("New District", profile.ManagedArea);
-        Assert.Equal(6, profile.ActivitySummary.TotalPois);
+        AssertProfile(profile, handler.ExpectedUpdatedProfile);
+    }
+
+    private static void AssertProfile(OwnerProfileDto actual, OwnerProfileDto expected)
+    {
+        Assert.Equal(expected.UserId, actual.UserId);
+        Assert.Equal(expected.FullName, actual.FullName);
+        Assert.Equal(expected.Email, actual.Email);
+        Assert.Equal(expected.Phone, actual.Phone);
+        Assert.Equal(expected.ManagedArea, actual.ManagedArea);
+        Assert.Equal(expected.PreferredLanguage, actual.PreferredLanguage);
+        Assert.Equal(expected.CreatedAtUtc, actual.CreatedAtUtc);
+        Assert.Equal(expected.LastLoginAtUtc, actual.LastLoginAtUtc);
+        Assert.Equal(expected.ActivitySummary.TotalPois, actual.ActivitySummary.TotalPois);
+        Assert.Equal(expected.ActivitySummary.PublishedPois, actual.ActivitySummary.PublishedPois);
+        Assert.Equal(expected.ActivitySummary.DraftPois, actual.ActivitySummary.DraftPois);
+        Assert.Equal(expected.ActivitySummary.PendingReviewPois, actual.ActivitySummary.PendingReviewPois);
+        Assert.Equal(expected.ActivitySummary.TotalAudioAssets, actual.ActivitySummary.TotalAudioAssets);
+        Assert.Equal(expected.ActivitySummary.TotalVisits, actual.ActivitySummary.TotalVisits);
+        Assert.Equal(expected.ActivitySummary.UnreadNotifications, actual.ActivitySummary.UnreadNotifications);
     }
 
     private sealed class TestAuthSessionStore : IAuthSessionStore
@@ -112,6 +125,50 @@ public sealed class OwnerProfileServiceTests
 
     private sealed class InspectingOwnerProfileHandler : HttpMessageHandler
     {
+        public OwnerProfileDto ExpectedProfile { get; } = new()
+        {
+            UserId = Guid.Parse("11111111-1111-1111-1111-111111111111"),
+            FullName = "Owner One",
+            Email = "owner@narration.app",
+            Phone = "+84 90 123 4567",
+            ManagedArea = "District 1",
+            PreferredLanguage = "vi",
+            CreatedAtUtc = new DateTime(2026, 3, 23, 10, 0, 0, DateTimeKind.Utc),
+            LastLoginAtUtc = new DateTime(2026, 4, 22, 4, 0, 0, DateTimeKind.Utc),
+            ActivitySummary = new OwnerActivitySummaryDto
+            {
+                TotalPois = 3,
+                PublishedPois = 2,
+                DraftPois = 1,
+                PendingReviewPois = 0,
+                TotalAudioAssets = 2,
+                TotalVisits = 10,
+                UnreadNotifications = 5
+            }
+        };
+
+        public OwnerProfileDto ExpectedUpdatedProfile { get; } = new()
+        {
+            UserId = Guid.Parse("11111111-1111-1111-1111-111111111111"),
+            FullName = "Owner Updated",
+            Email = "owner-edit@narration.app",
+            Phone = "+84 90 333 4444",
+            ManagedArea = "New District",
+            PreferredLanguage = "en",
+            CreatedAtUtc = new DateTime(2026, 3, 23, 10, 0, 0, DateTimeKind.Utc),
+            LastLoginAtUtc = new DateTime(2026, 4, 22, 4, 0, 0, DateTimeKind.Utc),
+            ActivitySummary = new OwnerActivitySummaryDto
+            {
+                TotalPois = 6,
+                PublishedPois = 4,
+                DraftPois = 1,
+                PendingReviewPois = 1,
+                TotalAudioAssets = 8,
+                TotalVisits = 25,
+                UnreadNotifications = 2
+            }
+        };
+
         public HttpMethod RequestMethod { get; private set; } = HttpMethod.Get;
 
         public string RequestPath { get; private set; } = string.Empty;
@@ -127,27 +184,7 @@ public sealed class OwnerProfileServiceTests
             AuthorizationHeader = request.Headers.Authorization?.ToString() ?? string.Empty;
             SerializedBody = request.Content is null ? string.Empty : await request.Content.ReadAsStringAsync(cancellationToken);
 
-            var profile = new OwnerProfileDto
-            {
-                UserId = Guid.Parse("11111111-1111-1111-1111-111111111111"),
-                FullName = request.Method == HttpMethod.Put ? "Owner Updated" : "Owner One",
-                Email = request.Method == HttpMethod.Put ? "owner-edit@narration.app" : "owner@narration.app",
-                Phone = request.Method == HttpMethod.Put ? "+84 90 333 4444" : "+84 90 123 4567",
-                ManagedArea = request.Method == HttpMethod.Put ? "New District" : "District 1",
-                PreferredLanguage = request.Method == HttpMethod.Put ? "en" : "vi",
-                CreatedAtUtc = DateTime.UtcNow.AddDays(-30),
-                LastLoginAtUtc = DateTime.UtcNow.AddHours(-4),
-                ActivitySummary = new OwnerActivitySummaryDto
-                {
-                    TotalPois = request.Method == HttpMethod.Put ? 6 : 3,
-                    PublishedPois = request.Method == HttpMethod.Put ? 4 : 2,
-                    DraftPois = request.Method == HttpMethod.Put ? 1 : 1,
-                    PendingReviewPois = request.Method == HttpMethod.Put ? 1 : 0,
-                    TotalAudioAssets = request.Method == HttpMethod.Put ? 8 : 2,
-                    TotalVisits = request.Method == HttpMethod.Put ? 25 : 10,
-                    UnreadNotifications = request.Method == HttpMethod.Put ? 2 : 5
-                }
-            };
+            var profile = request.Method == HttpMethod.Put ? ExpectedUpdatedProfile : ExpectedProfile;
 
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
