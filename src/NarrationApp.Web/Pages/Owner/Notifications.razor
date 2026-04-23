@@ -1,0 +1,292 @@
+@page "/owner/notifications"
+@attribute [Authorize(Roles = "poi_owner")]
+@implements IDisposable
+@using NarrationApp.Shared.DTOs.Notification
+@using NarrationApp.SharedUI.Services
+@inject INotificationCenterService NotificationCenterService
+
+<PageTitle>Owner notifications</PageTitle>
+
+@if (_isLoading)
+{
+    <section class="panel-shell">
+        <p class="panel-shell__eyebrow">Notifications</p>
+        <h2>Đang tải thông báo...</h2>
+    </section>
+}
+else if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <section class="panel-shell">
+        <p class="panel-shell__eyebrow">Notifications</p>
+        <h2>Không thể tải thông báo</h2>
+        <p class="panel-shell__copy">@_errorMessage</p>
+    </section>
+}
+else
+{
+    <div class="dashboard-stack owner-notifications">
+        <section class="panel-shell owner-notifications-hero">
+            <div>
+                <p class="panel-shell__eyebrow">Notifications workspace</p>
+                <h1>Lịch sử thông báo vận hành</h1>
+                <p class="panel-shell__copy">Xem đầy đủ phản hồi moderation, audio ready, tour publish và các cập nhật hệ thống thay vì chỉ dựa vào popover nhanh.</p>
+            </div>
+
+            <div class="owner-notifications-hero__stats" aria-label="Notification summary">
+                <article>
+                    <strong>@_unreadCount</strong>
+                    <span>@_unreadCount chưa đọc</span>
+                </article>
+                <article>
+                    <strong>@_items.Count</strong>
+                    <span>tổng thông báo</span>
+                </article>
+                <article>
+                    <strong>@FilteredItems.Count</strong>
+                    <span>đang hiển thị</span>
+                </article>
+            </div>
+        </section>
+
+        @if (!string.IsNullOrWhiteSpace(_statusMessage))
+        {
+            <section class="panel-shell owner-notifications-status" role="status">
+                <p class="panel-shell__copy">@_statusMessage</p>
+            </section>
+        }
+
+        <section class="panel-shell owner-notifications-toolbar">
+            <div class="owner-notifications-toolbar__filters">
+                <label>
+                    <span>Trạng thái</span>
+                    <select data-field="notification-read-filter" @bind="_readFilter">
+                        <option value="all">Tất cả</option>
+                        <option value="unread">Chưa đọc</option>
+                        <option value="read">Đã đọc</option>
+                    </select>
+                </label>
+
+                <label>
+                    <span>Loại thông báo</span>
+                    <select data-field="notification-type-filter" @bind="_typeFilter">
+                        <option value="all">Tất cả loại</option>
+                        @foreach (var type in _notificationTypes)
+                        {
+                            <option value="@type">@GetNotificationTypeLabel(type)</option>
+                        }
+                    </select>
+                </label>
+            </div>
+
+            <button class="app-button app-button--primary"
+                    data-action="mark-all-read"
+                    type="button"
+                    disabled="@(_unreadCount == 0 || _isUpdating)"
+                    @onclick="MarkAllReadAsync">
+                Đánh dấu tất cả đã đọc
+            </button>
+        </section>
+
+        @if (_items.Count == 0)
+        {
+            <section class="panel-shell">
+                <EmptyStateBlock Eyebrow="Notifications"
+                                 Title="Chưa có thông báo"
+                                 Message="Các cập nhật moderation, audio và vận hành sẽ xuất hiện tại đây." />
+            </section>
+        }
+        else if (FilteredItems.Count == 0)
+        {
+            <section class="panel-shell">
+                <EmptyStateBlock Eyebrow="Bộ lọc"
+                                 Title="Không có thông báo khớp bộ lọc"
+                                 Message="Hãy đổi trạng thái hoặc loại thông báo để xem lại lịch sử." />
+            </section>
+        }
+        else
+        {
+            <section class="owner-notifications-list" aria-label="Danh sách thông báo">
+                @foreach (var item in FilteredItems)
+                {
+                    <article class="@GetNotificationItemClass(item)" data-notification-id="@item.Id">
+                        <div class="owner-notifications-item__content">
+                            <div class="owner-notifications-item__title">
+                                <StatusBadge Label="@GetNotificationTypeLabel(item.Type)" Tone="@GetNotificationTypeTone(item.Type)" />
+                                <span>@GetRelativeTimeLabel(item.CreatedAtUtc)</span>
+                            </div>
+                            <h2>@item.Title</h2>
+                            <p>@item.Message</p>
+                        </div>
+
+                        <div class="owner-notifications-item__actions">
+                            @if (item.IsRead)
+                            {
+                                <StatusBadge Label="Đã đọc" Tone="StatusTone.Neutral" />
+                            }
+                            else
+                            {
+                                <StatusBadge Label="Chưa đọc" Tone="StatusTone.Warn" />
+                                <button class="app-button app-button--ghost"
+                                        data-action="@($"mark-read-{item.Id}")"
+                                        type="button"
+                                        disabled="@_isUpdating"
+                                        @onclick="() => MarkReadAsync(item)">
+                                    Đánh dấu đã đọc
+                                </button>
+                            }
+                        </div>
+                    </article>
+                }
+            </section>
+        }
+    </div>
+}
+
+@code {
+    private readonly NotificationType[] _notificationTypes = Enum.GetValues<NotificationType>();
+
+    private bool _isLoading = true;
+    private bool _isUpdating;
+    private string? _errorMessage;
+    private string? _statusMessage;
+    private string _readFilter = "all";
+    private string _typeFilter = "all";
+    private int _unreadCount;
+    private IReadOnlyList<NotificationDto> _items = Array.Empty<NotificationDto>();
+
+    private IReadOnlyList<NotificationDto> FilteredItems => _items
+        .Where(MatchesReadFilter)
+        .Where(MatchesTypeFilter)
+        .OrderByDescending(item => item.CreatedAtUtc)
+        .ToArray();
+
+    protected override async Task OnInitializedAsync()
+    {
+        NotificationCenterService.Changed += HandleChanged;
+        await ReloadAsync();
+        _isLoading = false;
+    }
+
+    public void Dispose()
+    {
+        NotificationCenterService.Changed -= HandleChanged;
+    }
+
+    private async Task ReloadAsync()
+    {
+        try
+        {
+            _items = await NotificationCenterService.GetAsync();
+            _unreadCount = await NotificationCenterService.GetUnreadCountAsync();
+            _errorMessage = null;
+        }
+        catch (Exception exception)
+        {
+            _errorMessage = exception.Message;
+        }
+    }
+
+    private async Task MarkReadAsync(NotificationDto item)
+    {
+        _isUpdating = true;
+
+        try
+        {
+            await NotificationCenterService.MarkReadAsync(item.Id);
+            await ReloadAsync();
+            _statusMessage = $"Đã đánh dấu {item.Title} là đã đọc.";
+        }
+        catch (Exception exception)
+        {
+            _statusMessage = exception.Message;
+        }
+        finally
+        {
+            _isUpdating = false;
+        }
+    }
+
+    private async Task MarkAllReadAsync()
+    {
+        _isUpdating = true;
+
+        try
+        {
+            await NotificationCenterService.MarkAllReadAsync();
+            await ReloadAsync();
+            _statusMessage = "Đã đánh dấu tất cả thông báo là đã đọc.";
+        }
+        catch (Exception exception)
+        {
+            _statusMessage = exception.Message;
+        }
+        finally
+        {
+            _isUpdating = false;
+        }
+    }
+
+    private async void HandleChanged()
+    {
+        await InvokeAsync(async () =>
+        {
+            await ReloadAsync();
+            StateHasChanged();
+        });
+    }
+
+    private bool MatchesReadFilter(NotificationDto item) => _readFilter switch
+    {
+        "unread" => !item.IsRead,
+        "read" => item.IsRead,
+        _ => true
+    };
+
+    private bool MatchesTypeFilter(NotificationDto item)
+    {
+        return string.Equals(_typeFilter, "all", StringComparison.Ordinal)
+            || string.Equals(item.Type.ToString(), _typeFilter, StringComparison.Ordinal);
+    }
+
+    private static string GetNotificationItemClass(NotificationDto item)
+    {
+        return item.IsRead ? "panel-shell owner-notifications-item is-read" : "panel-shell owner-notifications-item is-unread";
+    }
+
+    private static string GetNotificationTypeLabel(NotificationType type) => type switch
+    {
+        NotificationType.ModerationResult => "Moderation",
+        NotificationType.AudioReady => "Audio ready",
+        NotificationType.TourPublished => "Tour published",
+        NotificationType.PoiUpdated => "POI updated",
+        NotificationType.System => "System",
+        _ => type.ToString()
+    };
+
+    private static StatusTone GetNotificationTypeTone(NotificationType type) => type switch
+    {
+        NotificationType.ModerationResult => StatusTone.Warn,
+        NotificationType.AudioReady => StatusTone.Good,
+        NotificationType.TourPublished => StatusTone.Info,
+        NotificationType.PoiUpdated => StatusTone.Info,
+        NotificationType.System => StatusTone.Neutral,
+        _ => StatusTone.Neutral
+    };
+
+    private static string GetRelativeTimeLabel(DateTime createdAtUtc)
+    {
+        var elapsed = DateTime.UtcNow - createdAtUtc;
+
+        if (elapsed.TotalMinutes < 60)
+        {
+            return $"{Math.Max(1, (int)Math.Floor(elapsed.TotalMinutes))} phút trước";
+        }
+
+        if (elapsed.TotalHours < 24)
+        {
+            return $"{Math.Max(1, (int)Math.Floor(elapsed.TotalHours))} giờ trước";
+        }
+
+        return $"{Math.Max(1, (int)Math.Floor(elapsed.TotalDays))} ngày trước";
+    }
+}

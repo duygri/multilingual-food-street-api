@@ -85,6 +85,21 @@ public sealed class NotificationCenterTests : TestContext
         Assert.DoesNotContain("notification-center__badge", cut.Markup);
     }
 
+    [Fact]
+    public void Popover_can_render_owner_notifications_page_shortcut()
+    {
+        Services.AddSingleton<INotificationCenterService>(new TestNotificationCenterService(Array.Empty<NotificationDto>()));
+
+        var cut = RenderComponent<NotificationCenter>(parameters => parameters
+            .Add(component => component.AllNotificationsHref, "/owner/notifications"));
+
+        cut.Find("button[data-action='toggle']").Click();
+
+        var shortcut = cut.Find("a[data-action='open-notifications-page']");
+        Assert.Equal("/owner/notifications", shortcut.GetAttribute("href"));
+        Assert.Contains("Xem tất cả", shortcut.TextContent);
+    }
+
     private sealed class TestNotificationCenterService(IReadOnlyList<NotificationDto> seedItems) : INotificationCenterService
     {
         private List<NotificationDto> _items = seedItems.ToList();

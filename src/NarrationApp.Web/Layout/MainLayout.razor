@@ -24,7 +24,7 @@
             <div class="layout-header__actions">
                 @if (_isAuthenticated)
                 {
-                    <NotificationCenter />
+                    <NotificationCenter AllNotificationsHref="@(_isOwner ? "/owner/notifications" : null)" />
                     <div class="layout-header__identity">
                         <span>@_roleLabel</span>
                         <strong>@_email</strong>

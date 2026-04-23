@@ -32,6 +32,13 @@
                 </button>
             </header>
 
+            @if (!string.IsNullOrWhiteSpace(AllNotificationsHref))
+            {
+                <a class="notification-center__shortcut" data-action="open-notifications-page" href="@AllNotificationsHref">
+                    Xem tất cả
+                </a>
+            }
+
             <div class="notification-center__list">
                 @if (_items.Count == 0)
                 {
@@ -56,6 +63,9 @@
     private bool _isOpen;
     private List<NotificationDto> _items = [];
     private int _unreadCount;
+
+    [Parameter]
+    public string? AllNotificationsHref { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
