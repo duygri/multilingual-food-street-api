@@ -11,8 +11,8 @@
             <span class="confirm-dialog__focus-sentinel"
                   tabindex="0"
                   data-focus-sentinel="start"
-                  aria-hidden="true"
-                  @onfocus="() => HandleFocusSentinelAsync(LastFocusTarget)"></span>
+                  aria-label="Chuyển focus đến nút cuối trong hộp thoại"
+                  @onfocus="async _ => await FocusLastActionAsync()"></span>
 
             <div class="confirm-dialog__body">
                 <p class="confirm-dialog__eyebrow">@Eyebrow</p>
@@ -25,10 +25,10 @@
             </div>
 
             <div class="confirm-dialog__actions">
-                <button class="app-button app-button--ghost" type="button" data-action="cancel" @onclick="OnCancel">
+                <button class="app-button app-button--ghost" type="button" data-action="cancel" autofocus="autofocus" @ref="_cancelButton" @onclick="OnCancel">
                     @CancelText
                 </button>
-                <button class="app-button app-button--primary" type="button" data-action="confirm" autofocus="autofocus" @onclick="OnConfirm">
+                <button class="app-button app-button--primary" type="button" data-action="confirm" @ref="_confirmButton" @onclick="OnConfirm">
                     @ConfirmText
                 </button>
             </div>
@@ -36,17 +36,17 @@
             <span class="confirm-dialog__focus-sentinel"
                   tabindex="0"
                   data-focus-sentinel="end"
-                  aria-hidden="true"
-                  @onfocus="() => HandleFocusSentinelAsync(FirstFocusTarget)"></span>
+                  aria-label="Chuyển focus đến nút đầu trong hộp thoại"
+                  @onfocus="async _ => await FocusFirstActionAsync()"></span>
         </section>
     </div>
 }
 
 @code {
-    private const string FirstFocusTarget = "first";
-    private const string LastFocusTarget = "last";
-
     private readonly string _titleId = $"confirm-dialog-title-{Guid.NewGuid():N}";
+    private ElementReference _cancelButton;
+    private ElementReference _confirmButton;
+    private bool _wasOpen;
 
     [Parameter]
     public bool IsOpen { get; set; }
@@ -76,10 +76,20 @@
     public EventCallback OnCancel { get; set; }
 
     [Parameter]
-    public EventCallback<string> OnFocusTrap { get; set; }
-
-    [Parameter]
     public RenderFragment? ChildContent { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (IsOpen && !_wasOpen)
+        {
+            _wasOpen = true;
+            await FocusFirstActionAsync();
+        }
+        else if (!IsOpen)
+        {
+            _wasOpen = false;
+        }
+    }
 
     private async Task HandleKeyDownAsync(KeyboardEventArgs args)
     {
@@ -89,9 +99,14 @@
         }
     }
 
-    private Task HandleFocusSentinelAsync(string target)
+    private ValueTask FocusFirstActionAsync()
     {
-        return OnFocusTrap.InvokeAsync(target);
+        return _cancelButton.FocusAsync();
+    }
+
+    private ValueTask FocusLastActionAsync()
+    {
+        return _confirmButton.FocusAsync();
     }
 
     private static string NormalizeTone(string? tone)

@@ -10,6 +10,7 @@
 }
 
 .confirm-dialog {
+    position: relative;
     width: min(100%, 30rem);
     display: grid;
     gap: 1.25rem;
@@ -33,6 +34,7 @@
 }
 
 .confirm-dialog__focus-sentinel {
+    position: absolute;
     width: 1px;
     height: 1px;
     overflow: hidden;

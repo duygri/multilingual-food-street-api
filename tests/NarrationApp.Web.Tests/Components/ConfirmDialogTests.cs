@@ -24,7 +24,8 @@ public sealed class ConfirmDialogTests : TestContext
         Assert.Equal("true", dialog.GetAttribute("aria-modal"));
         Assert.Equal("-1", dialog.GetAttribute("tabindex"));
         Assert.Equal("confirm-dialog", dialog.GetAttribute("data-focus-target"));
-        Assert.Equal("autofocus", cut.Find("button[data-action='confirm']").GetAttribute("autofocus"));
+        Assert.Equal("autofocus", cut.Find("button[data-action='cancel']").GetAttribute("autofocus"));
+        Assert.Null(cut.Find("button[data-action='confirm']").GetAttribute("autofocus"));
         Assert.Contains("Gửi duyệt POI?", cut.Markup);
         Assert.Contains("POI sẽ được chuyển sang hàng chờ admin kiểm duyệt.", cut.Markup);
         Assert.Contains("Kiểm tra lại nội dung trước khi gửi.", cut.Markup);
@@ -67,14 +68,11 @@ public sealed class ConfirmDialogTests : TestContext
     }
 
     [Fact]
-    public void Renders_focus_trap_sentinels_and_reports_wrap_targets()
+    public void Renders_focus_trap_sentinels_without_hiding_focusable_elements()
     {
-        var wrapTargets = new List<string>();
-
         var cut = RenderComponent<ConfirmDialog>(parameters => parameters
             .Add(parameter => parameter.IsOpen, true)
-            .Add(parameter => parameter.Title, "Gửi duyệt POI?")
-            .Add(parameter => parameter.OnFocusTrap, EventCallback.Factory.Create<string>(this, target => wrapTargets.Add(target))));
+            .Add(parameter => parameter.Title, "Gửi duyệt POI?"));
 
         var sentinels = cut.FindAll("[data-focus-sentinel]");
 
@@ -82,11 +80,33 @@ public sealed class ConfirmDialogTests : TestContext
         Assert.Equal("start", sentinels[0].GetAttribute("data-focus-sentinel"));
         Assert.Equal("end", sentinels[1].GetAttribute("data-focus-sentinel"));
         Assert.All(sentinels, sentinel => Assert.Equal("0", sentinel.GetAttribute("tabindex")));
+        Assert.All(sentinels, sentinel => Assert.Null(sentinel.GetAttribute("aria-hidden")));
+        Assert.Equal("Chuyển focus đến nút cuối trong hộp thoại", sentinels[0].GetAttribute("aria-label"));
+        Assert.Equal("Chuyển focus đến nút đầu trong hộp thoại", sentinels[1].GetAttribute("aria-label"));
+    }
 
+    [Fact]
+    public void Focuses_cancel_on_open_and_wraps_focus_internally()
+    {
+        JSInterop.Mode = JSRuntimeMode.Loose;
+
+        var cut = RenderComponent<ConfirmDialog>(parameters => parameters
+            .Add(parameter => parameter.IsOpen, true)
+            .Add(parameter => parameter.Title, "Xóa POI?"));
+
+        JSInterop.VerifyFocusAsyncInvoke(1);
+
+        var sentinels = cut.FindAll("[data-focus-sentinel]");
         sentinels[0].TriggerEvent("onfocus", new FocusEventArgs());
         sentinels[1].TriggerEvent("onfocus", new FocusEventArgs());
 
-        Assert.Equal(["last", "first"], wrapTargets);
+        JSInterop.VerifyFocusAsyncInvoke(3);
+    }
+
+    [Fact]
+    public void Does_not_expose_external_focus_trap_callback_api()
+    {
+        Assert.Null(typeof(ConfirmDialog).GetProperty("OnFocusTrap"));
     }
 
     [Fact]
