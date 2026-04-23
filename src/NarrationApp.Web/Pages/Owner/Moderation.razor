@@ -1,0 +1,321 @@
+@page "/owner/moderation"
+@attribute [Authorize(Roles = "poi_owner")]
+@inject IModerationPortalService ModerationPortalService
+
+<PageTitle>Owner moderation</PageTitle>
+
+@if (_isLoading)
+{
+    <section class="panel-shell">
+        <p class="panel-shell__eyebrow">Moderation</p>
+        <h2>Đang tải trạng thái kiểm duyệt...</h2>
+    </section>
+}
+else if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <section class="panel-shell">
+        <p class="panel-shell__eyebrow">Moderation</p>
+        <h2>Không thể tải moderation workspace</h2>
+        <p class="panel-shell__copy">@_errorMessage</p>
+    </section>
+}
+else
+{
+    <div class="dashboard-stack owner-moderation">
+        <section class="panel-shell owner-moderation-hero">
+            <div>
+                <p class="panel-shell__eyebrow">Moderation workspace</p>
+                <h1>Theo dõi vòng đời duyệt POI</h1>
+                <p class="panel-shell__copy">Tách trạng thái kiểm duyệt khỏi dashboard để owner biết POI nào đang chờ admin và POI nào cần sửa ngay.</p>
+            </div>
+
+            <div class="owner-moderation-hero__stats" aria-label="Moderation summary">
+                <article>
+                    <strong>@PendingItems.Count</strong>
+                    <span>đang chờ</span>
+                </article>
+                <article>
+                    <strong>@RejectedItems.Count</strong>
+                    <span>cần sửa</span>
+                </article>
+                <article>
+                    <strong>@ResolvedItems.Count</strong>
+                    <span>đã xử lý</span>
+                </article>
+            </div>
+        </section>
+
+        <section class="panel-shell owner-moderation-stepper" aria-label="Moderation flow">
+            <p class="panel-shell__eyebrow">Flow</p>
+            <div class="owner-moderation-stepper__grid">
+                @foreach (var step in Steps)
+                {
+                    <article class="@GetStepClass(step)">
+                        <span>@step.Index</span>
+                        <strong>@step.Title</strong>
+                        <p>@step.Description</p>
+                    </article>
+                }
+            </div>
+        </section>
+
+        @if (_items.Count == 0)
+        {
+            <section class="panel-shell">
+                <EmptyStateBlock Eyebrow="Moderation"
+                                 Title="Chưa có yêu cầu moderation"
+                                 Message="Khi owner gửi POI đi duyệt, trạng thái xử lý sẽ xuất hiện tại đây." />
+            </section>
+        }
+        else
+        {
+            <section class="owner-moderation-grid">
+                <article class="panel-shell owner-moderation-pending">
+                    <div class="owner-moderation-section-title">
+                        <div>
+                            <p class="panel-shell__eyebrow">Đang chờ</p>
+                            <h2>Yêu cầu đang trong hàng đợi</h2>
+                        </div>
+                        <StatusBadge Label="@($"{PendingItems.Count} mục")" Tone="@(PendingItems.Count > 0 ? StatusTone.Warn : StatusTone.Good)" />
+                    </div>
+
+                    @if (PendingItems.Count == 0)
+                    {
+                        <p class="panel-shell__copy">Không còn POI nào đang chờ admin xử lý.</p>
+                    }
+                    else
+                    {
+                        <div class="owner-moderation-pending__list">
+                            @foreach (var item in PendingItems)
+                            {
+                                <article class="owner-moderation-pending__item">
+                                    <div>
+                                        <strong>@GetEntityTitle(item)</strong>
+                                        <p>@GetRelativeTimeLabel(item.CreatedAtUtc) · @GetEntityTypeLabel(item.EntityType)</p>
+                                    </div>
+                                    <div class="owner-moderation-pending__actions">
+                                        <StatusBadge Label="Đang chờ admin" Tone="StatusTone.Warn" />
+                                        <a class="app-button app-button--ghost" href="@GetEntityHref(item)">@GetPrimaryActionLabel(item)</a>
+                                    </div>
+                                </article>
+                            }
+                        </div>
+                    }
+                </article>
+
+                <article class="panel-shell owner-moderation-rejections">
+                    <div class="owner-moderation-section-title">
+                        <div>
+                            <p class="panel-shell__eyebrow">Cần phản hồi</p>
+                            <h2>Yêu cầu bị từ chối gần đây</h2>
+                        </div>
+                        <StatusBadge Label="@($"{RejectedItems.Count} mục")" Tone="@(RejectedItems.Count > 0 ? StatusTone.Warn : StatusTone.Good)" />
+                    </div>
+
+                    @if (RejectedItems.Count == 0)
+                    {
+                        <p class="panel-shell__copy">Chưa có phản hồi từ chối nào cần owner xử lý.</p>
+                    }
+                    else
+                    {
+                        <div class="owner-moderation-rejection-list">
+                            @foreach (var item in RejectedItems)
+                            {
+                                <article>
+                                    <div>
+                                        <strong>@GetEntityTitle(item)</strong>
+                                        <p>@(item.ReviewNote ?? "Admin chưa để lại ghi chú chi tiết.")</p>
+                                    </div>
+                                    <a class="app-button app-button--primary" href="@GetEntityHref(item)">@GetRejectedActionLabel(item)</a>
+                                </article>
+                            }
+                        </div>
+                    }
+                </article>
+            </section>
+
+            <section class="panel-shell owner-moderation-history">
+                <div class="owner-moderation-section-title">
+                    <div>
+                        <p class="panel-shell__eyebrow">Lịch sử moderation</p>
+                        <h2>Admin feedback và trạng thái đã gửi</h2>
+                    </div>
+                    <StatusBadge Label="@($"{_items.Count} yêu cầu")" Tone="StatusTone.Info" />
+                </div>
+
+                <div class="owner-moderation-history__scroller">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Đối tượng</th>
+                                <th>Trạng thái</th>
+                                <th>Ngày gửi</th>
+                                <th>Phản hồi admin</th>
+                                <th>Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in _items.OrderByDescending(item => item.CreatedAtUtc))
+                            {
+                                <tr>
+                                    <td>@GetEntityTitle(item)</td>
+                                    <td>
+                                        <StatusBadge Label="@GetModerationStatusLabel(item.Status)" Tone="@GetModerationStatusTone(item.Status)" />
+                                    </td>
+                                    <td>@item.CreatedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td>@(item.ReviewNote ?? GetDefaultReviewNote(item))</td>
+                                    <td>
+                                        <a href="@GetEntityHref(item)">@GetHistoryActionLabel(item)</a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        }
+    </div>
+}
+
+@code {
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private IReadOnlyList<ModerationRequestDto> _items = Array.Empty<ModerationRequestDto>();
+
+    private IReadOnlyList<ModerationRequestDto> PendingItems => _items
+        .Where(item => item.Status == ModerationStatus.Pending)
+        .OrderBy(item => item.CreatedAtUtc)
+        .ToArray();
+
+    private IReadOnlyList<ModerationRequestDto> RejectedItems => _items
+        .Where(item => item.Status == ModerationStatus.Rejected)
+        .OrderByDescending(item => item.CreatedAtUtc)
+        .ToArray();
+
+    private IReadOnlyList<ModerationRequestDto> ResolvedItems => _items
+        .Where(item => item.Status is ModerationStatus.Approved or ModerationStatus.Rejected or ModerationStatus.Revised)
+        .ToArray();
+
+    private IReadOnlyList<ModerationStep> Steps =>
+    [
+        new(1, "Soạn nội dung", "Owner chuẩn bị mô tả, TTS, audio và geofence.", true),
+        new(2, "Gửi duyệt", $"{PendingItems.Count} yêu cầu đang chờ admin.", PendingItems.Count > 0),
+        new(3, "Admin phản hồi", $"{RejectedItems.Count} POI cần owner chỉnh lại.", RejectedItems.Count > 0),
+        new(4, "Xuất bản", $"{ResolvedItems.Count(item => item.Status == ModerationStatus.Approved)} yêu cầu đã được duyệt.", ResolvedItems.Any(item => item.Status == ModerationStatus.Approved))
+    ];
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _items = await ModerationPortalService.GetMineAsync();
+        }
+        catch (ApiException exception)
+        {
+            _errorMessage = exception.Message;
+        }
+        catch (Exception exception)
+        {
+            _errorMessage = exception.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private static string GetEntityTitle(ModerationRequestDto item)
+    {
+        return string.Equals(item.EntityType, "poi", StringComparison.OrdinalIgnoreCase)
+            ? $"POI #{item.EntityId}"
+            : $"{GetEntityTypeLabel(item.EntityType)} #{item.EntityId}";
+    }
+
+    private static string GetEntityHref(ModerationRequestDto item)
+    {
+        return string.Equals(item.EntityType, "poi", StringComparison.OrdinalIgnoreCase)
+            ? $"/owner/pois/{item.EntityId}"
+            : "/owner/dashboard";
+    }
+
+    private static string GetPrimaryActionLabel(ModerationRequestDto item)
+    {
+        return string.Equals(item.EntityType, "poi", StringComparison.OrdinalIgnoreCase)
+            ? "Mở POI"
+            : "Mở dashboard";
+    }
+
+    private static string GetRejectedActionLabel(ModerationRequestDto item)
+    {
+        return string.Equals(item.EntityType, "poi", StringComparison.OrdinalIgnoreCase)
+            ? "Sửa trong POI detail"
+            : "Xem dashboard";
+    }
+
+    private static string GetEntityTypeLabel(string entityType) => entityType switch
+    {
+        "poi" => "POI",
+        "owner_registration" => "Owner registration",
+        _ => entityType
+    };
+
+    private static string GetModerationStatusLabel(ModerationStatus status) => status switch
+    {
+        ModerationStatus.Pending => "Đang chờ",
+        ModerationStatus.Approved => "Đã duyệt",
+        ModerationStatus.Rejected => "Bị từ chối",
+        ModerationStatus.Revised => "Đã chỉnh sửa",
+        _ => status.ToString()
+    };
+
+    private static StatusTone GetModerationStatusTone(ModerationStatus status) => status switch
+    {
+        ModerationStatus.Pending => StatusTone.Warn,
+        ModerationStatus.Approved => StatusTone.Good,
+        ModerationStatus.Rejected => StatusTone.Warn,
+        ModerationStatus.Revised => StatusTone.Info,
+        _ => StatusTone.Neutral
+    };
+
+    private static string GetDefaultReviewNote(ModerationRequestDto item) => item.Status switch
+    {
+        ModerationStatus.Pending => "Đang chờ admin phản hồi.",
+        ModerationStatus.Approved => "Admin đã duyệt yêu cầu.",
+        ModerationStatus.Revised => "Owner đã cập nhật lại nội dung.",
+        _ => "Chưa có ghi chú."
+    };
+
+    private static string GetHistoryActionLabel(ModerationRequestDto item)
+    {
+        if (!string.Equals(item.EntityType, "poi", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Xem dashboard";
+        }
+
+        return item.Status == ModerationStatus.Rejected ? "Sửa trong POI detail" : "Xem POI";
+    }
+
+    private static string GetStepClass(ModerationStep step)
+    {
+        return step.IsActive ? "owner-moderation-step is-active" : "owner-moderation-step";
+    }
+
+    private static string GetRelativeTimeLabel(DateTime createdAtUtc)
+    {
+        var elapsed = DateTime.UtcNow - createdAtUtc;
+
+        if (elapsed.TotalMinutes < 60)
+        {
+            return $"{Math.Max(1, (int)Math.Floor(elapsed.TotalMinutes))} phút trước";
+        }
+
+        if (elapsed.TotalHours < 24)
+        {
+            return $"{Math.Max(1, (int)Math.Floor(elapsed.TotalHours))} giờ trước";
+        }
+
+        return $"{Math.Max(1, (int)Math.Floor(elapsed.TotalDays))} ngày trước";
+    }
+
+    private sealed record ModerationStep(int Index, string Title, string Description, bool IsActive);
+}
