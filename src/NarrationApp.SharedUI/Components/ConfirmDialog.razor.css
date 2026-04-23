@@ -23,8 +23,20 @@
     box-shadow: 0 26px 80px rgba(2, 6, 23, 0.52);
 }
 
+.confirm-dialog:focus {
+    outline: 2px solid rgba(32, 227, 202, 0.66);
+    outline-offset: 0.25rem;
+}
+
 .confirm-dialog--danger {
     border-color: rgba(248, 113, 113, 0.38);
+}
+
+.confirm-dialog__focus-sentinel {
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    opacity: 0;
 }
 
 .confirm-dialog__body {

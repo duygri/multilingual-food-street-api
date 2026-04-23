@@ -4,7 +4,16 @@
         <section class="confirm-dialog confirm-dialog--@NormalizeTone(Tone)"
                  role="dialog"
                  aria-modal="true"
-                 aria-labelledby="@_titleId">
+                 aria-labelledby="@_titleId"
+                 tabindex="-1"
+                 data-focus-target="confirm-dialog"
+                 @onkeydown="HandleKeyDownAsync">
+            <span class="confirm-dialog__focus-sentinel"
+                  tabindex="0"
+                  data-focus-sentinel="start"
+                  aria-hidden="true"
+                  @onfocus="() => HandleFocusSentinelAsync(LastFocusTarget)"></span>
+
             <div class="confirm-dialog__body">
                 <p class="confirm-dialog__eyebrow">@Eyebrow</p>
                 <h2 id="@_titleId">@Title</h2>
@@ -19,15 +28,24 @@
                 <button class="app-button app-button--ghost" type="button" data-action="cancel" @onclick="OnCancel">
                     @CancelText
                 </button>
-                <button class="app-button app-button--primary" type="button" data-action="confirm" @onclick="OnConfirm">
+                <button class="app-button app-button--primary" type="button" data-action="confirm" autofocus="autofocus" @onclick="OnConfirm">
                     @ConfirmText
                 </button>
             </div>
+
+            <span class="confirm-dialog__focus-sentinel"
+                  tabindex="0"
+                  data-focus-sentinel="end"
+                  aria-hidden="true"
+                  @onfocus="() => HandleFocusSentinelAsync(FirstFocusTarget)"></span>
         </section>
     </div>
 }
 
 @code {
+    private const string FirstFocusTarget = "first";
+    private const string LastFocusTarget = "last";
+
     private readonly string _titleId = $"confirm-dialog-title-{Guid.NewGuid():N}";
 
     [Parameter]
@@ -58,7 +76,23 @@
     public EventCallback OnCancel { get; set; }
 
     [Parameter]
+    public EventCallback<string> OnFocusTrap { get; set; }
+
+    [Parameter]
     public RenderFragment? ChildContent { get; set; }
+
+    private async Task HandleKeyDownAsync(KeyboardEventArgs args)
+    {
+        if (string.Equals(args.Key, "Escape", StringComparison.Ordinal))
+        {
+            await OnCancel.InvokeAsync();
+        }
+    }
+
+    private Task HandleFocusSentinelAsync(string target)
+    {
+        return OnFocusTrap.InvokeAsync(target);
+    }
 
     private static string NormalizeTone(string? tone)
     {

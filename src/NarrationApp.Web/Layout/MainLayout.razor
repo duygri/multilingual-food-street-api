@@ -2,6 +2,7 @@
 @implements IDisposable
 @using System.Security.Claims
 @using Microsoft.Extensions.DependencyInjection
+@using Microsoft.AspNetCore.Components.Rendering
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject AuthClientService AuthClientService
 @inject NavigationManager NavigationManager
@@ -10,35 +11,8 @@
 <PortalShell Brand="@_portalBrand"
              Eyebrow="@_portalEyebrow"
              Tagline="@_portalTagline"
-             NavigationItems="_navigationItems">
-    <SidebarProfileContent>
-        @if (_isOwner)
-        {
-            <section class="layout-owner-card" aria-label="Owner profile summary">
-                <div class="layout-owner-card__identity">
-                    <span>Owner workspace</span>
-                    <strong>@_displayName</strong>
-                    <small>POI Owner</small>
-                </div>
-
-                <dl class="layout-owner-card__stats">
-                    <div>
-                        <dt>POI</dt>
-                        <dd>@FormatCount(_ownerSummary?.TotalPois)</dd>
-                    </div>
-                    <div>
-                        <dt>Published</dt>
-                        <dd>@FormatCount(_ownerSummary?.PublishedPois)</dd>
-                    </div>
-                    <div>
-                        <dt>Pending</dt>
-                        <dd>@FormatCount(_ownerSummary?.PendingModerationRequests)</dd>
-                    </div>
-                </dl>
-            </section>
-        }
-    </SidebarProfileContent>
-
+             NavigationItems="_navigationItems"
+             SidebarProfileContent="@(_isOwner ? OwnerSidebarProfileContent : null)">
     <HeaderContent>
         <div class="layout-header">
             <div class="layout-header__copy">
@@ -85,6 +59,35 @@
     private string _portalTagline = string.Empty;
     private OwnerDashboardDto? _ownerSummary;
     private IReadOnlyList<ShellNavItem> _navigationItems = Array.Empty<ShellNavItem>();
+
+    private RenderFragment OwnerSidebarProfileContent => builder =>
+    {
+        builder.OpenElement(0, "section");
+        builder.AddAttribute(1, "class", "layout-owner-card");
+        builder.AddAttribute(2, "aria-label", "Owner profile summary");
+
+        builder.OpenElement(3, "div");
+        builder.AddAttribute(4, "class", "layout-owner-card__identity");
+        builder.OpenElement(5, "span");
+        builder.AddContent(6, "Owner workspace");
+        builder.CloseElement();
+        builder.OpenElement(7, "strong");
+        builder.AddContent(8, _displayName);
+        builder.CloseElement();
+        builder.OpenElement(9, "small");
+        builder.AddContent(10, "POI Owner");
+        builder.CloseElement();
+        builder.CloseElement();
+
+        builder.OpenElement(11, "dl");
+        builder.AddAttribute(12, "class", "layout-owner-card__stats");
+        AddOwnerStat(builder, 13, "POI", FormatCount(_ownerSummary?.TotalPois));
+        AddOwnerStat(builder, 20, "Published", FormatCount(_ownerSummary?.PublishedPois));
+        AddOwnerStat(builder, 27, "Pending", FormatCount(_ownerSummary?.PendingModerationRequests));
+        builder.CloseElement();
+
+        builder.CloseElement();
+    };
 
     protected override async Task OnInitializedAsync()
     {
@@ -154,6 +157,18 @@
         {
             return null;
         }
+    }
+
+    private static void AddOwnerStat(RenderTreeBuilder builder, int sequence, string label, string value)
+    {
+        builder.OpenElement(sequence, "div");
+        builder.OpenElement(sequence + 1, "dt");
+        builder.AddContent(sequence + 2, label);
+        builder.CloseElement();
+        builder.OpenElement(sequence + 3, "dd");
+        builder.AddContent(sequence + 4, value);
+        builder.CloseElement();
+        builder.CloseElement();
     }
 
     private void UpdateRouteCopy()

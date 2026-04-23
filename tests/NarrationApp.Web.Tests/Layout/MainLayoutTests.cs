@@ -153,6 +153,40 @@ public sealed class MainLayoutTests : TestContext
         });
     }
 
+    [Fact]
+    public void Admin_layout_does_not_render_sidebar_profile_slot()
+    {
+        ConfigureAuthenticatedAdmin();
+        Services.GetRequiredService<NavigationManager>().NavigateTo("http://localhost/admin/dashboard");
+
+        var cut = RenderComponent<MainLayout>(parameters => parameters
+            .Add(layout => layout.Body, (RenderFragment)(builder => builder.AddMarkupContent(0, "<div>Body</div>"))));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Empty(cut.FindAll(".portal-shell__profile"));
+            Assert.Empty(cut.FindAll(".layout-owner-card"));
+            Assert.DoesNotContain("POI Owner", cut.Markup);
+        });
+    }
+
+    [Fact]
+    public void Anonymous_layout_does_not_render_sidebar_profile_slot()
+    {
+        ConfigureAnonymousUser();
+        Services.GetRequiredService<NavigationManager>().NavigateTo("http://localhost/auth/login");
+
+        var cut = RenderComponent<MainLayout>(parameters => parameters
+            .Add(layout => layout.Body, (RenderFragment)(builder => builder.AddMarkupContent(0, "<div>Body</div>"))));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Empty(cut.FindAll(".portal-shell__profile"));
+            Assert.Empty(cut.FindAll(".layout-owner-card"));
+            Assert.DoesNotContain("POI Owner", cut.Markup);
+        });
+    }
+
     private void ConfigureAuthenticatedAdmin()
     {
         var sessionStore = new TestAuthSessionStore
@@ -210,6 +244,23 @@ public sealed class MainLayoutTests : TestContext
         Services.AddSingleton(new AuthClientService(apiClient, authStateProvider));
         Services.AddSingleton<INotificationCenterService>(new TestNotificationCenterService(dashboard?.UnreadNotifications ?? 0));
         Services.AddSingleton<IOwnerPortalService>(new TestOwnerPortalService(dashboard));
+    }
+
+    private void ConfigureAnonymousUser()
+    {
+        var sessionStore = new TestAuthSessionStore();
+        var authStateProvider = new CustomAuthStateProvider(sessionStore);
+        var apiClient = new ApiClient(new HttpClient(new StubHttpMessageHandler())
+        {
+            BaseAddress = new Uri("http://localhost")
+        }, sessionStore, authStateProvider);
+
+        Services.AddSingleton<IAuthSessionStore>(sessionStore);
+        Services.AddSingleton(authStateProvider);
+        Services.AddSingleton<AuthenticationStateProvider>(authStateProvider);
+        Services.AddSingleton(new AuthClientService(apiClient, authStateProvider));
+        Services.AddSingleton<INotificationCenterService>(new TestNotificationCenterService());
+        Services.AddSingleton<IOwnerPortalService>(new TestOwnerPortalService());
     }
 
     private sealed class TestNotificationCenterService(int unreadCount = 0) : INotificationCenterService
