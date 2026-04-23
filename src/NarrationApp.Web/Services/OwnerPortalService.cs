@@ -5,6 +5,11 @@ namespace NarrationApp.Web.Services;
 
 public sealed class OwnerPortalService(ApiClient apiClient) : IOwnerPortalService
 {
+    public Task<OwnerShellSummaryDto> GetShellSummaryAsync(CancellationToken cancellationToken = default)
+    {
+        return apiClient.GetAsync<OwnerShellSummaryDto>("api/owner/shell-summary", cancellationToken);
+    }
+
     public Task<OwnerDashboardDto> GetDashboardAsync(CancellationToken cancellationToken = default)
     {
         return apiClient.GetAsync<OwnerDashboardDto>("api/owner/dashboard", cancellationToken);

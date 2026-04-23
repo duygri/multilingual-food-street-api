@@ -232,6 +232,17 @@ public sealed class DashboardTests : TestContext
         OwnerDashboardDto dashboard,
         IReadOnlyList<PoiDto> pois) : IOwnerPortalService
     {
+        public Task<OwnerShellSummaryDto> GetShellSummaryAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new OwnerShellSummaryDto
+            {
+                TotalPois = dashboard.TotalPois,
+                PublishedPois = dashboard.PublishedPois,
+                PendingModerationRequests = dashboard.PendingModerationRequests,
+                UnreadNotifications = dashboard.UnreadNotifications
+            });
+        }
+
         public Task<OwnerDashboardDto> GetDashboardAsync(CancellationToken cancellationToken = default)
         {
             return Task.FromResult(dashboard);

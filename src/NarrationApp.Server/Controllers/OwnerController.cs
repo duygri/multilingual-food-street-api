@@ -134,22 +134,30 @@ public sealed class OwnerController(AppDbContext dbContext, INotificationService
     public async Task<ActionResult<ApiResponse<OwnerDashboardDto>>> GetDashboardAsync(CancellationToken cancellationToken)
     {
         var ownerId = User.GetRequiredUserId();
+        var shellSummary = await BuildShellSummaryAsync(ownerId, cancellationToken);
         var ownerPoiIds = dbContext.Pois
             .Where(item => item.OwnerId == ownerId)
             .Select(item => item.Id);
 
         var response = new OwnerDashboardDto
         {
-            TotalPois = await dbContext.Pois.CountAsync(item => item.OwnerId == ownerId, cancellationToken),
-            PublishedPois = await dbContext.Pois.CountAsync(item => item.OwnerId == ownerId && item.Status == PoiStatus.Published, cancellationToken),
+            TotalPois = shellSummary.TotalPois,
+            PublishedPois = shellSummary.PublishedPois,
             DraftPois = await dbContext.Pois.CountAsync(item => item.OwnerId == ownerId && item.Status == PoiStatus.Draft, cancellationToken),
             PendingReviewPois = await dbContext.Pois.CountAsync(item => item.OwnerId == ownerId && item.Status == PoiStatus.PendingReview, cancellationToken),
             TotalAudioAssets = await dbContext.AudioAssets.CountAsync(item => ownerPoiIds.Contains(item.PoiId), cancellationToken),
-            PendingModerationRequests = await dbContext.ModerationRequests.CountAsync(item => item.RequestedBy == ownerId && item.Status == ModerationStatus.Pending, cancellationToken),
-            UnreadNotifications = (await notificationService.GetUnreadCountAsync(ownerId, cancellationToken)).Count
+            PendingModerationRequests = shellSummary.PendingModerationRequests,
+            UnreadNotifications = shellSummary.UnreadNotifications
         };
 
         return Ok(new ApiResponse<OwnerDashboardDto> { Succeeded = true, Message = "Owner dashboard loaded.", Data = response });
+    }
+
+    [HttpGet("shell-summary")]
+    public async Task<ActionResult<ApiResponse<OwnerShellSummaryDto>>> GetShellSummaryAsync(CancellationToken cancellationToken)
+    {
+        var response = await BuildShellSummaryAsync(User.GetRequiredUserId(), cancellationToken);
+        return Ok(new ApiResponse<OwnerShellSummaryDto> { Succeeded = true, Message = "Owner shell summary loaded.", Data = response });
     }
 
     [HttpGet("notifications")]
@@ -239,6 +247,17 @@ public sealed class OwnerController(AppDbContext dbContext, INotificationService
                 TotalAudioPlays = await dbContext.VisitEvents.CountAsync(item => ownerPoiIds.Contains(item.PoiId) && item.EventType == EventType.AudioPlay, cancellationToken),
                 UnreadNotifications = (await notificationService.GetUnreadCountAsync(owner.Id, cancellationToken)).Count
             }
+        };
+    }
+
+    private async Task<OwnerShellSummaryDto> BuildShellSummaryAsync(Guid ownerId, CancellationToken cancellationToken)
+    {
+        return new OwnerShellSummaryDto
+        {
+            TotalPois = await dbContext.Pois.CountAsync(item => item.OwnerId == ownerId, cancellationToken),
+            PublishedPois = await dbContext.Pois.CountAsync(item => item.OwnerId == ownerId && item.Status == PoiStatus.Published, cancellationToken),
+            PendingModerationRequests = await dbContext.ModerationRequests.CountAsync(item => item.RequestedBy == ownerId && item.Status == ModerationStatus.Pending, cancellationToken),
+            UnreadNotifications = (await notificationService.GetUnreadCountAsync(ownerId, cancellationToken)).Count
         };
     }
 

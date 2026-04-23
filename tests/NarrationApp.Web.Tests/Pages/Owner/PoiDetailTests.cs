@@ -264,6 +264,11 @@ public sealed class PoiDetailTests : TestContext
 
         public List<int> DeleteRequests { get; } = [];
 
+        public Task<OwnerShellSummaryDto> GetShellSummaryAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new OwnerShellSummaryDto());
+        }
+
         public Task<OwnerDashboardDto> GetDashboardAsync(CancellationToken cancellationToken = default)
         {
             return Task.FromResult(new OwnerDashboardDto());

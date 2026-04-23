@@ -5,6 +5,8 @@ namespace NarrationApp.Web.Services;
 
 public interface IOwnerPortalService
 {
+    Task<OwnerShellSummaryDto> GetShellSummaryAsync(CancellationToken cancellationToken = default);
+
     Task<OwnerDashboardDto> GetDashboardAsync(CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<PoiDto>> GetPoisAsync(CancellationToken cancellationToken = default);

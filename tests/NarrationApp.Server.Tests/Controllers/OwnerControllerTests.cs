@@ -18,6 +18,104 @@ namespace NarrationApp.Server.Tests.Controllers;
 public sealed class OwnerControllerTests
 {
     [Fact]
+    public async Task GetShellSummaryAsync_returns_owner_counts_for_shell()
+    {
+        await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
+        var owner = await TestAppDbContextFactory.AddOwnerAsync(dbContext, "owner-shell-summary@narration.app");
+        var otherOwner = await TestAppDbContextFactory.AddOwnerAsync(dbContext, "other-shell-owner@narration.app");
+
+        var publishedPoi = new Poi
+        {
+            Name = "Published POI",
+            Slug = "published-shell-poi",
+            OwnerId = owner.Id,
+            Lat = 10.758,
+            Lng = 106.701,
+            Priority = 1,
+            NarrationMode = NarrationMode.Both,
+            Description = "Published description",
+            TtsScript = "Published script",
+            Status = PoiStatus.Published,
+            CreatedAt = DateTime.UtcNow.AddDays(-3)
+        };
+        var pendingPoi = new Poi
+        {
+            Name = "Pending POI",
+            Slug = "pending-shell-poi",
+            OwnerId = owner.Id,
+            Lat = 10.759,
+            Lng = 106.702,
+            Priority = 2,
+            NarrationMode = NarrationMode.Both,
+            Description = "Pending description",
+            TtsScript = "Pending script",
+            Status = PoiStatus.PendingReview,
+            CreatedAt = DateTime.UtcNow.AddDays(-2)
+        };
+
+        dbContext.Pois.AddRange(
+            publishedPoi,
+            pendingPoi,
+            new Poi
+            {
+                Name = "Other Owner POI",
+                Slug = "other-owner-shell-poi",
+                OwnerId = otherOwner.Id,
+                Lat = 10.760,
+                Lng = 106.703,
+                Priority = 3,
+                NarrationMode = NarrationMode.Both,
+                Description = "Other owner description",
+                TtsScript = "Other owner script",
+                Status = PoiStatus.Published,
+                CreatedAt = DateTime.UtcNow.AddDays(-1)
+            });
+
+        await dbContext.SaveChangesAsync();
+
+        dbContext.ModerationRequests.AddRange(
+            new ModerationRequest
+            {
+                EntityType = "poi",
+                EntityId = publishedPoi.Id.ToString(),
+                RequestedBy = owner.Id,
+                Status = ModerationStatus.Pending,
+                CreatedAt = DateTime.UtcNow.AddHours(-6)
+            },
+            new ModerationRequest
+            {
+                EntityType = "poi",
+                EntityId = publishedPoi.Id.ToString(),
+                RequestedBy = owner.Id,
+                Status = ModerationStatus.Approved,
+                CreatedAt = DateTime.UtcNow.AddHours(-4)
+            },
+            new ModerationRequest
+            {
+                EntityType = "poi",
+                EntityId = pendingPoi.Id.ToString(),
+                RequestedBy = otherOwner.Id,
+                Status = ModerationStatus.Pending,
+                CreatedAt = DateTime.UtcNow.AddHours(-2)
+            });
+
+        await dbContext.SaveChangesAsync();
+
+        var controller = CreateController(dbContext, owner.Id, unreadCount: 4);
+
+        var actionResult = await controller.GetShellSummaryAsync(CancellationToken.None);
+        var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
+        var response = Assert.IsType<ApiResponse<OwnerShellSummaryDto>>(okResult.Value);
+        var summary = Assert.IsType<OwnerShellSummaryDto>(response.Data);
+
+        Assert.True(response.Succeeded);
+        Assert.Equal(2, summary.TotalPois);
+        Assert.Equal(1, summary.PublishedPois);
+        Assert.Equal(1, summary.PendingModerationRequests);
+        Assert.Equal(4, summary.UnreadNotifications);
+    }
+
+    [Fact]
     public async Task GetPoisAsync_returns_category_names_for_owned_pois()
     {
         await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();

@@ -58,7 +58,7 @@
     private string _portalBrand = "Vĩnh Khánh Portal";
     private string _portalEyebrow = "v2.1 — Truy cập hệ thống";
     private string _portalTagline = string.Empty;
-    private OwnerDashboardDto? _ownerSummary;
+    private OwnerShellSummaryDto? _ownerSummary;
     private IReadOnlyList<ShellNavItem> _navigationItems = Array.Empty<ShellNavItem>();
     private INotificationCenterService? _notificationCenterService;
     private OwnerPortalRefreshService? _ownerPortalRefreshService;
@@ -185,7 +185,7 @@
         UpdateRouteCopy();
     }
 
-    private async Task<OwnerDashboardDto?> LoadOwnerSummaryAsync()
+    private async Task<OwnerShellSummaryDto?> LoadOwnerSummaryAsync()
     {
         var ownerPortalService = ServiceProvider.GetService<IOwnerPortalService>();
         if (ownerPortalService is null)
@@ -195,7 +195,7 @@
 
         try
         {
-            return await ownerPortalService.GetDashboardAsync();
+            return await ownerPortalService.GetShellSummaryAsync();
         }
         catch
         {
@@ -246,7 +246,7 @@
         };
     }
 
-    private static IReadOnlyList<ShellNavItem> BuildNavigation(ClaimsPrincipal user, OwnerDashboardDto? ownerSummary)
+    private static IReadOnlyList<ShellNavItem> BuildNavigation(ClaimsPrincipal user, OwnerShellSummaryDto? ownerSummary)
     {
         var role = user.FindFirst(ClaimTypes.Role)?.Value;
 

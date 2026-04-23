@@ -1,5 +1,16 @@
 namespace NarrationApp.Shared.DTOs.Owner;
 
+public sealed class OwnerShellSummaryDto
+{
+    public int TotalPois { get; init; }
+
+    public int PublishedPois { get; init; }
+
+    public int PendingModerationRequests { get; init; }
+
+    public int UnreadNotifications { get; init; }
+}
+
 public sealed class OwnerDashboardDto
 {
     public int TotalPois { get; init; }

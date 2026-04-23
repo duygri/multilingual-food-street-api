@@ -124,7 +124,7 @@ public sealed class MainLayoutTests : TestContext
     {
         ConfigureAuthenticatedOwner(
             fullName: "Bà Tám Bún Bò",
-            dashboard: new OwnerDashboardDto
+            shellSummary: new OwnerShellSummaryDto
             {
                 TotalPois = 5,
                 PublishedPois = 3,
@@ -157,7 +157,7 @@ public sealed class MainLayoutTests : TestContext
     public void Owner_layout_refreshes_sidebar_summary_when_notification_state_changes()
     {
         var (ownerService, notificationService, _) = ConfigureAuthenticatedOwner(
-            dashboard: new OwnerDashboardDto
+            shellSummary: new OwnerShellSummaryDto
             {
                 TotalPois = 5,
                 PublishedPois = 3,
@@ -171,7 +171,7 @@ public sealed class MainLayoutTests : TestContext
 
         cut.WaitForAssertion(() => Assert.Contains("7", GetNavBadgeTexts(cut)));
 
-        ownerService.Dashboard = new OwnerDashboardDto
+        ownerService.ShellSummary = new OwnerShellSummaryDto
         {
             TotalPois = 5,
             PublishedPois = 3,
@@ -187,7 +187,7 @@ public sealed class MainLayoutTests : TestContext
     public void Owner_layout_refreshes_sidebar_summary_when_owner_portal_refresh_is_raised()
     {
         var (ownerService, _, refreshService) = ConfigureAuthenticatedOwner(
-            dashboard: new OwnerDashboardDto
+            shellSummary: new OwnerShellSummaryDto
             {
                 TotalPois = 5,
                 PublishedPois = 3,
@@ -201,7 +201,7 @@ public sealed class MainLayoutTests : TestContext
 
         cut.WaitForAssertion(() => Assert.Contains("2", GetNavBadgeTexts(cut)));
 
-        ownerService.Dashboard = new OwnerDashboardDto
+        ownerService.ShellSummary = new OwnerShellSummaryDto
         {
             TotalPois = 6,
             PublishedPois = 4,
@@ -283,7 +283,7 @@ public sealed class MainLayoutTests : TestContext
 
     private (TestOwnerPortalService OwnerService, TestNotificationCenterService NotificationService, OwnerPortalRefreshService RefreshService) ConfigureAuthenticatedOwner(
         string fullName = "Demo Owner",
-        OwnerDashboardDto? dashboard = null)
+        OwnerShellSummaryDto? shellSummary = null)
     {
         var sessionStore = new TestAuthSessionStore
         {
@@ -304,8 +304,8 @@ public sealed class MainLayoutTests : TestContext
             BaseAddress = new Uri("http://localhost")
         }, sessionStore, authStateProvider);
 
-        var notificationService = new TestNotificationCenterService(dashboard?.UnreadNotifications ?? 0);
-        var ownerService = new TestOwnerPortalService(dashboard);
+        var notificationService = new TestNotificationCenterService(shellSummary?.UnreadNotifications ?? 0);
+        var ownerService = new TestOwnerPortalService(shellSummary);
         var refreshService = new OwnerPortalRefreshService();
 
         Services.AddSingleton<IAuthSessionStore>(sessionStore);
@@ -369,9 +369,15 @@ public sealed class MainLayoutTests : TestContext
         }
     }
 
-    private sealed class TestOwnerPortalService(OwnerDashboardDto? dashboard = null) : IOwnerPortalService
+    private sealed class TestOwnerPortalService(OwnerShellSummaryDto? shellSummary = null) : IOwnerPortalService
     {
-        public OwnerDashboardDto Dashboard { get; set; } = dashboard ?? new OwnerDashboardDto();
+        public OwnerShellSummaryDto ShellSummary { get; set; } = shellSummary ?? new OwnerShellSummaryDto();
+        public OwnerDashboardDto Dashboard { get; set; } = new();
+
+        public Task<OwnerShellSummaryDto> GetShellSummaryAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(ShellSummary);
+        }
 
         public Task<OwnerDashboardDto> GetDashboardAsync(CancellationToken cancellationToken = default)
         {
