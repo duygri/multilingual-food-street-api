@@ -1,0 +1,145 @@
+.owner-pois-page {
+    gap: 1rem;
+}
+
+.owner-pois-hero,
+.owner-pois-toolbar,
+.owner-pois-card,
+.owner-pois-card__title {
+    display: flex;
+    gap: 1rem;
+}
+
+.owner-pois-hero,
+.owner-pois-toolbar,
+.owner-pois-card__title {
+    align-items: start;
+    justify-content: space-between;
+}
+
+.owner-pois-toolbar {
+    align-items: end;
+}
+
+.owner-pois-toolbar__summary {
+    display: grid;
+    gap: 0.25rem;
+}
+
+.owner-pois-toolbar__summary strong {
+    color: var(--vk-text);
+    font-size: 1.5rem;
+}
+
+.owner-pois-toolbar__summary span,
+.owner-pois-card p,
+.owner-pois-card dt,
+.owner-pois-card dd {
+    color: var(--vk-muted);
+}
+
+.owner-pois-toolbar__controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+}
+
+.owner-pois-toolbar label {
+    display: grid;
+    gap: 0.4rem;
+    min-width: min(15rem, 100%);
+    color: var(--vk-text);
+    font-weight: 800;
+}
+
+.owner-pois-toolbar input,
+.owner-pois-toolbar select {
+    min-height: 2.8rem;
+    border: 1px solid rgba(80, 137, 168, 0.2);
+    border-radius: 0.95rem;
+    background: rgba(255, 255, 255, 0.82);
+    color: var(--vk-text);
+    padding: 0 0.9rem;
+}
+
+.owner-pois-list {
+    display: grid;
+    gap: 0.85rem;
+}
+
+.owner-pois-card {
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    border: 1px solid rgba(80, 137, 168, 0.16);
+    border-radius: 1.25rem;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(246, 251, 249, 0.84));
+    box-shadow: 0 1rem 2.2rem rgba(20, 66, 88, 0.06);
+}
+
+.owner-pois-card__main {
+    display: grid;
+    flex: 1;
+    gap: 0.9rem;
+}
+
+.owner-pois-card h3,
+.owner-pois-card p,
+.owner-pois-card dl,
+.owner-pois-card dt,
+.owner-pois-card dd {
+    margin: 0;
+}
+
+.owner-pois-card h3 {
+    color: var(--vk-text);
+    font-size: 1.15rem;
+}
+
+.owner-pois-card p {
+    margin-top: 0.25rem;
+}
+
+.owner-pois-card__facts {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.65rem;
+}
+
+.owner-pois-card__facts div {
+    padding: 0.7rem;
+    border-radius: 0.9rem;
+    background: rgba(11, 119, 97, 0.06);
+}
+
+.owner-pois-card dt {
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.owner-pois-card dd {
+    margin-top: 0.35rem;
+    color: var(--vk-text);
+    font-weight: 800;
+}
+
+@media (max-width: 900px) {
+    .owner-pois-hero,
+    .owner-pois-toolbar,
+    .owner-pois-card {
+        display: grid;
+    }
+
+    .owner-pois-card__facts {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 560px) {
+    .owner-pois-card__facts {
+        grid-template-columns: 1fr;
+    }
+}

@@ -1,0 +1,202 @@
+@page "/owner/pois"
+@attribute [Authorize(Roles = "poi_owner")]
+@inject IOwnerPortalService OwnerPortalService
+
+<PageTitle>Danh sách POI</PageTitle>
+
+@if (_isLoading)
+{
+    <section class="panel-shell">
+        <p class="panel-shell__eyebrow">POI</p>
+        <h2>Đang tải danh sách POI...</h2>
+    </section>
+}
+else if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <section class="panel-shell">
+        <p class="panel-shell__eyebrow">POI</p>
+        <h2>Không thể tải danh sách POI</h2>
+        <p class="panel-shell__copy">@_errorMessage</p>
+    </section>
+}
+else
+{
+    <div class="dashboard-stack owner-pois-page">
+        <section class="panel-shell owner-pois-hero">
+            <div>
+                <p class="panel-shell__eyebrow">POI</p>
+                <h2>Danh sách POI</h2>
+                <p class="panel-shell__copy">Tìm, lọc và mở nhanh từng điểm để xem trạng thái vận hành chi tiết.</p>
+            </div>
+
+            <a class="app-button app-button--primary" data-action="create-poi" href="/owner/pois/new">
+                Tạo POI mới
+            </a>
+        </section>
+
+        <section class="panel-shell owner-pois-toolbar">
+            <div class="owner-pois-toolbar__summary">
+                <strong>@FilteredPois.Count POI</strong>
+                <span>trong tổng @_pois.Count điểm đang quản lý</span>
+            </div>
+
+            <div class="owner-pois-toolbar__controls">
+                <label>
+                    <span>Tìm POI</span>
+                    <input data-field="poi-search"
+                           placeholder="Tên hoặc slug"
+                           @bind="_searchTerm" />
+                </label>
+
+                <label>
+                    <span>Trạng thái</span>
+                    <select data-field="poi-status-filter" @bind="_statusFilter">
+                        <option value="">Tất cả trạng thái</option>
+                        @foreach (var status in _statusOptions)
+                        {
+                            <option value="@status.ToString()">@GetPoiStatusLabel(status)</option>
+                        }
+                    </select>
+                </label>
+            </div>
+        </section>
+
+        @if (_pois.Count == 0)
+        {
+            <EmptyStateBlock Eyebrow="POI"
+                             Title="Chưa có POI nào"
+                             Message="Tạo POI đầu tiên để bắt đầu cấu hình nội dung, geofence và audio nguồn cho tuyến phố." />
+        }
+        else if (FilteredPois.Count == 0)
+        {
+            <EmptyStateBlock Eyebrow="Bộ lọc"
+                             Title="Không tìm thấy POI phù hợp"
+                             Message="Thử đổi từ khóa hoặc trạng thái để xem lại toàn bộ danh sách owner." />
+        }
+        else
+        {
+            <section class="owner-pois-list" aria-label="Owner POI list">
+                @foreach (var poi in FilteredPois)
+                {
+                    <article class="owner-pois-card">
+                        <div class="owner-pois-card__main">
+                            <div class="owner-pois-card__title">
+                                <div>
+                                    <h3>@poi.Name</h3>
+                                    <p>@poi.Slug</p>
+                                </div>
+                                <StatusBadge Label="@GetPoiStatusLabel(poi.Status)" Tone="@GetPoiStatusTone(poi.Status)" />
+                            </div>
+
+                            <dl class="owner-pois-card__facts">
+                                <div>
+                                    <dt>Danh mục</dt>
+                                    <dd>@(poi.CategoryName ?? "Chưa gán")</dd>
+                                </div>
+                                <div>
+                                    <dt>Geofence</dt>
+                                    <dd>@GetGeofenceSummary(poi)</dd>
+                                </div>
+                                <div>
+                                    <dt>Bản dịch</dt>
+                                    <dd>@GetTranslationSummary(poi)</dd>
+                                </div>
+                                <div>
+                                    <dt>Narration</dt>
+                                    <dd>@GetNarrationLabel(poi.NarrationMode)</dd>
+                                </div>
+                            </dl>
+                        </div>
+
+                        <a class="app-button app-button--ghost" data-action="@($"view-poi-{poi.Id}")" href="@($"/owner/pois/{poi.Id}")">
+                            Xem chi tiết
+                        </a>
+                    </article>
+                }
+            </section>
+        }
+    </div>
+}
+
+@code {
+    private readonly PoiStatus[] _statusOptions = Enum.GetValues<PoiStatus>();
+
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private string _searchTerm = string.Empty;
+    private string _statusFilter = string.Empty;
+    private IReadOnlyList<PoiDto> _pois = Array.Empty<PoiDto>();
+
+    private IReadOnlyList<PoiDto> FilteredPois => _pois
+        .Where(MatchesSearch)
+        .Where(MatchesStatus)
+        .ToArray();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _pois = await OwnerPortalService.GetPoisAsync();
+        }
+        catch (ApiException exception)
+        {
+            _errorMessage = exception.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private bool MatchesSearch(PoiDto poi)
+    {
+        if (string.IsNullOrWhiteSpace(_searchTerm))
+        {
+            return true;
+        }
+
+        return poi.Name.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase)
+            || poi.Slug.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase)
+            || (poi.CategoryName?.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) ?? false);
+    }
+
+    private bool MatchesStatus(PoiDto poi)
+    {
+        return string.IsNullOrWhiteSpace(_statusFilter)
+            || string.Equals(poi.Status.ToString(), _statusFilter, StringComparison.Ordinal);
+    }
+
+    private static string GetPoiStatusLabel(PoiStatus status) => status switch
+    {
+        PoiStatus.Published => "Đã xuất bản",
+        PoiStatus.PendingReview => "Chờ duyệt",
+        PoiStatus.Draft => "Nháp",
+        PoiStatus.Rejected => "Bị từ chối",
+        PoiStatus.Updated => "Đã cập nhật",
+        PoiStatus.Archived => "Lưu trữ",
+        _ => status.ToString()
+    };
+
+    private static StatusTone GetPoiStatusTone(PoiStatus status) => status switch
+    {
+        PoiStatus.Published => StatusTone.Good,
+        PoiStatus.PendingReview => StatusTone.Warn,
+        PoiStatus.Draft => StatusTone.Neutral,
+        PoiStatus.Rejected => StatusTone.Warn,
+        PoiStatus.Updated => StatusTone.Info,
+        PoiStatus.Archived => StatusTone.Neutral,
+        _ => StatusTone.Neutral
+    };
+
+    private static string GetGeofenceSummary(PoiDto poi) => $"{poi.Geofences.Count} vùng";
+
+    private static string GetTranslationSummary(PoiDto poi) => $"{poi.Translations.Count} ngôn ngữ";
+
+    private static string GetNarrationLabel(NarrationMode mode) => mode switch
+    {
+        NarrationMode.TtsOnly => "Chỉ TTS",
+        NarrationMode.RecordedOnly => "Chỉ audio nguồn",
+        NarrationMode.Both => "Kết hợp",
+        _ => mode.ToString()
+    };
+}

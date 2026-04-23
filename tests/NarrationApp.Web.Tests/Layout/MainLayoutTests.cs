@@ -303,6 +303,11 @@ public sealed class MainLayoutTests : TestContext
             return Task.FromResult<IReadOnlyList<PoiDto>>(Array.Empty<PoiDto>());
         }
 
+        public Task<PoiDto> GetPoiAsync(int poiId, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new PoiDto { Id = poiId });
+        }
+
         public Task<OwnerPoiStatsDto> GetPoiStatsAsync(int poiId, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(new OwnerPoiStatsDto { PoiId = poiId });

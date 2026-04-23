@@ -1,0 +1,796 @@
+@page "/owner/pois/{Id:int}"
+@attribute [Authorize(Roles = "poi_owner")]
+@inject IOwnerPortalService OwnerPortalService
+@inject IAudioPortalService AudioPortalService
+@inject IGeofencePortalService GeofencePortalService
+@inject IModerationPortalService ModerationPortalService
+@inject ICategoryPortalService CategoryPortalService
+@inject NavigationManager NavigationManager
+
+<PageTitle>@(_poi?.Name ?? "Chi tiết POI")</PageTitle>
+
+@if (_isLoading)
+{
+    <section class="panel-shell">
+        <p class="panel-shell__eyebrow">POI</p>
+        <h2>Đang tải chi tiết POI...</h2>
+    </section>
+}
+else if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <section class="panel-shell">
+        <p class="panel-shell__eyebrow">POI</p>
+        <h2>Không thể tải chi tiết POI</h2>
+        <p class="panel-shell__copy">@_errorMessage</p>
+        <a class="app-button app-button--ghost" href="/owner/pois">Quay lại danh sách POI</a>
+    </section>
+}
+else if (_poi is not null && _editor is not null && _geofenceEditor is not null)
+{
+    <div class="dashboard-stack owner-poi-detail">
+        @if (!string.IsNullOrWhiteSpace(_statusMessage))
+        {
+            <section class="panel-shell owner-poi-status" role="status">
+                <p class="panel-shell__copy">@_statusMessage</p>
+            </section>
+        }
+
+        <section class="panel-shell owner-poi-preview">
+            <div class="owner-poi-preview__image">
+                @if (!string.IsNullOrWhiteSpace(_poi.ImageUrl))
+                {
+                    <img src="@_poi.ImageUrl" alt="@_poi.Name" />
+                }
+                else
+                {
+                    <span>POI</span>
+                }
+            </div>
+
+            <div class="owner-poi-preview__content">
+                <div class="owner-poi-preview__title">
+                    <div>
+                        <p class="panel-shell__eyebrow">POI #@_poi.Id</p>
+                        <h2>@_poi.Name</h2>
+                        <p>@_poi.Slug</p>
+                    </div>
+                    <StatusBadge Label="@GetPoiStatusLabel(_poi.Status)" Tone="@GetPoiStatusTone(_poi.Status)" />
+                </div>
+
+                <div class="owner-poi-preview__pills" aria-label="POI metadata">
+                    <span>@(_poi.CategoryName ?? "Chưa gán danh mục")</span>
+                    <span>@_poi.Lat.ToString("0.###"), @_poi.Lng.ToString("0.###")</span>
+                    <span>@GetRadiusSummary(_poi)</span>
+                    <span>Priority @_poi.Priority</span>
+                    <span>POI #@_poi.Id</span>
+                </div>
+
+                <div class="owner-poi-preview__actions">
+                    <button class="app-button app-button--primary"
+                            data-action="save-poi"
+                            type="button"
+                            disabled="@_isSaving"
+                            @onclick="SavePoiAsync">
+                        @(_isSaving ? "Đang lưu..." : "Lưu")
+                    </button>
+                    <button class="app-button app-button--ghost"
+                            data-action="request-review"
+                            type="button"
+                            disabled="@_isRequestingReview"
+                            @onclick="RequestReviewAsync">
+                        @(_isRequestingReview ? "Đang gửi..." : "Gửi duyệt")
+                    </button>
+                    <a class="app-button app-button--ghost" href="@(_poi.MapLink ?? "#")">Mở bản đồ</a>
+                    <button class="app-button app-button--ghost"
+                            data-action="open-delete-poi"
+                            type="button"
+                            @onclick="OpenDeleteDialog">
+                        Xóa
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        @if (ShouldShowRejectionSurface)
+        {
+            <section class="panel-shell owner-poi-rejection">
+                <p class="panel-shell__eyebrow">Kiểm duyệt</p>
+                <h2>Cần chỉnh trước khi gửi lại</h2>
+                <p class="panel-shell__copy">@RejectionNote</p>
+                <button class="app-button app-button--primary"
+                        data-action="request-review-rejected"
+                        type="button"
+                        disabled="@_isRequestingReview"
+                        @onclick="RequestReviewAsync">
+                    Sửa & gửi lại
+                </button>
+            </section>
+        }
+
+        <section class="metric-grid">
+            <MetricCard Label="Lượt ghé" Value="@((_stats?.TotalVisits ?? 0).ToString())" Hint="Tổng lượt tương tác với POI" />
+            <MetricCard Label="Audio plays" Value="@((_stats?.AudioPlays ?? 0).ToString())" Hint="Số lượt nghe audio" />
+            <MetricCard Label="Bản dịch" Value="@((_stats?.TranslationCount ?? 0).ToString())" Hint="Ngôn ngữ đã có nội dung" />
+            <MetricCard Label="Audio hiện có" Value="@((_stats?.AudioAssetCount ?? 0).ToString())" Hint="File audio trong hệ thống" />
+            <MetricCard Label="Vùng kích hoạt" Value="@((_stats?.GeofenceCount ?? 0).ToString())" Hint="Geofence gắn với POI" />
+        </section>
+
+        <section class="owner-poi-detail__grid">
+            <article class="panel-shell owner-poi-detail-card">
+                <p class="panel-shell__eyebrow">Thông tin chỉnh sửa</p>
+                <h2>Nội dung nguồn</h2>
+                <p class="panel-shell__copy">Chỉnh nhanh nội dung lõi trước khi gửi lại admin kiểm duyệt.</p>
+
+                <div class="owner-poi-form-grid">
+                    <label>
+                        <span>Tên POI</span>
+                        <input data-field="poi-name" @bind="_editor.Name" />
+                    </label>
+
+                    <label>
+                        <span>Slug</span>
+                        <input data-field="poi-slug" @bind="_editor.Slug" />
+                    </label>
+
+                    <label>
+                        <span>Vĩ độ</span>
+                        <input data-field="poi-lat" type="number" step="0.000001" @bind="_editor.Lat" />
+                    </label>
+
+                    <label>
+                        <span>Kinh độ</span>
+                        <input data-field="poi-lng" type="number" step="0.000001" @bind="_editor.Lng" />
+                    </label>
+
+                    <label>
+                        <span>Độ ưu tiên</span>
+                        <input data-field="poi-priority" type="number" @bind="_editor.Priority" />
+                    </label>
+
+                    <label>
+                        <span>Danh mục</span>
+                        <select data-field="poi-category" @bind="_editor.CategoryId">
+                            <option value="">Chưa gán danh mục</option>
+                            @foreach (var category in _categories)
+                            {
+                                <option value="@category.Id">@category.Name</option>
+                            }
+                        </select>
+                    </label>
+
+                    <label>
+                        <span>Chế độ phát</span>
+                        <select data-field="poi-mode" @bind="_editor.NarrationMode">
+                            @foreach (var mode in _narrationModes)
+                            {
+                                <option value="@mode">@GetNarrationLabel(mode)</option>
+                            }
+                        </select>
+                    </label>
+
+                    <label>
+                        <span>Liên kết bản đồ</span>
+                        <input data-field="poi-map-link" @bind="_editor.MapLink" />
+                    </label>
+
+                    <label>
+                        <span>URL hình ảnh</span>
+                        <input data-field="poi-image-url" @bind="_editor.ImageUrl" />
+                    </label>
+                </div>
+
+                <label class="owner-poi-field owner-poi-field--wide">
+                    <span>Mô tả nguồn</span>
+                    <textarea data-field="poi-description" @bind="_editor.Description"></textarea>
+                </label>
+
+                <label class="owner-poi-field owner-poi-field--wide">
+                    <span>Kịch bản TTS</span>
+                    <textarea data-field="poi-tts-script" @bind="_editor.TtsScript"></textarea>
+                </label>
+            </article>
+
+            <article class="panel-shell owner-poi-detail-card">
+                <p class="panel-shell__eyebrow">Geofence</p>
+                <h2>Vùng kích hoạt</h2>
+                <p class="panel-shell__copy">Tinh chỉnh vùng kích hoạt chính của POI để audio tự phát đúng ngữ cảnh.</p>
+
+                <div class="owner-poi-form-grid">
+                    <label>
+                        <span>Tên vùng</span>
+                        <input data-field="geofence-name" @bind="_geofenceEditor.Name" />
+                    </label>
+
+                    <label>
+                        <span>Bán kính (m)</span>
+                        <input data-field="geofence-radius" type="number" @bind="_geofenceEditor.RadiusMeters" />
+                    </label>
+
+                    <label>
+                        <span>Độ ưu tiên</span>
+                        <input data-field="geofence-priority" type="number" @bind="_geofenceEditor.Priority" />
+                    </label>
+
+                    <label>
+                        <span>Debounce (giây)</span>
+                        <input data-field="geofence-debounce" type="number" @bind="_geofenceEditor.DebounceSeconds" />
+                    </label>
+
+                    <label>
+                        <span>Cooldown (giây)</span>
+                        <input data-field="geofence-cooldown" type="number" @bind="_geofenceEditor.CooldownSeconds" />
+                    </label>
+
+                    <label>
+                        <span>Trigger action</span>
+                        <input data-field="geofence-trigger" @bind="_geofenceEditor.TriggerAction" />
+                    </label>
+                </div>
+
+                <div class="owner-poi-check-grid">
+                    <label>
+                        <input data-field="geofence-active" type="checkbox" @bind="_geofenceEditor.IsActive" />
+                        <span>Đang hoạt động</span>
+                    </label>
+
+                    <label>
+                        <input data-field="geofence-nearest-only" type="checkbox" @bind="_geofenceEditor.NearestOnly" />
+                        <span>Chỉ kích hoạt POI gần nhất</span>
+                    </label>
+                </div>
+
+                <div class="owner-poi-inline-actions">
+                    <button class="app-button app-button--primary"
+                            data-action="save-geofence"
+                            type="button"
+                            disabled="@_isSavingGeofence"
+                            @onclick="SaveGeofenceAsync">
+                        @(_isSavingGeofence ? "Đang cập nhật..." : "Lưu geofence")
+                    </button>
+                </div>
+            </article>
+        </section>
+
+        <section class="panel-shell owner-poi-audio">
+            <div class="owner-poi-section-header">
+                <div>
+                    <p class="panel-shell__eyebrow">Audio</p>
+                    <h2>Bảng audio</h2>
+                    <p class="panel-shell__copy">Upload audio nguồn tiếng Việt hoặc theo dõi trạng thái audio theo ngôn ngữ.</p>
+                </div>
+                <StatusBadge Label="@($"{_audioItems.Count} file")" Tone="StatusTone.Info" />
+            </div>
+
+            <div class="owner-poi-upload-row">
+                <label class="owner-poi-field" for="owner-source-audio">
+                    <span>Audio nguồn tiếng Việt</span>
+                    <InputFile id="owner-source-audio" data-field="source-audio" OnChange="HandleSourceAudioSelection" />
+                </label>
+
+                <button class="app-button app-button--primary"
+                        data-action="upload-source-audio"
+                        type="button"
+                        disabled="@(_isUploadingAudio || _selectedUploadFile is null)"
+                        @onclick="UploadSourceAudioAsync">
+                    @(_isUploadingAudio ? "Đang tải..." : "Upload audio nguồn")
+                </button>
+            </div>
+
+            @if (_selectedUploadFile is not null)
+            {
+                <p class="panel-shell__copy">Đã chọn: @_selectedUploadFile.Name</p>
+            }
+
+            @if (_audioItems.Count == 0)
+            {
+                <p class="panel-shell__copy">Chưa có audio cho POI này.</p>
+            }
+            else
+            {
+                <table class="owner-poi-audio__table">
+                    <thead>
+                        <tr>
+                            <th>Ngôn ngữ</th>
+                            <th>Loại audio</th>
+                            <th>Trạng thái</th>
+                            <th>Thời lượng</th>
+                            <th>Bản dịch</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var audio in _audioItems)
+                        {
+                            <tr>
+                                <td>@audio.LanguageCode</td>
+                                <td>@GetAudioSourceLabel(audio.SourceType)</td>
+                                <td>@audio.Status.ToString()</td>
+                                <td>@GetDurationLabel(audio.DurationSeconds)</td>
+                                <td>@(HasTranslation(audio.LanguageCode) ? "Có" : "Chưa có")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </section>
+
+        <section class="panel-shell owner-poi-detail-card">
+            <p class="panel-shell__eyebrow">Moderation snapshot</p>
+            <h2>Lịch sử gần đây</h2>
+            @if (PoiModerationItems.Count == 0)
+            {
+                <p class="panel-shell__copy">Chưa có yêu cầu kiểm duyệt cho POI này.</p>
+            }
+            else
+            {
+                <div class="owner-poi-moderation-list">
+                    @foreach (var item in PoiModerationItems)
+                    {
+                        <article>
+                            <div>
+                                <strong>@GetModerationStatusLabel(item.Status)</strong>
+                                <p>@(item.ReviewNote ?? "Chưa có ghi chú phản hồi.")</p>
+                            </div>
+                            <span>@item.CreatedAtUtc.ToLocalTime().ToString("dd/MM HH:mm")</span>
+                        </article>
+                    }
+                </div>
+            }
+        </section>
+    </div>
+
+    <ConfirmDialog IsOpen="_isDeleteDialogOpen"
+                   Eyebrow="POI"
+                   Title="Xóa POI này?"
+                   Message="@($"POI {_poi.Name} sẽ bị xóa khỏi workspace owner. Hành động này cần được xác nhận trước khi tiếp tục.")"
+                   ConfirmText="Xóa POI"
+                   CancelText="Giữ lại"
+                   Tone="danger"
+                   OnConfirm="DeletePoiAsync"
+                   OnCancel="CloseDeleteDialog" />
+}
+
+@code {
+    private const long MaxUploadBytes = 20_000_000;
+    private readonly NarrationMode[] _narrationModes = Enum.GetValues<NarrationMode>();
+
+    [Parameter]
+    public int Id { get; set; }
+
+    private bool _isLoading = true;
+    private bool _isSaving;
+    private bool _isSavingGeofence;
+    private bool _isUploadingAudio;
+    private bool _isRequestingReview;
+    private bool _isDeleteDialogOpen;
+    private string? _errorMessage;
+    private string? _statusMessage;
+    private PoiDto? _poi;
+    private OwnerPoiStatsDto? _stats;
+    private PoiEditModel? _editor;
+    private GeofenceEditModel? _geofenceEditor;
+    private IBrowserFile? _selectedUploadFile;
+    private IReadOnlyList<CategoryDto> _categories = Array.Empty<CategoryDto>();
+    private IReadOnlyList<AudioDto> _audioItems = Array.Empty<AudioDto>();
+    private IReadOnlyList<ModerationRequestDto> _moderationItems = Array.Empty<ModerationRequestDto>();
+
+    private IReadOnlyList<ModerationRequestDto> PoiModerationItems => _moderationItems
+        .Where(item => string.Equals(item.EntityType, "poi", StringComparison.OrdinalIgnoreCase)
+            && string.Equals(item.EntityId, Id.ToString(), StringComparison.Ordinal))
+        .OrderByDescending(item => item.CreatedAtUtc)
+        .ToArray();
+
+    private ModerationRequestDto? LatestRejectedModeration => PoiModerationItems
+        .FirstOrDefault(item => item.Status == ModerationStatus.Rejected);
+
+    private bool ShouldShowRejectionSurface => _poi?.Status == PoiStatus.Rejected || LatestRejectedModeration is not null;
+
+    private string RejectionNote => LatestRejectedModeration?.ReviewNote
+        ?? "POI đang bị từ chối. Kiểm tra nội dung nguồn, geofence và audio rồi gửi lại để admin duyệt.";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        ResetLoadState();
+
+        try
+        {
+            _categories = await CategoryPortalService.GetAsync();
+            _poi = await OwnerPortalService.GetPoiAsync(Id);
+            _stats = await OwnerPortalService.GetPoiStatsAsync(Id);
+            _audioItems = await AudioPortalService.GetByPoiAsync(Id);
+            _moderationItems = await ModerationPortalService.GetMineAsync();
+            HydrateEditors(_poi);
+        }
+        catch (ApiException exception)
+        {
+            _errorMessage = exception.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void ResetLoadState()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+        _statusMessage = null;
+        _poi = null;
+        _stats = null;
+        _editor = null;
+        _geofenceEditor = null;
+        _selectedUploadFile = null;
+        _categories = Array.Empty<CategoryDto>();
+        _audioItems = Array.Empty<AudioDto>();
+        _moderationItems = Array.Empty<ModerationRequestDto>();
+        _isDeleteDialogOpen = false;
+    }
+
+    private void HydrateEditors(PoiDto poi)
+    {
+        _editor = PoiEditModel.FromPoi(poi);
+        _geofenceEditor = GeofenceEditModel.FromPoi(poi);
+    }
+
+    private async Task SavePoiAsync()
+    {
+        if (_poi is null || _editor is null)
+        {
+            return;
+        }
+
+        _isSaving = true;
+
+        try
+        {
+            var updated = await OwnerPortalService.UpdatePoiAsync(_poi.Id, _editor.ToRequest(_poi));
+            _poi = updated;
+            HydrateEditors(updated);
+            _statusMessage = $"Đã lưu {_poi.Name}.";
+        }
+        catch (ApiException exception)
+        {
+            _statusMessage = exception.Message;
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private async Task SaveGeofenceAsync()
+    {
+        if (_poi is null || _geofenceEditor is null)
+        {
+            return;
+        }
+
+        _isSavingGeofence = true;
+
+        try
+        {
+            var updated = await GeofencePortalService.UpdateAsync(_poi.Id, _geofenceEditor.ToRequest());
+            _poi = WithUpdatedGeofence(_poi, updated);
+            _geofenceEditor = GeofenceEditModel.FromGeofence(updated);
+            _statusMessage = "Đã cập nhật vùng kích hoạt.";
+        }
+        catch (ApiException exception)
+        {
+            _statusMessage = exception.Message;
+        }
+        finally
+        {
+            _isSavingGeofence = false;
+        }
+    }
+
+    private void HandleSourceAudioSelection(InputFileChangeEventArgs args)
+    {
+        _selectedUploadFile = args.File;
+    }
+
+    private async Task UploadSourceAudioAsync()
+    {
+        if (_poi is null || _selectedUploadFile is null)
+        {
+            return;
+        }
+
+        _isUploadingAudio = true;
+
+        try
+        {
+            await using var stream = _selectedUploadFile.OpenReadStream(MaxUploadBytes);
+            await AudioPortalService.UploadAsync(new UploadAudioRequest
+            {
+                PoiId = _poi.Id,
+                LanguageCode = "vi",
+                FileName = _selectedUploadFile.Name
+            }, stream);
+
+            _audioItems = await AudioPortalService.GetByPoiAsync(_poi.Id);
+            _stats = await OwnerPortalService.GetPoiStatsAsync(_poi.Id);
+            _selectedUploadFile = null;
+            _statusMessage = "Đã tải audio nguồn tiếng Việt.";
+        }
+        catch (ApiException exception)
+        {
+            _statusMessage = exception.Message;
+        }
+        finally
+        {
+            _isUploadingAudio = false;
+        }
+    }
+
+    private async Task RequestReviewAsync()
+    {
+        if (_poi is null)
+        {
+            return;
+        }
+
+        _isRequestingReview = true;
+
+        try
+        {
+            await ModerationPortalService.CreateAsync(new CreateModerationRequest
+            {
+                EntityType = "poi",
+                EntityId = _poi.Id.ToString()
+            });
+
+            _moderationItems = await ModerationPortalService.GetMineAsync();
+            _statusMessage = $"Đã gửi {_poi.Name} vào hàng chờ duyệt.";
+        }
+        catch (ApiException exception)
+        {
+            _statusMessage = exception.Message;
+        }
+        finally
+        {
+            _isRequestingReview = false;
+        }
+    }
+
+    private void OpenDeleteDialog()
+    {
+        _isDeleteDialogOpen = true;
+    }
+
+    private void CloseDeleteDialog()
+    {
+        _isDeleteDialogOpen = false;
+    }
+
+    private async Task DeletePoiAsync()
+    {
+        if (_poi is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await OwnerPortalService.DeletePoiAsync(_poi.Id);
+            NavigationManager.NavigateTo("/owner/pois");
+        }
+        catch (ApiException exception)
+        {
+            _statusMessage = exception.Message;
+            _isDeleteDialogOpen = false;
+        }
+    }
+
+    private bool HasTranslation(string languageCode)
+    {
+        return _poi?.Translations.Any(translation =>
+            string.Equals(translation.LanguageCode, languageCode, StringComparison.OrdinalIgnoreCase)) ?? false;
+    }
+
+    private static PoiDto WithUpdatedGeofence(PoiDto poi, GeofenceDto geofence)
+    {
+        var geofences = poi.Geofences
+            .Where(item => item.Id != geofence.Id)
+            .Prepend(geofence)
+            .OrderByDescending(item => item.IsActive)
+            .ThenBy(item => item.Priority)
+            .ToArray();
+
+        return new PoiDto
+        {
+            Id = poi.Id,
+            Name = poi.Name,
+            Slug = poi.Slug,
+            OwnerId = poi.OwnerId,
+            Lat = poi.Lat,
+            Lng = poi.Lng,
+            Priority = poi.Priority,
+            CategoryId = poi.CategoryId,
+            CategoryName = poi.CategoryName,
+            NarrationMode = poi.NarrationMode,
+            Description = poi.Description,
+            TtsScript = poi.TtsScript,
+            MapLink = poi.MapLink,
+            ImageUrl = poi.ImageUrl,
+            Status = poi.Status,
+            CreatedAtUtc = poi.CreatedAtUtc,
+            Translations = poi.Translations,
+            Geofences = geofences
+        };
+    }
+
+    private static string GetPoiStatusLabel(PoiStatus status) => status switch
+    {
+        PoiStatus.Published => "Đã xuất bản",
+        PoiStatus.PendingReview => "Chờ duyệt",
+        PoiStatus.Draft => "Nháp",
+        PoiStatus.Rejected => "Bị từ chối",
+        PoiStatus.Updated => "Đã cập nhật",
+        PoiStatus.Archived => "Lưu trữ",
+        _ => status.ToString()
+    };
+
+    private static StatusTone GetPoiStatusTone(PoiStatus status) => status switch
+    {
+        PoiStatus.Published => StatusTone.Good,
+        PoiStatus.PendingReview => StatusTone.Warn,
+        PoiStatus.Draft => StatusTone.Neutral,
+        PoiStatus.Rejected => StatusTone.Warn,
+        PoiStatus.Updated => StatusTone.Info,
+        PoiStatus.Archived => StatusTone.Neutral,
+        _ => StatusTone.Neutral
+    };
+
+    private static string GetNarrationLabel(NarrationMode mode) => mode switch
+    {
+        NarrationMode.TtsOnly => "Chỉ TTS",
+        NarrationMode.RecordedOnly => "Chỉ audio nguồn",
+        NarrationMode.Both => "Kết hợp",
+        _ => mode.ToString()
+    };
+
+    private static string GetRadiusSummary(PoiDto poi)
+    {
+        var geofence = poi.Geofences.FirstOrDefault();
+        return geofence is null ? "Chưa có radius" : $"{geofence.RadiusMeters}m";
+    }
+
+    private static string GetDurationLabel(int durationSeconds)
+    {
+        return durationSeconds <= 0 ? "Chưa có" : $"{durationSeconds}s";
+    }
+
+    private static string GetAudioSourceLabel(AudioSourceType sourceType) => sourceType switch
+    {
+        AudioSourceType.Tts => "TTS",
+        AudioSourceType.Recorded => "Audio nguồn",
+        _ => sourceType.ToString()
+    };
+
+    private static string GetModerationStatusLabel(ModerationStatus status) => status switch
+    {
+        ModerationStatus.Pending => "Chờ duyệt",
+        ModerationStatus.Approved => "Đã duyệt",
+        ModerationStatus.Rejected => "Bị từ chối",
+        ModerationStatus.Revised => "Đã chỉnh sửa",
+        _ => status.ToString()
+    };
+
+    private sealed class PoiEditModel
+    {
+        public string Name { get; set; } = string.Empty;
+
+        public string Slug { get; set; } = string.Empty;
+
+        public double Lat { get; set; }
+
+        public double Lng { get; set; }
+
+        public int Priority { get; set; }
+
+        public int? CategoryId { get; set; }
+
+        public NarrationMode NarrationMode { get; set; }
+
+        public string Description { get; set; } = string.Empty;
+
+        public string TtsScript { get; set; } = string.Empty;
+
+        public string? MapLink { get; set; }
+
+        public string? ImageUrl { get; set; }
+
+        public static PoiEditModel FromPoi(PoiDto poi)
+        {
+            return new PoiEditModel
+            {
+                Name = poi.Name,
+                Slug = poi.Slug,
+                Lat = poi.Lat,
+                Lng = poi.Lng,
+                Priority = poi.Priority,
+                CategoryId = poi.CategoryId,
+                NarrationMode = poi.NarrationMode,
+                Description = poi.Description,
+                TtsScript = poi.TtsScript,
+                MapLink = poi.MapLink,
+                ImageUrl = poi.ImageUrl
+            };
+        }
+
+        public UpdatePoiRequest ToRequest(PoiDto poi)
+        {
+            return new UpdatePoiRequest
+            {
+                Name = Name,
+                Slug = Slug,
+                Lat = Lat,
+                Lng = Lng,
+                Priority = Priority,
+                CategoryId = CategoryId,
+                NarrationMode = NarrationMode,
+                Description = Description,
+                TtsScript = TtsScript,
+                MapLink = MapLink,
+                ImageUrl = ImageUrl,
+                Status = poi.Status
+            };
+        }
+    }
+
+    private sealed class GeofenceEditModel
+    {
+        public string Name { get; set; } = "Vùng kích hoạt chính";
+
+        public int RadiusMeters { get; set; } = 35;
+
+        public int Priority { get; set; } = 10;
+
+        public int DebounceSeconds { get; set; } = 10;
+
+        public int CooldownSeconds { get; set; } = 600;
+
+        public bool IsActive { get; set; } = true;
+
+        public string TriggerAction { get; set; } = "auto_play";
+
+        public bool NearestOnly { get; set; } = true;
+
+        public static GeofenceEditModel FromPoi(PoiDto poi)
+        {
+            var geofence = poi.Geofences.FirstOrDefault();
+            return geofence is null ? new GeofenceEditModel() : FromGeofence(geofence);
+        }
+
+        public static GeofenceEditModel FromGeofence(GeofenceDto geofence)
+        {
+            return new GeofenceEditModel
+            {
+                Name = geofence.Name,
+                RadiusMeters = geofence.RadiusMeters,
+                Priority = geofence.Priority,
+                DebounceSeconds = geofence.DebounceSeconds,
+                CooldownSeconds = geofence.CooldownSeconds,
+                IsActive = geofence.IsActive,
+                TriggerAction = geofence.TriggerAction,
+                NearestOnly = geofence.NearestOnly
+            };
+        }
+
+        public UpdateGeofenceRequest ToRequest()
+        {
+            return new UpdateGeofenceRequest
+            {
+                Name = Name,
+                RadiusMeters = RadiusMeters,
+                Priority = Priority,
+                DebounceSeconds = DebounceSeconds,
+                CooldownSeconds = CooldownSeconds,
+                IsActive = IsActive,
+                TriggerAction = TriggerAction,
+                NearestOnly = NearestOnly
+            };
+        }
+    }
+}

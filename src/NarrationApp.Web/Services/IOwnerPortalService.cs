@@ -9,6 +9,8 @@ public interface IOwnerPortalService
 
     Task<IReadOnlyList<PoiDto>> GetPoisAsync(CancellationToken cancellationToken = default);
 
+    Task<PoiDto> GetPoiAsync(int poiId, CancellationToken cancellationToken = default);
+
     Task<OwnerPoiStatsDto> GetPoiStatsAsync(int poiId, CancellationToken cancellationToken = default);
 
     Task<PoiDto> CreatePoiAsync(CreatePoiRequest request, CancellationToken cancellationToken = default);

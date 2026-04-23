@@ -1,0 +1,258 @@
+@page "/owner/pois/new"
+@attribute [Authorize(Roles = "poi_owner")]
+@inject IOwnerPortalService OwnerPortalService
+@inject ICategoryPortalService CategoryPortalService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Tạo POI mới</PageTitle>
+
+@if (_isLoading)
+{
+    <section class="panel-shell">
+        <p class="panel-shell__eyebrow">POI</p>
+        <h2>Đang chuẩn bị form tạo POI...</h2>
+    </section>
+}
+else
+{
+    <div class="dashboard-stack owner-poi-create">
+        <section class="panel-shell owner-poi-create__hero">
+            <div>
+                <p class="panel-shell__eyebrow">POI</p>
+                <h2>Tạo POI mới</h2>
+                <p class="panel-shell__copy">Tách tạo mới khỏi danh sách để owner nhập rõ nội dung nguồn, vị trí và cấu hình vận hành ban đầu.</p>
+            </div>
+
+            <a class="app-button app-button--ghost" href="/owner/pois">Quay lại danh sách</a>
+        </section>
+
+        @if (!string.IsNullOrWhiteSpace(_statusMessage))
+        {
+            <section class="panel-shell">
+                <p class="panel-shell__copy">@_statusMessage</p>
+            </section>
+        }
+
+        <section class="owner-poi-create__grid">
+            <article class="panel-shell owner-form-section">
+                <p class="panel-shell__eyebrow">Bước 1</p>
+                <h3>Thông tin cơ bản</h3>
+                <p class="panel-shell__copy">Tên, slug và chế độ narration giúp admin hiểu POI ngay từ hàng đợi duyệt.</p>
+
+                <div class="owner-form-grid">
+                    <label>
+                        <span>Tên POI</span>
+                        <input data-field="poi-name" @bind="_editor.Name" />
+                    </label>
+
+                    <label>
+                        <span>Slug</span>
+                        <input data-field="poi-slug" @bind="_editor.Slug" />
+                    </label>
+
+                    <label>
+                        <span>Độ ưu tiên</span>
+                        <input data-field="poi-priority" type="number" @bind="_editor.Priority" />
+                    </label>
+
+                    <label>
+                        <span>Chế độ phát</span>
+                        <select data-field="poi-mode" @bind="_editor.NarrationMode">
+                            @foreach (var mode in _narrationModes)
+                            {
+                                <option value="@mode">@GetNarrationLabel(mode)</option>
+                            }
+                        </select>
+                    </label>
+                </div>
+            </article>
+
+            <article class="panel-shell owner-form-section">
+                <p class="panel-shell__eyebrow">Bước 2</p>
+                <h3>Vị trí và danh mục</h3>
+                <p class="panel-shell__copy">Vị trí chính xác giúp geofence và bản đồ vận hành ổn định.</p>
+
+                <div class="owner-form-grid">
+                    <label>
+                        <span>Vĩ độ</span>
+                        <input data-field="poi-lat" type="number" step="0.000001" @bind="_editor.Lat" />
+                    </label>
+
+                    <label>
+                        <span>Kinh độ</span>
+                        <input data-field="poi-lng" type="number" step="0.000001" @bind="_editor.Lng" />
+                    </label>
+
+                    <label>
+                        <span>Danh mục</span>
+                        <select data-field="poi-category" @bind="_categoryId">
+                            <option value="">Chưa gán danh mục</option>
+                            @foreach (var category in _categories)
+                            {
+                                <option value="@category.Id.ToString()">@category.Name</option>
+                            }
+                        </select>
+                    </label>
+
+                    <label>
+                        <span>Liên kết bản đồ</span>
+                        <input data-field="poi-map-link" @bind="_editor.MapLink" />
+                    </label>
+                </div>
+            </article>
+
+            <article class="panel-shell owner-form-section">
+                <p class="panel-shell__eyebrow">Media</p>
+                <h3>Hình ảnh đại diện</h3>
+                <p class="panel-shell__copy">Dùng URL ảnh hiện có trong iteration này; upload nâng cao sẽ đi theo slice riêng nếu cần.</p>
+                <label>
+                    <span>URL hình ảnh</span>
+                    <input data-field="poi-image-url" @bind="_editor.ImageUrl" />
+                </label>
+            </article>
+
+            <article class="panel-shell owner-form-section owner-form-section--wide">
+                <p class="panel-shell__eyebrow">Nội dung</p>
+                <h3>Mô tả nguồn</h3>
+                <p class="panel-shell__copy">Mô tả càng rõ thì review và dịch thuật càng ít phải hỏi lại.</p>
+                <textarea data-field="poi-description" @bind="_editor.Description"></textarea>
+            </article>
+
+            <article class="panel-shell owner-form-section owner-form-section--wide">
+                <p class="panel-shell__eyebrow">Narration</p>
+                <h3>Kịch bản TTS</h3>
+                <p class="panel-shell__copy">Kịch bản tiếng Việt là nguồn cho audio và bản dịch về sau.</p>
+                <textarea data-field="poi-tts-script" @bind="_editor.TtsScript"></textarea>
+            </article>
+
+            <article class="panel-shell owner-form-section">
+                <p class="panel-shell__eyebrow">Audio</p>
+                <h3>Audio nguồn</h3>
+                <p class="panel-shell__copy">Sau khi tạo POI, mở trang chi tiết để upload hoặc theo dõi trạng thái audio theo ngôn ngữ.</p>
+            </article>
+
+            <article class="panel-shell owner-form-section">
+                <p class="panel-shell__eyebrow">Vùng kích hoạt</p>
+                <h3>Geofence mặc định</h3>
+                <p class="panel-shell__copy">POI mới dùng bán kính mặc định trước; tinh chỉnh vùng kích hoạt tại trang chi tiết.</p>
+            </article>
+        </section>
+
+        <section class="panel-shell owner-poi-create__actions">
+            <button class="app-button app-button--primary" data-action="create-poi" type="button" @onclick="CreatePoiAsync" disabled="@_isSaving">
+                @(_isSaving ? "Đang tạo..." : "Tạo POI")
+            </button>
+            <a class="app-button app-button--ghost" href="/owner/pois">Hủy</a>
+        </section>
+    </div>
+}
+
+@code {
+    private readonly NarrationMode[] _narrationModes = Enum.GetValues<NarrationMode>();
+
+    private bool _isLoading = true;
+    private bool _isSaving;
+    private string? _statusMessage;
+    private string _categoryId = string.Empty;
+    private IReadOnlyList<CategoryDto> _categories = Array.Empty<CategoryDto>();
+    private PoiCreateModel _editor = PoiCreateModel.CreateDefault();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _categories = await CategoryPortalService.GetAsync();
+        }
+        catch (ApiException exception)
+        {
+            _statusMessage = exception.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task CreatePoiAsync()
+    {
+        try
+        {
+            _isSaving = true;
+            var created = await OwnerPortalService.CreatePoiAsync(_editor.ToRequest(ParseCategoryId()));
+            NavigationManager.NavigateTo($"/owner/pois/{created.Id}");
+        }
+        catch (ApiException exception)
+        {
+            _statusMessage = exception.Message;
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private int? ParseCategoryId()
+    {
+        return int.TryParse(_categoryId, out var parsedCategoryId)
+            ? parsedCategoryId
+            : null;
+    }
+
+    private static string GetNarrationLabel(NarrationMode mode) => mode switch
+    {
+        NarrationMode.TtsOnly => "Chỉ TTS",
+        NarrationMode.RecordedOnly => "Chỉ audio nguồn",
+        NarrationMode.Both => "Kết hợp",
+        _ => mode.ToString()
+    };
+
+    private sealed class PoiCreateModel
+    {
+        public string Name { get; set; } = string.Empty;
+
+        public string Slug { get; set; } = string.Empty;
+
+        public double Lat { get; set; }
+
+        public double Lng { get; set; }
+
+        public int Priority { get; set; } = 10;
+
+        public NarrationMode NarrationMode { get; set; } = NarrationMode.TtsOnly;
+
+        public string Description { get; set; } = string.Empty;
+
+        public string TtsScript { get; set; } = string.Empty;
+
+        public string? MapLink { get; set; }
+
+        public string? ImageUrl { get; set; }
+
+        public static PoiCreateModel CreateDefault()
+        {
+            return new PoiCreateModel
+            {
+                Lat = 10.758d,
+                Lng = 106.701d
+            };
+        }
+
+        public CreatePoiRequest ToRequest(int? categoryId)
+        {
+            return new CreatePoiRequest
+            {
+                Name = Name,
+                Slug = Slug,
+                Lat = Lat,
+                Lng = Lng,
+                Priority = Priority,
+                CategoryId = categoryId,
+                NarrationMode = NarrationMode,
+                Description = Description,
+                TtsScript = TtsScript,
+                MapLink = MapLink,
+                ImageUrl = ImageUrl
+            };
+        }
+    }
+}

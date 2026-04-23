@@ -69,6 +69,35 @@ public sealed class OwnerController(AppDbContext dbContext, INotificationService
         });
     }
 
+    [HttpGet("pois/{id:int}")]
+    public async Task<ActionResult<ApiResponse<PoiDto>>> GetPoiAsync(int id, CancellationToken cancellationToken)
+    {
+        var ownerId = User.GetRequiredUserId();
+        var poi = await dbContext.Pois
+            .AsNoTracking()
+            .Include(item => item.Category)
+            .Include(item => item.Translations)
+            .Include(item => item.Geofences)
+            .SingleOrDefaultAsync(item => item.Id == id && item.OwnerId == ownerId, cancellationToken);
+
+        if (poi is null)
+        {
+            return NotFound(new ApiResponse<PoiDto>
+            {
+                Succeeded = false,
+                Message = "POI not found.",
+                Error = new ErrorResponse { Code = "poi_not_found", Message = "POI not found for this owner." }
+            });
+        }
+
+        return Ok(new ApiResponse<PoiDto>
+        {
+            Succeeded = true,
+            Message = "Owner POI loaded.",
+            Data = poi.ToDto()
+        });
+    }
+
     [HttpGet("pois/{id:int}/stats")]
     public async Task<ActionResult<ApiResponse<OwnerPoiStatsDto>>> GetPoiStatsAsync(int id, CancellationToken cancellationToken)
     {

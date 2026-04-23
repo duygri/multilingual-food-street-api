@@ -10,12 +10,135 @@ using NarrationApp.Server.Tests.Support;
 using NarrationApp.Shared.DTOs.Common;
 using NarrationApp.Shared.DTOs.Notification;
 using NarrationApp.Shared.DTOs.Owner;
+using NarrationApp.Shared.DTOs.Poi;
 using NarrationApp.Shared.Enums;
 
 namespace NarrationApp.Server.Tests.Controllers;
 
 public sealed class OwnerControllerTests
 {
+    [Fact]
+    public async Task GetPoiAsync_returns_owned_poi_with_translations_and_geofences()
+    {
+        await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
+        var owner = await TestAppDbContextFactory.AddOwnerAsync(dbContext, "owner-poi-detail@narration.app");
+        var category = new Category
+        {
+            Name = "Hải sản",
+            Slug = "hai-san",
+            Description = "Seafood",
+            Icon = "shrimp",
+            DisplayOrder = 1,
+            IsActive = true
+        };
+
+        var poi = new Poi
+        {
+            Name = "Bún mắm Vĩnh Khánh",
+            Slug = "bun-mam-vinh-khanh",
+            OwnerId = owner.Id,
+            Lat = 10.758,
+            Lng = 106.701,
+            Priority = 7,
+            Category = category,
+            NarrationMode = NarrationMode.Both,
+            Description = "Món bún mắm đậm vị về đêm.",
+            TtsScript = "Kịch bản tiếng Việt.",
+            Status = PoiStatus.Rejected,
+            CreatedAt = DateTime.UtcNow.AddDays(-2),
+            Translations =
+            [
+                new PoiTranslation
+                {
+                    LanguageCode = "vi",
+                    Title = "Bún mắm",
+                    Description = "Đậm vị",
+                    Story = "Câu chuyện",
+                    Highlight = "Nước lèo",
+                    IsFallback = false
+                },
+                new PoiTranslation
+                {
+                    LanguageCode = "en",
+                    Title = "Fermented noodle soup",
+                    Description = "Rich broth",
+                    Story = "Story",
+                    Highlight = "Broth",
+                    IsFallback = true
+                }
+            ],
+            Geofences =
+            [
+                new Geofence
+                {
+                    Name = "Vùng kích hoạt chính",
+                    RadiusMeters = 35,
+                    Priority = 8,
+                    DebounceSeconds = 10,
+                    CooldownSeconds = 600,
+                    IsActive = true,
+                    TriggerAction = "auto_play",
+                    NearestOnly = true
+                }
+            ]
+        };
+
+        dbContext.Pois.Add(poi);
+        await dbContext.SaveChangesAsync();
+
+        var controller = CreateController(dbContext, owner.Id, unreadCount: 0);
+
+        var actionResult = await controller.GetPoiAsync(poi.Id, CancellationToken.None);
+        var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
+        var response = Assert.IsType<ApiResponse<PoiDto>>(okResult.Value);
+        var result = Assert.IsType<PoiDto>(response.Data);
+
+        Assert.True(response.Succeeded);
+        Assert.Equal(poi.Id, result.Id);
+        Assert.Equal(owner.Id, result.OwnerId);
+        Assert.Equal("Bún mắm Vĩnh Khánh", result.Name);
+        Assert.Equal("Hải sản", result.CategoryName);
+        Assert.Equal(PoiStatus.Rejected, result.Status);
+        Assert.Equal(2, result.Translations.Count);
+        Assert.Contains(result.Translations, item => item.LanguageCode == "vi" && item.Title == "Bún mắm");
+        Assert.Single(result.Geofences);
+        Assert.Equal("Vùng kích hoạt chính", result.Geofences[0].Name);
+    }
+
+    [Fact]
+    public async Task GetPoiAsync_returns_not_found_for_other_owner_poi()
+    {
+        await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
+        var owner = await TestAppDbContextFactory.AddOwnerAsync(dbContext, "owner-scope@narration.app");
+        var otherOwner = await TestAppDbContextFactory.AddOwnerAsync(dbContext, "other-owner@narration.app");
+        var otherPoi = new Poi
+        {
+            Name = "Other POI",
+            Slug = "other-poi",
+            OwnerId = otherOwner.Id,
+            Lat = 10.758,
+            Lng = 106.701,
+            Priority = 10,
+            NarrationMode = NarrationMode.TtsOnly,
+            Description = "Owned by someone else.",
+            TtsScript = "Script",
+            Status = PoiStatus.Published,
+            CreatedAt = DateTime.UtcNow.AddDays(-1)
+        };
+
+        dbContext.Pois.Add(otherPoi);
+        await dbContext.SaveChangesAsync();
+
+        var controller = CreateController(dbContext, owner.Id, unreadCount: 0);
+
+        var actionResult = await controller.GetPoiAsync(otherPoi.Id, CancellationToken.None);
+        var notFound = Assert.IsType<NotFoundObjectResult>(actionResult.Result);
+        var response = Assert.IsType<ApiResponse<PoiDto>>(notFound.Value);
+
+        Assert.False(response.Succeeded);
+        Assert.Equal("poi_not_found", response.Error?.Code);
+    }
+
     [Fact]
     public async Task GetProfileAsync_returns_editable_owner_profile_data_and_activity_summary()
     {

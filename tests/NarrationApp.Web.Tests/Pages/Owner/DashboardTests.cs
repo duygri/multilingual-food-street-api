@@ -242,6 +242,9 @@ public sealed class DashboardTests : TestContext
             return Task.FromResult(pois);
         }
 
+        public Task<PoiDto> GetPoiAsync(int poiId, CancellationToken cancellationToken = default)
+            => Task.FromResult(pois.FirstOrDefault(poi => poi.Id == poiId) ?? new PoiDto { Id = poiId });
+
         public Task<OwnerPoiStatsDto> GetPoiStatsAsync(int poiId, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 

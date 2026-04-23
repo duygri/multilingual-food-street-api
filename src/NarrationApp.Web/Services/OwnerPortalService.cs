@@ -15,6 +15,11 @@ public sealed class OwnerPortalService(ApiClient apiClient) : IOwnerPortalServic
         return apiClient.GetAsync<IReadOnlyList<PoiDto>>("api/owner/pois", cancellationToken);
     }
 
+    public Task<PoiDto> GetPoiAsync(int poiId, CancellationToken cancellationToken = default)
+    {
+        return apiClient.GetAsync<PoiDto>($"api/owner/pois/{poiId}", cancellationToken);
+    }
+
     public Task<OwnerPoiStatsDto> GetPoiStatsAsync(int poiId, CancellationToken cancellationToken = default)
     {
         return apiClient.GetAsync<OwnerPoiStatsDto>($"api/owner/pois/{poiId}/stats", cancellationToken);
