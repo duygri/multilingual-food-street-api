@@ -195,6 +195,108 @@ public sealed class OwnerControllerTests
         Assert.Equal("en", persistedOwner.PreferredLanguage);
     }
 
+    [Fact]
+    public async Task PutProfileAsync_preserves_omitted_optional_fields_and_clears_blank_optional_fields()
+    {
+        await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
+        var owner = await TestAppDbContextFactory.AddOwnerAsync(dbContext, "owner-partial@narration.app");
+        owner.FullName = "Original Owner";
+        owner.Phone = "+84 90 111 2222";
+        owner.ManagedArea = "Old District";
+        owner.PreferredLanguage = "vi";
+        await dbContext.SaveChangesAsync();
+
+        var controller = CreateController(dbContext, owner.Id, unreadCount: 0);
+
+        var preserveResult = await controller.UpdateProfileAsync(new UpdateOwnerProfileRequest
+        {
+            FullName = "Updated Owner",
+            PreferredLanguage = "EN"
+        }, CancellationToken.None);
+
+        var preserveOkResult = Assert.IsType<OkObjectResult>(preserveResult.Result);
+        var preserveResponse = Assert.IsType<ApiResponse<OwnerProfileDto>>(preserveOkResult.Value);
+        var preservedProfile = Assert.IsType<OwnerProfileDto>(preserveResponse.Data);
+
+        Assert.Equal("+84 90 111 2222", preservedProfile.Phone);
+        Assert.Equal("Old District", preservedProfile.ManagedArea);
+
+        var clearResult = await controller.UpdateProfileAsync(new UpdateOwnerProfileRequest
+        {
+            FullName = "Updated Owner",
+            Phone = "   ",
+            ManagedArea = "",
+            PreferredLanguage = "en"
+        }, CancellationToken.None);
+
+        var clearOkResult = Assert.IsType<OkObjectResult>(clearResult.Result);
+        var clearResponse = Assert.IsType<ApiResponse<OwnerProfileDto>>(clearOkResult.Value);
+        var clearedProfile = Assert.IsType<OwnerProfileDto>(clearResponse.Data);
+
+        var persistedOwner = await dbContext.AppUsers.SingleAsync(item => item.Id == owner.Id);
+
+        Assert.Null(clearedProfile.Phone);
+        Assert.Null(clearedProfile.ManagedArea);
+        Assert.Null(persistedOwner.Phone);
+        Assert.Null(persistedOwner.ManagedArea);
+    }
+
+    [Theory]
+    [MemberData(nameof(InvalidProfileRequests))]
+    public async Task PutProfileAsync_rejects_invalid_profile_values_without_persisting_changes(UpdateOwnerProfileRequest request)
+    {
+        await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
+        var owner = await TestAppDbContextFactory.AddOwnerAsync(dbContext, "owner-invalid@narration.app");
+        owner.FullName = "Original Owner";
+        owner.Phone = "+84 90 111 2222";
+        owner.ManagedArea = "Old District";
+        owner.PreferredLanguage = "vi";
+        await dbContext.SaveChangesAsync();
+
+        var controller = CreateController(dbContext, owner.Id, unreadCount: 0);
+
+        var actionResult = await controller.UpdateProfileAsync(request, CancellationToken.None);
+
+        var badRequest = Assert.IsType<BadRequestObjectResult>(actionResult.Result);
+        var response = Assert.IsType<ApiResponse<OwnerProfileDto>>(badRequest.Value);
+        var persistedOwner = await dbContext.AppUsers.SingleAsync(item => item.Id == owner.Id);
+
+        Assert.False(response.Succeeded);
+        Assert.Equal("invalid_owner_profile", response.Error?.Code);
+        Assert.Equal("Original Owner", persistedOwner.FullName);
+        Assert.Equal("+84 90 111 2222", persistedOwner.Phone);
+        Assert.Equal("Old District", persistedOwner.ManagedArea);
+        Assert.Equal("vi", persistedOwner.PreferredLanguage);
+    }
+
+    public static IEnumerable<object[]> InvalidProfileRequests()
+    {
+        yield return
+        [
+            new UpdateOwnerProfileRequest { FullName = "   ", PreferredLanguage = "en" }
+        ];
+        yield return
+        [
+            new UpdateOwnerProfileRequest { FullName = "Owner", PreferredLanguage = "   " }
+        ];
+        yield return
+        [
+            new UpdateOwnerProfileRequest { FullName = new string('A', 151), PreferredLanguage = "en" }
+        ];
+        yield return
+        [
+            new UpdateOwnerProfileRequest { FullName = "Owner", Phone = new string('1', 31), PreferredLanguage = "en" }
+        ];
+        yield return
+        [
+            new UpdateOwnerProfileRequest { FullName = "Owner", ManagedArea = new string('A', 251), PreferredLanguage = "en" }
+        ];
+        yield return
+        [
+            new UpdateOwnerProfileRequest { FullName = "Owner", PreferredLanguage = new string('a', 11) }
+        ];
+    }
+
     private static OwnerController CreateController(AppDbContext dbContext, Guid userId, int unreadCount)
     {
         var controller = new OwnerController(dbContext, new StubNotificationService(unreadCount));

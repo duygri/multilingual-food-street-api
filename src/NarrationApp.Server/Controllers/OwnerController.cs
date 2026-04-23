@@ -18,6 +18,11 @@ namespace NarrationApp.Server.Controllers;
 [Route("api/owner")]
 public sealed class OwnerController(AppDbContext dbContext, INotificationService notificationService) : ControllerBase
 {
+    private const int FullNameMaxLength = 150;
+    private const int PhoneMaxLength = 30;
+    private const int ManagedAreaMaxLength = 250;
+    private const int PreferredLanguageMaxLength = 10;
+
     [HttpGet("profile")]
     public async Task<ActionResult<ApiResponse<OwnerProfileDto>>> GetProfileAsync(CancellationToken cancellationToken)
     {
@@ -141,12 +146,31 @@ public sealed class OwnerController(AppDbContext dbContext, INotificationService
             });
         }
 
-        owner.FullName = string.IsNullOrWhiteSpace(request.FullName) ? owner.FullName : request.FullName.Trim();
-        owner.Phone = NormalizeOptionalField(request.Phone);
-        owner.ManagedArea = NormalizeOptionalField(request.ManagedArea);
-        owner.PreferredLanguage = string.IsNullOrWhiteSpace(request.PreferredLanguage)
-            ? owner.PreferredLanguage
-            : request.PreferredLanguage.Trim().ToLowerInvariant();
+        var fullName = request.FullName?.Trim();
+        var preferredLanguage = request.PreferredLanguage?.Trim().ToLowerInvariant();
+        var phone = NormalizeOptionalField(request.Phone);
+        var managedArea = NormalizeOptionalField(request.ManagedArea);
+        var validationErrors = ValidateProfileUpdate(fullName, phone, managedArea, preferredLanguage);
+
+        if (validationErrors.Count > 0)
+        {
+            return BadRequest(new ApiResponse<OwnerProfileDto>
+            {
+                Succeeded = false,
+                Message = "Owner profile is invalid.",
+                Error = new ErrorResponse
+                {
+                    Code = "invalid_owner_profile",
+                    Message = "Owner profile contains invalid values.",
+                    Details = validationErrors
+                }
+            });
+        }
+
+        owner.FullName = fullName!;
+        owner.Phone = phone.WasProvided ? phone.Value : owner.Phone;
+        owner.ManagedArea = managedArea.WasProvided ? managedArea.Value : owner.ManagedArea;
+        owner.PreferredLanguage = preferredLanguage!;
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -188,13 +212,55 @@ public sealed class OwnerController(AppDbContext dbContext, INotificationService
         };
     }
 
-    private static string? NormalizeOptionalField(string? value)
+    private static OptionalProfileField NormalizeOptionalField(string? value)
     {
-        if (string.IsNullOrWhiteSpace(value))
+        if (value is null)
         {
-            return null;
+            return new OptionalProfileField(false, null);
         }
 
-        return value.Trim();
+        var normalizedValue = value.Trim();
+        return new OptionalProfileField(true, normalizedValue.Length == 0 ? null : normalizedValue);
     }
+
+    private static List<string> ValidateProfileUpdate(
+        string? fullName,
+        OptionalProfileField phone,
+        OptionalProfileField managedArea,
+        string? preferredLanguage)
+    {
+        var errors = new List<string>();
+
+        if (string.IsNullOrWhiteSpace(fullName))
+        {
+            errors.Add("Full name is required.");
+        }
+        else if (fullName.Length > FullNameMaxLength)
+        {
+            errors.Add($"Full name must be {FullNameMaxLength} characters or fewer.");
+        }
+
+        if (phone.Value?.Length > PhoneMaxLength)
+        {
+            errors.Add($"Phone must be {PhoneMaxLength} characters or fewer.");
+        }
+
+        if (managedArea.Value?.Length > ManagedAreaMaxLength)
+        {
+            errors.Add($"Managed area must be {ManagedAreaMaxLength} characters or fewer.");
+        }
+
+        if (string.IsNullOrWhiteSpace(preferredLanguage))
+        {
+            errors.Add("Preferred language is required.");
+        }
+        else if (preferredLanguage.Length > PreferredLanguageMaxLength)
+        {
+            errors.Add($"Preferred language must be {PreferredLanguageMaxLength} characters or fewer.");
+        }
+
+        return errors;
+    }
+
+    private readonly record struct OptionalProfileField(bool WasProvided, string? Value);
 }
