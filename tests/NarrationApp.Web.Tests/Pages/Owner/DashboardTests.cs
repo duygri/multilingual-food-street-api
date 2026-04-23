@@ -78,6 +78,15 @@ public sealed class DashboardTests : TestContext
             Assert.Contains("1 POI cần phản hồi kiểm duyệt", cut.Markup);
             Assert.Contains("Mở moderation", cut.Markup);
         });
+
+        var watchRows = cut.FindAll(".owner-watch-row");
+        Assert.Equal(4, watchRows.Count);
+        Assert.Contains("2 yêu cầu chờ xử lý", watchRows[0].TextContent);
+        Assert.Contains("2 mục", watchRows[0].TextContent);
+        Assert.DoesNotContain("1 mục", watchRows[0].TextContent);
+        Assert.Contains("1 POI cần phản hồi kiểm duyệt", watchRows[1].TextContent);
+        Assert.Contains("1 chờ xử lý", watchRows[1].TextContent);
+        Assert.DoesNotContain("2 chờ xử lý", watchRows[1].TextContent);
     }
 
     [Fact]
@@ -93,6 +102,29 @@ public sealed class DashboardTests : TestContext
             Assert.DoesNotContain("Mức sẵn sàng POI", cut.Markup);
             Assert.DoesNotContain("Kỷ luật phát hành audio", cut.Markup);
             Assert.DoesNotContain("Sẵn sàng audio", cut.Markup);
+        });
+    }
+
+    [Fact]
+    public void Renders_empty_activity_state_when_dashboard_has_no_activity()
+    {
+        ConfigureDashboard(
+            dashboard: new OwnerDashboardDto(),
+            pois: Array.Empty<PoiDto>());
+
+        var cut = RenderComponent<Dashboard>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Dòng hoạt động", cut.Markup);
+            Assert.Contains("Chưa có hoạt động mới", cut.Markup);
+            Assert.Contains("Các cập nhật về POI, moderation, audio và thông báo sẽ xuất hiện tại đây khi có dữ liệu vận hành.", cut.Markup);
+            Assert.Empty(cut.FindAll(".owner-activity-feed__item"));
+            var activityPanel = cut.FindAll(".panel-shell")
+                .Single(panel => panel.TextContent.Contains("Dòng hoạt động", StringComparison.Ordinal));
+            Assert.DoesNotContain("1 cập nhật", activityPanel.TextContent);
+            Assert.DoesNotContain("0 cập nhật", activityPanel.TextContent);
+            Assert.DoesNotContain("0 audio sẵn sàng", activityPanel.TextContent);
         });
     }
 

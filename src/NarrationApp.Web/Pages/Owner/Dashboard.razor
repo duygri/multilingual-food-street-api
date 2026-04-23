@@ -108,21 +108,30 @@ else
 
                 <PanelShell Eyebrow="Dòng hoạt động"
                             Title="Những tín hiệu mới nhất"
-                            BadgeLabel="@($"{_activityItems.Count} cập nhật")"
+                            BadgeLabel="@(_activityItems.Count > 0 ? $"{_activityItems.Count} cập nhật" : null)"
                             BadgeTone="StatusTone.Info">
-                    <div class="owner-activity-feed">
-                        @foreach (var item in _activityItems)
-                        {
-                            <article class="owner-activity-feed__item">
-                                <span class="owner-activity-feed__dot" aria-hidden="true"></span>
-                                <div>
-                                    <strong>@item.Title</strong>
-                                    <p>@item.Description</p>
-                                </div>
-                                <StatusBadge Label="@item.Badge" Tone="@item.Tone" />
-                            </article>
-                        }
-                    </div>
+                    @if (_activityItems.Count == 0)
+                    {
+                        <EmptyStateBlock Eyebrow="Hoạt động"
+                                         Title="Chưa có hoạt động mới"
+                                         Message="Các cập nhật về POI, moderation, audio và thông báo sẽ xuất hiện tại đây khi có dữ liệu vận hành." />
+                    }
+                    else
+                    {
+                        <div class="owner-activity-feed">
+                            @foreach (var item in _activityItems)
+                            {
+                                <article class="owner-activity-feed__item">
+                                    <span class="owner-activity-feed__dot" aria-hidden="true"></span>
+                                    <div>
+                                        <strong>@item.Title</strong>
+                                        <p>@item.Description</p>
+                                    </div>
+                                    <StatusBadge Label="@item.Badge" Tone="@item.Tone" />
+                                </article>
+                            }
+                        </div>
+                    }
                 </PanelShell>
             </div>
 
@@ -137,7 +146,7 @@ else
                                 <strong>@_dashboard.PendingModerationRequests yêu cầu chờ xử lý</strong>
                                 <p>Theo dõi queue moderation để biết khi nào admin phản hồi nội dung mới.</p>
                             </div>
-                            <StatusBadge Label="@($"{_dashboard.PendingReviewPois} mục")" Tone="StatusTone.Warn" />
+                            <StatusBadge Label="@($"{_dashboard.PendingModerationRequests} mục")" Tone="StatusTone.Warn" />
                         </div>
 
                         <div class="owner-watch-row">
@@ -145,7 +154,7 @@ else
                                 <strong>@_dashboard.PendingReviewPois POI cần phản hồi kiểm duyệt</strong>
                                 <p>Ưu tiên kiểm tra các POI đang chờ duyệt hoặc cần sửa trước khi xuất bản.</p>
                             </div>
-                            <StatusBadge Label="@($"{_dashboard.PendingModerationRequests} chờ xử lý")" Tone="StatusTone.Warn" />
+                            <StatusBadge Label="@($"{_dashboard.PendingReviewPois} chờ xử lý")" Tone="StatusTone.Warn" />
                         </div>
 
                         <div class="owner-watch-row">
@@ -305,11 +314,14 @@ else
             });
         }
 
-        items.Add(new ActivityItem(
-            $"{dashboard.TotalAudioAssets} audio sẵn sàng",
-            "Kho audio hiện có đang hỗ trợ các POI đã xuất bản và các bản nháp gần hoàn thiện.",
-            "Audio",
-            dashboard.TotalAudioAssets > 0 ? StatusTone.Info : StatusTone.Neutral));
+        if (dashboard.TotalAudioAssets > 0)
+        {
+            items.Add(new ActivityItem(
+                $"{dashboard.TotalAudioAssets} audio sẵn sàng",
+                "Kho audio hiện có đang hỗ trợ các POI đã xuất bản và các bản nháp gần hoàn thiện.",
+                "Audio",
+                StatusTone.Info));
+        }
 
         if (dashboard.UnreadNotifications > 0)
         {
