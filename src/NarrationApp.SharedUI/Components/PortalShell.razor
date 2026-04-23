@@ -1,3 +1,6 @@
+@implements IDisposable
+@inject NavigationManager NavigationManager
+
 <div class="portal-shell">
     <aside class="portal-shell__sidebar">
         <div class="portal-shell__brand">
@@ -11,6 +14,13 @@
                 <p class="portal-shell__brand-copy">@Tagline</p>
             }
         </div>
+
+        @if (SidebarProfileContent is not null)
+        {
+            <div class="portal-shell__profile">
+                @SidebarProfileContent
+            </div>
+        }
 
         @if (NavigationItems.Count > 0)
         {
@@ -26,16 +36,15 @@
                         <div class="portal-shell__nav-items">
                             @foreach (var item in group.Items)
                             {
-                                <NavLink href="@item.Href"
-                                         Match="@(item.MatchAll ? NavLinkMatch.All : NavLinkMatch.Prefix)"
-                                         ActiveClass="active portal-shell__nav-link--active"
-                                         class="portal-shell__nav-link--plain portal-shell__nav-link">
+                                <a href="@item.Href"
+                                   class="@GetNavLinkClass(item)"
+                                   aria-current="@GetAriaCurrent(item)">
                                     <span class="portal-shell__nav-label">@item.Label</span>
                                     @if (!string.IsNullOrWhiteSpace(item.BadgeText))
                                     {
                                         <span class="portal-shell__nav-badge">@item.BadgeText</span>
                                     }
-                                </NavLink>
+                                </a>
                             }
                         </div>
                     </section>
@@ -74,6 +83,9 @@
     public IReadOnlyList<ShellNavItem> NavigationItems { get; set; } = Array.Empty<ShellNavItem>();
 
     [Parameter]
+    public RenderFragment? SidebarProfileContent { get; set; }
+
+    [Parameter]
     public RenderFragment? HeaderContent { get; set; }
 
     [Parameter]
@@ -83,6 +95,93 @@
         .GroupBy(item => item.Group ?? string.Empty)
         .Select(group => new NavGroup(group.Key, group.ToArray()))
         .ToArray();
+
+    protected override void OnInitialized()
+    {
+        NavigationManager.LocationChanged += HandleLocationChanged;
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= HandleLocationChanged;
+    }
+
+    private void HandleLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        StateHasChanged();
+    }
+
+    private string GetNavLinkClass(ShellNavItem item)
+    {
+        const string baseClass = "portal-shell__nav-link--plain portal-shell__nav-link";
+        return IsActive(item)
+            ? $"{baseClass} active portal-shell__nav-link--active"
+            : baseClass;
+    }
+
+    private string? GetAriaCurrent(ShellNavItem item)
+    {
+        return IsActive(item) ? "page" : null;
+    }
+
+    private bool IsActive(ShellNavItem item)
+    {
+        var itemPath = NormalizePath(item.Href);
+        var currentPath = GetCurrentPath();
+        var match = item.MatchAll ? ShellNavItemMatch.Exact : item.Match;
+
+        if (match == ShellNavItemMatch.Exact)
+        {
+            return string.Equals(currentPath, itemPath, StringComparison.OrdinalIgnoreCase);
+        }
+
+        if (!MatchesPrefix(currentPath, itemPath))
+        {
+            return false;
+        }
+
+        return !HasMoreSpecificExactMatch(itemPath, currentPath);
+    }
+
+    private bool HasMoreSpecificExactMatch(string itemPath, string currentPath)
+    {
+        return NavigationItems
+            .Where(item => item.MatchAll || item.Match == ShellNavItemMatch.Exact)
+            .Select(item => NormalizePath(item.Href))
+            .Any(exactPath =>
+                exactPath.Length > itemPath.Length &&
+                string.Equals(exactPath, currentPath, StringComparison.OrdinalIgnoreCase) &&
+                MatchesPrefix(exactPath, itemPath));
+    }
+
+    private string GetCurrentPath()
+    {
+        return NormalizePath(NavigationManager.ToBaseRelativePath(NavigationManager.Uri));
+    }
+
+    private static bool MatchesPrefix(string currentPath, string itemPath)
+    {
+        return string.Equals(currentPath, itemPath, StringComparison.OrdinalIgnoreCase) ||
+            currentPath.StartsWith($"{itemPath.TrimEnd('/')}/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizePath(string path)
+    {
+        var normalized = path;
+        var queryIndex = normalized.IndexOfAny(['?', '#']);
+        if (queryIndex >= 0)
+        {
+            normalized = normalized[..queryIndex];
+        }
+
+        normalized = normalized.Trim();
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return "/";
+        }
+
+        return $"/{normalized.Trim('/')}";
+    }
 
     private sealed record NavGroup(string Key, IReadOnlyList<ShellNavItem> Items);
 }

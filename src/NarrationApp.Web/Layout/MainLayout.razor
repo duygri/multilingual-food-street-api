@@ -1,14 +1,44 @@
 @inherits LayoutComponentBase
 @implements IDisposable
 @using System.Security.Claims
+@using Microsoft.Extensions.DependencyInjection
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject AuthClientService AuthClientService
 @inject NavigationManager NavigationManager
+@inject IServiceProvider ServiceProvider
 
 <PortalShell Brand="@_portalBrand"
              Eyebrow="@_portalEyebrow"
              Tagline="@_portalTagline"
              NavigationItems="_navigationItems">
+    <SidebarProfileContent>
+        @if (_isOwner)
+        {
+            <section class="layout-owner-card" aria-label="Owner profile summary">
+                <div class="layout-owner-card__identity">
+                    <span>Owner workspace</span>
+                    <strong>@_displayName</strong>
+                    <small>POI Owner</small>
+                </div>
+
+                <dl class="layout-owner-card__stats">
+                    <div>
+                        <dt>POI</dt>
+                        <dd>@FormatCount(_ownerSummary?.TotalPois)</dd>
+                    </div>
+                    <div>
+                        <dt>Published</dt>
+                        <dd>@FormatCount(_ownerSummary?.PublishedPois)</dd>
+                    </div>
+                    <div>
+                        <dt>Pending</dt>
+                        <dd>@FormatCount(_ownerSummary?.PendingModerationRequests)</dd>
+                    </div>
+                </dl>
+            </section>
+        }
+    </SidebarProfileContent>
+
     <HeaderContent>
         <div class="layout-header">
             <div class="layout-header__copy">
@@ -43,7 +73,9 @@
 
 @code {
     private bool _isAuthenticated;
+    private bool _isOwner;
     private string _email = string.Empty;
+    private string _displayName = string.Empty;
     private string _roleLabel = "Khách";
     private string _heading = "Portal vận hành";
     private string _summary = "Admin / Tổng quan";
@@ -51,6 +83,7 @@
     private string _portalBrand = "Vĩnh Khánh Portal";
     private string _portalEyebrow = "v2.1 — Truy cập hệ thống";
     private string _portalTagline = string.Empty;
+    private OwnerDashboardDto? _ownerSummary;
     private IReadOnlyList<ShellNavItem> _navigationItems = Array.Empty<ShellNavItem>();
 
     protected override async Task OnInitializedAsync()
@@ -96,10 +129,31 @@
         var user = state.User;
         _isAuthenticated = user.Identity?.IsAuthenticated == true;
         _email = user.Identity?.Name ?? "guest@narration.app";
+        _displayName = RouteHelper.GetDisplayName(user);
+        _isOwner = RouteHelper.IsOwner(user);
         _roleLabel = RouteHelper.GetRoleLabel(user);
-        _navigationItems = BuildNavigation(user);
+        _ownerSummary = _isOwner ? await LoadOwnerSummaryAsync() : null;
+        _navigationItems = BuildNavigation(user, _ownerSummary);
         UpdatePortalBrand(user);
         UpdateRouteCopy();
+    }
+
+    private async Task<OwnerDashboardDto?> LoadOwnerSummaryAsync()
+    {
+        var ownerPortalService = ServiceProvider.GetService<IOwnerPortalService>();
+        if (ownerPortalService is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            return await ownerPortalService.GetDashboardAsync();
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private void UpdateRouteCopy()
@@ -122,12 +176,18 @@
             "admin/tour-management" => ("Admin", "Tour Management", "Admin / Quản lý nội dung > Tour"),
             "admin/user-management" => ("Admin", "User Manager", "Admin / Vận hành > Users"),
             "owner/dashboard" => ("Chủ POI", "Bảng theo dõi POI", "Nắm trạng thái nội dung, geofence, audio hiện có và thông báo kiểm duyệt của POI."),
+            "owner/pois" => ("Chủ POI", "POI", "Quản lý danh sách POI, tìm nhanh theo tên và mở từng điểm để cập nhật nội dung."),
+            "owner/pois/new" => ("Chủ POI", "Tạo POI mới", "Tạo bản nháp POI trong một màn riêng trước khi gửi duyệt."),
+            _ when route.StartsWith("owner/pois/", StringComparison.Ordinal) => ("Chủ POI", "Chi tiết POI", "Xem trạng thái, audio, geofence và kiểm duyệt của từng POI trong một không gian tập trung."),
             "owner/poi-management" => ("Chủ POI", "Quản lý POI", "Chọn POI, cập nhật vùng kích hoạt, metadata, nội dung nguồn và gửi duyệt theo luồng quản lý chủ POI trong PRD."),
+            "owner/moderation" => ("Chủ POI", "Moderation", "Theo dõi các POI đang chờ duyệt, kết quả xử lý gần đây và ghi chú phản hồi từ admin."),
+            "owner/notifications" => ("Chủ POI", "Notifications", "Xem lịch sử thông báo, trạng thái chưa đọc và các cập nhật vận hành quan trọng."),
+            "owner/profile" => ("Chủ POI", "Profile", "Quản lý hồ sơ và bảo mật tài khoản owner trong một không gian riêng."),
             _ => ("Cổng truy cập", "Portal vận hành thuyết minh", "Không gian vận hành dành cho admin và chủ POI để quản trị nội dung, kiểm duyệt và trạng thái hệ thống.")
         };
     }
 
-    private static IReadOnlyList<ShellNavItem> BuildNavigation(ClaimsPrincipal user)
+    private static IReadOnlyList<ShellNavItem> BuildNavigation(ClaimsPrincipal user, OwnerDashboardDto? ownerSummary)
     {
         var role = user.FindFirst(ClaimTypes.Role)?.Value;
 
@@ -232,19 +292,71 @@
                     Label = "Dashboard",
                     Description = "POI và audio",
                     Href = "/owner/dashboard",
-                    IconGlyph = "◈"
+                    IconGlyph = "◈",
+                    Match = ShellNavItemMatch.Exact
                 },
                 new ShellNavItem
                 {
                     Group = "Nội dung",
-                    Label = "Quản lý POI",
-                    Description = "Metadata, geofence, gửi duyệt",
-                    Href = "/owner/poi-management",
-                    IconGlyph = "◎"
+                    Label = "POI",
+                    Description = "Danh sách và chi tiết",
+                    Href = "/owner/pois",
+                    IconGlyph = "◎",
+                    Match = ShellNavItemMatch.Prefix
+                },
+                new ShellNavItem
+                {
+                    Group = "Nội dung",
+                    Label = "Tạo POI mới",
+                    Description = "Tạo bản nháp mới",
+                    Href = "/owner/pois/new",
+                    IconGlyph = "+",
+                    Match = ShellNavItemMatch.Exact
+                },
+                new ShellNavItem
+                {
+                    Group = "Vận hành",
+                    Label = "Moderation",
+                    Description = "Theo dõi kiểm duyệt",
+                    Href = "/owner/moderation",
+                    IconGlyph = "▣",
+                    BadgeText = FormatBadge(ownerSummary?.PendingModerationRequests),
+                    Match = ShellNavItemMatch.Exact
+                },
+                new ShellNavItem
+                {
+                    Group = "Vận hành",
+                    Label = "Notifications",
+                    Description = "Lịch sử thông báo",
+                    Href = "/owner/notifications",
+                    IconGlyph = "◌",
+                    BadgeText = FormatBadge(ownerSummary?.UnreadNotifications),
+                    Match = ShellNavItemMatch.Exact
+                },
+                new ShellNavItem
+                {
+                    Group = "Tài khoản",
+                    Label = "Profile",
+                    Description = "Hồ sơ owner",
+                    Href = "/owner/profile",
+                    IconGlyph = "⊙",
+                    Match = ShellNavItemMatch.Exact
                 }
             ],
             _ => Array.Empty<ShellNavItem>()
         };
+    }
+
+    private static string FormatCount(int? count)
+    {
+        return count.HasValue ? count.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) : "—";
+    }
+
+    private static string? FormatBadge(int? count)
+    {
+        return count.GetValueOrDefault() > 0
+            ? count.GetValueOrDefault().ToString(System.Globalization.CultureInfo.InvariantCulture)
+            : null;
     }
 
     private void UpdatePortalBrand(ClaimsPrincipal user)

@@ -14,5 +14,13 @@ public sealed class ShellNavItem
 
     public string? BadgeText { get; init; }
 
+    public ShellNavItemMatch Match { get; init; }
+
     public bool MatchAll { get; init; }
+}
+
+public enum ShellNavItemMatch
+{
+    Prefix,
+    Exact
 }

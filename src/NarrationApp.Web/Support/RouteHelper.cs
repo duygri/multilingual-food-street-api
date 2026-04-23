@@ -37,4 +37,20 @@ public static class RouteHelper
             _ => "Khách"
         };
     }
+
+    public static bool IsOwner(ClaimsPrincipal user)
+    {
+        return string.Equals(user.FindFirst(ClaimTypes.Role)?.Value, "poi_owner", StringComparison.Ordinal);
+    }
+
+    public static string GetDisplayName(ClaimsPrincipal user)
+    {
+        var fullName = user.FindFirst("full_name")?.Value;
+        if (!string.IsNullOrWhiteSpace(fullName))
+        {
+            return fullName;
+        }
+
+        return user.FindFirst(ClaimTypes.Email)?.Value ?? user.Identity?.Name ?? "guest@narration.app";
+    }
 }

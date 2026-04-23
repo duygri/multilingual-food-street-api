@@ -1,0 +1,73 @@
+@if (IsOpen)
+{
+    <div class="confirm-dialog__backdrop">
+        <section class="confirm-dialog confirm-dialog--@NormalizeTone(Tone)"
+                 role="dialog"
+                 aria-modal="true"
+                 aria-labelledby="@_titleId">
+            <div class="confirm-dialog__body">
+                <p class="confirm-dialog__eyebrow">@Eyebrow</p>
+                <h2 id="@_titleId">@Title</h2>
+                @if (!string.IsNullOrWhiteSpace(Message))
+                {
+                    <p class="confirm-dialog__message">@Message</p>
+                }
+                @ChildContent
+            </div>
+
+            <div class="confirm-dialog__actions">
+                <button class="app-button app-button--ghost" type="button" data-action="cancel" @onclick="OnCancel">
+                    @CancelText
+                </button>
+                <button class="app-button app-button--primary" type="button" data-action="confirm" @onclick="OnConfirm">
+                    @ConfirmText
+                </button>
+            </div>
+        </section>
+    </div>
+}
+
+@code {
+    private readonly string _titleId = $"confirm-dialog-title-{Guid.NewGuid():N}";
+
+    [Parameter]
+    public bool IsOpen { get; set; }
+
+    [Parameter]
+    public string Eyebrow { get; set; } = "Xác nhận";
+
+    [Parameter]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? Message { get; set; }
+
+    [Parameter]
+    public string ConfirmText { get; set; } = "Xác nhận";
+
+    [Parameter]
+    public string CancelText { get; set; } = "Hủy";
+
+    [Parameter]
+    public string Tone { get; set; } = "default";
+
+    [Parameter]
+    public EventCallback OnConfirm { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private static string NormalizeTone(string? tone)
+    {
+        return tone?.Trim().ToLowerInvariant() switch
+        {
+            "danger" => "danger",
+            "warning" => "warning",
+            "success" => "success",
+            _ => "default"
+        };
+    }
+}

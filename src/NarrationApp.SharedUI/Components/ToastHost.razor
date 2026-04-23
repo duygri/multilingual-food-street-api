@@ -1,0 +1,55 @@
+<section class="toast-host" aria-live="polite" aria-relevant="additions text">
+    @if (ChildContent is not null)
+    {
+        @ChildContent
+    }
+
+    @foreach (var toast in Toasts)
+    {
+        <article class="toast-host__toast toast-host__toast--@NormalizeTone(toast.Tone)" data-toast-id="@toast.Id">
+            <div class="toast-host__copy">
+                <strong>@toast.Title</strong>
+                @if (!string.IsNullOrWhiteSpace(toast.Message))
+                {
+                    <p>@toast.Message</p>
+                }
+            </div>
+            <button type="button"
+                    class="toast-host__dismiss"
+                    data-action="dismiss-toast"
+                    aria-label="Đóng thông báo"
+                    @onclick="() => DismissAsync(toast)">
+                ×
+            </button>
+        </article>
+    }
+</section>
+
+@code {
+    [Parameter]
+    public IReadOnlyList<ToastItem> Toasts { get; set; } = Array.Empty<ToastItem>();
+
+    [Parameter]
+    public EventCallback<string> OnDismiss { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private Task DismissAsync(ToastItem toast)
+    {
+        return OnDismiss.InvokeAsync(toast.Id);
+    }
+
+    private static string NormalizeTone(string? tone)
+    {
+        return tone?.Trim().ToLowerInvariant() switch
+        {
+            "success" => "success",
+            "danger" => "danger",
+            "warning" => "warning",
+            _ => "info"
+        };
+    }
+
+    public sealed record ToastItem(string Id, string Title, string Message, string Tone = "info");
+}
