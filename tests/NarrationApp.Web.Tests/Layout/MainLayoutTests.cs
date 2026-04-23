@@ -154,6 +154,41 @@ public sealed class MainLayoutTests : TestContext
     }
 
     [Fact]
+    public void Owner_layout_renders_avatar_role_line_and_inline_owner_stats()
+    {
+        ConfigureAuthenticatedOwner(
+            fullName: "Nguyen Van A",
+            shellSummary: new OwnerShellSummaryDto
+            {
+                TotalPois = 6,
+                PublishedPois = 4,
+                PendingModerationRequests = 2,
+                UnreadNotifications = 7
+            });
+        Services.GetRequiredService<NavigationManager>().NavigateTo("http://localhost/owner/pois");
+
+        var cut = RenderComponent<MainLayout>(parameters => parameters
+            .Add(layout => layout.Body, (RenderFragment)(builder => builder.AddMarkupContent(0, "<div>Body</div>"))));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal("NA", cut.Find(".layout-owner-card__avatar").TextContent.Trim());
+            Assert.Equal("Nguyen Van A", cut.Find(".layout-owner-card__name").TextContent.Trim());
+            Assert.Equal("POI Owner", cut.Find(".layout-owner-card__role-label").TextContent.Trim());
+
+            var statValues = cut.FindAll(".layout-owner-card__stat-value")
+                .Select(item => item.TextContent.Trim())
+                .ToArray();
+            var statLabels = cut.FindAll(".layout-owner-card__stat-label")
+                .Select(item => item.TextContent.Trim())
+                .ToArray();
+
+            Assert.Equal(["6", "4", "2"], statValues);
+            Assert.Equal(["POI", "Published", "Pending"], statLabels);
+        });
+    }
+
+    [Fact]
     public void Owner_layout_refreshes_sidebar_summary_when_notification_state_changes()
     {
         var (ownerService, notificationService, _) = ConfigureAuthenticatedOwner(

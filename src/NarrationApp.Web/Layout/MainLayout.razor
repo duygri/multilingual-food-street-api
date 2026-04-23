@@ -2,7 +2,6 @@
 @implements IDisposable
 @using System.Security.Claims
 @using Microsoft.Extensions.DependencyInjection
-@using Microsoft.AspNetCore.Components.Rendering
 @using NarrationApp.SharedUI.Services
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject AuthClientService AuthClientService
@@ -63,34 +62,35 @@
     private INotificationCenterService? _notificationCenterService;
     private OwnerPortalRefreshService? _ownerPortalRefreshService;
 
-    private RenderFragment OwnerSidebarProfileContent => builder =>
-    {
-        builder.OpenElement(0, "section");
-        builder.AddAttribute(1, "class", "layout-owner-card");
-        builder.AddAttribute(2, "aria-label", "Owner profile summary");
+    private RenderFragment OwnerSidebarProfileContent => @<section class="layout-owner-card" aria-label="Owner profile summary">
+        <div class="layout-owner-card__head">
+            <div class="layout-owner-card__avatar" aria-hidden="true">@GetOwnerInitials(_displayName)</div>
 
-        builder.OpenElement(3, "div");
-        builder.AddAttribute(4, "class", "layout-owner-card__identity");
-        builder.OpenElement(5, "span");
-        builder.AddContent(6, "Owner workspace");
-        builder.CloseElement();
-        builder.OpenElement(7, "strong");
-        builder.AddContent(8, _displayName);
-        builder.CloseElement();
-        builder.OpenElement(9, "small");
-        builder.AddContent(10, "POI Owner");
-        builder.CloseElement();
-        builder.CloseElement();
+            <div class="layout-owner-card__identity">
+                <strong class="layout-owner-card__name">@_displayName</strong>
 
-        builder.OpenElement(11, "dl");
-        builder.AddAttribute(12, "class", "layout-owner-card__stats");
-        AddOwnerStat(builder, 13, "POI", FormatCount(_ownerSummary?.TotalPois));
-        AddOwnerStat(builder, 20, "Published", FormatCount(_ownerSummary?.PublishedPois));
-        AddOwnerStat(builder, 27, "Pending", FormatCount(_ownerSummary?.PendingModerationRequests));
-        builder.CloseElement();
+                <div class="layout-owner-card__role">
+                    <span class="layout-owner-card__role-dot" aria-hidden="true"></span>
+                    <span class="layout-owner-card__role-label">POI Owner</span>
+                </div>
+            </div>
+        </div>
 
-        builder.CloseElement();
-    };
+        <div class="layout-owner-card__stats" role="list">
+            <div class="layout-owner-card__stat" role="listitem">
+                <span class="layout-owner-card__stat-value">@FormatCount(_ownerSummary?.TotalPois)</span>
+                <span class="layout-owner-card__stat-label">POI</span>
+            </div>
+            <div class="layout-owner-card__stat" role="listitem">
+                <span class="layout-owner-card__stat-value">@FormatCount(_ownerSummary?.PublishedPois)</span>
+                <span class="layout-owner-card__stat-label">Published</span>
+            </div>
+            <div class="layout-owner-card__stat" role="listitem">
+                <span class="layout-owner-card__stat-value">@FormatCount(_ownerSummary?.PendingModerationRequests)</span>
+                <span class="layout-owner-card__stat-label">Pending</span>
+            </div>
+        </div>
+    </section>;
 
     protected override async Task OnInitializedAsync()
     {
@@ -201,18 +201,6 @@
         {
             return null;
         }
-    }
-
-    private static void AddOwnerStat(RenderTreeBuilder builder, int sequence, string label, string value)
-    {
-        builder.OpenElement(sequence, "div");
-        builder.OpenElement(sequence + 1, "dt");
-        builder.AddContent(sequence + 2, label);
-        builder.CloseElement();
-        builder.OpenElement(sequence + 3, "dd");
-        builder.AddContent(sequence + 4, value);
-        builder.CloseElement();
-        builder.CloseElement();
     }
 
     private void UpdateRouteCopy()
@@ -416,6 +404,44 @@
         return count.GetValueOrDefault() > 0
             ? count.GetValueOrDefault().ToString(System.Globalization.CultureInfo.InvariantCulture)
             : null;
+    }
+
+    private static string GetOwnerInitials(string displayName)
+    {
+        if (string.IsNullOrWhiteSpace(displayName))
+        {
+            return "OW";
+        }
+
+        var parts = displayName
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        if (parts.Length == 0)
+        {
+            return "OW";
+        }
+
+        if (parts.Length == 1)
+        {
+            var singleWordInitials = new string(parts[0]
+                .Where(char.IsLetterOrDigit)
+                .Take(2)
+                .Select(char.ToUpperInvariant)
+                .ToArray());
+
+            return string.IsNullOrWhiteSpace(singleWordInitials) ? "OW" : singleWordInitials;
+        }
+
+        var firstInitial = GetInitial(parts[0]);
+        var lastInitial = GetInitial(parts[^1]);
+        var combined = string.Concat(firstInitial, lastInitial);
+        return string.IsNullOrWhiteSpace(combined) ? "OW" : combined;
+    }
+
+    private static string GetInitial(string value)
+    {
+        var initial = value.FirstOrDefault(char.IsLetterOrDigit);
+        return initial == default ? string.Empty : char.ToUpperInvariant(initial).ToString();
     }
 
     private void UpdatePortalBrand(ClaimsPrincipal user)
