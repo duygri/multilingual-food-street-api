@@ -1,7 +1,10 @@
 using Bunit;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using NarrationApp.Shared.DTOs.Auth;
 using NarrationApp.Shared.DTOs.Owner;
+using NarrationApp.Shared.Enums;
+using NarrationApp.SharedUI.Auth;
 using NarrationApp.Web.Pages.Owner;
 using NarrationApp.Web.Services;
 
@@ -12,7 +15,7 @@ public sealed class ProfileTests : TestContext
     [Fact]
     public void Profile_page_renders_owner_values_and_activity_summary()
     {
-        Services.AddSingleton<IOwnerProfileService>(new TestOwnerProfileService());
+        ConfigureProfile();
 
         var cut = RenderComponent<Profile>();
 
@@ -36,7 +39,7 @@ public sealed class ProfileTests : TestContext
     public void Profile_page_updates_editable_owner_profile_fields()
     {
         var service = new TestOwnerProfileService();
-        Services.AddSingleton<IOwnerProfileService>(service);
+        ConfigureProfile(service);
 
         var cut = RenderComponent<Profile>();
 
@@ -63,7 +66,7 @@ public sealed class ProfileTests : TestContext
     public void Profile_page_validates_and_submits_password_change()
     {
         var service = new TestOwnerProfileService();
-        Services.AddSingleton<IOwnerProfileService>(service);
+        ConfigureProfile(service);
 
         var cut = RenderComponent<Profile>();
 
@@ -93,13 +96,48 @@ public sealed class ProfileTests : TestContext
     }
 
     [Fact]
+    public async Task Profile_page_updates_auth_session_after_profile_save()
+    {
+        var service = new TestOwnerProfileService();
+        var (_, sessionStore, authStateProvider) = ConfigureProfile(
+            service,
+            new AuthSession
+            {
+                UserId = Guid.Parse("11111111-1111-1111-1111-111111111111"),
+                FullName = "Tên owner cũ",
+                Email = "owner@narration.app",
+                Role = UserRole.PoiOwner,
+                PreferredLanguage = "vi",
+                Token = "jwt-token"
+            });
+
+        var cut = RenderComponent<Profile>();
+
+        cut.WaitForAssertion(() => Assert.Contains("Thông tin hồ sơ", cut.Markup));
+        cut.Find("input[data-field='owner-full-name']").Change("Cô Tám Vĩnh Khánh");
+        cut.Find("select[data-field='owner-preferred-language']").Change("en");
+        cut.Find("button[data-action='save-profile']").Click();
+
+        cut.WaitForAssertion(() => Assert.Contains("Đã cập nhật hồ sơ owner.", cut.Markup));
+
+        Assert.NotNull(sessionStore.Session);
+        Assert.Equal("Cô Tám Vĩnh Khánh", sessionStore.Session.FullName);
+        Assert.Equal("en", sessionStore.Session.PreferredLanguage);
+        Assert.Equal("jwt-token", sessionStore.Session.Token);
+
+        var state = await authStateProvider.GetAuthenticationStateAsync();
+        Assert.Equal("Cô Tám Vĩnh Khánh", state.User.FindFirst("full_name")?.Value);
+        Assert.Equal("en", state.User.FindFirst("preferred_language")?.Value);
+    }
+
+    [Fact]
     public void Profile_page_surfaces_unexpected_profile_update_errors()
     {
         var service = new TestOwnerProfileService
         {
             UpdateException = new InvalidOperationException("Không thể lưu hồ sơ lúc này.")
         };
-        Services.AddSingleton<IOwnerProfileService>(service);
+        ConfigureProfile(service);
 
         var cut = RenderComponent<Profile>();
 
@@ -120,7 +158,7 @@ public sealed class ProfileTests : TestContext
         {
             ChangePasswordException = new InvalidOperationException("Không thể đổi mật khẩu lúc này.")
         };
-        Services.AddSingleton<IOwnerProfileService>(service);
+        ConfigureProfile(service);
 
         var cut = RenderComponent<Profile>();
 
@@ -135,6 +173,33 @@ public sealed class ProfileTests : TestContext
             Assert.Contains("Không thể đổi mật khẩu lúc này.", cut.Markup);
             Assert.Single(service.ChangePasswordRequests);
         });
+    }
+
+    private (TestOwnerProfileService Service, TestAuthSessionStore SessionStore, CustomAuthStateProvider AuthStateProvider) ConfigureProfile(
+        TestOwnerProfileService? service = null,
+        AuthSession? session = null)
+    {
+        service ??= new TestOwnerProfileService();
+        var sessionStore = new TestAuthSessionStore
+        {
+            Session = session ?? new AuthSession
+            {
+                UserId = Guid.Parse("11111111-1111-1111-1111-111111111111"),
+                FullName = "Bà Tám Bún Bò",
+                Email = "owner@narration.app",
+                Role = UserRole.PoiOwner,
+                PreferredLanguage = "vi",
+                Token = "jwt-token"
+            }
+        };
+        var authStateProvider = new CustomAuthStateProvider(sessionStore);
+
+        Services.AddSingleton<IOwnerProfileService>(service);
+        Services.AddSingleton<IAuthSessionStore>(sessionStore);
+        Services.AddSingleton(authStateProvider);
+        Services.AddSingleton<AuthenticationStateProvider>(authStateProvider);
+
+        return (service, sessionStore, authStateProvider);
     }
 
     private sealed class TestOwnerProfileService : IOwnerProfileService
@@ -204,6 +269,28 @@ public sealed class ProfileTests : TestContext
                     UnreadNotifications = 3
                 }
             };
+        }
+    }
+
+    private sealed class TestAuthSessionStore : IAuthSessionStore
+    {
+        public AuthSession? Session { get; set; }
+
+        public ValueTask<AuthSession?> GetAsync(CancellationToken cancellationToken = default)
+        {
+            return ValueTask.FromResult(Session);
+        }
+
+        public ValueTask SetAsync(AuthSession session, CancellationToken cancellationToken = default)
+        {
+            Session = session;
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask ClearAsync(CancellationToken cancellationToken = default)
+        {
+            Session = null;
+            return ValueTask.CompletedTask;
         }
     }
 }

@@ -56,6 +56,7 @@ public sealed class OwnerController(AppDbContext dbContext, INotificationService
         var pois = await dbContext.Pois
             .AsNoTracking()
             .Where(item => item.OwnerId == ownerId)
+            .Include(item => item.Category)
             .Include(item => item.Translations)
             .Include(item => item.Geofences)
             .OrderByDescending(item => item.CreatedAt)

@@ -18,6 +18,49 @@ namespace NarrationApp.Server.Tests.Controllers;
 public sealed class OwnerControllerTests
 {
     [Fact]
+    public async Task GetPoisAsync_returns_category_names_for_owned_pois()
+    {
+        await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
+        var owner = await TestAppDbContextFactory.AddOwnerAsync(dbContext, "owner-poi-list@narration.app");
+        var category = new Category
+        {
+            Name = "Ăn vặt",
+            Slug = "an-vat",
+            Description = "Snacks",
+            Icon = "snack",
+            DisplayOrder = 2,
+            IsActive = true
+        };
+
+        dbContext.Pois.Add(new Poi
+        {
+            Name = "Ốc đêm Vĩnh Khánh",
+            Slug = "oc-dem-vinh-khanh",
+            OwnerId = owner.Id,
+            Lat = 10.758,
+            Lng = 106.701,
+            Priority = 7,
+            Category = category,
+            NarrationMode = NarrationMode.Both,
+            Description = "Quán ốc đêm đông khách.",
+            TtsScript = "Kịch bản tiếng Việt.",
+            Status = PoiStatus.Published,
+            CreatedAt = DateTime.UtcNow.AddDays(-1)
+        });
+        await dbContext.SaveChangesAsync();
+
+        var controller = CreateController(dbContext, owner.Id, unreadCount: 0);
+
+        var actionResult = await controller.GetPoisAsync(CancellationToken.None);
+        var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
+        var response = Assert.IsType<ApiResponse<IReadOnlyList<PoiDto>>>(okResult.Value);
+        var poi = Assert.Single(Assert.IsType<PoiDto[]>(response.Data));
+
+        Assert.True(response.Succeeded);
+        Assert.Equal("Ăn vặt", poi.CategoryName);
+    }
+
+    [Fact]
     public async Task GetPoiAsync_returns_owned_poi_with_translations_and_geofences()
     {
         await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();

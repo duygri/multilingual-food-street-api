@@ -3,6 +3,7 @@
 @using System.Security.Claims
 @using Microsoft.Extensions.DependencyInjection
 @using Microsoft.AspNetCore.Components.Rendering
+@using NarrationApp.SharedUI.Services
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject AuthClientService AuthClientService
 @inject NavigationManager NavigationManager
@@ -59,6 +60,8 @@
     private string _portalTagline = string.Empty;
     private OwnerDashboardDto? _ownerSummary;
     private IReadOnlyList<ShellNavItem> _navigationItems = Array.Empty<ShellNavItem>();
+    private INotificationCenterService? _notificationCenterService;
+    private OwnerPortalRefreshService? _ownerPortalRefreshService;
 
     private RenderFragment OwnerSidebarProfileContent => builder =>
     {
@@ -93,6 +96,18 @@
     {
         AuthenticationStateProvider.AuthenticationStateChanged += HandleAuthenticationStateChanged;
         NavigationManager.LocationChanged += HandleLocationChanged;
+        _notificationCenterService = ServiceProvider.GetService<INotificationCenterService>();
+        _ownerPortalRefreshService = ServiceProvider.GetService<OwnerPortalRefreshService>();
+        if (_notificationCenterService is not null)
+        {
+            _notificationCenterService.Changed += HandleOwnerSummaryRefreshRequested;
+        }
+
+        if (_ownerPortalRefreshService is not null)
+        {
+            _ownerPortalRefreshService.Changed += HandleOwnerSummaryRefreshRequested;
+        }
+
         await RefreshLayoutStateAsync();
     }
 
@@ -100,6 +115,15 @@
     {
         AuthenticationStateProvider.AuthenticationStateChanged -= HandleAuthenticationStateChanged;
         NavigationManager.LocationChanged -= HandleLocationChanged;
+        if (_notificationCenterService is not null)
+        {
+            _notificationCenterService.Changed -= HandleOwnerSummaryRefreshRequested;
+        }
+
+        if (_ownerPortalRefreshService is not null)
+        {
+            _ownerPortalRefreshService.Changed -= HandleOwnerSummaryRefreshRequested;
+        }
     }
 
     private async Task LogoutAsync()
@@ -110,8 +134,28 @@
 
     private void HandleLocationChanged(object? sender, LocationChangedEventArgs e)
     {
-        UpdateRouteCopy();
-        StateHasChanged();
+        _ = InvokeAsync(async () =>
+        {
+            if (_isOwner)
+            {
+                await RefreshLayoutStateAsync();
+            }
+            else
+            {
+                UpdateRouteCopy();
+            }
+
+            StateHasChanged();
+        });
+    }
+
+    private void HandleOwnerSummaryRefreshRequested()
+    {
+        _ = InvokeAsync(async () =>
+        {
+            await RefreshLayoutStateAsync();
+            StateHasChanged();
+        });
     }
 
     private void HandleAuthenticationStateChanged(Task<AuthenticationState> authenticationStateTask)

@@ -25,6 +25,7 @@ builder.Services.AddScoped<ApiClient>();
 builder.Services.AddScoped<AuthClientService>();
 builder.Services.AddScoped<OwnerPortalService>();
 builder.Services.AddScoped<OwnerProfileService>();
+builder.Services.AddScoped<OwnerPortalRefreshService>();
 builder.Services.AddScoped<AdminPortalService>();
 builder.Services.AddScoped<IOwnerPortalService>(sp => sp.GetRequiredService<OwnerPortalService>());
 builder.Services.AddScoped<IOwnerProfileService>(sp => sp.GetRequiredService<OwnerProfileService>());

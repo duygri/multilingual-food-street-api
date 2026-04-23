@@ -3,6 +3,7 @@
 @inject IOwnerPortalService OwnerPortalService
 @inject ICategoryPortalService CategoryPortalService
 @inject NavigationManager NavigationManager
+@inject IServiceProvider ServiceProvider
 
 <PageTitle>Tạo POI mới</PageTitle>
 
@@ -179,6 +180,7 @@ else
         {
             _isSaving = true;
             var created = await OwnerPortalService.CreatePoiAsync(_editor.ToRequest(ParseCategoryId()));
+            NotifyOwnerPortalChanged();
             NavigationManager.NavigateTo($"/owner/pois/{created.Id}");
         }
         catch (ApiException exception)
@@ -205,6 +207,14 @@ else
         NarrationMode.Both => "Kết hợp",
         _ => mode.ToString()
     };
+
+    private void NotifyOwnerPortalChanged()
+    {
+        if (ServiceProvider.GetService(typeof(OwnerPortalRefreshService)) is OwnerPortalRefreshService refreshService)
+        {
+            refreshService.NotifyChanged();
+        }
+    }
 
     private sealed class PoiCreateModel
     {

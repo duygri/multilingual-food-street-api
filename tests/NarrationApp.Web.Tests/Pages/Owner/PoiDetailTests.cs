@@ -174,6 +174,45 @@ public sealed class PoiDetailTests : TestContext
     }
 
     [Fact]
+    public void Detail_page_ignores_historical_rejection_when_latest_moderation_is_not_rejected()
+    {
+        var (ownerService, _, moderationService, _, _) = ConfigureDetail();
+        ownerService.Status = PoiStatus.Published;
+        moderationService.Items =
+        [
+            new ModerationRequestDto
+            {
+                Id = 301,
+                EntityType = "poi",
+                EntityId = "1",
+                Status = ModerationStatus.Rejected,
+                RequestedBy = Guid.NewGuid(),
+                ReviewNote = "Ghi chú từ chối cũ.",
+                CreatedAtUtc = DateTime.UtcNow.AddDays(-2)
+            },
+            new ModerationRequestDto
+            {
+                Id = 302,
+                EntityType = "poi",
+                EntityId = "1",
+                Status = ModerationStatus.Approved,
+                RequestedBy = Guid.NewGuid(),
+                ReviewNote = "Đã duyệt lại.",
+                CreatedAtUtc = DateTime.UtcNow.AddHours(-1)
+            }
+        ];
+
+        var cut = RenderComponent<PoiDetail>(parameters => parameters.Add(page => page.Id, 1));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Bún mắm Vĩnh Khánh", cut.Markup);
+            Assert.DoesNotContain("Cần chỉnh trước khi gửi lại", cut.Markup);
+            Assert.Empty(cut.FindAll("button[data-action='request-review-rejected']"));
+        });
+    }
+
+    [Fact]
     public void Owner_portal_get_poi_contract_requires_implementers()
     {
         var method = typeof(IOwnerPortalService).GetMethod(
@@ -207,6 +246,17 @@ public sealed class PoiDetailTests : TestContext
     private sealed class TestOwnerPortalService : IOwnerPortalService
     {
         private PoiDto _poi = BuildPoi();
+        private PoiStatus _status = PoiStatus.Rejected;
+
+        public PoiStatus Status
+        {
+            get => _status;
+            set
+            {
+                _status = value;
+                _poi = BuildPoi(status: value);
+            }
+        }
 
         public HashSet<int> MissingPoiIds { get; } = [];
 
@@ -267,6 +317,7 @@ public sealed class PoiDetailTests : TestContext
                 request.MapLink,
                 request.ImageUrl,
                 request.Status);
+            _status = request.Status;
 
             return Task.FromResult(_poi);
         }
@@ -418,7 +469,7 @@ public sealed class PoiDetailTests : TestContext
 
     private sealed class TestModerationPortalService : IModerationPortalService
     {
-        private readonly List<ModerationRequestDto> _items =
+        public List<ModerationRequestDto> Items { get; set; } =
         [
             new ModerationRequestDto
             {
@@ -436,7 +487,7 @@ public sealed class PoiDetailTests : TestContext
 
         public Task<IReadOnlyList<ModerationRequestDto>> GetMineAsync(CancellationToken cancellationToken = default)
         {
-            return Task.FromResult<IReadOnlyList<ModerationRequestDto>>(_items.ToArray());
+            return Task.FromResult<IReadOnlyList<ModerationRequestDto>>(Items.ToArray());
         }
 
         public Task<ModerationRequestDto> CreateAsync(CreateModerationRequest request, CancellationToken cancellationToken = default)
@@ -453,7 +504,7 @@ public sealed class PoiDetailTests : TestContext
                 CreatedAtUtc = DateTime.UtcNow
             };
 
-            _items.Add(item);
+            Items.Add(item);
             return Task.FromResult(item);
         }
     }

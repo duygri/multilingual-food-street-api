@@ -6,6 +6,7 @@
 @inject IModerationPortalService ModerationPortalService
 @inject ICategoryPortalService CategoryPortalService
 @inject NavigationManager NavigationManager
+@inject IServiceProvider ServiceProvider
 
 <PageTitle>@(_poi?.Name ?? "Chi tiết POI")</PageTitle>
 
@@ -380,7 +381,7 @@ else if (_poi is not null && _editor is not null && _geofenceEditor is not null)
         .ToArray();
 
     private ModerationRequestDto? LatestRejectedModeration => PoiModerationItems
-        .FirstOrDefault(item => item.Status == ModerationStatus.Rejected);
+        .FirstOrDefault() is { Status: ModerationStatus.Rejected } latestRejected ? latestRejected : null;
 
     private bool ShouldShowRejectionSurface => _poi?.Status == PoiStatus.Rejected || LatestRejectedModeration is not null;
 
@@ -446,6 +447,7 @@ else if (_poi is not null && _editor is not null && _geofenceEditor is not null)
             var updated = await OwnerPortalService.UpdatePoiAsync(_poi.Id, _editor.ToRequest(_poi));
             _poi = updated;
             HydrateEditors(updated);
+            NotifyOwnerPortalChanged();
             _statusMessage = $"Đã lưu {_poi.Name}.";
         }
         catch (ApiException exception)
@@ -511,6 +513,7 @@ else if (_poi is not null && _editor is not null && _geofenceEditor is not null)
             _audioItems = await AudioPortalService.GetByPoiAsync(_poi.Id);
             _stats = await OwnerPortalService.GetPoiStatsAsync(_poi.Id);
             _selectedUploadFile = null;
+            NotifyOwnerPortalChanged();
             _statusMessage = "Đã tải audio nguồn tiếng Việt.";
         }
         catch (ApiException exception)
@@ -541,6 +544,7 @@ else if (_poi is not null && _editor is not null && _geofenceEditor is not null)
             });
 
             _moderationItems = await ModerationPortalService.GetMineAsync();
+            NotifyOwnerPortalChanged();
             _statusMessage = $"Đã gửi {_poi.Name} vào hàng chờ duyệt.";
         }
         catch (ApiException exception)
@@ -573,6 +577,7 @@ else if (_poi is not null && _editor is not null && _geofenceEditor is not null)
         try
         {
             await OwnerPortalService.DeletePoiAsync(_poi.Id);
+            NotifyOwnerPortalChanged();
             NavigationManager.NavigateTo("/owner/pois");
         }
         catch (ApiException exception)
@@ -586,6 +591,14 @@ else if (_poi is not null && _editor is not null && _geofenceEditor is not null)
     {
         return _poi?.Translations.Any(translation =>
             string.Equals(translation.LanguageCode, languageCode, StringComparison.OrdinalIgnoreCase)) ?? false;
+    }
+
+    private void NotifyOwnerPortalChanged()
+    {
+        if (ServiceProvider.GetService(typeof(OwnerPortalRefreshService)) is OwnerPortalRefreshService refreshService)
+        {
+            refreshService.NotifyChanged();
+        }
     }
 
     private static PoiDto WithUpdatedGeofence(PoiDto poi, GeofenceDto geofence)

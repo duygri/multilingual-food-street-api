@@ -154,6 +154,72 @@ public sealed class MainLayoutTests : TestContext
     }
 
     [Fact]
+    public void Owner_layout_refreshes_sidebar_summary_when_notification_state_changes()
+    {
+        var (ownerService, notificationService, _) = ConfigureAuthenticatedOwner(
+            dashboard: new OwnerDashboardDto
+            {
+                TotalPois = 5,
+                PublishedPois = 3,
+                PendingModerationRequests = 2,
+                UnreadNotifications = 7
+            });
+        Services.GetRequiredService<NavigationManager>().NavigateTo("http://localhost/owner/notifications");
+
+        var cut = RenderComponent<MainLayout>(parameters => parameters
+            .Add(layout => layout.Body, (RenderFragment)(builder => builder.AddMarkupContent(0, "<div>Body</div>"))));
+
+        cut.WaitForAssertion(() => Assert.Contains("7", GetNavBadgeTexts(cut)));
+
+        ownerService.Dashboard = new OwnerDashboardDto
+        {
+            TotalPois = 5,
+            PublishedPois = 3,
+            PendingModerationRequests = 2,
+            UnreadNotifications = 0
+        };
+        notificationService.RaiseChanged();
+
+        cut.WaitForAssertion(() => Assert.DoesNotContain("7", GetNavBadgeTexts(cut)));
+    }
+
+    [Fact]
+    public void Owner_layout_refreshes_sidebar_summary_when_owner_portal_refresh_is_raised()
+    {
+        var (ownerService, _, refreshService) = ConfigureAuthenticatedOwner(
+            dashboard: new OwnerDashboardDto
+            {
+                TotalPois = 5,
+                PublishedPois = 3,
+                PendingModerationRequests = 2,
+                UnreadNotifications = 7
+            });
+        Services.GetRequiredService<NavigationManager>().NavigateTo("http://localhost/owner/moderation");
+
+        var cut = RenderComponent<MainLayout>(parameters => parameters
+            .Add(layout => layout.Body, (RenderFragment)(builder => builder.AddMarkupContent(0, "<div>Body</div>"))));
+
+        cut.WaitForAssertion(() => Assert.Contains("2", GetNavBadgeTexts(cut)));
+
+        ownerService.Dashboard = new OwnerDashboardDto
+        {
+            TotalPois = 6,
+            PublishedPois = 4,
+            PendingModerationRequests = 0,
+            UnreadNotifications = 7
+        };
+        refreshService.NotifyChanged();
+
+        cut.WaitForAssertion(() =>
+        {
+            var badges = GetNavBadgeTexts(cut);
+            Assert.DoesNotContain("2", badges);
+            Assert.Contains("6", cut.Markup);
+            Assert.Contains("4", cut.Markup);
+        });
+    }
+
+    [Fact]
     public void Admin_layout_does_not_render_sidebar_profile_slot()
     {
         ConfigureAuthenticatedAdmin();
@@ -215,7 +281,7 @@ public sealed class MainLayoutTests : TestContext
         Services.AddSingleton<IOwnerPortalService>(new TestOwnerPortalService());
     }
 
-    private void ConfigureAuthenticatedOwner(
+    private (TestOwnerPortalService OwnerService, TestNotificationCenterService NotificationService, OwnerPortalRefreshService RefreshService) ConfigureAuthenticatedOwner(
         string fullName = "Demo Owner",
         OwnerDashboardDto? dashboard = null)
     {
@@ -238,12 +304,21 @@ public sealed class MainLayoutTests : TestContext
             BaseAddress = new Uri("http://localhost")
         }, sessionStore, authStateProvider);
 
+        var notificationService = new TestNotificationCenterService(dashboard?.UnreadNotifications ?? 0);
+        var ownerService = new TestOwnerPortalService(dashboard);
+        var refreshService = new OwnerPortalRefreshService();
+
         Services.AddSingleton<IAuthSessionStore>(sessionStore);
         Services.AddSingleton(authStateProvider);
         Services.AddSingleton<AuthenticationStateProvider>(authStateProvider);
         Services.AddSingleton(new AuthClientService(apiClient, authStateProvider));
-        Services.AddSingleton<INotificationCenterService>(new TestNotificationCenterService(dashboard?.UnreadNotifications ?? 0));
-        Services.AddSingleton<IOwnerPortalService>(new TestOwnerPortalService(dashboard));
+        Services.AddSingleton(notificationService);
+        Services.AddSingleton<INotificationCenterService>(notificationService);
+        Services.AddSingleton(ownerService);
+        Services.AddSingleton<IOwnerPortalService>(ownerService);
+        Services.AddSingleton(refreshService);
+
+        return (ownerService, notificationService, refreshService);
     }
 
     private void ConfigureAnonymousUser()
@@ -287,15 +362,20 @@ public sealed class MainLayoutTests : TestContext
         {
             return ValueTask.CompletedTask;
         }
+
+        public void RaiseChanged()
+        {
+            Changed?.Invoke();
+        }
     }
 
     private sealed class TestOwnerPortalService(OwnerDashboardDto? dashboard = null) : IOwnerPortalService
     {
-        private readonly OwnerDashboardDto _dashboard = dashboard ?? new OwnerDashboardDto();
+        public OwnerDashboardDto Dashboard { get; set; } = dashboard ?? new OwnerDashboardDto();
 
         public Task<OwnerDashboardDto> GetDashboardAsync(CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(_dashboard);
+            return Task.FromResult(Dashboard);
         }
 
         public Task<IReadOnlyList<PoiDto>> GetPoisAsync(CancellationToken cancellationToken = default)
@@ -357,5 +437,12 @@ public sealed class MainLayoutTests : TestContext
         {
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
         }
+    }
+
+    private static IReadOnlyList<string> GetNavBadgeTexts(IRenderedComponent<MainLayout> cut)
+    {
+        return cut.FindAll(".portal-shell__nav-badge")
+            .Select(item => item.TextContent)
+            .ToArray();
     }
 }

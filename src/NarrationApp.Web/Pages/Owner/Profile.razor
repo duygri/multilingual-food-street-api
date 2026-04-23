@@ -1,6 +1,8 @@
 @page "/owner/profile"
 @attribute [Authorize(Roles = "poi_owner")]
 @inject IOwnerProfileService OwnerProfileService
+@inject IAuthSessionStore AuthSessionStore
+@inject CustomAuthStateProvider AuthStateProvider
 
 <PageTitle>Owner profile</PageTitle>
 
@@ -205,6 +207,7 @@ else if (_profile is not null && _editor is not null)
         {
             _profile = await OwnerProfileService.UpdateProfileAsync(_editor.ToRequest());
             _editor = OwnerProfileEditModel.FromProfile(_profile);
+            await RefreshAuthSessionAsync(_profile);
             _statusMessage = "Đã cập nhật hồ sơ owner.";
         }
         catch (ApiException exception)
@@ -254,6 +257,25 @@ else if (_profile is not null && _editor is not null)
         {
             _isChangingPassword = false;
         }
+    }
+
+    private async Task RefreshAuthSessionAsync(OwnerProfileDto profile)
+    {
+        var session = await AuthSessionStore.GetAsync();
+        if (session is null)
+        {
+            return;
+        }
+
+        await AuthStateProvider.MarkUserAsAuthenticatedAsync(new AuthSession
+        {
+            UserId = profile.UserId,
+            FullName = profile.FullName,
+            Email = profile.Email,
+            Role = session.Role,
+            PreferredLanguage = profile.PreferredLanguage,
+            Token = session.Token
+        });
     }
 
     private sealed class OwnerProfileEditModel
