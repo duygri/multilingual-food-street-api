@@ -1,0 +1,300 @@
+@page "/owner/profile"
+@attribute [Authorize(Roles = "poi_owner")]
+@inject IOwnerProfileService OwnerProfileService
+
+<PageTitle>Owner profile</PageTitle>
+
+@if (_isLoading)
+{
+    <section class="panel-shell">
+        <p class="panel-shell__eyebrow">Profile</p>
+        <h2>Đang tải hồ sơ owner...</h2>
+    </section>
+}
+else if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <section class="panel-shell">
+        <p class="panel-shell__eyebrow">Profile</p>
+        <h2>Không thể tải hồ sơ owner</h2>
+        <p class="panel-shell__copy">@_errorMessage</p>
+    </section>
+}
+else if (_profile is not null && _editor is not null)
+{
+    <div class="dashboard-stack owner-profile">
+        <section class="panel-shell owner-profile-hero">
+            <div>
+                <p class="panel-shell__eyebrow">Profile workspace</p>
+                <h1>@_profile.FullName</h1>
+                <p class="panel-shell__copy">Quản lý hồ sơ, khu vực phụ trách và bảo mật tài khoản owner trong một màn riêng.</p>
+            </div>
+
+            <div class="owner-profile-hero__identity">
+                <strong>POI Owner</strong>
+                <span>@_profile.Email</span>
+                <span>@(_profile.ManagedArea ?? "Chưa gán khu vực")</span>
+            </div>
+        </section>
+
+        @if (!string.IsNullOrWhiteSpace(_statusMessage))
+        {
+            <section class="panel-shell owner-profile-status" role="status">
+                <p class="panel-shell__copy">@_statusMessage</p>
+            </section>
+        }
+
+        <section class="metric-grid">
+            <MetricCard Label="POI" Value="@($"{_profile.ActivitySummary.TotalPois} POI")" Hint="Tổng điểm đang quản lý" />
+            <MetricCard Label="Published" Value="@($"{_profile.ActivitySummary.PublishedPois} published")" Hint="POI đang phục vụ khách" />
+            <MetricCard Label="Nháp" Value="@_profile.ActivitySummary.DraftPois.ToString()" Hint="POI đang biên tập" />
+            <MetricCard Label="Chờ duyệt" Value="@_profile.ActivitySummary.PendingReviewPois.ToString()" Hint="Đang trong moderation" />
+            <MetricCard Label="Audio" Value="@_profile.ActivitySummary.TotalAudioAssets.ToString()" Hint="Tài sản audio" />
+            <MetricCard Label="Lượt nghe" Value="@($"{_profile.ActivitySummary.TotalAudioPlays} lượt nghe")" Hint="Tổng audio plays" />
+        </section>
+
+        <section class="owner-profile-grid">
+            <article class="panel-shell owner-profile-card">
+                <p class="panel-shell__eyebrow">Thông tin hồ sơ</p>
+                <h2>Owner profile</h2>
+                <p class="panel-shell__copy">Email và role được quản lý bởi hệ thống; các thông tin còn lại owner có thể cập nhật.</p>
+
+                <div class="owner-profile-form-grid">
+                    <label>
+                        <span>Họ tên</span>
+                        <input data-field="owner-full-name" @bind="_editor.FullName" />
+                    </label>
+
+                    <label>
+                        <span>Email</span>
+                        <input data-field="owner-email" value="@_profile.Email" readonly="readonly" />
+                    </label>
+
+                    <label>
+                        <span>Role</span>
+                        <input data-field="owner-role" value="POI Owner" readonly="readonly" />
+                    </label>
+
+                    <label>
+                        <span>Điện thoại</span>
+                        <input data-field="owner-phone" @bind="_editor.Phone" />
+                    </label>
+
+                    <label>
+                        <span>Khu vực phụ trách</span>
+                        <input data-field="owner-managed-area" @bind="_editor.ManagedArea" />
+                    </label>
+
+                    <label>
+                        <span>Ngôn ngữ ưu tiên</span>
+                        <select data-field="owner-preferred-language" @bind="_editor.PreferredLanguage">
+                            <option value="vi">Tiếng Việt</option>
+                            <option value="en">English</option>
+                            <option value="ja">Japanese</option>
+                            <option value="ko">Korean</option>
+                        </select>
+                    </label>
+                </div>
+
+                <div class="owner-profile-actions">
+                    <button class="app-button app-button--primary"
+                            data-action="save-profile"
+                            type="button"
+                            disabled="@_isSavingProfile"
+                            @onclick="SaveProfileAsync">
+                        @(_isSavingProfile ? "Đang lưu..." : "Lưu hồ sơ")
+                    </button>
+                </div>
+            </article>
+
+            <article class="panel-shell owner-profile-card">
+                <p class="panel-shell__eyebrow">Bảo mật</p>
+                <h2>Đổi mật khẩu</h2>
+                <p class="panel-shell__copy">Mật khẩu mới sẽ được gửi qua endpoint auth hiện có và không lưu trong state sau khi đổi thành công.</p>
+
+                <div class="owner-profile-form-grid owner-profile-form-grid--single">
+                    <label>
+                        <span>Mật khẩu hiện tại</span>
+                        <input data-field="current-password" type="password" @bind="_passwordEditor.CurrentPassword" />
+                    </label>
+
+                    <label>
+                        <span>Mật khẩu mới</span>
+                        <input data-field="new-password" type="password" @bind="_passwordEditor.NewPassword" />
+                    </label>
+
+                    <label>
+                        <span>Xác nhận mật khẩu mới</span>
+                        <input data-field="confirm-password" type="password" @bind="_passwordEditor.ConfirmPassword" />
+                    </label>
+                </div>
+
+                <div class="owner-profile-actions">
+                    <button class="app-button app-button--primary"
+                            data-action="change-password"
+                            type="button"
+                            disabled="@_isChangingPassword"
+                            @onclick="ChangePasswordAsync">
+                        @(_isChangingPassword ? "Đang đổi..." : "Đổi mật khẩu")
+                    </button>
+                </div>
+            </article>
+        </section>
+
+        <section class="panel-shell owner-profile-card">
+            <p class="panel-shell__eyebrow">Activity summary</p>
+            <h2>Dấu mốc tài khoản</h2>
+            <dl class="owner-profile-timeline">
+                <div>
+                    <dt>Ngày tạo</dt>
+                    <dd>@_profile.CreatedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</dd>
+                </div>
+                <div>
+                    <dt>Lần đăng nhập cuối</dt>
+                    <dd>@(_profile.LastLoginAtUtc?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "Chưa có dữ liệu")</dd>
+                </div>
+                <div>
+                    <dt>Thông báo chưa đọc</dt>
+                    <dd>@_profile.ActivitySummary.UnreadNotifications</dd>
+                </div>
+            </dl>
+        </section>
+    </div>
+}
+
+@code {
+    private bool _isLoading = true;
+    private bool _isSavingProfile;
+    private bool _isChangingPassword;
+    private string? _errorMessage;
+    private string? _statusMessage;
+    private OwnerProfileDto? _profile;
+    private OwnerProfileEditModel? _editor;
+    private PasswordEditModel _passwordEditor = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _profile = await OwnerProfileService.GetProfileAsync();
+            _editor = OwnerProfileEditModel.FromProfile(_profile);
+        }
+        catch (ApiException exception)
+        {
+            _errorMessage = exception.Message;
+        }
+        catch (Exception exception)
+        {
+            _errorMessage = exception.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task SaveProfileAsync()
+    {
+        if (_editor is null)
+        {
+            return;
+        }
+
+        _isSavingProfile = true;
+
+        try
+        {
+            _profile = await OwnerProfileService.UpdateProfileAsync(_editor.ToRequest());
+            _editor = OwnerProfileEditModel.FromProfile(_profile);
+            _statusMessage = "Đã cập nhật hồ sơ owner.";
+        }
+        catch (ApiException exception)
+        {
+            _statusMessage = exception.Message;
+        }
+        catch (Exception exception)
+        {
+            _statusMessage = exception.Message;
+        }
+        finally
+        {
+            _isSavingProfile = false;
+        }
+    }
+
+    private async Task ChangePasswordAsync()
+    {
+        if (!string.Equals(_passwordEditor.NewPassword, _passwordEditor.ConfirmPassword, StringComparison.Ordinal))
+        {
+            _statusMessage = "Mật khẩu xác nhận không khớp.";
+            return;
+        }
+
+        _isChangingPassword = true;
+
+        try
+        {
+            await OwnerProfileService.ChangePasswordAsync(new ChangePasswordRequest
+            {
+                CurrentPassword = _passwordEditor.CurrentPassword,
+                NewPassword = _passwordEditor.NewPassword
+            });
+
+            _passwordEditor = new PasswordEditModel();
+            _statusMessage = "Đã đổi mật khẩu owner.";
+        }
+        catch (ApiException exception)
+        {
+            _statusMessage = exception.Message;
+        }
+        catch (Exception exception)
+        {
+            _statusMessage = exception.Message;
+        }
+        finally
+        {
+            _isChangingPassword = false;
+        }
+    }
+
+    private sealed class OwnerProfileEditModel
+    {
+        public string FullName { get; set; } = string.Empty;
+
+        public string? Phone { get; set; }
+
+        public string? ManagedArea { get; set; }
+
+        public string PreferredLanguage { get; set; } = "vi";
+
+        public static OwnerProfileEditModel FromProfile(OwnerProfileDto profile)
+        {
+            return new OwnerProfileEditModel
+            {
+                FullName = profile.FullName,
+                Phone = profile.Phone,
+                ManagedArea = profile.ManagedArea,
+                PreferredLanguage = profile.PreferredLanguage
+            };
+        }
+
+        public UpdateOwnerProfileRequest ToRequest()
+        {
+            return new UpdateOwnerProfileRequest
+            {
+                FullName = FullName,
+                Phone = Phone,
+                ManagedArea = ManagedArea,
+                PreferredLanguage = PreferredLanguage
+            };
+        }
+    }
+
+    private sealed class PasswordEditModel
+    {
+        public string CurrentPassword { get; set; } = string.Empty;
+
+        public string NewPassword { get; set; } = string.Empty;
+
+        public string ConfirmPassword { get; set; } = string.Empty;
+    }
+}

@@ -27,6 +27,16 @@ public sealed class ApiClient(HttpClient httpClient, IAuthSessionStore sessionSt
         return SendWithBodyAsync<TRequest, TResponse>(HttpMethod.Post, uri, request, cancellationToken);
     }
 
+    public async Task PostAsync<TRequest>(string uri, TRequest request, CancellationToken cancellationToken = default)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Post, uri)
+        {
+            Content = new StringContent(JsonSerializer.Serialize(request, SerializerOptions), Encoding.UTF8, "application/json")
+        };
+
+        await SendWithoutDataAsync(message, cancellationToken);
+    }
+
     public Task<TResponse> PutAsync<TRequest, TResponse>(string uri, TRequest request, CancellationToken cancellationToken = default)
     {
         return SendWithBodyAsync<TRequest, TResponse>(HttpMethod.Put, uri, request, cancellationToken);

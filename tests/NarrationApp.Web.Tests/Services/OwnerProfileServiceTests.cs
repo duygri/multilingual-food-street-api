@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using NarrationApp.Shared.DTOs.Auth;
 using NarrationApp.Shared.DTOs.Common;
 using NarrationApp.Shared.DTOs.Owner;
 using NarrationApp.Shared.Enums;
@@ -80,6 +81,42 @@ public sealed class OwnerProfileServiceTests
         Assert.Equal("New District", payload.RootElement.GetProperty("managedArea").GetString());
         Assert.Equal("en", payload.RootElement.GetProperty("preferredLanguage").GetString());
         AssertProfile(profile, handler.ExpectedUpdatedProfile);
+    }
+
+    [Fact]
+    public async Task ChangePasswordAsync_posts_owner_password_payload_to_auth_endpoint()
+    {
+        var handler = new InspectingOwnerProfileHandler();
+        var store = new TestAuthSessionStore
+        {
+            Session = new AuthSession
+            {
+                UserId = Guid.Parse("33333333-3333-3333-3333-333333333333"),
+                Email = "owner-password@narration.app",
+                FullName = "Owner Password",
+                Role = UserRole.PoiOwner,
+                PreferredLanguage = "vi",
+                Token = "jwt-token"
+            }
+        };
+        var apiClient = new ApiClient(new HttpClient(handler)
+        {
+            BaseAddress = new Uri("https://localhost:5001/")
+        }, store);
+        var sut = new OwnerProfileService(apiClient);
+
+        await sut.ChangePasswordAsync(new ChangePasswordRequest
+        {
+            CurrentPassword = "old-secret",
+            NewPassword = "new-secret-123"
+        });
+
+        Assert.Equal(HttpMethod.Post, handler.RequestMethod);
+        Assert.Equal("/api/auth/change-password", handler.RequestPath);
+        Assert.Contains("Bearer jwt-token", handler.AuthorizationHeader);
+        using var payload = JsonDocument.Parse(handler.SerializedBody);
+        Assert.Equal("old-secret", payload.RootElement.GetProperty("currentPassword").GetString());
+        Assert.Equal("new-secret-123", payload.RootElement.GetProperty("newPassword").GetString());
     }
 
     private static void AssertProfile(OwnerProfileDto actual, OwnerProfileDto expected)
@@ -183,6 +220,19 @@ public sealed class OwnerProfileServiceTests
             RequestPath = request.RequestUri?.AbsolutePath ?? string.Empty;
             AuthorizationHeader = request.Headers.Authorization?.ToString() ?? string.Empty;
             SerializedBody = request.Content is null ? string.Empty : await request.Content.ReadAsStringAsync(cancellationToken);
+
+            if (request.Method == HttpMethod.Post
+                && string.Equals(RequestPath, "/api/auth/change-password", StringComparison.Ordinal))
+            {
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = JsonContent.Create(new ApiResponse<object>
+                    {
+                        Succeeded = true,
+                        Message = "Password changed successfully."
+                    }, options: new JsonSerializerOptions(JsonSerializerDefaults.Web))
+                };
+            }
 
             var profile = request.Method == HttpMethod.Put ? ExpectedUpdatedProfile : ExpectedProfile;
 
