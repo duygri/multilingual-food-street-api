@@ -74,6 +74,12 @@ public sealed class ApiClient(HttpClient httpClient, IAuthSessionStore sessionSt
         await SendWithoutDataAsync(request, cancellationToken);
     }
 
+    public Task<TResponse> DeleteAsync<TResponse>(string uri, CancellationToken cancellationToken = default)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Delete, uri);
+        return SendForDataAsync<TResponse>(request, cancellationToken);
+    }
+
     private async Task<TResponse> SendWithBodyAsync<TRequest, TResponse>(HttpMethod method, string uri, TRequest requestBody, CancellationToken cancellationToken)
     {
         using var request = new HttpRequestMessage(method, uri)

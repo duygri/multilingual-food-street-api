@@ -1,6 +1,6 @@
 @page "/owner/moderation"
 @attribute [Authorize(Roles = "poi_owner")]
-@inject IModerationPortalService ModerationPortalService
+@inject IOwnerPortalService OwnerPortalService
 
 <PageTitle>Owner moderation</PageTitle>
 
@@ -21,200 +21,207 @@ else if (!string.IsNullOrWhiteSpace(_errorMessage))
 }
 else
 {
-    <div class="dashboard-stack owner-moderation">
-        <section class="panel-shell owner-moderation-hero">
+    <div class="owner-workspace-page">
+        <header class="owner-workspace-heading">
             <div>
-                <p class="panel-shell__eyebrow">Moderation workspace</p>
-                <h1>Theo dõi vòng đời duyệt POI</h1>
-                <p class="panel-shell__copy">Tách trạng thái kiểm duyệt khỏi dashboard để owner biết POI nào đang chờ admin và POI nào cần sửa ngay.</p>
+                <div class="owner-workspace-breadcrumb">Owner / <strong>Trạng thái</strong> / Moderation</div>
+                <h1>Trạng thái duyệt</h1>
+                <p>Theo dõi queue moderation của owner, biết POI nào đang chờ admin và POI nào cần sửa để gửi lại.</p>
             </div>
+        </header>
 
-            <div class="owner-moderation-hero__stats" aria-label="Moderation summary">
-                <article>
-                    <strong>@PendingItems.Count</strong>
-                    <span>đang chờ</span>
-                </article>
-                <article>
-                    <strong>@RejectedItems.Count</strong>
-                    <span>cần sửa</span>
-                </article>
-                <article>
-                    <strong>@ResolvedItems.Count</strong>
-                    <span>đã xử lý</span>
-                </article>
-            </div>
+        <section class="owner-workspace-stats" aria-label="Moderation summary">
+            <article class="panel-shell owner-workspace-stat owner-workspace-stat--pending">
+                <div class="owner-workspace-stat__icon">REV</div>
+                <p class="owner-workspace-stat__value">@_workspace.Summary.PendingCount</p>
+                <p class="owner-workspace-stat__label">Đang chờ</p>
+                <p class="owner-workspace-stat__hint">Các yêu cầu đang nằm trong hàng đợi</p>
+            </article>
+
+            <article class="panel-shell owner-workspace-stat owner-workspace-stat--published">
+                <div class="owner-workspace-stat__icon">OK</div>
+                <p class="owner-workspace-stat__value">@_workspace.Summary.ApprovedCount</p>
+                <p class="owner-workspace-stat__label">Đã duyệt</p>
+                <p class="owner-workspace-stat__hint">Các yêu cầu đã được admin duyệt</p>
+            </article>
+
+            <article class="panel-shell owner-workspace-stat">
+                <div class="owner-workspace-stat__icon">FIX</div>
+                <p class="owner-workspace-stat__value">@_workspace.Summary.RejectedCount</p>
+                <p class="owner-workspace-stat__label">Bị từ chối</p>
+                <p class="owner-workspace-stat__hint">Các yêu cầu cần owner chỉnh sửa</p>
+            </article>
         </section>
 
-        <section class="panel-shell owner-moderation-stepper" aria-label="Moderation flow">
-            <p class="panel-shell__eyebrow">Flow</p>
-            <div class="owner-moderation-stepper__grid">
-                @foreach (var step in Steps)
-                {
-                    <article class="@GetStepClass(step)">
-                        <span>@step.Index</span>
-                        <strong>@step.Title</strong>
-                        <p>@step.Description</p>
+        <article class="panel-shell owner-workspace-panel">
+            <div class="owner-workspace-panel__header">
+                <div class="owner-workspace-panel__title">
+                    <div class="owner-workspace-stat__icon">FLOW</div>
+                    <div>
+                        <h2>Quy trình duyệt nội dung</h2>
+                        <p>Ảnh chụp nhanh trạng thái pipeline moderation của workspace owner.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="owner-workspace-panel__body">
+                <div class="owner-workspace-flow">
+                    <article class="owner-workspace-flow__step owner-workspace-flow__step--good">
+                        <span class="owner-workspace-flow__dot">1</span>
+                        <strong>Owner tạo / sửa POI</strong>
+                        <p>@_workspace.FlowState.DraftCount mục đang ở trạng thái draft.</p>
                     </article>
+
+                    <article class="owner-workspace-flow__step owner-workspace-flow__step--warn">
+                        <span class="owner-workspace-flow__dot">2</span>
+                        <strong>Gửi duyệt</strong>
+                        <p>@_workspace.FlowState.PendingCount mục đang chờ admin xét duyệt.</p>
+                    </article>
+
+                    <article class="owner-workspace-flow__step owner-workspace-flow__step--danger">
+                        <span class="owner-workspace-flow__dot">3</span>
+                        <strong>Admin phản hồi</strong>
+                        <p>@_workspace.FlowState.NeedsChangesCount mục cần owner chỉnh sửa.</p>
+                    </article>
+
+                    <article class="owner-workspace-flow__step owner-workspace-flow__step--info">
+                        <span class="owner-workspace-flow__dot">4</span>
+                        <strong>Xuất bản</strong>
+                        <p>@_workspace.FlowState.ApprovedCount mục đã được duyệt.</p>
+                    </article>
+                </div>
+            </div>
+        </article>
+
+        <article class="panel-shell owner-workspace-panel">
+            <div class="owner-workspace-panel__header">
+                <div class="owner-workspace-panel__title">
+                    <div class="owner-workspace-stat__icon">PEND</div>
+                    <div>
+                        <h2>Yêu cầu đang chờ duyệt</h2>
+                        <p>Các yêu cầu moderation active mà admin chưa xử lý.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="owner-workspace-panel__body">
+                @if (_workspace.PendingRows.Count == 0)
+                {
+                    <div class="owner-workspace-empty">
+                        Chưa có yêu cầu đang chờ duyệt.
+                    </div>
+                }
+                else
+                {
+                    <div class="owner-workspace-table-wrap">
+                        <table class="owner-workspace-table" aria-label="Owner moderation pending table">
+                            <thead>
+                                <tr>
+                                    <th>POI</th>
+                                    <th>LOẠI YÊU CẦU</th>
+                                    <th>GỬI LÚC</th>
+                                    <th>CHỜ DUYỆT</th>
+                                    <th>THAO TÁC</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var row in _workspace.PendingRows)
+                                {
+                                    <tr>
+                                        <td>
+                                            <div class="owner-workspace-cell">
+                                                <div class="owner-workspace-cell__avatar">POI</div>
+                                                <div>
+                                                    <p class="owner-workspace-cell__title">@row.PoiName</p>
+                                                    <p class="owner-workspace-cell__sub">#@row.PoiId</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>@row.RequestType</td>
+                                        <td>@GetDateTimeLabel(row.SubmittedAtUtc)</td>
+                                        <td>
+                                            <span class="owner-workspace-badge owner-workspace-badge--warn">@row.WaitTimeLabel</span>
+                                        </td>
+                                        <td>
+                                            <a class="app-button app-button--ghost" href="@GetPoiHref(row.PoiId)">@row.ActionLabel</a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
                 }
             </div>
-        </section>
+        </article>
 
-        @if (_items.Count == 0)
-        {
-            <section class="panel-shell">
-                <EmptyStateBlock Eyebrow="Moderation"
-                                 Title="Chưa có yêu cầu moderation"
-                                 Message="Khi owner gửi POI đi duyệt, trạng thái xử lý sẽ xuất hiện tại đây." />
-            </section>
-        }
-        else
-        {
-            <section class="owner-moderation-grid">
-                <article class="panel-shell owner-moderation-pending">
-                    <div class="owner-moderation-section-title">
-                        <div>
-                            <p class="panel-shell__eyebrow">Đang chờ</p>
-                            <h2>Yêu cầu đang trong hàng đợi</h2>
-                        </div>
-                        <StatusBadge Label="@($"{PendingItems.Count} mục")" Tone="@(PendingItems.Count > 0 ? StatusTone.Warn : StatusTone.Good)" />
-                    </div>
-
-                    @if (PendingItems.Count == 0)
-                    {
-                        <p class="panel-shell__copy">Không còn POI nào đang chờ admin xử lý.</p>
-                    }
-                    else
-                    {
-                        <div class="owner-moderation-pending__list">
-                            @foreach (var item in PendingItems)
-                            {
-                                <article class="owner-moderation-pending__item">
-                                    <div>
-                                        <strong>@GetEntityTitle(item)</strong>
-                                        <p>@GetRelativeTimeLabel(item.CreatedAtUtc) · @GetEntityTypeLabel(item.EntityType)</p>
-                                    </div>
-                                    <div class="owner-moderation-pending__actions">
-                                        <StatusBadge Label="Đang chờ admin" Tone="StatusTone.Warn" />
-                                        <a class="app-button app-button--ghost" href="@GetEntityHref(item)">@GetPrimaryActionLabel(item)</a>
-                                    </div>
-                                </article>
-                            }
-                        </div>
-                    }
-                </article>
-
-                <article class="panel-shell owner-moderation-rejections">
-                    <div class="owner-moderation-section-title">
-                        <div>
-                            <p class="panel-shell__eyebrow">Cần phản hồi</p>
-                            <h2>Yêu cầu bị từ chối gần đây</h2>
-                        </div>
-                        <StatusBadge Label="@($"{RejectedItems.Count} mục")" Tone="@(RejectedItems.Count > 0 ? StatusTone.Warn : StatusTone.Good)" />
-                    </div>
-
-                    @if (RejectedItems.Count == 0)
-                    {
-                        <p class="panel-shell__copy">Chưa có phản hồi từ chối nào cần owner xử lý.</p>
-                    }
-                    else
-                    {
-                        <div class="owner-moderation-rejection-list">
-                            @foreach (var item in RejectedItems)
-                            {
-                                <article>
-                                    <div>
-                                        <strong>@GetEntityTitle(item)</strong>
-                                        <p>@(item.ReviewNote ?? "Admin chưa để lại ghi chú chi tiết.")</p>
-                                    </div>
-                                    <a class="app-button app-button--primary" href="@GetEntityHref(item)">@GetRejectedActionLabel(item)</a>
-                                </article>
-                            }
-                        </div>
-                    }
-                </article>
-            </section>
-
-            <section class="panel-shell owner-moderation-history">
-                <div class="owner-moderation-section-title">
+        <article class="panel-shell owner-workspace-panel">
+            <div class="owner-workspace-panel__header">
+                <div class="owner-workspace-panel__title">
+                    <div class="owner-workspace-stat__icon">HIS</div>
                     <div>
-                        <p class="panel-shell__eyebrow">Lịch sử moderation</p>
-                        <h2>Admin feedback và trạng thái đã gửi</h2>
+                        <h2>Lịch sử duyệt</h2>
+                        <p>Phản hồi moderation gần đây đã được admin xử lý.</p>
                     </div>
-                    <StatusBadge Label="@($"{_items.Count} yêu cầu")" Tone="StatusTone.Info" />
                 </div>
+            </div>
 
-                <div class="owner-moderation-history__scroller">
-                    <table>
+            <div class="owner-workspace-panel__body">
+                <div class="owner-workspace-table-wrap">
+                    <table class="owner-workspace-table" aria-label="Owner moderation history table">
                         <thead>
                             <tr>
-                                <th>Đối tượng</th>
-                                <th>Trạng thái</th>
-                                <th>Ngày gửi</th>
-                                <th>Phản hồi admin</th>
-                                <th>Hành động</th>
+                                <th>POI</th>
+                                <th>LOẠI YÊU CẦU</th>
+                                <th>GỬI LÚC</th>
+                                <th>KẾT QUẢ</th>
+                                <th>GHI CHÚ ADMIN</th>
+                                <th>THAO TÁC</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var item in _items.OrderByDescending(item => item.CreatedAtUtc))
+                            @foreach (var row in _workspace.HistoryRows)
                             {
                                 <tr>
-                                    <td>@GetEntityTitle(item)</td>
                                     <td>
-                                        <StatusBadge Label="@GetModerationStatusLabel(item.Status)" Tone="@GetModerationStatusTone(item.Status)" />
+                                        <div class="owner-workspace-cell">
+                                            <div class="owner-workspace-cell__avatar">POI</div>
+                                            <div>
+                                                <p class="owner-workspace-cell__title">@row.PoiName</p>
+                                                <p class="owner-workspace-cell__sub">#@row.PoiId</p>
+                                            </div>
+                                        </div>
                                     </td>
-                                    <td>@item.CreatedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
-                                    <td>@(item.ReviewNote ?? GetDefaultReviewNote(item))</td>
+                                    <td>@row.RequestType</td>
+                                    <td>@GetDateTimeLabel(row.SubmittedAtUtc)</td>
                                     <td>
-                                        <a href="@GetEntityHref(item)">@GetHistoryActionLabel(item)</a>
+                                        <span class="@GetResultClass(row.Result)">@row.Result</span>
+                                    </td>
+                                    <td>@(row.AdminNote ?? "Chưa có ghi chú.")</td>
+                                    <td>
+                                        <a class="app-button app-button--ghost" href="@GetPoiHref(row.PoiId)">@row.ActionLabel</a>
                                     </td>
                                 </tr>
                             }
                         </tbody>
                     </table>
                 </div>
-            </section>
-        }
+            </div>
+        </article>
     </div>
 }
 
 @code {
     private bool _isLoading = true;
     private string? _errorMessage;
-    private IReadOnlyList<ModerationRequestDto> _items = Array.Empty<ModerationRequestDto>();
-
-    private IReadOnlyList<ModerationRequestDto> PendingItems => _items
-        .Where(item => item.Status == ModerationStatus.Pending)
-        .OrderBy(item => item.CreatedAtUtc)
-        .ToArray();
-
-    private IReadOnlyList<ModerationRequestDto> RejectedItems => _items
-        .Where(item => item.Status == ModerationStatus.Rejected)
-        .OrderByDescending(item => item.CreatedAtUtc)
-        .ToArray();
-
-    private IReadOnlyList<ModerationRequestDto> ResolvedItems => _items
-        .Where(item => item.Status is ModerationStatus.Approved or ModerationStatus.Rejected or ModerationStatus.Revised)
-        .ToArray();
-
-    private IReadOnlyList<ModerationStep> Steps =>
-    [
-        new(1, "Soạn nội dung", "Owner chuẩn bị mô tả, TTS, audio và geofence.", true),
-        new(2, "Gửi duyệt", $"{PendingItems.Count} yêu cầu đang chờ admin.", PendingItems.Count > 0),
-        new(3, "Admin phản hồi", $"{RejectedItems.Count} POI cần owner chỉnh lại.", RejectedItems.Count > 0),
-        new(4, "Xuất bản", $"{ResolvedItems.Count(item => item.Status == ModerationStatus.Approved)} yêu cầu đã được duyệt.", ResolvedItems.Any(item => item.Status == ModerationStatus.Approved))
-    ];
+    private OwnerModerationWorkspaceDto _workspace = new();
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            _items = await ModerationPortalService.GetMineAsync();
+            _workspace = await OwnerPortalService.GetModerationWorkspaceAsync();
         }
         catch (ApiException exception)
-        {
-            _errorMessage = exception.Message;
-        }
-        catch (Exception exception)
         {
             _errorMessage = exception.Message;
         }
@@ -224,98 +231,25 @@ else
         }
     }
 
-    private static string GetEntityTitle(ModerationRequestDto item)
+    private static string GetPoiHref(int poiId) => $"/owner/pois/{poiId}";
+
+    private static string GetDateTimeLabel(DateTime value)
     {
-        return string.Equals(item.EntityType, "poi", StringComparison.OrdinalIgnoreCase)
-            ? $"POI #{item.EntityId}"
-            : $"{GetEntityTypeLabel(item.EntityType)} #{item.EntityId}";
+        return value.ToLocalTime().ToString("dd/MM/yyyy HH:mm");
     }
 
-    private static string GetEntityHref(ModerationRequestDto item)
+    private static string GetResultClass(string result)
     {
-        return string.Equals(item.EntityType, "poi", StringComparison.OrdinalIgnoreCase)
-            ? $"/owner/pois/{item.EntityId}"
-            : "/owner/dashboard";
-    }
-
-    private static string GetPrimaryActionLabel(ModerationRequestDto item)
-    {
-        return string.Equals(item.EntityType, "poi", StringComparison.OrdinalIgnoreCase)
-            ? "Mở POI"
-            : "Mở dashboard";
-    }
-
-    private static string GetRejectedActionLabel(ModerationRequestDto item)
-    {
-        return string.Equals(item.EntityType, "poi", StringComparison.OrdinalIgnoreCase)
-            ? "Sửa trong POI detail"
-            : "Xem dashboard";
-    }
-
-    private static string GetEntityTypeLabel(string entityType) => entityType switch
-    {
-        "poi" => "POI",
-        "owner_registration" => "Owner registration",
-        _ => entityType
-    };
-
-    private static string GetModerationStatusLabel(ModerationStatus status) => status switch
-    {
-        ModerationStatus.Pending => "Đang chờ",
-        ModerationStatus.Approved => "Đã duyệt",
-        ModerationStatus.Rejected => "Bị từ chối",
-        ModerationStatus.Revised => "Đã chỉnh sửa",
-        _ => status.ToString()
-    };
-
-    private static StatusTone GetModerationStatusTone(ModerationStatus status) => status switch
-    {
-        ModerationStatus.Pending => StatusTone.Warn,
-        ModerationStatus.Approved => StatusTone.Good,
-        ModerationStatus.Rejected => StatusTone.Warn,
-        ModerationStatus.Revised => StatusTone.Info,
-        _ => StatusTone.Neutral
-    };
-
-    private static string GetDefaultReviewNote(ModerationRequestDto item) => item.Status switch
-    {
-        ModerationStatus.Pending => "Đang chờ admin phản hồi.",
-        ModerationStatus.Approved => "Admin đã duyệt yêu cầu.",
-        ModerationStatus.Revised => "Owner đã cập nhật lại nội dung.",
-        _ => "Chưa có ghi chú."
-    };
-
-    private static string GetHistoryActionLabel(ModerationRequestDto item)
-    {
-        if (!string.Equals(item.EntityType, "poi", StringComparison.OrdinalIgnoreCase))
+        if (result.Contains("duyệt", StringComparison.OrdinalIgnoreCase))
         {
-            return "Xem dashboard";
+            return "owner-workspace-badge owner-workspace-badge--good";
         }
 
-        return item.Status == ModerationStatus.Rejected ? "Sửa trong POI detail" : "Xem POI";
-    }
-
-    private static string GetStepClass(ModerationStep step)
-    {
-        return step.IsActive ? "owner-moderation-step is-active" : "owner-moderation-step";
-    }
-
-    private static string GetRelativeTimeLabel(DateTime createdAtUtc)
-    {
-        var elapsed = DateTime.UtcNow - createdAtUtc;
-
-        if (elapsed.TotalMinutes < 60)
+        if (result.Contains("từ chối", StringComparison.OrdinalIgnoreCase))
         {
-            return $"{Math.Max(1, (int)Math.Floor(elapsed.TotalMinutes))} phút trước";
+            return "owner-workspace-badge owner-workspace-badge--danger";
         }
 
-        if (elapsed.TotalHours < 24)
-        {
-            return $"{Math.Max(1, (int)Math.Floor(elapsed.TotalHours))} giờ trước";
-        }
-
-        return $"{Math.Max(1, (int)Math.Floor(elapsed.TotalDays))} ngày trước";
+        return "owner-workspace-badge";
     }
-
-    private sealed record ModerationStep(int Index, string Title, string Description, bool IsActive);
 }

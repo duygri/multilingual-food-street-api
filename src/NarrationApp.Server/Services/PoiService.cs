@@ -7,7 +7,7 @@ using NarrationApp.Shared.Enums;
 
 namespace NarrationApp.Server.Services;
 
-public sealed class PoiService(AppDbContext dbContext) : IPoiService
+public sealed class PoiService(AppDbContext dbContext, IStorageService? storageService = null) : IPoiService
 {
     public async Task<IReadOnlyList<PoiDto>> GetAllAsync(CancellationToken cancellationToken = default)
     {
@@ -105,6 +105,57 @@ public sealed class PoiService(AppDbContext dbContext) : IPoiService
         return poi.ToDto();
     }
 
+    public async Task<PoiDto> UploadImageAsync(
+        Guid actorUserId,
+        UserRole actorRole,
+        int poiId,
+        string fileName,
+        string contentType,
+        Stream content,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(storageService);
+        EnsureSupportedImage(fileName, contentType);
+
+        var poi = await dbContext.Pois
+            .Include(item => item.Translations)
+            .Include(item => item.Geofences)
+            .Include(item => item.Category)
+            .SingleOrDefaultAsync(item => item.Id == poiId, cancellationToken)
+            ?? throw new KeyNotFoundException("POI was not found.");
+
+        EnsureWriteAccess(poi, actorUserId, actorRole);
+
+        var (_, url) = await storageService.SaveAsync(fileName, content, cancellationToken);
+        poi.ImageUrl = url;
+        poi.Status = actorRole == UserRole.Admin
+            ? poi.Status
+            : poi.Status == PoiStatus.Published ? PoiStatus.Updated : PoiStatus.Draft;
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return poi.ToDto();
+    }
+
+    public async Task<PoiDto> DeleteImageAsync(Guid actorUserId, UserRole actorRole, int poiId, CancellationToken cancellationToken = default)
+    {
+        var poi = await dbContext.Pois
+            .Include(item => item.Translations)
+            .Include(item => item.Geofences)
+            .Include(item => item.Category)
+            .SingleOrDefaultAsync(item => item.Id == poiId, cancellationToken)
+            ?? throw new KeyNotFoundException("POI was not found.");
+
+        EnsureWriteAccess(poi, actorUserId, actorRole);
+
+        poi.ImageUrl = null;
+        poi.Status = actorRole == UserRole.Admin
+            ? poi.Status
+            : poi.Status == PoiStatus.Published ? PoiStatus.Updated : PoiStatus.Draft;
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return poi.ToDto();
+    }
+
     public async Task DeleteAsync(Guid actorUserId, UserRole actorRole, int poiId, CancellationToken cancellationToken = default)
     {
         var poi = await dbContext.Pois.SingleOrDefaultAsync(item => item.Id == poiId, cancellationToken)
@@ -155,6 +206,29 @@ public sealed class PoiService(AppDbContext dbContext) : IPoiService
     }
 
     private static double DegreesToRadians(double degrees) => degrees * Math.PI / 180d;
+
+    private static void EnsureSupportedImage(string fileName, string contentType)
+    {
+        var extension = Path.GetExtension(fileName);
+        var allowedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ".jpg",
+            ".jpeg",
+            ".png",
+            ".webp"
+        };
+        var allowedContentTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "image/jpeg",
+            "image/png",
+            "image/webp"
+        };
+
+        if (!allowedExtensions.Contains(extension) || !allowedContentTypes.Contains(contentType))
+        {
+            throw new InvalidOperationException("Unsupported representative image format.");
+        }
+    }
 
     private void UpsertBaseTranslation(Poi poi)
     {

@@ -1,11 +1,8 @@
 using Bunit;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection;
-using NarrationApp.Shared.DTOs.Geofence;
 using NarrationApp.Shared.DTOs.Owner;
 using NarrationApp.Shared.DTOs.Poi;
-using NarrationApp.Shared.DTOs.Translation;
-using NarrationApp.Shared.Enums;
 using NarrationApp.Web.Pages.Owner;
 using NarrationApp.Web.Services;
 using System.Security.Claims;
@@ -15,7 +12,7 @@ namespace NarrationApp.Web.Tests.Pages.Owner;
 public sealed class DashboardTests : TestContext
 {
     [Fact]
-    public void Renders_welcome_banner_with_owner_name_and_key_counts()
+    public void Dashboard_renders_workspace_stat_cards_published_table_and_recent_activity_panel()
     {
         ConfigureDashboard();
 
@@ -23,33 +20,20 @@ public sealed class DashboardTests : TestContext
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Contains("Chào Bà Tám Bún Bò", cut.Markup);
-            Assert.Contains("4 POI đang quản lý", cut.Markup);
-            Assert.Contains("1 chờ duyệt", cut.Markup);
-            Assert.Contains("5 thông báo chưa đọc", cut.Markup);
-        });
-    }
-
-    [Fact]
-    public void Renders_spotlight_published_poi_area()
-    {
-        ConfigureDashboard();
-
-        var cut = RenderComponent<Dashboard>();
-
-        cut.WaitForAssertion(() =>
-        {
-            Assert.Contains("POI spotlight", cut.Markup);
-            Assert.Contains("Các điểm đang xuất bản", cut.Markup);
+            Assert.Contains("Tổng POI", cut.Markup);
+            Assert.Contains("Đang xuất bản", cut.Markup);
+            Assert.Contains("Chờ duyệt", cut.Markup);
+            Assert.Contains("Audio sẵn sàng", cut.Markup);
+            Assert.Contains("POI đang xuất bản", cut.Markup);
             Assert.Contains("Bún mắm Vĩnh Khánh", cut.Markup);
-            Assert.Contains("2 vùng kích hoạt", cut.Markup);
-            Assert.Contains("3 ngôn ngữ", cut.Markup);
-            Assert.Contains("Kết hợp", cut.Markup);
+            Assert.Contains("Lượt nghe", cut.Markup);
+            Assert.Contains("Hoạt động gần đây", cut.Markup);
+            Assert.Contains("Admin yêu cầu bổ sung nội dung nguồn", cut.Markup);
         });
     }
 
     [Fact]
-    public void Renders_activity_feed()
+    public void Dashboard_renders_published_workspace_table_headers()
     {
         ConfigureDashboard();
 
@@ -57,160 +41,115 @@ public sealed class DashboardTests : TestContext
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Contains("Dòng hoạt động", cut.Markup);
-            Assert.Contains("Bún mắm Vĩnh Khánh đang phục vụ khách", cut.Markup);
-            Assert.Contains("Ốc đêm đang ở trạng thái nháp", cut.Markup);
-            Assert.Contains("12 audio sẵn sàng", cut.Markup);
+            var headers = cut.FindAll("th").Select(header => header.TextContent.Trim()).ToArray();
+
+            Assert.Contains("POI", headers);
+            Assert.Contains("DANH MỤC", headers);
+            Assert.Contains("LƯỢT NGHE", headers);
+            Assert.Contains("XU HƯỚNG 7 NGÀY", headers);
+            Assert.Contains("VỊ TRÍ", headers);
         });
     }
 
     [Fact]
-    public void Renders_moderation_watch_summary()
-    {
-        ConfigureDashboard();
-
-        var cut = RenderComponent<Dashboard>();
-
-        cut.WaitForAssertion(() =>
-        {
-            Assert.Contains("Moderation watch", cut.Markup);
-            Assert.Contains("2 yêu cầu chờ xử lý", cut.Markup);
-            Assert.Contains("1 POI cần phản hồi kiểm duyệt", cut.Markup);
-            Assert.Contains("Mở moderation", cut.Markup);
-        });
-
-        var watchRows = cut.FindAll(".owner-watch-row");
-        Assert.Equal(4, watchRows.Count);
-        Assert.Contains("2 yêu cầu chờ xử lý", watchRows[0].TextContent);
-        Assert.Contains("2 mục", watchRows[0].TextContent);
-        Assert.DoesNotContain("1 mục", watchRows[0].TextContent);
-        Assert.Contains("1 POI cần phản hồi kiểm duyệt", watchRows[1].TextContent);
-        Assert.Contains("1 chờ xử lý", watchRows[1].TextContent);
-        Assert.DoesNotContain("2 chờ xử lý", watchRows[1].TextContent);
-    }
-
-    [Fact]
-    public void Does_not_render_old_readiness_board_only_wording()
-    {
-        ConfigureDashboard();
-
-        var cut = RenderComponent<Dashboard>();
-
-        cut.WaitForAssertion(() =>
-        {
-            Assert.DoesNotContain("Bảng sẵn sàng POI", cut.Markup);
-            Assert.DoesNotContain("Mức sẵn sàng POI", cut.Markup);
-            Assert.DoesNotContain("Kỷ luật phát hành audio", cut.Markup);
-            Assert.DoesNotContain("Sẵn sàng audio", cut.Markup);
-        });
-    }
-
-    [Fact]
-    public void Renders_empty_activity_state_when_dashboard_has_no_activity()
+    public void Dashboard_renders_empty_recent_activity_panel_when_workspace_has_no_activities()
     {
         ConfigureDashboard(
-            dashboard: new OwnerDashboardDto(),
-            pois: Array.Empty<PoiDto>());
+            workspace: new OwnerDashboardWorkspaceDto
+            {
+                Summary = new OwnerWorkspaceSummaryDto
+                {
+                    TotalPois = 1,
+                    PublishedPois = 1,
+                    PendingReviewPois = 0,
+                    ReadyAudioAssets = 0
+                },
+                PublishedRows =
+                [
+                    new OwnerDashboardPublishedRowDto
+                    {
+                        PoiId = 1,
+                        PoiName = "Bún mắm Vĩnh Khánh",
+                        CategoryName = "Bún",
+                        ListenCount = 42,
+                        Trend = [1, 2, 3, 4, 5, 6, 7],
+                        LocationHint = "Vĩnh Khánh"
+                    }
+                ],
+                RecentActivities = []
+            });
 
         var cut = RenderComponent<Dashboard>();
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Contains("Dòng hoạt động", cut.Markup);
-            Assert.Contains("Chưa có hoạt động mới", cut.Markup);
-            Assert.Contains("Các cập nhật về POI, moderation, audio và thông báo sẽ xuất hiện tại đây khi có dữ liệu vận hành.", cut.Markup);
-            Assert.Empty(cut.FindAll(".owner-activity-feed__item"));
-            var activityPanel = cut.FindAll(".panel-shell")
-                .Single(panel => panel.TextContent.Contains("Dòng hoạt động", StringComparison.Ordinal));
-            Assert.DoesNotContain("1 cập nhật", activityPanel.TextContent);
-            Assert.DoesNotContain("0 cập nhật", activityPanel.TextContent);
-            Assert.DoesNotContain("0 audio sẵn sàng", activityPanel.TextContent);
+            Assert.Contains("Hoạt động gần đây", cut.Markup);
+            Assert.Contains("Chưa có hoạt động nào gần đây.", cut.Markup);
         });
     }
 
     private void ConfigureDashboard(
         string ownerName = "Bà Tám Bún Bò",
-        OwnerDashboardDto? dashboard = null,
-        IReadOnlyList<PoiDto>? pois = null)
+        OwnerDashboardWorkspaceDto? workspace = null)
     {
         Services.AddSingleton<AuthenticationStateProvider>(
             new TestAuthenticationStateProvider(ownerName));
         Services.AddSingleton<IOwnerPortalService>(
-            new TestOwnerPortalService(dashboard ?? BuildDashboard(), pois ?? BuildPois()));
+            new TestOwnerPortalService(workspace ?? BuildWorkspace()));
     }
 
-    private static OwnerDashboardDto BuildDashboard() => new()
+    private static OwnerDashboardWorkspaceDto BuildWorkspace() => new()
     {
-        TotalPois = 4,
-        PublishedPois = 2,
-        DraftPois = 1,
-        PendingReviewPois = 1,
-        TotalAudioAssets = 12,
-        PendingModerationRequests = 2,
-        UnreadNotifications = 5
+        Summary = new OwnerWorkspaceSummaryDto
+        {
+            TotalPois = 4,
+            PublishedPois = 2,
+            PendingReviewPois = 1,
+            ReadyAudioAssets = 12
+        },
+        PublishedRows =
+        [
+            new OwnerDashboardPublishedRowDto
+            {
+                PoiId = 1,
+                PoiName = "Bún mắm Vĩnh Khánh",
+                CategoryName = "Bún",
+                ListenCount = 128,
+                Trend = [3, 6, 4, 8, 7, 9, 10],
+                LocationHint = "Vĩnh Khánh"
+            },
+            new OwnerDashboardPublishedRowDto
+            {
+                PoiId = 2,
+                PoiName = "Cơm tấm than hồng",
+                CategoryName = "Cơm",
+                ListenCount = 74,
+                Trend = [2, 3, 5, 5, 6, 7, 8],
+                LocationHint = "Khánh Hội"
+            }
+        ],
+        RecentActivities =
+        [
+            new OwnerDashboardRecentActivityDto
+            {
+                Type = "moderation",
+                Title = "Admin yêu cầu bổ sung nội dung nguồn",
+                Description = "POI Bún mắm Vĩnh Khánh cần cập nhật nguồn trước khi duyệt.",
+                OccurredAtUtc = DateTime.UtcNow.AddHours(-2),
+                Tone = "warn",
+                LinkedPoiId = 1
+            },
+            new OwnerDashboardRecentActivityDto
+            {
+                Type = "audio",
+                Title = "Audio nguồn tiếng Việt đã sẵn sàng",
+                Description = "Cơm tấm than hồng đã có audio nguồn để owner kiểm tra.",
+                OccurredAtUtc = DateTime.UtcNow.AddHours(-6),
+                Tone = "good",
+                LinkedPoiId = 2
+            }
+        ]
     };
-
-    private static IReadOnlyList<PoiDto> BuildPois() =>
-    [
-        new PoiDto
-        {
-            Id = 1,
-            Name = "Bún mắm Vĩnh Khánh",
-            Slug = "bun-mam-vinh-khanh",
-            OwnerId = Guid.NewGuid(),
-            Priority = 1,
-            NarrationMode = NarrationMode.Both,
-            Status = PoiStatus.Published,
-            Translations =
-            [
-                new TranslationDto { Id = 1, LanguageCode = "vi", Title = "Bún mắm" },
-                new TranslationDto { Id = 2, LanguageCode = "en", Title = "Fermented noodle soup" },
-                new TranslationDto { Id = 3, LanguageCode = "ko", Title = "분맘" }
-            ],
-            Geofences =
-            [
-                new GeofenceDto { Id = 1, Name = "North gate", RadiusMeters = 18, IsActive = true },
-                new GeofenceDto { Id = 2, Name = "South gate", RadiusMeters = 24, IsActive = true }
-            ]
-        },
-        new PoiDto
-        {
-            Id = 2,
-            Name = "Ốc đêm",
-            Slug = "oc-dem",
-            OwnerId = Guid.NewGuid(),
-            Priority = 2,
-            NarrationMode = NarrationMode.RecordedOnly,
-            Status = PoiStatus.Draft,
-            Translations =
-            [
-                new TranslationDto { Id = 4, LanguageCode = "vi", Title = "Ốc đêm" }
-            ],
-            Geofences =
-            [
-                new GeofenceDto { Id = 3, Name = "Main lane", RadiusMeters = 20, IsActive = true }
-            ]
-        },
-        new PoiDto
-        {
-            Id = 3,
-            Name = "Cơm tấm than hồng",
-            Slug = "com-tam-than-hong",
-            OwnerId = Guid.NewGuid(),
-            Priority = 3,
-            NarrationMode = NarrationMode.TtsOnly,
-            Status = PoiStatus.PendingReview,
-            Translations =
-            [
-                new TranslationDto { Id = 5, LanguageCode = "vi", Title = "Cơm tấm" },
-                new TranslationDto { Id = 6, LanguageCode = "en", Title = "Broken rice" }
-            ],
-            Geofences =
-            [
-                new GeofenceDto { Id = 4, Name = "Street corner", RadiusMeters = 16, IsActive = true }
-            ]
-        }
-    ];
 
     private sealed class TestAuthenticationStateProvider(string ownerName) : AuthenticationStateProvider
     {
@@ -228,33 +167,46 @@ public sealed class DashboardTests : TestContext
         }
     }
 
-    private sealed class TestOwnerPortalService(
-        OwnerDashboardDto dashboard,
-        IReadOnlyList<PoiDto> pois) : IOwnerPortalService
+    private sealed class TestOwnerPortalService(OwnerDashboardWorkspaceDto workspace) : IOwnerPortalService
     {
+        public Task<OwnerDashboardWorkspaceDto> GetDashboardWorkspaceAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(workspace);
+
         public Task<OwnerShellSummaryDto> GetShellSummaryAsync(CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult(new OwnerShellSummaryDto
+            => Task.FromResult(new OwnerShellSummaryDto
             {
-                TotalPois = dashboard.TotalPois,
-                PublishedPois = dashboard.PublishedPois,
-                PendingModerationRequests = dashboard.PendingModerationRequests,
-                UnreadNotifications = dashboard.UnreadNotifications
+                TotalPois = workspace.Summary.TotalPois,
+                PublishedPois = workspace.Summary.PublishedPois,
+                PendingModerationRequests = workspace.Summary.PendingReviewPois,
+                UnreadNotifications = 0
             });
-        }
 
         public Task<OwnerDashboardDto> GetDashboardAsync(CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult(dashboard);
-        }
+            => Task.FromResult(new OwnerDashboardDto
+            {
+                TotalPois = workspace.Summary.TotalPois,
+                PublishedPois = workspace.Summary.PublishedPois,
+                DraftPois = 1,
+                PendingReviewPois = workspace.Summary.PendingReviewPois,
+                TotalAudioAssets = workspace.Summary.ReadyAudioAssets,
+                PendingModerationRequests = workspace.RecentActivities.Count(activity => activity.Type == "moderation"),
+                UnreadNotifications = 0
+            });
 
         public Task<IReadOnlyList<PoiDto>> GetPoisAsync(CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult(pois);
-        }
+            => Task.FromResult<IReadOnlyList<PoiDto>>(
+                workspace.PublishedRows.Select(row => new PoiDto
+                {
+                    Id = row.PoiId,
+                    Name = row.PoiName,
+                    Slug = row.PoiName.ToLowerInvariant().Replace(' ', '-'),
+                    CategoryName = row.CategoryName,
+                    Priority = row.PoiId,
+                    Status = NarrationApp.Shared.Enums.PoiStatus.Published
+                }).ToArray());
 
         public Task<PoiDto> GetPoiAsync(int poiId, CancellationToken cancellationToken = default)
-            => Task.FromResult(pois.FirstOrDefault(poi => poi.Id == poiId) ?? new PoiDto { Id = poiId });
+            => throw new NotSupportedException();
 
         public Task<OwnerPoiStatsDto> GetPoiStatsAsync(int poiId, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();

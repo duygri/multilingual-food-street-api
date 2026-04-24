@@ -14,6 +14,8 @@ namespace NarrationApp.Server.Controllers;
 [Route("api/pois")]
 public sealed class PoisController(IPoiService poiService) : ControllerBase
 {
+    private const long MaxRepresentativeImageBytes = 5_000_000;
+
     [AllowAnonymous]
     [HttpGet]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<PoiDto>>>> GetAllAsync(CancellationToken cancellationToken)
@@ -85,6 +87,81 @@ public sealed class PoisController(IPoiService poiService) : ControllerBase
 
     [Authorize(Roles = "poi_owner,admin")]
     [EnableRateLimiting(AppConstants.ContentMutationRateLimitPolicyName)]
+    [HttpPost("{id:int}/image")]
+    [RequestSizeLimit(MaxRepresentativeImageBytes)]
+    public async Task<ActionResult<ApiResponse<PoiDto>>> UploadImageAsync(int id, [FromForm] UploadPoiImageFormRequest request, CancellationToken cancellationToken)
+    {
+        if (request.File.Length <= 0 || request.File.Length > MaxRepresentativeImageBytes)
+        {
+            return BadRequest(new ApiResponse<PoiDto>
+            {
+                Succeeded = false,
+                Message = "Representative image is invalid.",
+                Error = new ErrorResponse
+                {
+                    Code = "invalid_image_upload",
+                    Message = "Representative image must be greater than 0 bytes and at most 5 MB."
+                }
+            });
+        }
+
+        try
+        {
+            await using var stream = request.File.OpenReadStream();
+            var response = await poiService.UploadImageAsync(
+                User.GetRequiredUserId(),
+                User.GetRequiredUserRole(),
+                id,
+                request.File.FileName,
+                request.File.ContentType,
+                stream,
+                cancellationToken);
+
+            return Ok(new ApiResponse<PoiDto> { Succeeded = true, Message = "Representative image uploaded.", Data = response });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new ApiResponse<PoiDto>
+            {
+                Succeeded = false,
+                Message = "POI image upload forbidden.",
+                Error = new ErrorResponse { Code = "poi_forbidden", Message = ex.Message }
+            });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new ApiResponse<PoiDto>
+            {
+                Succeeded = false,
+                Message = "Representative image is invalid.",
+                Error = new ErrorResponse { Code = "invalid_image_upload", Message = ex.Message }
+            });
+        }
+    }
+
+    [Authorize(Roles = "poi_owner,admin")]
+    [EnableRateLimiting(AppConstants.ContentMutationRateLimitPolicyName)]
+    [HttpDelete("{id:int}/image")]
+    public async Task<ActionResult<ApiResponse<PoiDto>>> DeleteImageAsync(int id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var response = await poiService.DeleteImageAsync(User.GetRequiredUserId(), User.GetRequiredUserRole(), id, cancellationToken);
+            return Ok(new ApiResponse<PoiDto> { Succeeded = true, Message = "Representative image removed.", Data = response });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new ApiResponse<PoiDto>
+            {
+                Succeeded = false,
+                Message = "POI image delete forbidden.",
+                Error = new ErrorResponse { Code = "poi_forbidden", Message = ex.Message }
+            });
+        }
+    }
+
+    [Authorize(Roles = "poi_owner,admin")]
+    [EnableRateLimiting(AppConstants.ContentMutationRateLimitPolicyName)]
     [HttpDelete("{id:int}")]
     public async Task<ActionResult<ApiResponse<object>>> DeleteAsync(int id, CancellationToken cancellationToken)
     {
@@ -102,5 +179,10 @@ public sealed class PoisController(IPoiService poiService) : ControllerBase
                 Error = new ErrorResponse { Code = "poi_forbidden", Message = ex.Message }
             });
         }
+    }
+
+    public sealed class UploadPoiImageFormRequest
+    {
+        public IFormFile File { get; init; } = default!;
     }
 }

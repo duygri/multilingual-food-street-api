@@ -21,100 +21,153 @@ else if (!string.IsNullOrWhiteSpace(_errorMessage))
 }
 else
 {
-    <div class="dashboard-stack owner-pois-page">
-        <section class="panel-shell owner-pois-hero">
+    <div class="owner-workspace-page">
+        <header class="owner-workspace-heading">
             <div>
-                <p class="panel-shell__eyebrow">POI</p>
-                <h2>Danh sách POI</h2>
-                <p class="panel-shell__copy">Tìm, lọc và mở nhanh từng điểm để xem trạng thái vận hành chi tiết.</p>
+                <div class="owner-workspace-breadcrumb">Owner / <strong>POI của tôi</strong> / Danh sách</div>
+                <h1>Danh sách POI</h1>
+                <p>Quản lý nhanh nội dung nguồn, trạng thái duyệt và hành động cần xử lý của từng POI.</p>
             </div>
+        </header>
 
-            <a class="app-button app-button--primary" data-action="create-poi" href="/owner/pois/new">
-                Tạo POI mới
-            </a>
+        <section class="owner-workspace-stats" aria-label="Owner POI stats">
+            <article class="panel-shell owner-workspace-stat">
+                <div class="owner-workspace-stat__icon">POI</div>
+                <p class="owner-workspace-stat__value">@_workspace.Summary.TotalPois</p>
+                <p class="owner-workspace-stat__label">Tổng POI</p>
+                <p class="owner-workspace-stat__hint">Toàn bộ POI trong workspace</p>
+            </article>
+
+            <article class="panel-shell owner-workspace-stat owner-workspace-stat--published">
+                <div class="owner-workspace-stat__icon">PUB</div>
+                <p class="owner-workspace-stat__value">@_workspace.Summary.PublishedPois</p>
+                <p class="owner-workspace-stat__label">Đang xuất bản</p>
+                <p class="owner-workspace-stat__hint">Các điểm đang live</p>
+            </article>
+
+            <article class="panel-shell owner-workspace-stat owner-workspace-stat--pending">
+                <div class="owner-workspace-stat__icon">REV</div>
+                <p class="owner-workspace-stat__value">@_workspace.Summary.PendingReviewPois</p>
+                <p class="owner-workspace-stat__label">Chờ duyệt</p>
+                <p class="owner-workspace-stat__hint">Nội dung đang nằm trong queue</p>
+            </article>
+
+            <article class="panel-shell owner-workspace-stat owner-workspace-stat--audio">
+                <div class="owner-workspace-stat__icon">FIX</div>
+                <p class="owner-workspace-stat__value">@_workspace.Summary.DraftOrRejectedPois</p>
+                <p class="owner-workspace-stat__label">Nháp / Từ chối</p>
+                <p class="owner-workspace-stat__hint">Các mục cần hoàn thiện hoặc gửi lại</p>
+            </article>
         </section>
 
-        <section class="panel-shell owner-pois-toolbar">
-            <div class="owner-pois-toolbar__summary">
-                <strong>@FilteredPois.Count POI</strong>
-                <span>trong tổng @_pois.Count điểm đang quản lý</span>
+        <article class="panel-shell owner-workspace-panel">
+            <div class="owner-workspace-panel__header">
+                <div class="owner-workspace-panel__title">
+                    <div class="owner-workspace-stat__icon">POI</div>
+                    <div>
+                        <h2>Danh sách POI</h2>
+                        <p>Bảng owner workspace cho toàn bộ POI</p>
+                    </div>
+                </div>
             </div>
 
-            <div class="owner-pois-toolbar__controls">
-                <label>
-                    <span>Tìm POI</span>
-                    <input data-field="poi-search"
-                           placeholder="Tên hoặc slug"
-                           @bind="_searchTerm" />
-                </label>
+            <div class="owner-workspace-panel__body">
+                <div class="owner-workspace-toolbar">
+                    <div class="owner-workspace-toolbar__group">
+                        <label class="owner-workspace-field">
+                            <span>Tìm kiếm</span>
+                            <input data-field="poi-search"
+                                   placeholder="Tên hoặc slug"
+                                   @bind="_searchTerm" />
+                        </label>
 
-                <label>
-                    <span>Trạng thái</span>
-                    <select data-field="poi-status-filter" @bind="_statusFilter">
-                        <option value="">Tất cả trạng thái</option>
-                        @foreach (var status in _statusOptions)
-                        {
-                            <option value="@status.ToString()">@GetPoiStatusLabel(status)</option>
-                        }
-                    </select>
-                </label>
-            </div>
-        </section>
+                        <label class="owner-workspace-field">
+                            <span>Trạng thái</span>
+                            <select data-field="poi-status-filter" @bind="_statusFilter">
+                                <option value="">Tất cả trạng thái</option>
+                                @foreach (var status in _statusOptions)
+                                {
+                                    <option value="@status.ToString()">@GetPoiStatusLabel(status)</option>
+                                }
+                            </select>
+                        </label>
+                    </div>
 
-        @if (_pois.Count == 0)
-        {
-            <EmptyStateBlock Eyebrow="POI"
-                             Title="Chưa có POI nào"
-                             Message="Tạo POI đầu tiên để bắt đầu cấu hình nội dung, geofence và audio nguồn cho tuyến phố." />
-        }
-        else if (FilteredPois.Count == 0)
-        {
-            <EmptyStateBlock Eyebrow="Bộ lọc"
-                             Title="Không tìm thấy POI phù hợp"
-                             Message="Thử đổi từ khóa hoặc trạng thái để xem lại toàn bộ danh sách owner." />
-        }
-        else
-        {
-            <section class="owner-pois-list" aria-label="Owner POI list">
-                @foreach (var poi in FilteredPois)
-                {
-                    <article class="owner-pois-card">
-                        <div class="owner-pois-card__main">
-                            <div class="owner-pois-card__title">
-                                <div>
-                                    <h3>@poi.Name</h3>
-                                    <p>@poi.Slug</p>
-                                </div>
-                                <StatusBadge Label="@GetPoiStatusLabel(poi.Status)" Tone="@GetPoiStatusTone(poi.Status)" />
-                            </div>
-
-                            <dl class="owner-pois-card__facts">
-                                <div>
-                                    <dt>Danh mục</dt>
-                                    <dd>@(poi.CategoryName ?? "Chưa gán")</dd>
-                                </div>
-                                <div>
-                                    <dt>Geofence</dt>
-                                    <dd>@GetGeofenceSummary(poi)</dd>
-                                </div>
-                                <div>
-                                    <dt>Bản dịch</dt>
-                                    <dd>@GetTranslationSummary(poi)</dd>
-                                </div>
-                                <div>
-                                    <dt>Narration</dt>
-                                    <dd>@GetNarrationLabel(poi.NarrationMode)</dd>
-                                </div>
-                            </dl>
-                        </div>
-
-                        <a class="app-button app-button--ghost" data-action="@($"view-poi-{poi.Id}")" href="@($"/owner/pois/{poi.Id}")">
-                            Xem chi tiết
+                    <div class="owner-workspace-actions">
+                        <a class="app-button app-button--primary" data-action="create-poi" href="/owner/pois/new">
+                            Tạo POI mới
                         </a>
-                    </article>
+                    </div>
+                </div>
+
+                @if (_workspace.Rows.Count == 0)
+                {
+                    <div class="owner-workspace-empty">
+                        Chưa có POI nào trong workspace owner.
+                    </div>
                 }
-            </section>
-        }
+                else if (FilteredRows.Count == 0)
+                {
+                    <div class="owner-workspace-empty">
+                        Không có POI nào khớp bộ lọc hiện tại.
+                    </div>
+                }
+                else
+                {
+                    <div class="owner-workspace-table-wrap">
+                        <table class="owner-workspace-table" aria-label="Owner POI list">
+                            <thead>
+                                <tr>
+                                    <th>POI</th>
+                                    <th>DANH MỤC</th>
+                                    <th>TỌA ĐỘ</th>
+                                    <th>PRIORITY</th>
+                                    <th>NỘI DUNG NGUỒN</th>
+                                    <th>TRẠNG THÁI</th>
+                                    <th>THAO TÁC</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var row in FilteredRows)
+                                {
+                                    <tr>
+                                        <td>
+                                            <div class="owner-workspace-cell">
+                                                <div class="owner-workspace-cell__avatar">POI</div>
+                                                <div>
+                                                    <p class="owner-workspace-cell__title">@row.PoiName</p>
+                                                    <p class="owner-workspace-cell__sub">@row.Slug</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="owner-workspace-badge owner-workspace-badge--category">@(row.CategoryName ?? "Chưa gán")</span>
+                                        </td>
+                                        <td>@GetCoordinateLabel(row)</td>
+                                        <td>@row.Priority</td>
+                                        <td>
+                                            <span class="owner-workspace-badge owner-workspace-badge--source">@GetSourceContentLabel(row.SourceContentKind)</span>
+                                        </td>
+                                        <td>
+                                            <span class="@GetStatusClass(row.Status)">@GetStatusText(row.Status)</span>
+                                        </td>
+                                        <td>
+                                            <div class="owner-workspace-actions">
+                                                <a class="app-button app-button--ghost" href="@($"/owner/pois/{row.PoiId}")">Xem</a>
+                                                @if (row.CanResubmit)
+                                                {
+                                                    <a class="app-button app-button--primary" href="@($"/owner/pois/{row.PoiId}")">Sửa &amp; Gửi lại</a>
+                                                }
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </article>
     </div>
 }
 
@@ -125,9 +178,9 @@ else
     private string? _errorMessage;
     private string _searchTerm = string.Empty;
     private string _statusFilter = string.Empty;
-    private IReadOnlyList<PoiDto> _pois = Array.Empty<PoiDto>();
+    private OwnerPoisWorkspaceDto _workspace = new();
 
-    private IReadOnlyList<PoiDto> FilteredPois => _pois
+    private IReadOnlyList<OwnerPoisWorkspaceRowDto> FilteredRows => _workspace.Rows
         .Where(MatchesSearch)
         .Where(MatchesStatus)
         .ToArray();
@@ -136,7 +189,7 @@ else
     {
         try
         {
-            _pois = await OwnerPortalService.GetPoisAsync();
+            _workspace = await OwnerPortalService.GetPoisWorkspaceAsync();
         }
         catch (ApiException exception)
         {
@@ -148,55 +201,63 @@ else
         }
     }
 
-    private bool MatchesSearch(PoiDto poi)
+    private bool MatchesSearch(OwnerPoisWorkspaceRowDto row)
     {
         if (string.IsNullOrWhiteSpace(_searchTerm))
         {
             return true;
         }
 
-        return poi.Name.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase)
-            || poi.Slug.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase)
-            || (poi.CategoryName?.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) ?? false);
+        return row.PoiName.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase)
+            || row.Slug.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase)
+            || (row.CategoryName?.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) ?? false);
     }
 
-    private bool MatchesStatus(PoiDto poi)
+    private bool MatchesStatus(OwnerPoisWorkspaceRowDto row)
     {
         return string.IsNullOrWhiteSpace(_statusFilter)
-            || string.Equals(poi.Status.ToString(), _statusFilter, StringComparison.Ordinal);
+            || string.Equals(row.Status.ToString(), _statusFilter, StringComparison.Ordinal);
     }
 
     private static string GetPoiStatusLabel(PoiStatus status) => status switch
     {
-        PoiStatus.Published => "Đã xuất bản",
+        PoiStatus.Published => "Đang xuất bản",
         PoiStatus.PendingReview => "Chờ duyệt",
         PoiStatus.Draft => "Nháp",
-        PoiStatus.Rejected => "Bị từ chối",
+        PoiStatus.Rejected => "Rejected",
         PoiStatus.Updated => "Đã cập nhật",
         PoiStatus.Archived => "Lưu trữ",
         _ => status.ToString()
     };
 
-    private static StatusTone GetPoiStatusTone(PoiStatus status) => status switch
+    private static string GetCoordinateLabel(OwnerPoisWorkspaceRowDto row)
     {
-        PoiStatus.Published => StatusTone.Good,
-        PoiStatus.PendingReview => StatusTone.Warn,
-        PoiStatus.Draft => StatusTone.Neutral,
-        PoiStatus.Rejected => StatusTone.Warn,
-        PoiStatus.Updated => StatusTone.Info,
-        PoiStatus.Archived => StatusTone.Neutral,
-        _ => StatusTone.Neutral
+        return $"{row.Latitude:0.####}, {row.Longitude:0.####}";
+    }
+
+    private static string GetSourceContentLabel(OwnerSourceContentKind kind) => kind switch
+    {
+        OwnerSourceContentKind.ScriptTts => "Script TTS",
+        OwnerSourceContentKind.AudioFile => "Audio file",
+        _ => "Chưa có"
     };
 
-    private static string GetGeofenceSummary(PoiDto poi) => $"{poi.Geofences.Count} vùng";
-
-    private static string GetTranslationSummary(PoiDto poi) => $"{poi.Translations.Count} ngôn ngữ";
-
-    private static string GetNarrationLabel(NarrationMode mode) => mode switch
+    private static string GetStatusText(PoiStatus status) => status switch
     {
-        NarrationMode.TtsOnly => "Chỉ TTS",
-        NarrationMode.RecordedOnly => "Chỉ audio nguồn",
-        NarrationMode.Both => "Kết hợp",
-        _ => mode.ToString()
+        PoiStatus.Published => "Đang xuất bản",
+        PoiStatus.PendingReview => "Chờ duyệt",
+        PoiStatus.Rejected => "Rejected",
+        PoiStatus.Updated => "Đã cập nhật",
+        PoiStatus.Draft => "Nháp",
+        _ => status.ToString()
+    };
+
+    private static string GetStatusClass(PoiStatus status) => status switch
+    {
+        PoiStatus.Published => "owner-workspace-badge owner-workspace-badge--good",
+        PoiStatus.PendingReview => "owner-workspace-badge owner-workspace-badge--warn",
+        PoiStatus.Rejected => "owner-workspace-badge owner-workspace-badge--danger",
+        PoiStatus.Updated => "owner-workspace-badge owner-workspace-badge--source",
+        _ => "owner-workspace-badge"
     };
 }

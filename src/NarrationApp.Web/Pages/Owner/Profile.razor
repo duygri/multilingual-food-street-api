@@ -23,142 +23,171 @@ else if (!string.IsNullOrWhiteSpace(_errorMessage))
 }
 else if (_profile is not null && _editor is not null)
 {
-    <div class="dashboard-stack owner-profile">
-        <section class="panel-shell owner-profile-hero">
+    <div class="owner-workspace-page">
+        <header class="owner-workspace-heading">
             <div>
-                <p class="panel-shell__eyebrow">Profile workspace</p>
-                <h1>@_profile.FullName</h1>
-                <p class="panel-shell__copy">Quản lý hồ sơ, khu vực phụ trách và bảo mật tài khoản owner trong một màn riêng.</p>
+                <div class="owner-workspace-breadcrumb">Owner / <strong>Tài khoản</strong> / Hồ sơ</div>
+                <h1>Hồ sơ cá nhân</h1>
+                <p>Profile workspace cho thông tin tài khoản, bảo mật và tóm tắt hoạt động owner.</p>
             </div>
-
-            <div class="owner-profile-hero__identity">
-                <strong>POI Owner</strong>
-                <span>@_profile.Email</span>
-                <span>@(_profile.ManagedArea ?? "Chưa gán khu vực")</span>
-            </div>
-        </section>
+        </header>
 
         @if (!string.IsNullOrWhiteSpace(_statusMessage))
         {
-            <section class="panel-shell owner-profile-status" role="status">
+            <section class="panel-shell owner-profile__status" role="status">
                 <p class="panel-shell__copy">@_statusMessage</p>
             </section>
         }
 
-        <section class="metric-grid">
-            <MetricCard Label="POI" Value="@($"{_profile.ActivitySummary.TotalPois} POI")" Hint="Tổng điểm đang quản lý" />
-            <MetricCard Label="Published" Value="@($"{_profile.ActivitySummary.PublishedPois} published")" Hint="POI đang phục vụ khách" />
-            <MetricCard Label="Nháp" Value="@_profile.ActivitySummary.DraftPois.ToString()" Hint="POI đang biên tập" />
-            <MetricCard Label="Chờ duyệt" Value="@_profile.ActivitySummary.PendingReviewPois.ToString()" Hint="Đang trong moderation" />
-            <MetricCard Label="Audio" Value="@_profile.ActivitySummary.TotalAudioAssets.ToString()" Hint="Tài sản audio" />
-            <MetricCard Label="Lượt nghe" Value="@($"{_profile.ActivitySummary.TotalAudioPlays} lượt nghe")" Hint="Tổng audio plays" />
-        </section>
-
-        <section class="owner-profile-grid">
-            <article class="panel-shell owner-profile-card">
-                <p class="panel-shell__eyebrow">Thông tin hồ sơ</p>
-                <h2>Owner profile</h2>
-                <p class="panel-shell__copy">Email và role được quản lý bởi hệ thống; các thông tin còn lại owner có thể cập nhật.</p>
-
-                <div class="owner-profile-form-grid">
-                    <label>
-                        <span>Họ tên</span>
-                        <input data-field="owner-full-name" @bind="_editor.FullName" />
-                    </label>
-
-                    <label>
-                        <span>Email</span>
-                        <input data-field="owner-email" value="@_profile.Email" readonly="readonly" />
-                    </label>
-
-                    <label>
-                        <span>Role</span>
-                        <input data-field="owner-role" value="POI Owner" readonly="readonly" />
-                    </label>
-
-                    <label>
-                        <span>Điện thoại</span>
-                        <input data-field="owner-phone" @bind="_editor.Phone" />
-                    </label>
-
-                    <label>
-                        <span>Khu vực phụ trách</span>
-                        <input data-field="owner-managed-area" @bind="_editor.ManagedArea" />
-                    </label>
-
-                    <label>
-                        <span>Ngôn ngữ ưu tiên</span>
-                        <select data-field="owner-preferred-language" @bind="_editor.PreferredLanguage">
-                            <option value="vi">Tiếng Việt</option>
-                            <option value="en">English</option>
-                            <option value="ja">Japanese</option>
-                            <option value="ko">Korean</option>
-                        </select>
-                    </label>
+        <section class="owner-workspace-grid owner-workspace-grid--split">
+            <article class="panel-shell owner-workspace-panel">
+                <div class="owner-workspace-panel__header">
+                    <div class="owner-workspace-panel__title">
+                        <div class="owner-workspace-stat__icon">ACC</div>
+                        <div>
+                            <h2>Thông tin hồ sơ</h2>
+                            <p>Thông tin tài khoản owner dùng xuyên suốt owner shell và moderation workflow.</p>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="owner-profile-actions">
-                    <button class="app-button app-button--primary"
-                            data-action="save-profile"
-                            type="button"
-                            disabled="@_isSavingProfile"
-                            @onclick="SaveProfileAsync">
-                        @(_isSavingProfile ? "Đang lưu..." : "Lưu hồ sơ")
-                    </button>
-                </div>
-            </article>
+                <div class="owner-workspace-panel__body owner-workspace-panel__body--stack">
+                    <div class="owner-workspace-detail-hero__meta">
+                        <span class="owner-workspace-badge owner-workspace-badge--source">@_profile.Email</span>
+                        <span class="owner-workspace-badge">POI Owner</span>
+                        <span class="owner-workspace-badge owner-workspace-badge--category">@(_profile.ManagedArea ?? "Chưa gán khu vực")</span>
+                    </div>
 
-            <article class="panel-shell owner-profile-card">
-                <p class="panel-shell__eyebrow">Bảo mật</p>
-                <h2>Đổi mật khẩu</h2>
-                <p class="panel-shell__copy">Mật khẩu mới sẽ được gửi qua endpoint auth hiện có và không lưu trong state sau khi đổi thành công.</p>
+                    <div class="owner-workspace-form-grid">
+                        <label class="owner-workspace-field">
+                            <span>Họ tên</span>
+                            <input data-field="owner-full-name" @bind="_editor.FullName" />
+                        </label>
 
-                <div class="owner-profile-form-grid owner-profile-form-grid--single">
-                    <label>
-                        <span>Mật khẩu hiện tại</span>
-                        <input data-field="current-password" type="password" @bind="_passwordEditor.CurrentPassword" />
-                    </label>
+                        <label class="owner-workspace-field">
+                            <span>Email</span>
+                            <input data-field="owner-email" value="@_profile.Email" readonly="readonly" />
+                        </label>
 
-                    <label>
-                        <span>Mật khẩu mới</span>
-                        <input data-field="new-password" type="password" @bind="_passwordEditor.NewPassword" />
-                    </label>
+                        <label class="owner-workspace-field">
+                            <span>Role</span>
+                            <input data-field="owner-role" value="POI Owner" readonly="readonly" />
+                        </label>
 
-                    <label>
-                        <span>Xác nhận mật khẩu mới</span>
-                        <input data-field="confirm-password" type="password" @bind="_passwordEditor.ConfirmPassword" />
-                    </label>
-                </div>
+                        <label class="owner-workspace-field">
+                            <span>Điện thoại</span>
+                            <input data-field="owner-phone" @bind="_editor.Phone" />
+                        </label>
 
-                <div class="owner-profile-actions">
-                    <button class="app-button app-button--primary"
-                            data-action="change-password"
-                            type="button"
-                            disabled="@_isChangingPassword"
-                            @onclick="ChangePasswordAsync">
-                        @(_isChangingPassword ? "Đang đổi..." : "Đổi mật khẩu")
-                    </button>
+                        <label class="owner-workspace-field">
+                            <span>Khu vực phụ trách</span>
+                            <input data-field="owner-managed-area" @bind="_editor.ManagedArea" />
+                        </label>
+
+                        <label class="owner-workspace-field">
+                            <span>Ngôn ngữ ưu tiên</span>
+                            <select data-field="owner-preferred-language" @bind="_editor.PreferredLanguage">
+                                <option value="vi">Tiếng Việt</option>
+                                <option value="en">English</option>
+                                <option value="ja">Japanese</option>
+                                <option value="ko">Korean</option>
+                            </select>
+                        </label>
+                    </div>
+
+                    <div class="owner-workspace-actions">
+                        <button class="app-button app-button--primary"
+                                data-action="save-profile"
+                                type="button"
+                                disabled="@_isSavingProfile"
+                                @onclick="SaveProfileAsync">
+                            @(_isSavingProfile ? "Đang lưu..." : "Lưu hồ sơ")
+                        </button>
+                    </div>
                 </div>
             </article>
-        </section>
 
-        <section class="panel-shell owner-profile-card">
-            <p class="panel-shell__eyebrow">Activity summary</p>
-            <h2>Dấu mốc tài khoản</h2>
-            <dl class="owner-profile-timeline">
-                <div>
-                    <dt>Ngày tạo</dt>
-                    <dd>@_profile.CreatedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</dd>
-                </div>
-                <div>
-                    <dt>Lần đăng nhập cuối</dt>
-                    <dd>@(_profile.LastLoginAtUtc?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "Chưa có dữ liệu")</dd>
-                </div>
-                <div>
-                    <dt>Thông báo chưa đọc</dt>
-                    <dd>@_profile.ActivitySummary.UnreadNotifications</dd>
-                </div>
-            </dl>
+            <div class="owner-workspace-stack">
+                <article class="panel-shell owner-workspace-panel">
+                    <div class="owner-workspace-panel__header">
+                        <div class="owner-workspace-panel__title">
+                            <div class="owner-workspace-stat__icon">PWD</div>
+                            <div>
+                                <h2>Đổi mật khẩu</h2>
+                                <p>Gọi trực tiếp auth endpoint hiện có, không giữ mật khẩu trong state sau khi đổi xong.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="owner-workspace-panel__body owner-workspace-panel__body--stack">
+                        <label class="owner-workspace-field owner-workspace-field--full">
+                            <span>Mật khẩu hiện tại</span>
+                            <input data-field="current-password" type="password" @bind="_passwordEditor.CurrentPassword" />
+                        </label>
+
+                        <label class="owner-workspace-field owner-workspace-field--full">
+                            <span>Mật khẩu mới</span>
+                            <input data-field="new-password" type="password" @bind="_passwordEditor.NewPassword" />
+                        </label>
+
+                        <label class="owner-workspace-field owner-workspace-field--full">
+                            <span>Xác nhận mật khẩu mới</span>
+                            <input data-field="confirm-password" type="password" @bind="_passwordEditor.ConfirmPassword" />
+                        </label>
+
+                        <div class="owner-workspace-actions">
+                            <button class="app-button app-button--primary"
+                                    data-action="change-password"
+                                    type="button"
+                                    disabled="@_isChangingPassword"
+                                    @onclick="ChangePasswordAsync">
+                                @(_isChangingPassword ? "Đang đổi..." : "Đổi mật khẩu")
+                            </button>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="panel-shell owner-workspace-panel">
+                    <div class="owner-workspace-panel__header">
+                        <div class="owner-workspace-panel__title">
+                            <div class="owner-workspace-stat__icon">SUM</div>
+                            <div>
+                                <h2>Tóm tắt hoạt động</h2>
+                                <p>Tổng hợp các mốc chính để owner biết phạm vi vận hành hiện tại.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="owner-workspace-panel__body">
+                        <dl class="owner-workspace-kv">
+                            <div>
+                                <dt>Ngày tạo tài khoản</dt>
+                                <dd>@_profile.CreatedAtUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</dd>
+                            </div>
+                            <div>
+                                <dt>Tổng POI đã tạo</dt>
+                                <dd>@($"{_profile.ActivitySummary.TotalPois} POI")</dd>
+                            </div>
+                            <div>
+                                <dt>POI published</dt>
+                                <dd>@($"{_profile.ActivitySummary.PublishedPois} published")</dd>
+                            </div>
+                            <div>
+                                <dt>Lượt nghe tổng cộng</dt>
+                                <dd>@($"{_profile.ActivitySummary.TotalAudioPlays} lượt nghe")</dd>
+                            </div>
+                            <div>
+                                <dt>Lần đăng nhập cuối</dt>
+                                <dd>@(_profile.LastLoginAtUtc?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "Chưa có dữ liệu")</dd>
+                            </div>
+                            <div>
+                                <dt>Thông báo chưa đọc</dt>
+                                <dd>@_profile.ActivitySummary.UnreadNotifications</dd>
+                            </div>
+                        </dl>
+                    </div>
+                </article>
+            </div>
         </section>
     </div>
 }

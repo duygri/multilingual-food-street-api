@@ -27,8 +27,10 @@ public sealed class PoiDetailTests : TestContext
 
         cut.WaitForAssertion(() =>
         {
+            Assert.Contains("Chi tiết POI", cut.Markup);
             Assert.Contains("Bún mắm Vĩnh Khánh", cut.Markup);
             Assert.Contains("Bị từ chối", cut.Markup);
+            Assert.Contains("Ảnh minh họa", cut.Markup);
             Assert.Contains("Hải sản", cut.Markup);
             Assert.Contains("10.758", cut.Markup);
             Assert.Contains("35m", cut.Markup);
@@ -39,13 +41,15 @@ public sealed class PoiDetailTests : TestContext
             Assert.Contains("64", cut.Markup);
             Assert.Contains("Cần chỉnh trước khi gửi lại", cut.Markup);
             Assert.Contains("Thiếu mô tả nguồn rõ ràng.", cut.Markup);
-            Assert.Contains("Sửa & gửi lại", cut.Markup);
-            Assert.Contains("Bảng audio", cut.Markup);
+            Assert.Contains("Audio đa ngôn ngữ", cut.Markup);
             Assert.Contains("vi", cut.Markup);
             Assert.Contains("en", cut.Markup);
             Assert.Contains("Ready", cut.Markup);
             Assert.Contains("Generating", cut.Markup);
+            Assert.DoesNotContain("URL hình ảnh", cut.Markup);
         });
+
+        Assert.Equal("Sửa & gửi lại", cut.Find("button[data-action='request-review-rejected']").TextContent.Trim());
     }
 
     [Fact]
@@ -66,7 +70,6 @@ public sealed class PoiDetailTests : TestContext
         cut.Find("select[data-field='poi-category']").Change("3");
         cut.Find("select[data-field='poi-mode']").Change(NarrationMode.RecordedOnly.ToString());
         cut.Find("input[data-field='poi-map-link']").Change("https://maps.test/poi-1");
-        cut.Find("input[data-field='poi-image-url']").Change("https://cdn.test/poi-1.jpg");
         cut.Find("textarea[data-field='poi-description']").Change("Mô tả đã bổ sung cho admin.");
         cut.Find("textarea[data-field='poi-tts-script']").Change("Kịch bản TTS đã chỉnh.");
         cut.Find("button[data-action='save-poi']").Click();
@@ -86,7 +89,7 @@ public sealed class PoiDetailTests : TestContext
         Assert.Equal(3, updateRequest.CategoryId);
         Assert.Equal(NarrationMode.RecordedOnly, updateRequest.NarrationMode);
         Assert.Equal("https://maps.test/poi-1", updateRequest.MapLink);
-        Assert.Equal("https://cdn.test/poi-1.jpg", updateRequest.ImageUrl);
+        Assert.Null(updateRequest.ImageUrl);
         Assert.Equal("Mô tả đã bổ sung cho admin.", updateRequest.Description);
         Assert.Equal("Kịch bản TTS đã chỉnh.", updateRequest.TtsScript);
 
@@ -116,7 +119,21 @@ public sealed class PoiDetailTests : TestContext
         Assert.False(geofenceRequest.IsActive);
         Assert.False(geofenceRequest.NearestOnly);
 
-        cut.FindComponent<InputFile>().UploadFiles(
+        FindInputFile(cut, "poi-image-file").UploadFiles(
+            InputFileContent.CreateFromText("representative image", "poi-hero.png", contentType: "image/png"));
+        cut.Find("button[data-action='upload-poi-image']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Single(ownerService.UploadImageRequests);
+            Assert.Contains("Đã cập nhật ảnh đại diện POI.", cut.Markup);
+        });
+
+        Assert.Equal(1, ownerService.UploadImageRequests[0].PoiId);
+        Assert.Equal("poi-hero.png", ownerService.UploadImageRequests[0].FileName);
+        Assert.Equal("image/png", ownerService.UploadImageRequests[0].ContentType);
+
+        FindInputFile(cut, "source-audio").UploadFiles(
             InputFileContent.CreateFromText("recorded audio", "source-vi.mp3", contentType: "audio/mpeg"));
         cut.Find("button[data-action='upload-source-audio']").Click();
 
@@ -223,6 +240,12 @@ public sealed class PoiDetailTests : TestContext
         Assert.True(method.IsAbstract);
     }
 
+    private static IRenderedComponent<InputFile> FindInputFile(IRenderedComponent<PoiDetail> cut, string dataField)
+    {
+        return cut.FindComponents<InputFile>()
+            .Single(component => string.Equals(component.Find("input").GetAttribute("data-field"), dataField, StringComparison.Ordinal));
+    }
+
     private (TestOwnerPortalService OwnerService,
         TestAudioPortalService AudioService,
         TestModerationPortalService ModerationService,
@@ -261,6 +284,8 @@ public sealed class PoiDetailTests : TestContext
         public HashSet<int> MissingPoiIds { get; } = [];
 
         public List<UpdatePoiRequest> UpdateRequests { get; } = [];
+
+        public List<ImageUploadCall> UploadImageRequests { get; } = [];
 
         public List<int> DeleteRequests { get; } = [];
 
@@ -302,6 +327,31 @@ public sealed class PoiDetailTests : TestContext
             });
         }
 
+        public Task<OwnerPoiDetailWorkspaceDto> GetPoiWorkspaceAsync(int poiId, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(new OwnerPoiDetailWorkspaceDto
+            {
+                Summary = new OwnerPoiDetailSummaryDto
+                {
+                    PoiId = _poi.Id,
+                    PoiName = _poi.Name,
+                    ImageUrl = _poi.ImageUrl,
+                    Status = _poi.Status,
+                    CategoryName = _poi.CategoryName
+                },
+                Metrics = new OwnerPoiDetailMetricsDto
+                {
+                    TotalVisits = 128,
+                    AudioPlays = 64,
+                    TranslationCount = 2,
+                    AudioAssetCount = 2,
+                    GeofenceCount = 1,
+                    QrScans = 18,
+                    TotalListenDurationSeconds = 5420
+                }
+            });
+        }
+
         public Task<PoiDto> CreatePoiAsync(CreatePoiRequest request, CancellationToken cancellationToken = default)
         {
             throw new NotSupportedException();
@@ -327,11 +377,50 @@ public sealed class PoiDetailTests : TestContext
             return Task.FromResult(_poi);
         }
 
+        public Task<PoiDto> UploadPoiImageAsync(int poiId, string fileName, string contentType, Stream content, CancellationToken cancellationToken = default)
+        {
+            UploadImageRequests.Add(new ImageUploadCall(poiId, fileName, contentType));
+            _poi = BuildPoi(
+                _poi.Name,
+                _poi.Slug,
+                _poi.Lat,
+                _poi.Lng,
+                _poi.Priority,
+                _poi.NarrationMode,
+                _poi.Description,
+                _poi.TtsScript,
+                _poi.MapLink,
+                $"https://cdn.test/{fileName}",
+                _poi.Status);
+
+            return Task.FromResult(_poi);
+        }
+
+        public Task<PoiDto> DeletePoiImageAsync(int poiId, CancellationToken cancellationToken = default)
+        {
+            _poi = BuildPoi(
+                _poi.Name,
+                _poi.Slug,
+                _poi.Lat,
+                _poi.Lng,
+                _poi.Priority,
+                _poi.NarrationMode,
+                _poi.Description,
+                _poi.TtsScript,
+                _poi.MapLink,
+                null,
+                _poi.Status);
+
+            return Task.FromResult(_poi);
+        }
+
         public Task DeletePoiAsync(int poiId, CancellationToken cancellationToken = default)
         {
             DeleteRequests.Add(poiId);
             return Task.CompletedTask;
         }
+
+        public readonly record struct ImageUploadCall(int PoiId, string FileName, string ContentType);
 
         private static PoiDto BuildPoi(
             string name = "Bún mắm Vĩnh Khánh",

@@ -281,6 +281,609 @@ public sealed class OwnerControllerTests
     }
 
     [Fact]
+    public async Task GetDashboardWorkspaceAsync_returns_owner_counts_published_rows_and_recent_activity()
+    {
+        await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
+        var owner = await TestAppDbContextFactory.AddOwnerAsync(dbContext, "owner-dashboard-workspace@narration.app");
+        var otherOwner = await TestAppDbContextFactory.AddOwnerAsync(dbContext, "other-dashboard-workspace@narration.app");
+        var category = new Category
+        {
+            Name = "Ăn vặt",
+            Slug = "an-vat-workspace",
+            Description = "Snacks",
+            Icon = "snack",
+            DisplayOrder = 10,
+            IsActive = true
+        };
+
+        var publishedPoi = new Poi
+        {
+            Name = "Bún mắm Vĩnh Khánh",
+            Slug = "bun-mam-vinh-khanh",
+            OwnerId = owner.Id,
+            Lat = 10.758,
+            Lng = 106.701,
+            Priority = 5,
+            Category = category,
+            NarrationMode = NarrationMode.Both,
+            Description = "Published description",
+            TtsScript = "Published script",
+            Status = PoiStatus.Published,
+            CreatedAt = DateTime.UtcNow.AddDays(-8)
+        };
+        var pendingPoi = new Poi
+        {
+            Name = "Ốc đêm Vĩnh Khánh",
+            Slug = "oc-dem-vinh-khanh",
+            OwnerId = owner.Id,
+            Lat = 10.759,
+            Lng = 106.702,
+            Priority = 4,
+            Category = category,
+            NarrationMode = NarrationMode.RecordedOnly,
+            Description = "Pending description",
+            TtsScript = "Pending script",
+            Status = PoiStatus.PendingReview,
+            CreatedAt = DateTime.UtcNow.AddDays(-4)
+        };
+        var secondPublishedPoi = new Poi
+        {
+            Name = "Cơm tấm than hồng",
+            Slug = "com-tam-than-hong",
+            OwnerId = owner.Id,
+            Lat = 10.760,
+            Lng = 106.703,
+            Priority = 3,
+            Category = category,
+            NarrationMode = NarrationMode.TtsOnly,
+            Description = "Second published description",
+            TtsScript = "Second published script",
+            Status = PoiStatus.Published,
+            CreatedAt = DateTime.UtcNow.AddDays(-6)
+        };
+        var otherOwnerPoi = new Poi
+        {
+            Name = "Other owner POI",
+            Slug = "other-owner-poi",
+            OwnerId = otherOwner.Id,
+            Lat = 10.761,
+            Lng = 106.704,
+            Priority = 2,
+            NarrationMode = NarrationMode.Both,
+            Description = "Other owner description",
+            TtsScript = "Other owner script",
+            Status = PoiStatus.Published,
+            CreatedAt = DateTime.UtcNow.AddDays(-2)
+        };
+
+        dbContext.Pois.AddRange(publishedPoi, pendingPoi, secondPublishedPoi, otherOwnerPoi);
+        await dbContext.SaveChangesAsync();
+
+        dbContext.AudioAssets.AddRange(
+            new AudioAsset
+            {
+                PoiId = publishedPoi.Id,
+                LanguageCode = "vi",
+                SourceType = AudioSourceType.Tts,
+                Provider = "test",
+                StoragePath = "audio/published.mp3",
+                Url = "https://cdn.test/audio/published.mp3",
+                Status = AudioStatus.Ready,
+                DurationSeconds = 45,
+                GeneratedAt = DateTime.UtcNow.AddHours(-3)
+            },
+            new AudioAsset
+            {
+                PoiId = secondPublishedPoi.Id,
+                LanguageCode = "vi",
+                SourceType = AudioSourceType.Recorded,
+                Provider = "test",
+                StoragePath = "audio/second.mp3",
+                Url = "https://cdn.test/audio/second.mp3",
+                Status = AudioStatus.Ready,
+                DurationSeconds = 60,
+                GeneratedAt = DateTime.UtcNow.AddHours(-1)
+            },
+            new AudioAsset
+            {
+                PoiId = otherOwnerPoi.Id,
+                LanguageCode = "vi",
+                SourceType = AudioSourceType.Recorded,
+                Provider = "test",
+                StoragePath = "audio/other.mp3",
+                Url = "https://cdn.test/audio/other.mp3",
+                Status = AudioStatus.Ready,
+                DurationSeconds = 30,
+                GeneratedAt = DateTime.UtcNow.AddMinutes(-30)
+            });
+
+        dbContext.ModerationRequests.AddRange(
+            new ModerationRequest
+            {
+                EntityType = "poi",
+                EntityId = pendingPoi.Id.ToString(),
+                RequestedBy = owner.Id,
+                Status = ModerationStatus.Pending,
+                CreatedAt = DateTime.UtcNow.AddHours(-2)
+            },
+            new ModerationRequest
+            {
+                EntityType = "poi",
+                EntityId = publishedPoi.Id.ToString(),
+                RequestedBy = owner.Id,
+                Status = ModerationStatus.Approved,
+                ReviewNote = "Đã duyệt nội dung.",
+                CreatedAt = DateTime.UtcNow.AddHours(-5)
+            },
+            new ModerationRequest
+            {
+                EntityType = "poi",
+                EntityId = otherOwnerPoi.Id.ToString(),
+                RequestedBy = otherOwner.Id,
+                Status = ModerationStatus.Approved,
+                CreatedAt = DateTime.UtcNow.AddHours(-1)
+            });
+
+        dbContext.VisitEvents.AddRange(
+            BuildAudioPlayEvent(publishedPoi.Id, DateTime.UtcNow.AddDays(-6), 10),
+            BuildAudioPlayEvent(publishedPoi.Id, DateTime.UtcNow.AddDays(-4), 20),
+            BuildAudioPlayEvent(publishedPoi.Id, DateTime.UtcNow.AddDays(-1), 30),
+            BuildAudioPlayEvent(secondPublishedPoi.Id, DateTime.UtcNow.AddDays(-3), 15),
+            BuildAudioPlayEvent(otherOwnerPoi.Id, DateTime.UtcNow.AddDays(-2), 25));
+
+        await dbContext.SaveChangesAsync();
+
+        var controller = CreateController(dbContext, owner.Id, unreadCount: 3);
+
+        var actionResult = await controller.GetDashboardWorkspaceAsync(CancellationToken.None);
+        var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
+        var response = Assert.IsType<ApiResponse<OwnerDashboardWorkspaceDto>>(okResult.Value);
+        var workspace = Assert.IsType<OwnerDashboardWorkspaceDto>(response.Data);
+
+        Assert.True(response.Succeeded);
+        Assert.Equal(3, workspace.Summary.TotalPois);
+        Assert.Equal(2, workspace.Summary.PublishedPois);
+        Assert.Equal(1, workspace.Summary.PendingReviewPois);
+        Assert.Equal(2, workspace.Summary.ReadyAudioAssets);
+        Assert.Equal(2, workspace.PublishedRows.Count);
+        Assert.Contains(workspace.PublishedRows, row => row.PoiId == publishedPoi.Id && row.CategoryName == "Ăn vặt" && row.ListenCount == 3);
+        Assert.Contains(workspace.PublishedRows, row => row.PoiId == secondPublishedPoi.Id && row.Trend.Count == 7);
+        Assert.Contains(workspace.RecentActivities, item => item.LinkedPoiId == pendingPoi.Id && item.Type == "moderation");
+        Assert.DoesNotContain(workspace.RecentActivities, item => item.LinkedPoiId == otherOwnerPoi.Id);
+    }
+
+    [Fact]
+    public async Task GetPoisWorkspaceAsync_returns_owner_summary_and_source_content_kinds()
+    {
+        await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
+        var owner = await TestAppDbContextFactory.AddOwnerAsync(dbContext, "owner-poi-workspace@narration.app");
+        var otherOwner = await TestAppDbContextFactory.AddOwnerAsync(dbContext, "other-poi-workspace@narration.app");
+        var category = new Category
+        {
+            Name = "Bún/Phở",
+            Slug = "bun-pho-workspace",
+            Description = "Noodles",
+            Icon = "noodle",
+            DisplayOrder = 11,
+            IsActive = true
+        };
+
+        var scriptPoi = new Poi
+        {
+            Name = "Bún mắm Vĩnh Khánh",
+            Slug = "bun-mam-vinh-khanh-poi-workspace",
+            OwnerId = owner.Id,
+            Lat = 10.758,
+            Lng = 106.701,
+            Priority = 9,
+            Category = category,
+            NarrationMode = NarrationMode.TtsOnly,
+            Description = "Script description",
+            TtsScript = "Script nội dung",
+            Status = PoiStatus.Published,
+            CreatedAt = DateTime.UtcNow.AddDays(-3)
+        };
+        var audioPoi = new Poi
+        {
+            Name = "Ốc đêm Vĩnh Khánh",
+            Slug = "oc-dem-vinh-khanh-poi-workspace",
+            OwnerId = owner.Id,
+            Lat = 10.759,
+            Lng = 106.702,
+            Priority = 8,
+            Category = category,
+            NarrationMode = NarrationMode.RecordedOnly,
+            Description = "Audio description",
+            TtsScript = string.Empty,
+            Status = PoiStatus.PendingReview,
+            CreatedAt = DateTime.UtcNow.AddDays(-2)
+        };
+        var emptyPoi = new Poi
+        {
+            Name = "Cơm tấm than hồng",
+            Slug = "com-tam-than-hong-poi-workspace",
+            OwnerId = owner.Id,
+            Lat = 10.760,
+            Lng = 106.703,
+            Priority = 7,
+            Category = category,
+            NarrationMode = NarrationMode.Both,
+            Description = "Empty description",
+            TtsScript = string.Empty,
+            Status = PoiStatus.Rejected,
+            CreatedAt = DateTime.UtcNow.AddDays(-1)
+        };
+        var otherOwnerPoi = new Poi
+        {
+            Name = "Other owner POI",
+            Slug = "other-owner-poi-workspace",
+            OwnerId = otherOwner.Id,
+            Lat = 10.761,
+            Lng = 106.704,
+            Priority = 6,
+            NarrationMode = NarrationMode.Both,
+            Description = "Other owner description",
+            TtsScript = "Other owner script",
+            Status = PoiStatus.Published,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        dbContext.Pois.AddRange(scriptPoi, audioPoi, emptyPoi, otherOwnerPoi);
+        await dbContext.SaveChangesAsync();
+
+        dbContext.AudioAssets.AddRange(
+            new AudioAsset
+            {
+                PoiId = audioPoi.Id,
+                LanguageCode = "vi",
+                SourceType = AudioSourceType.Recorded,
+                Provider = "test",
+                StoragePath = "audio/audio-poi.mp3",
+                Url = "https://cdn.test/audio/audio-poi.mp3",
+                Status = AudioStatus.Ready,
+                DurationSeconds = 55,
+                GeneratedAt = DateTime.UtcNow.AddHours(-1)
+            },
+            new AudioAsset
+            {
+                PoiId = otherOwnerPoi.Id,
+                LanguageCode = "vi",
+                SourceType = AudioSourceType.Recorded,
+                Provider = "test",
+                StoragePath = "audio/other-owner.mp3",
+                Url = "https://cdn.test/audio/other-owner.mp3",
+                Status = AudioStatus.Ready,
+                DurationSeconds = 40,
+                GeneratedAt = DateTime.UtcNow.AddMinutes(-30)
+            });
+
+        await dbContext.SaveChangesAsync();
+
+        var controller = CreateController(dbContext, owner.Id, unreadCount: 0);
+
+        var actionResult = await controller.GetPoisWorkspaceAsync(CancellationToken.None);
+        var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
+        var response = Assert.IsType<ApiResponse<OwnerPoisWorkspaceDto>>(okResult.Value);
+        var workspace = Assert.IsType<OwnerPoisWorkspaceDto>(response.Data);
+
+        Assert.True(response.Succeeded);
+        Assert.Equal(3, workspace.Summary.TotalPois);
+        Assert.Equal(1, workspace.Summary.PublishedPois);
+        Assert.Equal(1, workspace.Summary.PendingReviewPois);
+        Assert.Equal(1, workspace.Summary.DraftOrRejectedPois);
+        Assert.Contains(workspace.Rows, row => row.PoiId == scriptPoi.Id && row.SourceContentKind == OwnerSourceContentKind.ScriptTts);
+        Assert.Contains(workspace.Rows, row => row.PoiId == audioPoi.Id && row.SourceContentKind == OwnerSourceContentKind.AudioFile);
+        Assert.Contains(workspace.Rows, row => row.PoiId == emptyPoi.Id && row.SourceContentKind == OwnerSourceContentKind.None);
+        Assert.DoesNotContain(workspace.Rows, row => row.PoiId == otherOwnerPoi.Id);
+    }
+
+    [Fact]
+    public async Task GetModerationWorkspaceAsync_returns_pending_and_history_rows_with_poi_names()
+    {
+        await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
+        var owner = await TestAppDbContextFactory.AddOwnerAsync(dbContext, "owner-moderation-workspace@narration.app");
+        var otherOwner = await TestAppDbContextFactory.AddOwnerAsync(dbContext, "other-moderation-workspace@narration.app");
+
+        var draftPoi = new Poi
+        {
+            Name = "POI nháp",
+            Slug = "poi-nhap-workspace",
+            OwnerId = owner.Id,
+            Lat = 10.758,
+            Lng = 106.701,
+            Priority = 5,
+            NarrationMode = NarrationMode.Both,
+            Description = "Draft description",
+            TtsScript = "Draft script",
+            Status = PoiStatus.Draft,
+            CreatedAt = DateTime.UtcNow.AddDays(-5)
+        };
+        var pendingPoi = new Poi
+        {
+            Name = "Bún mắm Vĩnh Khánh",
+            Slug = "bun-mam-vinh-khanh-moderation",
+            OwnerId = owner.Id,
+            Lat = 10.759,
+            Lng = 106.702,
+            Priority = 4,
+            NarrationMode = NarrationMode.Both,
+            Description = "Pending description",
+            TtsScript = "Pending script",
+            Status = PoiStatus.PendingReview,
+            CreatedAt = DateTime.UtcNow.AddDays(-4)
+        };
+        var rejectedPoi = new Poi
+        {
+            Name = "Ốc đêm Vĩnh Khánh",
+            Slug = "oc-dem-vinh-khanh-moderation",
+            OwnerId = owner.Id,
+            Lat = 10.760,
+            Lng = 106.703,
+            Priority = 3,
+            NarrationMode = NarrationMode.Both,
+            Description = "Rejected description",
+            TtsScript = "Rejected script",
+            Status = PoiStatus.Rejected,
+            CreatedAt = DateTime.UtcNow.AddDays(-3)
+        };
+        var approvedPoi = new Poi
+        {
+            Name = "Cơm tấm than hồng",
+            Slug = "com-tam-than-hong-moderation",
+            OwnerId = owner.Id,
+            Lat = 10.761,
+            Lng = 106.704,
+            Priority = 2,
+            NarrationMode = NarrationMode.Both,
+            Description = "Approved description",
+            TtsScript = "Approved script",
+            Status = PoiStatus.Published,
+            CreatedAt = DateTime.UtcNow.AddDays(-2)
+        };
+        var otherOwnerPoi = new Poi
+        {
+            Name = "Other owner POI",
+            Slug = "other-owner-poi-moderation",
+            OwnerId = otherOwner.Id,
+            Lat = 10.762,
+            Lng = 106.705,
+            Priority = 1,
+            NarrationMode = NarrationMode.Both,
+            Description = "Other owner description",
+            TtsScript = "Other owner script",
+            Status = PoiStatus.PendingReview,
+            CreatedAt = DateTime.UtcNow.AddDays(-1)
+        };
+
+        dbContext.Pois.AddRange(draftPoi, pendingPoi, rejectedPoi, approvedPoi, otherOwnerPoi);
+        await dbContext.SaveChangesAsync();
+
+        dbContext.ModerationRequests.AddRange(
+            new ModerationRequest
+            {
+                EntityType = "poi",
+                EntityId = pendingPoi.Id.ToString(),
+                RequestedBy = owner.Id,
+                Status = ModerationStatus.Pending,
+                CreatedAt = DateTime.UtcNow.AddHours(-2)
+            },
+            new ModerationRequest
+            {
+                EntityType = "poi",
+                EntityId = rejectedPoi.Id.ToString(),
+                RequestedBy = owner.Id,
+                Status = ModerationStatus.Rejected,
+                ReviewNote = "Thiếu mô tả nguồn rõ ràng.",
+                CreatedAt = DateTime.UtcNow.AddDays(-1)
+            },
+            new ModerationRequest
+            {
+                EntityType = "poi",
+                EntityId = approvedPoi.Id.ToString(),
+                RequestedBy = owner.Id,
+                Status = ModerationStatus.Approved,
+                ReviewNote = "Đã duyệt nội dung.",
+                CreatedAt = DateTime.UtcNow.AddDays(-2)
+            },
+            new ModerationRequest
+            {
+                EntityType = "poi",
+                EntityId = otherOwnerPoi.Id.ToString(),
+                RequestedBy = otherOwner.Id,
+                Status = ModerationStatus.Pending,
+                CreatedAt = DateTime.UtcNow.AddHours(-1)
+            });
+
+        await dbContext.SaveChangesAsync();
+
+        var controller = CreateController(dbContext, owner.Id, unreadCount: 0);
+
+        var actionResult = await controller.GetModerationWorkspaceAsync(CancellationToken.None);
+        var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
+        var response = Assert.IsType<ApiResponse<OwnerModerationWorkspaceDto>>(okResult.Value);
+        var workspace = Assert.IsType<OwnerModerationWorkspaceDto>(response.Data);
+
+        Assert.True(response.Succeeded);
+        Assert.Equal(1, workspace.Summary.PendingCount);
+        Assert.Equal(1, workspace.Summary.ApprovedCount);
+        Assert.Equal(1, workspace.Summary.RejectedCount);
+        Assert.Equal(1, workspace.FlowState.DraftCount);
+        Assert.Equal(1, workspace.FlowState.PendingCount);
+        Assert.Equal(1, workspace.FlowState.NeedsChangesCount);
+        Assert.Equal(1, workspace.FlowState.ApprovedCount);
+        Assert.Single(workspace.PendingRows);
+        Assert.Equal("Bún mắm Vĩnh Khánh", workspace.PendingRows[0].PoiName);
+        Assert.Equal(2, workspace.HistoryRows.Count);
+        Assert.Contains(workspace.HistoryRows, row => row.PoiName == "Ốc đêm Vĩnh Khánh" && row.AdminNote == "Thiếu mô tả nguồn rõ ràng.");
+        Assert.Contains(workspace.HistoryRows, row => row.PoiName == "Cơm tấm than hồng" && row.Result == "Đã duyệt");
+        Assert.DoesNotContain(workspace.HistoryRows, row => row.PoiName == "Other owner POI");
+    }
+
+    [Fact]
+    public async Task GetPoiWorkspaceAsync_returns_detail_metrics_including_qr_scans_and_listen_duration()
+    {
+        await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
+        var owner = await TestAppDbContextFactory.AddOwnerAsync(dbContext, "owner-poi-detail-workspace@narration.app");
+        var category = new Category
+        {
+            Name = "Hải sản",
+            Slug = "hai-san-workspace",
+            Description = "Seafood",
+            Icon = "shrimp",
+            DisplayOrder = 12,
+            IsActive = true
+        };
+
+        var poi = new Poi
+        {
+            Name = "Bún mắm Vĩnh Khánh",
+            Slug = "bun-mam-vinh-khanh-detail-workspace",
+            OwnerId = owner.Id,
+            Lat = 10.758,
+            Lng = 106.701,
+            Priority = 7,
+            Category = category,
+            NarrationMode = NarrationMode.Both,
+            Description = "Detail description",
+            TtsScript = "Detail script",
+            ImageUrl = "https://cdn.test/poi-image.png",
+            Status = PoiStatus.Published,
+            CreatedAt = DateTime.UtcNow.AddDays(-2),
+            Translations =
+            [
+                new PoiTranslation
+                {
+                    LanguageCode = "vi",
+                    Title = "Bún mắm",
+                    Description = "Đậm vị",
+                    Story = "Câu chuyện",
+                    Highlight = "Nước lèo",
+                    IsFallback = false
+                },
+                new PoiTranslation
+                {
+                    LanguageCode = "en",
+                    Title = "Fermented noodle soup",
+                    Description = "Rich broth",
+                    Story = "Story",
+                    Highlight = "Broth",
+                    IsFallback = true
+                }
+            ],
+            Geofences =
+            [
+                new Geofence
+                {
+                    Name = "Vùng kích hoạt chính",
+                    RadiusMeters = 35,
+                    Priority = 8,
+                    DebounceSeconds = 10,
+                    CooldownSeconds = 600,
+                    IsActive = true,
+                    TriggerAction = "auto_play",
+                    NearestOnly = true
+                }
+            ]
+        };
+
+        dbContext.Pois.Add(poi);
+        await dbContext.SaveChangesAsync();
+
+        dbContext.AudioAssets.AddRange(
+            new AudioAsset
+            {
+                PoiId = poi.Id,
+                LanguageCode = "vi",
+                SourceType = AudioSourceType.Recorded,
+                Provider = "test",
+                StoragePath = "audio/vi.mp3",
+                Url = "https://cdn.test/audio/vi.mp3",
+                Status = AudioStatus.Ready,
+                DurationSeconds = 70,
+                GeneratedAt = DateTime.UtcNow.AddHours(-4)
+            },
+            new AudioAsset
+            {
+                PoiId = poi.Id,
+                LanguageCode = "en",
+                SourceType = AudioSourceType.Tts,
+                Provider = "test",
+                StoragePath = "audio/en.mp3",
+                Url = "https://cdn.test/audio/en.mp3",
+                Status = AudioStatus.Ready,
+                DurationSeconds = 65,
+                GeneratedAt = DateTime.UtcNow.AddHours(-3)
+            });
+
+        dbContext.VisitEvents.AddRange(
+            new VisitEvent
+            {
+                DeviceId = "device-alpha",
+                PoiId = poi.Id,
+                EventType = EventType.AudioPlay,
+                Source = "owner-web",
+                ListenDurationSeconds = 40,
+                CreatedAt = DateTime.UtcNow.AddHours(-2)
+            },
+            new VisitEvent
+            {
+                DeviceId = "device-beta",
+                PoiId = poi.Id,
+                EventType = EventType.AudioPlay,
+                Source = "owner-web",
+                ListenDurationSeconds = 25,
+                CreatedAt = DateTime.UtcNow.AddHours(-1)
+            },
+            new VisitEvent
+            {
+                DeviceId = "device-gamma",
+                PoiId = poi.Id,
+                EventType = EventType.QrScan,
+                Source = "owner-web",
+                CreatedAt = DateTime.UtcNow.AddHours(-3)
+            },
+            new VisitEvent
+            {
+                DeviceId = "device-delta",
+                PoiId = poi.Id,
+                EventType = EventType.QrScan,
+                Source = "owner-web",
+                CreatedAt = DateTime.UtcNow.AddHours(-4)
+            },
+            new VisitEvent
+            {
+                DeviceId = "device-epsilon",
+                PoiId = poi.Id,
+                EventType = EventType.GeofenceEnter,
+                Source = "owner-web",
+                CreatedAt = DateTime.UtcNow.AddHours(-5)
+            });
+
+        await dbContext.SaveChangesAsync();
+
+        var controller = CreateController(dbContext, owner.Id, unreadCount: 0);
+
+        var actionResult = await controller.GetPoiWorkspaceAsync(poi.Id, CancellationToken.None);
+        var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
+        var response = Assert.IsType<ApiResponse<OwnerPoiDetailWorkspaceDto>>(okResult.Value);
+        var workspace = Assert.IsType<OwnerPoiDetailWorkspaceDto>(response.Data);
+
+        Assert.True(response.Succeeded);
+        Assert.Equal(poi.Id, workspace.Summary.PoiId);
+        Assert.Equal("Bún mắm Vĩnh Khánh", workspace.Summary.PoiName);
+        Assert.Equal("Hải sản", workspace.Summary.CategoryName);
+        Assert.Equal(PoiStatus.Published, workspace.Summary.Status);
+        Assert.Equal("https://cdn.test/poi-image.png", workspace.Summary.ImageUrl);
+        Assert.Equal(5, workspace.Metrics.TotalVisits);
+        Assert.Equal(2, workspace.Metrics.AudioPlays);
+        Assert.Equal(2, workspace.Metrics.TranslationCount);
+        Assert.Equal(2, workspace.Metrics.AudioAssetCount);
+        Assert.Equal(1, workspace.Metrics.GeofenceCount);
+        Assert.Equal(2, workspace.Metrics.QrScans);
+        Assert.Equal(65d, workspace.Metrics.TotalListenDurationSeconds);
+    }
+
+    [Fact]
     public async Task GetProfileAsync_returns_editable_owner_profile_data_and_activity_summary()
     {
         await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
@@ -577,6 +1180,19 @@ public sealed class OwnerControllerTests
         };
 
         return controller;
+    }
+
+    private static VisitEvent BuildAudioPlayEvent(int poiId, DateTime createdAtUtc, int listenDurationSeconds)
+    {
+        return new VisitEvent
+        {
+            DeviceId = Guid.NewGuid().ToString("N"),
+            PoiId = poiId,
+            EventType = EventType.AudioPlay,
+            Source = "owner-web",
+            ListenDurationSeconds = listenDurationSeconds,
+            CreatedAt = createdAtUtc
+        };
     }
 
     private sealed class StubNotificationService(int unreadCount) : INotificationService
