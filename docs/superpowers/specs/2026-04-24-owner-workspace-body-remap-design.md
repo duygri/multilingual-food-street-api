@@ -335,6 +335,14 @@ Where:
   - audio assets becoming ready
   - POI create/update transitions
 
+### Trend rule
+
+- dashboard trend spark bars use the **latest 7 calendar days**
+- each bar represents the count of relevant visit/listen events for one day
+- bars are ordered oldest to newest
+- if fewer than 7 days have data, missing days render as zero-value bars
+- the first implementation may use audio-play or visit counts, but the chosen metric must be fixed consistently in the DTO and tests
+
 ---
 
 ## 2. POI List
@@ -675,6 +683,14 @@ POI list/dashboard/detail:
 
 - all image thumbnails read from the same `Poi.ImageUrl`
 
+## ImageUrl compatibility policy
+
+- `Poi.ImageUrl` remains the persisted read model field
+- owner create/detail **UI** should move to file-upload-first flows
+- raw `ImageUrl` manual entry should no longer be the primary owner-facing control
+- DTOs may keep `ImageUrl` for backward compatibility and display purposes
+- admin and other read surfaces continue consuming `ImageUrl` without needing a separate image model in this iteration
+
 ---
 
 ## Admin Integration
@@ -835,4 +851,3 @@ The approved direction for implementation is:
 - back the new UI with real owner/admin data
 - add owner workspace endpoints where existing contracts are too thin
 - support one representative image uploaded from file per POI, stored through backend infrastructure and shared with admin views
-
