@@ -8,7 +8,7 @@ namespace NarrationApp.Server.Controllers;
 
 [ApiController]
 [Route("api/qr")]
-public sealed class QrController(IQrService qrService, QrPublicLinkBuilder qrPublicLinkBuilder) : ControllerBase
+public sealed class QrController(IQrService qrService, QrPublicLinkBuilder qrPublicLinkBuilder, IQrWebPresenceTracker qrWebPresenceTracker) : ControllerBase
 {
     [Authorize(Roles = "admin")]
     [HttpGet]
@@ -74,9 +74,21 @@ public sealed class QrController(IQrService qrService, QrPublicLinkBuilder qrPub
     [HttpPost("{code}/scan")]
     public async Task<ActionResult<ApiResponse<QrCodeDto>>> ScanAsync(string code, [FromHeader(Name = "X-Device-Id")] string? deviceId, CancellationToken cancellationToken)
     {
-        var response = await qrService.ScanAsync(code, string.IsNullOrWhiteSpace(deviceId) ? "anonymous-device" : deviceId, cancellationToken);
+        var normalizedDeviceId = string.IsNullOrWhiteSpace(deviceId) ? "anonymous-device" : deviceId.Trim();
+        var response = await qrService.ScanAsync(code, normalizedDeviceId, cancellationToken);
+        qrWebPresenceTracker.Track(normalizedDeviceId);
         var hydrated = qrPublicLinkBuilder.Enrich(HttpContext, response);
         return Ok(new ApiResponse<QrCodeDto> { Succeeded = true, Message = "QR code scanned.", Data = hydrated });
+    }
+
+    [AllowAnonymous]
+    [HttpPost("{code}/presence")]
+    public async Task<ActionResult<ApiResponse<object>>> TrackPresenceAsync(string code, [FromHeader(Name = "X-Device-Id")] string? deviceId, CancellationToken cancellationToken)
+    {
+        _ = await qrService.ResolveAsync(code, cancellationToken);
+        var normalizedDeviceId = string.IsNullOrWhiteSpace(deviceId) ? "anonymous-device" : deviceId.Trim();
+        qrWebPresenceTracker.Track(normalizedDeviceId);
+        return Ok(new ApiResponse<object> { Succeeded = true, Message = "QR presence tracked." });
     }
 
     [Authorize(Roles = "admin")]

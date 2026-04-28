@@ -162,6 +162,46 @@ public sealed class AudioManagementTests : TestContext
     }
 
     [Fact]
+    public void Audio_management_can_switch_preview_language_per_poi()
+    {
+        var audioService = new MultiLanguagePreviewAudioPortalService();
+        var adminService = new TestAdminPortalService();
+        var translationService = new TestTranslationPortalService();
+        var languageService = new TestLanguagePortalService();
+        var refreshPump = new TestAudioRefreshPump();
+
+        Services.AddSingleton<IAudioPortalService>(audioService);
+        Services.AddSingleton<IAdminPortalService>(adminService);
+        Services.AddSingleton<ITranslationPortalService>(translationService);
+        Services.AddSingleton<ILanguagePortalService>(languageService);
+        Services.AddSingleton<IAudioRefreshPump>(refreshPump);
+
+        var cut = RenderComponent<AudioManagement>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.NotNull(cut.Find("button[data-action='select-preview-language-7-en']"));
+            Assert.NotNull(cut.Find("button[data-action='select-preview-language-7-ja']"));
+        });
+
+        cut.Find("button[data-action='select-preview-language-7-en']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var player = cut.Find("audio[data-role='inline-preview-audio-189']");
+            Assert.Equal("https://localhost:5001/api/audio/189/stream", player.GetAttribute("src"));
+        });
+
+        cut.Find("button[data-action='select-preview-language-7-ja']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var player = cut.Find("audio[data-role='inline-preview-audio-190']");
+            Assert.Equal("https://localhost:5001/api/audio/190/stream", player.GetAttribute("src"));
+        });
+    }
+
+    [Fact]
     public async Task Audio_management_auto_refreshes_processing_rows_without_manual_refresh()
     {
         var audioService = new SequencedAudioPortalService();
@@ -612,6 +652,82 @@ public sealed class AudioManagementTests : TestContext
             GetCallCount++;
             IReadOnlyList<AudioDto> items = GetCallCount == 1 ? _processingItems : _readyItems;
             return Task.FromResult(items);
+        }
+
+        public Task<AudioDto> GenerateTtsAsync(TtsGenerateRequest request, CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task<AudioDto> GenerateFromTranslationAsync(GenerateAudioFromTranslationRequest request, CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task<AudioDto> UploadAsync(UploadAudioRequest request, Stream content, CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task<AudioDto> UpdateAsync(int audioId, UpdateAudioRequest request, CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task DeleteAsync(int audioId, CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+    }
+
+    private sealed class MultiLanguagePreviewAudioPortalService : IAudioPortalService
+    {
+        private readonly IReadOnlyList<AudioDto> _items =
+        [
+            new AudioDto
+            {
+                Id = 88,
+                PoiId = 7,
+                LanguageCode = "vi",
+                SourceType = AudioSourceType.Recorded,
+                Provider = "manual-upload-vi",
+                StoragePath = "audio/vinh-khanh-vi.mp3",
+                Url = "https://localhost:5001/api/audio/88/stream",
+                Status = AudioStatus.Ready,
+                DurationSeconds = 30,
+                GeneratedAtUtc = DateTime.UtcNow.AddMinutes(-5)
+            },
+            new AudioDto
+            {
+                Id = 189,
+                PoiId = 7,
+                LanguageCode = "en",
+                SourceType = AudioSourceType.Tts,
+                Provider = "google-tts-en",
+                StoragePath = "audio/vinh-khanh-en.mp3",
+                Url = "https://localhost:5001/api/audio/189/stream",
+                Status = AudioStatus.Ready,
+                DurationSeconds = 31,
+                GeneratedAtUtc = DateTime.UtcNow.AddMinutes(-4)
+            },
+            new AudioDto
+            {
+                Id = 190,
+                PoiId = 7,
+                LanguageCode = "ja",
+                SourceType = AudioSourceType.Tts,
+                Provider = "google-tts-ja",
+                StoragePath = "audio/vinh-khanh-ja.mp3",
+                Url = "https://localhost:5001/api/audio/190/stream",
+                Status = AudioStatus.Ready,
+                DurationSeconds = 32,
+                GeneratedAtUtc = DateTime.UtcNow.AddMinutes(-3)
+            }
+        ];
+
+        public Task<IReadOnlyList<AudioDto>> GetByPoiAsync(int poiId, string? languageCode = null, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<IReadOnlyList<AudioDto>>(_items.Where(item => item.PoiId == poiId).ToArray());
         }
 
         public Task<AudioDto> GenerateTtsAsync(TtsGenerateRequest request, CancellationToken cancellationToken = default)

@@ -36,6 +36,7 @@ public partial class AudioManagement : IAsyncDisposable
     private IReadOnlyList<AdminPoiDto> _pois = Array.Empty<AdminPoiDto>();
     private Dictionary<int, IReadOnlyList<AudioDto>> _audioByPoi = [];
     private Dictionary<int, IReadOnlyList<TranslationDto>> _translationsByPoi = [];
+    private Dictionary<int, string> _previewLanguageByPoi = [];
     private AdminPoiDto? _selectedPoi;
     private AdminPoiDto? _modalPoi;
     private AdminPoiDto? _uploadPoi;
@@ -102,6 +103,18 @@ public partial class AudioManagement : IAsyncDisposable
     private void ToggleInlinePreview(AudioDto audio)
     {
         _previewingAudioId = _previewingAudioId == audio.Id ? null : audio.Id;
+    }
+
+    private void SelectPreviewLanguage(int poiId, string languageCode)
+    {
+        var previewAudio = GetPreviewAudio(poiId, GetAudioItems(poiId), languageCode);
+        if (previewAudio is null)
+        {
+            return;
+        }
+
+        _previewLanguageByPoi[poiId] = previewAudio.LanguageCode;
+        _previewingAudioId = previewAudio.Id;
     }
 
     private void AppendAudio(AudioDto audio)

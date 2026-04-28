@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NarrationApp.Server.Data;
 using NarrationApp.Server.Data.Seed;
+using NarrationApp.Server.Services;
 
 namespace NarrationApp.Server.Tests.Support;
 
@@ -41,9 +42,16 @@ internal sealed class TestWebApplicationFactory : WebApplicationFactory<Program>
         {
             services.RemoveAll(typeof(DbContextOptions<AppDbContext>));
             services.RemoveAll(typeof(AppDbContext));
+            services.RemoveAll(typeof(IGoogleAccessTokenProvider));
+            services.RemoveAll(typeof(IGoogleTranslationService));
+            services.RemoveAll(typeof(IGoogleTtsService));
+            services.RemoveAll(typeof(GoogleCloudTranslationService));
+            services.RemoveAll(typeof(GoogleCloudTtsService));
 
             services.AddDbContext<AppDbContext>(options =>
                 options.UseInMemoryDatabase(_databaseName));
+            services.AddSingleton<IGoogleTranslationService, MockGoogleTranslationService>();
+            services.AddSingleton<IGoogleTtsService, MockGoogleTtsService>();
         });
     }
 

@@ -181,7 +181,7 @@ else
                             @foreach (var poi in FilteredPois)
                             {
                                 var items = GetAudioItems(poi.Id);
-                                var previewAudio = GetPreviewAudio(items);
+                                var previewAudio = GetPreviewAudio(poi.Id, items);
                                 var latestAudio = GetLatestAudio(items);
                                 var sourceAudio = GetVietnameseSource(items);
                                 var status = GetOverallAudioStatus(items);
@@ -216,9 +216,14 @@ else
                                         <div class="audio-language-chips">
                                             @foreach (var language in ActiveLanguageOptions)
                                             {
-                                                <span class="audio-language-chip @GetLanguageChipClass(items, language.Code)">
+                                                <button class="audio-language-chip @GetLanguageChipClass(poi.Id, items, language.Code)"
+                                                        data-action="select-preview-language-@poi.Id-@language.Code"
+                                                        type="button"
+                                                        disabled="@(!CanPreviewLanguage(items, language.Code))"
+                                                        @onclick:stopPropagation="true"
+                                                        @onclick="() => SelectPreviewLanguage(poi.Id, language.Code)">
                                                     @language.Code
-                                                </span>
+                                                </button>
                                             }
                                         </div>
                                     </td>

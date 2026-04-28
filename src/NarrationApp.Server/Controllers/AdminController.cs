@@ -17,8 +17,14 @@ namespace NarrationApp.Server.Controllers;
 [ApiController]
 [Authorize(Roles = "admin")]
 [Route("api/admin")]
-public sealed class AdminController(IModerationService moderationService, IAnalyticsService analyticsService, Server.Data.AppDbContext dbContext) : ControllerBase
+public sealed class AdminController(
+    IModerationService moderationService,
+    IAnalyticsService analyticsService,
+    Server.Data.AppDbContext dbContext,
+    IQrWebPresenceTracker qrWebPresenceTracker) : ControllerBase
 {
+    private static readonly TimeSpan QrWebOnlineWindow = TimeSpan.FromSeconds(30);
+
     [HttpGet("pois")]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<AdminPoiDto>>>> PoisAsync(CancellationToken cancellationToken)
     {
@@ -201,6 +207,7 @@ public sealed class AdminController(IModerationService moderationService, IAnaly
     [HttpGet("visitor-devices")]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<VisitorDeviceSummaryDto>>>> VisitorDevicesAsync(CancellationToken cancellationToken)
     {
+        var nowUtc = DateTime.UtcNow;
         var onlineThresholdUtc = DateTime.UtcNow.AddMinutes(-15);
         var touristUsersById = await dbContext.AppUsers
             .AsNoTracking()
@@ -258,6 +265,10 @@ public sealed class AdminController(IModerationService moderationService, IAnaly
                 }
 
                 var passiveVisitorDevice = IsPassiveVisitorDevice(latest.Source, deviceId);
+                var qrWebPresenceLastSeenUtc = IsQrWebVisitor(latest.Source, deviceId)
+                    ? qrWebPresenceTracker.GetLastSeenUtc(deviceId)
+                    : null;
+                var effectiveLastSeenAtUtc = GetEffectiveVisitorLastSeenUtc(latest.CreatedAt, qrWebPresenceLastSeenUtc);
 
                 return new VisitorDeviceSummaryDto
                 {
@@ -267,7 +278,7 @@ public sealed class AdminController(IModerationService moderationService, IAnaly
                     DeviceId = deviceId,
                     PreferredLanguage = normalizedLanguage,
                     RoleName = roleName,
-                    IsOnline = latest.CreatedAt >= onlineThresholdUtc,
+                    IsOnline = IsVisitorOnline(latest.Source, deviceId, effectiveLastSeenAtUtc, onlineThresholdUtc, nowUtc),
                     AutoPlayEnabled = !passiveVisitorDevice,
                     BackgroundTrackingEnabled = !passiveVisitorDevice,
                     TrackingCount = ordered.Length,
@@ -276,7 +287,7 @@ public sealed class AdminController(IModerationService moderationService, IAnaly
                         .Distinct()
                         .Count(),
                     TriggerCount = ordered.Count(item => item.EventType == EventType.GeofenceEnter),
-                    LastSeenAtUtc = latest.CreatedAt
+                    LastSeenAtUtc = effectiveLastSeenAtUtc
                 };
             })
             .Where(item => item is not null)
@@ -469,6 +480,33 @@ public sealed class AdminController(IModerationService moderationService, IAnaly
     {
         var combined = $"{source} {deviceId}".ToLowerInvariant();
         return combined.Contains("qr", StringComparison.Ordinal);
+    }
+
+    private static bool IsQrWebVisitor(string? source, string deviceId)
+    {
+        var combined = $"{source} {deviceId}".ToLowerInvariant();
+        return combined.Contains("qr-web", StringComparison.Ordinal)
+            || combined.Contains("browser", StringComparison.Ordinal);
+    }
+
+    private static DateTime GetEffectiveVisitorLastSeenUtc(DateTime latestEventAtUtc, DateTime? qrWebPresenceLastSeenUtc)
+    {
+        if (!qrWebPresenceLastSeenUtc.HasValue || qrWebPresenceLastSeenUtc.Value <= latestEventAtUtc)
+        {
+            return latestEventAtUtc;
+        }
+
+        return qrWebPresenceLastSeenUtc.Value;
+    }
+
+    private static bool IsVisitorOnline(string? source, string deviceId, DateTime effectiveLastSeenAtUtc, DateTime onlineThresholdUtc, DateTime nowUtc)
+    {
+        if (IsQrWebVisitor(source, deviceId))
+        {
+            return effectiveLastSeenAtUtc >= nowUtc.Subtract(QrWebOnlineWindow);
+        }
+
+        return effectiveLastSeenAtUtc >= onlineThresholdUtc;
     }
 
     private static string InferDevicePlatform(string deviceId, string? source)

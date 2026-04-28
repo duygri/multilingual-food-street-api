@@ -5,7 +5,7 @@ namespace NarrationApp.Web.Tests.Pages.Public;
 public sealed class QrLaunchPageSourceTests
 {
     [Fact]
-    public void Public_qr_page_exists_and_exposes_qr_route_with_app_handoff()
+    public void Public_qr_page_exists_and_exposes_qr_route_with_public_poi_experience()
     {
         var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
         var pagePath = Path.Combine(projectRoot, "src", "NarrationApp.Web", "Pages", "Public", "QrLaunch.razor");
@@ -18,8 +18,11 @@ public sealed class QrLaunchPageSourceTests
 
         Assert.Contains("@page \"/qr/{Code}\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("@code", source, StringComparison.Ordinal);
+        Assert.Contains("Nghe thuyết minh", source, StringComparison.Ordinal);
+        Assert.Contains("Mở ứng dụng", source, StringComparison.Ordinal);
         var codeBehind = File.ReadAllText(codeBehindPath);
         Assert.Contains("partial class QrLaunch", codeBehind, StringComparison.Ordinal);
         Assert.Contains("foodstreet://qr/", codeBehind, StringComparison.Ordinal);
+        Assert.Contains("NormalizedCode", codeBehind, StringComparison.Ordinal);
     }
 }

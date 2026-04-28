@@ -17,20 +17,63 @@ public partial class AudioManagement
     private int PoisWithVietnameseSourceCount => _pois.Count(poi => GetVietnameseSource(GetAudioItems(poi.Id)) is not null);
 
     private string GetRowClass(AdminPoiDto poi) => poi.Id == _selectedPoi?.Id ? "is-active" : string.Empty;
-
     private bool IsPreviewingAudio(AudioDto audio) => _previewingAudioId == audio.Id;
-
+    private bool IsPreviewLanguageSelected(int poiId, IEnumerable<AudioDto> items, string languageCode)
+    {
+        var selected = GetSelectedPreviewLanguageCode(poiId, items);
+        return string.Equals(selected, languageCode, StringComparison.OrdinalIgnoreCase);
+    }
+    private bool CanPreviewLanguage(IEnumerable<AudioDto> items, string languageCode) =>
+        GetCurrentAudioItems(items)
+            .Any(item => string.Equals(item.LanguageCode, languageCode, StringComparison.OrdinalIgnoreCase)
+                && item.Status == AudioStatus.Ready);
     private static AudioDto? GetVietnameseSource(IEnumerable<AudioDto> items) =>
         items.Where(item => string.Equals(item.LanguageCode, "vi", StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(item => item.GeneratedAtUtc ?? DateTime.MinValue)
             .FirstOrDefault();
 
-    private static AudioDto? GetPreviewAudio(IEnumerable<AudioDto> items) =>
-        GetCurrentAudioItems(items)
+    private AudioDto? GetPreviewAudio(int poiId, IEnumerable<AudioDto> items, string? preferredLanguageCode = null)
+    {
+        var readyItems = GetCurrentAudioItems(items)
+            .Where(item => item.Status == AudioStatus.Ready)
+            .ToArray();
+
+        if (readyItems.Length == 0)
+        {
+            return null;
+        }
+
+        var languageCode = preferredLanguageCode ?? GetSelectedPreviewLanguageCode(poiId, items);
+        if (!string.IsNullOrWhiteSpace(languageCode))
+        {
+            var selected = readyItems.FirstOrDefault(item => string.Equals(item.LanguageCode, languageCode, StringComparison.OrdinalIgnoreCase));
+            if (selected is not null)
+            {
+                return selected;
+            }
+        }
+
+        return readyItems
+            .OrderByDescending(item => string.Equals(item.LanguageCode, "vi", StringComparison.OrdinalIgnoreCase))
+            .ThenByDescending(item => item.GeneratedAtUtc ?? DateTime.MinValue)
+            .First();
+    }
+
+    private string? GetSelectedPreviewLanguageCode(int poiId, IEnumerable<AudioDto> items)
+    {
+        if (_previewLanguageByPoi.TryGetValue(poiId, out var selected))
+        {
+            return selected;
+        }
+
+        var preview = GetCurrentAudioItems(items)
             .Where(item => item.Status == AudioStatus.Ready)
             .OrderByDescending(item => string.Equals(item.LanguageCode, "vi", StringComparison.OrdinalIgnoreCase))
             .ThenByDescending(item => item.GeneratedAtUtc ?? DateTime.MinValue)
             .FirstOrDefault();
+
+        return preview?.LanguageCode;
+    }
 
     private static AudioDto? GetLatestAudio(IEnumerable<AudioDto> items) =>
         items.OrderByDescending(item => item.GeneratedAtUtc ?? DateTime.MinValue).FirstOrDefault();
@@ -81,8 +124,9 @@ public partial class AudioManagement
         _ => "audio-tag--muted"
     };
 
-    private static string GetLanguageChipClass(IEnumerable<AudioDto> items, string languageCode) =>
-        GetCurrentAudioItems(items)
+    private string GetLanguageChipClass(int poiId, IEnumerable<AudioDto> items, string languageCode)
+    {
+        var statusClass = GetCurrentAudioItems(items)
             .Where(item => string.Equals(item.LanguageCode, languageCode, StringComparison.OrdinalIgnoreCase))
             .FirstOrDefault()?.Status switch
             {
@@ -91,6 +135,14 @@ public partial class AudioManagement
                 AudioStatus.Failed => "is-failed",
                 _ => "is-empty"
             };
+
+        if (string.Equals(statusClass, "is-ready", StringComparison.Ordinal) && IsPreviewLanguageSelected(poiId, items, languageCode))
+        {
+            return $"{statusClass} is-selected";
+        }
+
+        return statusClass;
+    }
 
     private static IEnumerable<AudioDto> GetCurrentAudioItems(IEnumerable<AudioDto> items) =>
         items.Where(item => item.Status is not AudioStatus.Deleted and not AudioStatus.Replaced)

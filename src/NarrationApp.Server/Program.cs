@@ -184,6 +184,7 @@ builder.Services.AddScoped<IAudioGenerationScheduler, AudioGenerationScheduler>(
 builder.Services.AddScoped<IAudioGenerationProcessor, AudioGenerationProcessor>();
 builder.Services.AddScoped<IQrService, QrService>();
 builder.Services.AddSingleton<QrPublicLinkBuilder>();
+builder.Services.AddSingleton<IQrWebPresenceTracker, InMemoryQrWebPresenceTracker>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IModerationService, ModerationService>();
 builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();

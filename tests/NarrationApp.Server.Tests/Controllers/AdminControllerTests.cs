@@ -30,7 +30,7 @@ public sealed class AdminControllerTests
         });
         await dbContext.SaveChangesAsync();
 
-        var controller = new AdminController(new StubModerationService(), new StubAnalyticsService(), dbContext);
+        var controller = new AdminController(new StubModerationService(), new StubAnalyticsService(), dbContext, new StubQrWebPresenceTracker());
 
         var actionResult = await controller.PoisAsync(CancellationToken.None);
         var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
@@ -98,7 +98,7 @@ public sealed class AdminControllerTests
 
         await dbContext.SaveChangesAsync();
 
-        var controller = new AdminController(new StubModerationService(), new StubAnalyticsService(), dbContext);
+        var controller = new AdminController(new StubModerationService(), new StubAnalyticsService(), dbContext, new StubQrWebPresenceTracker());
 
         var actionResult = await controller.UsersAsync(CancellationToken.None);
         var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
@@ -173,7 +173,7 @@ public sealed class AdminControllerTests
 
         await dbContext.SaveChangesAsync();
 
-        var controller = new AdminController(new StubModerationService(), new StubAnalyticsService(), dbContext);
+        var controller = new AdminController(new StubModerationService(), new StubAnalyticsService(), dbContext, new StubQrWebPresenceTracker());
 
         var actionResult = await controller.VisitorDevicesAsync(CancellationToken.None);
         var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
@@ -203,6 +203,71 @@ public sealed class AdminControllerTests
         Assert.Equal(1, guestDevice.VisitCount);
         Assert.Equal(0, guestDevice.TriggerCount);
         Assert.DoesNotContain(response.Data, item => string.Equals(item.AccountLabel, owner.Email, StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task VisitorDevicesAsync_marks_qr_web_device_offline_after_thirty_seconds_without_presence()
+    {
+        await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
+        var poiId = await dbContext.Pois.Select(item => item.Id).FirstAsync();
+        var now = DateTime.UtcNow;
+
+        dbContext.VisitEvents.Add(new VisitEvent
+        {
+            UserId = null,
+            DeviceId = "qr-web-timeout-001",
+            PoiId = poiId,
+            EventType = EventType.QrScan,
+            Source = "qr-web",
+            CreatedAt = now.AddMinutes(-1)
+        });
+
+        await dbContext.SaveChangesAsync();
+
+        var controller = new AdminController(new StubModerationService(), new StubAnalyticsService(), dbContext, new StubQrWebPresenceTracker());
+
+        var actionResult = await controller.VisitorDevicesAsync(CancellationToken.None);
+        var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
+        var response = Assert.IsType<ApiResponse<IReadOnlyList<VisitorDeviceSummaryDto>>>(okResult.Value);
+
+        var visitor = Assert.Single(response.Data);
+        Assert.Equal("qr-web-timeout-001", visitor.DeviceId);
+        Assert.False(visitor.IsOnline);
+    }
+
+    [Fact]
+    public async Task VisitorDevicesAsync_marks_qr_web_device_online_when_presence_is_recent()
+    {
+        await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
+        var poiId = await dbContext.Pois.Select(item => item.Id).FirstAsync();
+        var now = DateTime.UtcNow;
+
+        dbContext.VisitEvents.Add(new VisitEvent
+        {
+            UserId = null,
+            DeviceId = "qr-web-heartbeat-001",
+            PoiId = poiId,
+            EventType = EventType.QrScan,
+            Source = "qr-web",
+            CreatedAt = now.AddMinutes(-1)
+        });
+
+        await dbContext.SaveChangesAsync();
+
+        var presenceTracker = new StubQrWebPresenceTracker();
+        presenceTracker.Track("qr-web-heartbeat-001", now.AddSeconds(-5));
+
+        var controller = new AdminController(new StubModerationService(), new StubAnalyticsService(), dbContext, presenceTracker);
+
+        var actionResult = await controller.VisitorDevicesAsync(CancellationToken.None);
+        var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
+        var response = Assert.IsType<ApiResponse<IReadOnlyList<VisitorDeviceSummaryDto>>>(okResult.Value);
+
+        var visitor = Assert.Single(response.Data);
+        Assert.Equal("qr-web-heartbeat-001", visitor.DeviceId);
+        Assert.True(visitor.IsOnline);
+        Assert.NotNull(visitor.LastSeenAtUtc);
+        Assert.True(visitor.LastSeenAtUtc >= now.AddSeconds(-10));
     }
 
     private sealed class StubModerationService : IModerationService
@@ -253,6 +318,21 @@ public sealed class AdminControllerTests
         public Task<AudioPlayAnalyticsDto> GetAudioPlayAnalyticsAsync(CancellationToken cancellationToken = default)
         {
             throw new NotSupportedException();
+        }
+    }
+
+    private sealed class StubQrWebPresenceTracker : IQrWebPresenceTracker
+    {
+        private readonly Dictionary<string, DateTime> _lastSeenByDeviceId = new(StringComparer.OrdinalIgnoreCase);
+
+        public DateTime? GetLastSeenUtc(string deviceId)
+        {
+            return _lastSeenByDeviceId.TryGetValue(deviceId, out var value) ? value : null;
+        }
+
+        public void Track(string deviceId, DateTime? seenAtUtc = null)
+        {
+            _lastSeenByDeviceId[deviceId] = seenAtUtc ?? DateTime.UtcNow;
         }
     }
 }
