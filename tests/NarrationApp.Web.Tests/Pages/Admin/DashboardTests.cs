@@ -13,6 +13,34 @@ namespace NarrationApp.Web.Tests.Pages.Admin;
 public sealed class DashboardTests : TestContext
 {
     [Fact]
+    public void Dashboard_behavior_is_split_into_focused_partials()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var pageRoot = Path.Combine(projectRoot, "src", "NarrationApp.Web", "Pages", "Admin");
+        var markupPath = Path.Combine(pageRoot, "Dashboard.razor");
+        var expectedPartials = new[]
+        {
+            ("Dashboard.razor.cs", "OnInitializedAsync"),
+            ("Dashboard.Presentation.razor.cs", "GetLanguageHint")
+        };
+
+        var markup = File.ReadAllText(markupPath);
+        Assert.DoesNotContain("@code", markup, StringComparison.Ordinal);
+
+        foreach (var (fileName, marker) in expectedPartials)
+        {
+            var path = Path.Combine(pageRoot, fileName);
+            Assert.True(File.Exists(path), $"{fileName} should exist.");
+            var source = File.ReadAllText(path);
+            Assert.Contains("partial class Dashboard", source, StringComparison.Ordinal);
+            Assert.Contains(marker, source, StringComparison.Ordinal);
+        }
+
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "Dashboard.razor.cs")).Length <= 70);
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "Dashboard.Presentation.razor.cs")).Length <= 110);
+    }
+
+    [Fact]
     public void Renders_sample_strict_kpis_and_recent_operations_tables()
     {
         Services.AddSingleton<IAdminPortalService>(new TestAdminPortalService());
@@ -25,11 +53,14 @@ public sealed class DashboardTests : TestContext
             Assert.NotNull(cut.Find(".dashboard-surface"));
             Assert.Contains("Audio Files", cut.Markup);
             Assert.Contains("QR Codes hoạt động", cut.Markup);
+            Assert.Contains("Thiết bị visitor", cut.Markup);
+            Assert.Contains("1 đang online", cut.Markup);
             Assert.Contains("Top POI được nghe nhiều nhất", cut.Markup);
             Assert.Contains("Moderation Queue gần đây", cut.Markup);
             Assert.Contains("Bún mắm Vĩnh Khánh", cut.Markup);
             Assert.DoesNotContain("Tuyến ưu tiên của ca trực", cut.Markup);
             Assert.DoesNotContain("Người dùng đang hoạt động", cut.Markup);
+            Assert.DoesNotContain("Người dùng", cut.Markup);
         });
     }
 
@@ -83,6 +114,33 @@ public sealed class DashboardTests : TestContext
                     DeviceCount = 2,
                     ActiveDeviceCount = 0,
                     LastSeenAtUtc = DateTime.UtcNow.AddHours(-2)
+                }
+            ]);
+        }
+
+        public Task<IReadOnlyList<VisitorDeviceSummaryDto>> GetVisitorDevicesAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<IReadOnlyList<VisitorDeviceSummaryDto>>(
+            [
+                new VisitorDeviceSummaryDto
+                {
+                    Id = Guid.NewGuid(),
+                    DisplayName = "Pixel 7",
+                    DeviceId = "pixel7-guest-001",
+                    PreferredLanguage = "vi-VN",
+                    RoleName = "guest",
+                    IsOnline = true,
+                    LastSeenAtUtc = DateTime.UtcNow.AddMinutes(-2)
+                },
+                new VisitorDeviceSummaryDto
+                {
+                    Id = Guid.NewGuid(),
+                    DisplayName = "iPhone visitor",
+                    DeviceId = "iphone-guest-002",
+                    PreferredLanguage = "en-US",
+                    RoleName = "guest",
+                    IsOnline = false,
+                    LastSeenAtUtc = DateTime.UtcNow.AddHours(-1)
                 }
             ]);
         }

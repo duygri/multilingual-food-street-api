@@ -1,0 +1,202 @@
+@using NarrationApp.Mobile.Features.Home
+
+<section class="map-screen">
+    <div class="map-shell">
+        <div class="map-canvas map-canvas--full">
+            <div id="discover-map" class="map-surface"></div>
+
+            <div class="map-top-overlay @(State.ShowPoiSheet ? "map-top-overlay--sheet-open" : string.Empty)">
+                <div class="map-top-controls">
+                    <button type="button" class="map-icon-button" @onclick="OnToggleNotifications">
+                        <svg class="map-icon-glyph" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M12 4.5a3 3 0 0 0-3 3v.7a6.5 6.5 0 0 1-1.5 4.1L6 14.1v1.4h12v-1.4l-1.5-1.8A6.5 6.5 0 0 1 15 8.2v-.7a3 3 0 0 0-3-3Z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
+                            <path d="M10.2 18a1.8 1.8 0 0 0 3.6 0" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8" />
+                        </svg>
+                    </button>
+                    <button type="button" class="map-icon-button" @onclick="OnCycleLanguage">
+                        <svg class="map-icon-glyph" viewBox="0 0 24 24" aria-hidden="true">
+                            <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.8" />
+                            <path d="M4 12h16M12 4a13 13 0 0 1 0 16M12 4a13 13 0 0 0 0 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="map-category-rail">
+                    <section class="category-strip category-strip--map">
+                        @foreach (var category in State.Categories)
+                        {
+                            <button
+                                type="button"
+                                class="category-chip @CategoryChipClassSelector(category.Id)"
+                                @onclick="() => OnSelectCategory.InvokeAsync(category.Id)">
+                                <span>@CategoryIconSelector(category.Id)</span>
+                                <span>@category.Label</span>
+                            </button>
+                        }
+                    </section>
+                </div>
+
+                <div class="map-overlay-meta">
+                    <span class="map-pill">@State.LocationStatusLabel</span>
+                    <span class="map-pill">@State.DataSourceLabel</span>
+                    @if (State.HasAutoNarrationPrompt)
+                    {
+                        <span class="map-pill">@AutoAudioStatusProvider()</span>
+                    }
+                </div>
+
+                @if (State.IsUsingFallbackData)
+                {
+                    <aside class="offline-banner">
+                        <strong>Offline mode</strong>
+                        <span>@State.SyncMessage</span>
+                    </aside>
+                }
+            </div>
+
+            @if (State.ShowNotifications)
+            {
+                <aside class="notification-panel">
+                    <div class="notification-panel__surface">
+                        <div class="panel-header">
+                            <div class="notification-panel__copy">
+                                <span class="eyebrow">Thông báo</span>
+                                <strong>Cập nhật gần đây</strong>
+                            </div>
+                            <button type="button" class="panel-close" @onclick="OnToggleNotifications">Đóng</button>
+                        </div>
+
+                        <div class="panel-list">
+                            @foreach (var notification in State.Notifications)
+                            {
+                                <article class="panel-item">
+                                    <strong>@notification.Title</strong>
+                                    <p>@notification.Body</p>
+                                    <span>@notification.TimeLabel</span>
+                                </article>
+                            }
+                        </div>
+                    </div>
+                </aside>
+            }
+
+            <div class="map-zoom-controls">
+                <button type="button" class="map-fab-button" @onclick="OnZoomIn">+</button>
+                <button type="button" class="map-fab-button" @onclick="OnZoomOut">−</button>
+            </div>
+
+            <div class="map-fab-rail">
+                <button type="button" class="map-fab-button" @onclick="OnRefresh">↻</button>
+                <button type="button" class="map-fab-button map-fab-button--accent" @onclick="OnSwitchToTours">🎧</button>
+            </div>
+
+            <button type="button" class="qr-fab" @onclick="OnOpenQrModal">📱</button>
+
+            @if (IsQrModalOpen)
+            {
+                <section class="qr-modal" @onclick="OnCloseQrModal">
+                    <div class="qr-modal__content qr-modal__panel" @onclick:stopPropagation="true">
+                        <div class="qr-modal__header">
+                            <div>
+                                <span class="eyebrow">Mô phỏng quét QR</span>
+                                <strong>Xem trước deep link</strong>
+                            </div>
+                            <button type="button" class="panel-close" @onclick="OnCloseQrModal">Đóng</button>
+                        </div>
+
+                        <div class="qr-preview">
+                            <div class="qr-preview__code">@QrPreviewCode</div>
+                        </div>
+
+                        <div class="qr-targets">
+                            <button type="button" class="qr-target-btn" @onclick="() => OnTriggerQrPreview.InvokeAsync(VisitorQrTargetKind.OpenApp)">
+                                <span class="qr-target-btn__icon">📱</span>
+                                <span class="qr-target-btn__copy">
+                                    <strong>Mở ứng dụng</strong>
+                                    <span>foodstreet://qr/open-app</span>
+                                </span>
+                            </button>
+
+                            @if (QrPreviewPoi is { } previewPoi)
+                            {
+                                <button type="button" class="qr-target-btn" @onclick="() => OnTriggerQrPreview.InvokeAsync(VisitorQrTargetKind.Poi)">
+                                    <span class="qr-target-btn__icon">@CategoryIconSelector(previewPoi.CategoryId)</span>
+                                    <span class="qr-target-btn__copy">
+                                        <strong>Xem POI: @previewPoi.Name</strong>
+                                        <span>foodstreet://qr/@previewPoi.Id</span>
+                                    </span>
+                                </button>
+                            }
+
+                        </div>
+                    </div>
+                </section>
+            }
+
+            @if (State.SelectedPoi is not null && State.ShowPoiSheet)
+            {
+                <section class="poi-sheet poi-sheet--floating">
+                    <div class="poi-sheet__grabber"></div>
+                    <div class="poi-sheet__head">
+                        <div class="poi-sheet__icon">@CategoryIconSelector(State.SelectedPoi.CategoryId)</div>
+                        <div class="poi-sheet__title">
+                            <h3>@State.SelectedPoi.Name</h3>
+                            <span class="poi-sheet__badge">@PoiCategoryLabelSelector(State.SelectedPoi)</span>
+                            <p class="poi-sheet__location">📍 @State.SelectedPoi.DistanceMeters m • @State.SelectedPoi.District</p>
+                        </div>
+                        <button type="button" class="poi-sheet__close" @onclick="OnClosePoiSheet">Đóng</button>
+                    </div>
+
+                    <div class="poi-sheet__meta-chips">
+                        <span class="poi-meta-chip">🎯 Bán kính @State.SelectedPoi.GeofenceRadiusMeters m</span>
+                        <span class="poi-meta-chip">⭐ Ưu tiên @State.SelectedPoi.Priority</span>
+                        <span class="poi-meta-chip">🔊 @State.SelectedPoi.StatusLabel</span>
+                        <span class="poi-meta-chip">🌐 @State.SelectedPoi.AvailableLanguageCount ngôn ngữ</span>
+                    </div>
+
+                    <div class="poi-sheet__description">
+                        <p>@State.SelectedPoi.Description</p>
+                        <strong>@State.SelectedPoi.Highlight</strong>
+                    </div>
+
+                    <div class="sheet-actions sheet-actions--poi">
+                        <button type="button" class="secondary-pill" @onclick="OnClosePoiSheet">Ẩn</button>
+                        <button type="button" class="primary-pill" @onclick="OnPlaySelectedPoi">Nghe ngay</button>
+                    </div>
+                </section>
+            }
+
+            @if (State.ActiveProximity is not null)
+            {
+                <aside class="geofence-toast">
+                    <strong>Đang ở gần @State.ActiveProximity.PoiName</strong>
+                    <span>@GeofenceToastMessageProvider()</span>
+                </aside>
+            }
+        </div>
+    </div>
+</section>
+
+@code {
+    [Parameter] public VisitorShellState State { get; set; } = default!;
+    [Parameter] public bool IsQrModalOpen { get; set; }
+    [Parameter] public string QrPreviewCode { get; set; } = "OPEN-APP";
+    [Parameter] public VisitorPoi? QrPreviewPoi { get; set; }
+    [Parameter] public Func<string, string> CategoryChipClassSelector { get; set; } = static _ => string.Empty;
+    [Parameter] public Func<string, string> CategoryIconSelector { get; set; } = static _ => string.Empty;
+    [Parameter] public Func<string> AutoAudioStatusProvider { get; set; } = static () => string.Empty;
+    [Parameter] public Func<string> GeofenceToastMessageProvider { get; set; } = static () => string.Empty;
+    [Parameter] public Func<VisitorPoi, string> PoiCategoryLabelSelector { get; set; } = static poi => poi.CategoryLabel;
+    [Parameter] public EventCallback OnToggleNotifications { get; set; }
+    [Parameter] public EventCallback OnCycleLanguage { get; set; }
+    [Parameter] public EventCallback<string> OnSelectCategory { get; set; }
+    [Parameter] public EventCallback OnZoomIn { get; set; }
+    [Parameter] public EventCallback OnZoomOut { get; set; }
+    [Parameter] public EventCallback OnRefresh { get; set; }
+    [Parameter] public EventCallback OnSwitchToTours { get; set; }
+    [Parameter] public EventCallback OnOpenQrModal { get; set; }
+    [Parameter] public EventCallback OnCloseQrModal { get; set; }
+    [Parameter] public EventCallback<VisitorQrTargetKind> OnTriggerQrPreview { get; set; }
+    [Parameter] public EventCallback OnClosePoiSheet { get; set; }
+    [Parameter] public EventCallback OnPlaySelectedPoi { get; set; }
+}

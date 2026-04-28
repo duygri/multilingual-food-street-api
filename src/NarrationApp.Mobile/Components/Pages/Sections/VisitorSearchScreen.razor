@@ -1,0 +1,265 @@
+@using System.Globalization
+@using System.Net
+@using NarrationApp.Mobile.Features.Home
+
+<section class="search-screen" @onclick="OnClose">
+    <div class="search-screen__panel" @onclick:stopPropagation="true">
+        <header class="search-top">
+            <button type="button" class="search-top__back" @onclick="OnClose">←</button>
+            <label class="search-top__field search-top__field--strict">
+                <span class="search-icon">⌕</span>
+                <input
+                    class="search-input"
+                    type="text"
+                    placeholder="Tìm theo tên, danh mục..."
+                    value="@SearchTerm"
+                    @oninput="OnSearchChanged"
+                    autofocus />
+            </label>
+        </header>
+
+        <section class="search-screen__summary">
+            <div class="search-result-count">@GetResultCountLabel()</div>
+            <p>Chạm vào POI hoặc tour để mở nhanh đúng ngữ cảnh nghe thuyết minh.</p>
+        </section>
+
+        <section class="search-suggestion-chips">
+            @foreach (var category in Categories)
+            {
+                <button
+                    type="button"
+                    class="category-chip @(SelectedCategoryId == category.Id ? "is-selected" : string.Empty)"
+                    @onclick="() => OnSelectCategory.InvokeAsync(category.Id)">
+                    <span>@GetCategoryIcon(category.Id)</span>
+                    <span>@category.Label</span>
+                </button>
+            }
+        </section>
+
+        <div class="search-results">
+            <section class="search-section">
+                <div class="search-section__header">
+                    <strong>📍 Điểm tham quan</strong>
+                    <span>@PoiResults.Count</span>
+                </div>
+
+                @if (PoiResults.Count == 0)
+                {
+                    <article class="search-section__empty">
+                        <strong>Chưa có POI phù hợp.</strong>
+                        <p>Thử đổi từ khóa hoặc chọn lại chip gợi ý.</p>
+                    </article>
+                }
+                else
+                {
+                    @foreach (var poi in PoiResults)
+                    {
+                        <button type="button" class="search-result-item" @onclick="() => OnSelectPoi.InvokeAsync(poi.Id)">
+                            <div class="search-result-item__icon @GetPoiTone(poi.CategoryId)">
+                                <span>@GetPoiIcon(poi)</span>
+                            </div>
+                            <div class="search-result-item__body">
+                                <div class="search-result-item__eyebrow">
+                                    <span class="discover-badge">@GetCategoryLabel(poi)</span>
+                                    <span>POI gần bạn</span>
+                                </div>
+                                <div class="search-result-item__headline">
+                                    <strong>@HighlightText(poi.Name)</strong>
+                                    <span>@poi.DistanceMeters m</span>
+                                </div>
+                                <div class="search-result-item__meta">
+                                    <span>🔊 @poi.StatusLabel</span>
+                                    <span>🌐 @poi.AvailableLanguageCount ngôn ngữ</span>
+                                </div>
+                                <p class="search-result-item__summary">@HighlightText(Truncate(poi.Description, 92))</p>
+                            </div>
+                        </button>
+                    }
+                }
+            </section>
+
+            <section class="search-section">
+                <div class="search-section__header">
+                    <strong>🚶 Tour liên quan</strong>
+                    <span>@TourResults.Count</span>
+                </div>
+
+                @if (TourResults.Count == 0)
+                {
+                    <article class="search-section__empty">
+                        <strong>Chưa có tour phù hợp.</strong>
+                        <p>Tìm thêm theo tên tour hoặc điểm dừng liên quan.</p>
+                    </article>
+                }
+                else
+                {
+                    @foreach (var tour in TourResults)
+                    {
+                        <button type="button" class="search-result-item search-result-item--tour" @onclick="() => OnSelectTour.InvokeAsync(tour.Id)">
+                            <div class="search-result-item__icon @GetTourTone(tour)">
+                                <span>@GetTourIcon(tour)</span>
+                            </div>
+                            <div class="search-result-item__body">
+                                <div class="search-result-item__eyebrow">
+                                    <span class="discover-badge">@tour.StopCountLabel</span>
+                                    <span>Tour gợi ý</span>
+                                </div>
+                                <div class="search-result-item__headline">
+                                    <strong>@HighlightText(tour.Title)</strong>
+                                    <span>@tour.DurationLabel</span>
+                                </div>
+                                <div class="search-result-item__meta">
+                                    <span>@tour.DifficultyLabel</span>
+                                </div>
+                                <p class="search-result-item__summary">@HighlightText(Truncate(tour.Description, 96))</p>
+                            </div>
+                        </button>
+                    }
+                }
+            </section>
+        </div>
+    </div>
+</section>
+
+@code {
+    [Parameter] public string SearchTerm { get; set; } = string.Empty;
+    [Parameter] public string SelectedCategoryId { get; set; } = "all";
+    [Parameter] public int ResultCount { get; set; }
+    [Parameter] public IReadOnlyList<VisitorCategory> Categories { get; set; } = [];
+    [Parameter] public IReadOnlyList<VisitorPoi> PoiResults { get; set; } = [];
+    [Parameter] public IReadOnlyList<VisitorTourCard> TourResults { get; set; } = [];
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<ChangeEventArgs> OnSearchChanged { get; set; }
+    [Parameter] public EventCallback<string> OnSelectCategory { get; set; }
+    [Parameter] public EventCallback<string> OnSelectPoi { get; set; }
+    [Parameter] public EventCallback<string> OnSelectTour { get; set; }
+
+    private string GetResultCountLabel() =>
+        ResultCount switch
+        {
+            0 => "Chưa tìm thấy kết quả phù hợp",
+            1 => "Tìm thấy 1 kết quả",
+            _ => $"Tìm thấy {ResultCount} kết quả"
+        };
+
+    private static string GetCategoryIcon(string categoryId) =>
+        categoryId switch
+        {
+            "all" => "🏷️",
+            "food" => "🍜",
+            "history" => "🏛️",
+            "river" => "🌉",
+            "night" => "🍢",
+            _ => "☕"
+        };
+
+    private static string GetPoiIcon(VisitorPoi poi)
+    {
+        var label = poi.CategoryLabel.ToLowerInvariant();
+        if (label.Contains("uống") || label.Contains("cà phê") || label.Contains("coffee"))
+        {
+            return "☕";
+        }
+
+        if (label.Contains("bún") || label.Contains("phở") || label.Contains("ẩm") || label.Contains("food"))
+        {
+            return "🍜";
+        }
+
+        if (label.Contains("đêm") || label.Contains("ăn vặt"))
+        {
+            return "🍢";
+        }
+
+        if (label.Contains("sông") || label.Contains("cầu") || label.Contains("ven"))
+        {
+            return "🌉";
+        }
+
+        return GetCategoryIcon(poi.CategoryId);
+    }
+
+    private static string GetPoiTone(string categoryId) =>
+        categoryId switch
+        {
+            "food" => "is-food",
+            "river" => "is-river",
+            "night" => "is-night",
+            _ => "is-history"
+        };
+
+    private static string GetCategoryLabel(VisitorPoi poi) =>
+        string.IsNullOrWhiteSpace(poi.CategoryLabel) ? poi.District : poi.CategoryLabel;
+
+    private static string GetTourTone(VisitorTourCard tour)
+    {
+        var text = $"{tour.Title} {tour.Description}".ToLowerInvariant();
+        if (text.Contains("ẩm thực") || text.Contains("food"))
+        {
+            return "is-food";
+        }
+
+        if (text.Contains("đêm") || text.Contains("night"))
+        {
+            return "is-night";
+        }
+
+        return "is-history";
+    }
+
+    private static string GetTourIcon(VisitorTourCard tour)
+    {
+        var text = $"{tour.Title} {tour.Description}".ToLowerInvariant();
+        if (text.Contains("ẩm thực") || text.Contains("food"))
+        {
+            return "🍜";
+        }
+
+        if (text.Contains("đêm") || text.Contains("night"))
+        {
+            return "🌙";
+        }
+
+        return "🏛️";
+    }
+
+    private MarkupString HighlightText(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return new MarkupString(string.Empty);
+        }
+
+        if (string.IsNullOrWhiteSpace(SearchTerm))
+        {
+            return new MarkupString(WebUtility.HtmlEncode(text));
+        }
+
+        var term = SearchTerm.Trim();
+        var matchIndex = CultureInfo.InvariantCulture.CompareInfo.IndexOf(
+            text,
+            term,
+            CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace);
+
+        if (matchIndex < 0)
+        {
+            return new MarkupString(WebUtility.HtmlEncode(text));
+        }
+
+        var matchLength = Math.Min(term.Length, text.Length - matchIndex);
+        var before = WebUtility.HtmlEncode(text[..matchIndex]);
+        var match = WebUtility.HtmlEncode(text.Substring(matchIndex, matchLength));
+        var after = WebUtility.HtmlEncode(text[(matchIndex + matchLength)..]);
+        return new MarkupString($"{before}<mark>{match}</mark>{after}");
+    }
+
+    private static string Truncate(string text, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(text) || text.Length <= maxLength)
+        {
+            return text;
+        }
+
+        return $"{text[..maxLength].TrimEnd()}...";
+    }
+}

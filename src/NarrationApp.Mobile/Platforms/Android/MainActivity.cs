@@ -29,7 +29,7 @@ public class MainActivity : MauiAppCompatActivity
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
-        TouristMobileDiagnostics.Log("MainActivity", $"OnCreate action={Intent?.Action ?? "<null>"} data={Intent?.DataString ?? "<null>"}");
+        VisitorMobileDiagnostics.Log("MainActivity", $"OnCreate action={Intent?.Action ?? "<null>"} data={Intent?.DataString ?? "<null>"}");
         CapturePendingDeepLink(Intent);
     }
 
@@ -37,13 +37,13 @@ public class MainActivity : MauiAppCompatActivity
     {
         base.OnNewIntent(intent);
         Intent = intent;
-        TouristMobileDiagnostics.Log("MainActivity", $"OnNewIntent action={intent?.Action ?? "<null>"} data={intent?.DataString ?? "<null>"}");
+        VisitorMobileDiagnostics.Log("MainActivity", $"OnNewIntent action={intent?.Action ?? "<null>"} data={intent?.DataString ?? "<null>"}");
         CapturePendingDeepLink(intent);
     }
 
     private static void CapturePendingDeepLink(Intent? intent)
     {
-        TouristMobileDiagnostics.Log("MainActivity", $"CapturePendingDeepLink data={intent?.DataString ?? "<null>"}");
-        TouristPendingDeepLinkStore.SetPendingUri(intent?.DataString);
+        VisitorMobileDiagnostics.Log("MainActivity", $"CapturePendingDeepLink data={intent?.DataString ?? "<null>"}");
+        VisitorPendingDeepLinkStore.SetPendingUri(intent?.DataString);
     }
 }

@@ -11,6 +11,36 @@ namespace NarrationApp.Web.Tests.Pages.Owner;
 public sealed class PoisTests : TestContext
 {
     [Fact]
+    public void Pois_behavior_is_split_into_focused_partials()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var pageRoot = Path.Combine(projectRoot, "src", "NarrationApp.Web", "Pages", "Owner");
+        var markupPath = Path.Combine(pageRoot, "Pois.razor");
+        var expectedPartials = new[]
+        {
+            ("Pois.razor.cs", "OnInitializedAsync"),
+            ("Pois.Filters.razor.cs", "MatchesSearch"),
+            ("Pois.Presentation.razor.cs", "GetPoiStatusLabel")
+        };
+
+        var markup = File.ReadAllText(markupPath);
+        Assert.DoesNotContain("@code", markup, StringComparison.Ordinal);
+
+        foreach (var (fileName, marker) in expectedPartials)
+        {
+            var path = Path.Combine(pageRoot, fileName);
+            Assert.True(File.Exists(path), $"{fileName} should exist.");
+            var source = File.ReadAllText(path);
+            Assert.Contains("partial class Pois", source, StringComparison.Ordinal);
+            Assert.Contains(marker, source, StringComparison.Ordinal);
+        }
+
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "Pois.razor.cs")).Length <= 40);
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "Pois.Filters.razor.cs")).Length <= 50);
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "Pois.Presentation.razor.cs")).Length <= 80);
+    }
+
+    [Fact]
     public void List_page_renders_workspace_stat_cards_toolbar_and_table_headers()
     {
         var ownerService = new TestOwnerPortalService();

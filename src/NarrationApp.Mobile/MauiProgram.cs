@@ -10,9 +10,9 @@ public static class MauiProgram
     public static MauiApp CreateMauiApp()
     {
         var builder = MauiApp.CreateBuilder();
-        var touristApiOptions = LoadTouristApiOptions();
-        var touristApiEnvironment = GetTouristApiEnvironment();
-        var touristApiBaseAddress = ResolveTouristApiBaseAddress(touristApiOptions, touristApiEnvironment);
+        var visitorApiOptions = LoadVisitorApiOptions();
+        var visitorApiEnvironment = GetVisitorApiEnvironment();
+        var visitorApiBaseAddress = ResolveVisitorApiBaseAddress(visitorApiOptions, visitorApiEnvironment);
 
         builder
             .UseMauiApp<App>()
@@ -22,16 +22,14 @@ public static class MauiProgram
             });
 
         builder.Services.AddMauiBlazorWebView();
-        builder.Services.AddSingleton(new TouristMapOptions());
-        builder.Services.AddSingleton(touristApiOptions);
-        builder.Services.AddSingleton<ITouristAuthSessionStore, SecureTouristAuthSessionStore>();
-        builder.Services.AddSingleton<ITouristDeviceIdentityProvider, DeviceTouristIdentityProvider>();
-        builder.Services.AddScoped<ITouristAuthApiService, TouristAuthApiService>();
-        builder.Services.AddScoped<ITouristContentService, TouristContentService>();
-        builder.Services.AddScoped<ITouristAudioCatalogService, TouristAudioCatalogService>();
-        builder.Services.AddScoped<ITouristQrApiService, TouristQrApiService>();
-        builder.Services.AddScoped<ITouristTourSessionApiService, TouristTourSessionApiService>();
-        builder.Services.AddScoped<ITouristLocationService, DeviceTouristLocationService>();
+        builder.Services.AddSingleton(new VisitorMapOptions());
+        builder.Services.AddSingleton(visitorApiOptions);
+        builder.Services.AddSingleton<IVisitorDeviceIdentityProvider, DeviceVisitorIdentityProvider>();
+        builder.Services.AddScoped<IVisitorContentService, VisitorContentService>();
+        builder.Services.AddScoped<IVisitorAudioCatalogService, VisitorAudioCatalogService>();
+        builder.Services.AddScoped<IVisitorQrApiService, VisitorQrApiService>();
+        builder.Services.AddScoped<IVisitorQrDeepLinkService, VisitorQrDeepLinkService>();
+        builder.Services.AddScoped<IVisitorLocationService, DeviceVisitorLocationService>();
         builder.Services.AddScoped(_ =>
         {
             HttpMessageHandler handler = new HttpClientHandler();
@@ -45,7 +43,7 @@ public static class MauiProgram
 
             return new HttpClient(handler)
             {
-                BaseAddress = touristApiBaseAddress,
+                BaseAddress = visitorApiBaseAddress,
                 Timeout = TimeSpan.FromSeconds(12)
             };
         });
@@ -58,26 +56,26 @@ public static class MauiProgram
         return builder.Build();
     }
 
-    private static TouristApiOptions LoadTouristApiOptions()
+    private static VisitorApiOptions LoadVisitorApiOptions()
     {
-        using var stream = FileSystem.OpenAppPackageFileAsync("tourist-api.json").GetAwaiter().GetResult();
+        using var stream = FileSystem.OpenAppPackageFileAsync("visitor-api.json").GetAwaiter().GetResult();
         using var reader = new StreamReader(stream);
         var json = reader.ReadToEnd();
-        return TouristApiOptions.Parse(json);
+        return VisitorApiOptions.Parse(json);
     }
 
-    private static TouristApiDeploymentEnvironment GetTouristApiEnvironment()
+    private static VisitorApiDeploymentEnvironment GetVisitorApiEnvironment()
     {
 #if STAGING
-        return TouristApiDeploymentEnvironment.Staging;
+        return VisitorApiDeploymentEnvironment.Staging;
 #elif DEBUG || SMOKE
-        return TouristApiDeploymentEnvironment.Development;
+        return VisitorApiDeploymentEnvironment.Development;
 #else
-        return TouristApiDeploymentEnvironment.Production;
+        return VisitorApiDeploymentEnvironment.Production;
 #endif
     }
 
-    private static Uri ResolveTouristApiBaseAddress(TouristApiOptions options, TouristApiDeploymentEnvironment environment)
+    private static Uri ResolveVisitorApiBaseAddress(VisitorApiOptions options, VisitorApiDeploymentEnvironment environment)
     {
 #if ANDROID
         const bool IsAndroid = true;
@@ -85,6 +83,6 @@ public static class MauiProgram
         const bool IsAndroid = false;
 #endif
 
-        return TouristApiEndpointResolver.Resolve(options, environment, IsAndroid);
+        return VisitorApiEndpointResolver.Resolve(options, environment, IsAndroid);
     }
 }

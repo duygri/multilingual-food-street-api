@@ -18,11 +18,12 @@ public sealed class DataSeederTests
         await sut.SeedAsync();
 
         Assert.Equal(3, await dbContext.Roles.CountAsync());
-        Assert.Equal(2, await dbContext.AppUsers.CountAsync());
-        Assert.Equal(5, await dbContext.Pois.CountAsync());
-        Assert.Equal(5, await dbContext.Geofences.CountAsync());
-        Assert.Equal(5, await dbContext.PoiTranslations.CountAsync());
+        Assert.Equal(13, await dbContext.AppUsers.CountAsync());
+        Assert.Equal(12, await dbContext.Pois.CountAsync());
+        Assert.Equal(12, await dbContext.Geofences.CountAsync());
+        Assert.Equal(12, await dbContext.PoiTranslations.CountAsync());
         Assert.Equal(5, await dbContext.ManagedLanguages.CountAsync());
+        Assert.Equal(12, await dbContext.Pois.Select(poi => poi.OwnerId).Distinct().CountAsync());
 
         var admin = await dbContext.AppUsers.SingleAsync(user => user.Email == AppConstants.DefaultAdminEmail);
         var owner = await dbContext.AppUsers.SingleAsync(user => user.Email == AppConstants.DefaultOwnerEmail);
@@ -45,11 +46,12 @@ public sealed class DataSeederTests
         await sut.SeedAsync();
 
         Assert.Equal(3, await dbContext.Roles.CountAsync());
-        Assert.Equal(2, await dbContext.AppUsers.CountAsync());
-        Assert.Equal(5, await dbContext.Pois.CountAsync());
-        Assert.Equal(5, await dbContext.Geofences.CountAsync());
-        Assert.Equal(5, await dbContext.PoiTranslations.CountAsync());
+        Assert.Equal(13, await dbContext.AppUsers.CountAsync());
+        Assert.Equal(12, await dbContext.Pois.CountAsync());
+        Assert.Equal(12, await dbContext.Geofences.CountAsync());
+        Assert.Equal(12, await dbContext.PoiTranslations.CountAsync());
         Assert.Equal(5, await dbContext.ManagedLanguages.CountAsync());
+        Assert.Equal(12, await dbContext.Pois.Select(poi => poi.OwnerId).Distinct().CountAsync());
     }
 
     [Fact]

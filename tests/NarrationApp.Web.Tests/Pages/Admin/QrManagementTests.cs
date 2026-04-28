@@ -1,5 +1,6 @@
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
+using NarrationApp.Web.Configuration;
 using NarrationApp.Shared.DTOs.Poi;
 using NarrationApp.Shared.DTOs.QR;
 using NarrationApp.Shared.DTOs.Tour;
@@ -12,10 +13,43 @@ namespace NarrationApp.Web.Tests.Pages.Admin;
 public sealed class QrManagementTests : TestContext
 {
     [Fact]
+    public void Qr_management_behavior_is_split_into_focused_partials()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var pageRoot = Path.Combine(projectRoot, "src", "NarrationApp.Web", "Pages", "Admin");
+        var markupPath = Path.Combine(pageRoot, "QrManagement.razor");
+        var expectedPartials = new[]
+        {
+            ("QrManagement.razor.cs", "OnInitializedAsync"),
+            ("QrManagement.Composer.razor.cs", "ShowComposer"),
+            ("QrManagement.Actions.razor.cs", "CreateQrAsync"),
+            ("QrManagement.Presentation.razor.cs", "GetQrTypeLabel")
+        };
+
+        var markup = File.ReadAllText(markupPath);
+        Assert.DoesNotContain("@code", markup, StringComparison.Ordinal);
+
+        foreach (var (fileName, marker) in expectedPartials)
+        {
+            var path = Path.Combine(pageRoot, fileName);
+            Assert.True(File.Exists(path), $"{fileName} should exist.");
+            var source = File.ReadAllText(path);
+            Assert.Contains("partial class QrManagement", source, StringComparison.Ordinal);
+            Assert.Contains(marker, source, StringComparison.Ordinal);
+        }
+
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "QrManagement.razor.cs")).Length <= 80);
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "QrManagement.Composer.razor.cs")).Length <= 90);
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "QrManagement.Actions.razor.cs")).Length <= 90);
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "QrManagement.Presentation.razor.cs")).Length <= 90);
+    }
+
+    [Fact]
     public void Create_filter_and_delete_qr_code_updates_sample_strict_qr_workspace()
     {
         Services.AddSingleton<ITourPortalService>(new TestTourPortalService());
         Services.AddSingleton<IQrPortalService>(new TestQrPortalService());
+        Services.AddSingleton(new QrPublicUrlOptions { BaseAddress = new Uri("https://narration.app/") });
 
         var cut = RenderComponent<QrManagement>();
 
@@ -26,6 +60,9 @@ public sealed class QrManagementTests : TestContext
             Assert.Contains("Quản lý QR Code", cut.Markup);
             Assert.Contains("QR-POI-001", cut.Markup);
             Assert.Contains("Xem", cut.Markup);
+            Assert.Contains("Link đến POI", cut.Markup);
+            Assert.Contains("Mở App", cut.Markup);
+            Assert.DoesNotContain("Link đến Tour", cut.Markup);
             Assert.DoesNotContain("Copy Link", cut.Markup);
             Assert.DoesNotContain("Đang chuyển sang workspace Tour", cut.Markup);
             Assert.Empty(cut.FindAll("select[data-field='qr-target-type']"));
@@ -37,41 +74,47 @@ public sealed class QrManagementTests : TestContext
         {
             Assert.Single(cut.FindAll("[data-panel='qr-composer']"));
             Assert.Single(cut.FindAll("select[data-field='qr-target-type']"));
+            Assert.DoesNotContain("option value=\"tour\"", cut.Markup, StringComparison.Ordinal);
+            Assert.Empty(cut.FindAll("select[data-field='qr-tour-id']"));
         });
-        cut.Find("select[data-field='qr-target-type']").Change("tour");
-        cut.Find("select[data-field='qr-tour-id']").Change("7");
+
+        cut.Find("select[data-field='qr-target-type']").Change("open_app");
         cut.Find("input[data-field='qr-location-hint']").Change("Cổng tour đêm");
         cut.Find("button[data-action='create-qr']").Click();
 
         cut.WaitForAssertion(() =>
         {
             Assert.Contains("Đã tạo QR mới", cut.Markup);
-            Assert.Contains("QR-TOUR-003", cut.Markup);
+            Assert.Contains("QR-APP-003", cut.Markup);
             Assert.Empty(cut.FindAll("select[data-field='qr-target-type']"));
         });
 
-        cut.Find("select[data-field='qr-filter']").Change("tour");
+        cut.Find("select[data-field='qr-filter']").Change("open_app");
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Contains("QR-TOUR-003", cut.Markup);
+            Assert.Contains("QR-APP-003", cut.Markup);
             Assert.DoesNotContain("QR-POI-001", cut.Markup);
-            Assert.DoesNotContain("QR-APP-001", cut.Markup);
+            Assert.Contains("QR-APP-001", cut.Markup);
         });
 
         cut.Find("button[data-action='view-qr-3']").Click();
         cut.WaitForAssertion(() =>
         {
             Assert.Contains("Xem mã QR", cut.Markup);
-            Assert.Contains("QR-TOUR-003", cut.Markup);
+            Assert.Contains("QR-APP-003", cut.Markup);
+            var qrImage = cut.Find("img[data-role='qr-image']");
+            var qrImageSource = qrImage.GetAttribute("src");
+            Assert.False(string.IsNullOrWhiteSpace(qrImageSource));
+            Assert.StartsWith("data:image/png;base64,", qrImageSource, StringComparison.Ordinal);
+            Assert.Contains("https://narration.app/qr/QR-APP-003", cut.Markup);
         });
 
         cut.Find("button[data-action='delete-qr-3']").Click();
 
         cut.WaitForAssertion(() =>
         {
-            Assert.DoesNotContain("QR-TOUR-003", cut.Markup);
-            Assert.Contains("Chưa có QR nào trong bộ lọc này.", cut.Markup);
+            Assert.DoesNotContain("QR-APP-003", cut.Markup);
         });
     }
 
@@ -88,17 +131,7 @@ public sealed class QrManagementTests : TestContext
 
         public Task<IReadOnlyList<TourDto>> GetToursAsync(CancellationToken cancellationToken = default)
         {
-            return Task.FromResult<IReadOnlyList<TourDto>>(
-            [
-                new TourDto
-                {
-                    Id = 7,
-                    Title = "Tour đêm Vĩnh Khánh",
-                    Description = "Tuyến đêm nổi bật",
-                    EstimatedMinutes = 35,
-                    Status = TourStatus.Published
-                }
-            ]);
+            return Task.FromResult<IReadOnlyList<TourDto>>([]);
         }
 
         public Task<TourDto> CreateTourAsync(CreateTourRequest request, CancellationToken cancellationToken = default)
@@ -154,7 +187,7 @@ public sealed class QrManagementTests : TestContext
             var created = new QrCodeDto
             {
                 Id = 3,
-                Code = "QR-TOUR-003",
+                Code = request.TargetType == "open_app" ? "QR-APP-003" : "QR-POI-003",
                 TargetType = request.TargetType,
                 TargetId = request.TargetId,
                 LocationHint = request.LocationHint,

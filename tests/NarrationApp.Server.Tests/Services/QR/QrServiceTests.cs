@@ -50,15 +50,6 @@ public sealed class QrServiceTests
     {
         await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
         var poi = await dbContext.Pois.FirstAsync();
-        var tour = new NarrationApp.Server.Data.Entities.Tour
-        {
-            Title = "Tour đêm kiểm thử",
-            Description = "Route test cho QR",
-            EstimatedMinutes = 35,
-            Status = TourStatus.Draft
-        };
-        dbContext.Tours.Add(tour);
-        await dbContext.SaveChangesAsync();
         var sut = new QrService(dbContext);
 
         await sut.CreateAsync(new CreateQrRequest
@@ -70,16 +61,16 @@ public sealed class QrServiceTests
 
         await sut.CreateAsync(new CreateQrRequest
         {
-            TargetType = "tour",
-            TargetId = tour.Id,
-            LocationHint = "Route banner"
+            TargetType = "open_app",
+            TargetId = 0,
+            LocationHint = "App landing"
         });
 
-        var filtered = await sut.GetAsync("tour");
+        var filtered = await sut.GetAsync("open_app");
 
         Assert.Single(filtered);
-        Assert.Equal("tour", filtered[0].TargetType);
-        Assert.Equal(tour.Id, filtered[0].TargetId);
+        Assert.Equal("open_app", filtered[0].TargetType);
+        Assert.Equal(0, filtered[0].TargetId);
     }
 
     [Fact]
@@ -110,6 +101,19 @@ public sealed class QrServiceTests
         {
             TargetType = "invalid_target",
             TargetId = 1
+        }));
+    }
+
+    [Fact]
+    public async Task CreateAsync_rejects_tour_target_type()
+    {
+        await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
+        var sut = new QrService(dbContext);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => sut.CreateAsync(new CreateQrRequest
+        {
+            TargetType = "tour",
+            TargetId = 7
         }));
     }
 }

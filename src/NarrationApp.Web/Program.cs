@@ -16,6 +16,10 @@ var apiBaseAddress = ApiBaseAddressResolver.Resolve(
     builder.HostEnvironment.BaseAddress);
 
 builder.Services.AddScoped(_ => new HttpClient { BaseAddress = apiBaseAddress });
+builder.Services.AddAnalyticsMapOptions(builder.Configuration);
+builder.Services.AddQrPublicUrlOptions(
+    builder.Configuration,
+    builder.HostEnvironment.BaseAddress);
 builder.Services.AddAuthorizationCore();
 builder.Services.AddScoped<BrowserAuthSessionStore>();
 builder.Services.AddScoped<IAuthSessionStore>(sp => sp.GetRequiredService<BrowserAuthSessionStore>());

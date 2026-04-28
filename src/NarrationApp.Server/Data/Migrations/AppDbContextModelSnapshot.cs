@@ -29,6 +29,12 @@ namespace NarrationApp.Server.Data.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -45,10 +51,9 @@ namespace NarrationApp.Server.Data.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("is_active");
 
-                    b.Property<DateTime>("CreatedAtUtc")
+                    b.Property<DateTime?>("LastLoginAtUtc")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at_utc")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnName("last_login_at_utc");
 
                     b.Property<string>("ManagedArea")
                         .HasMaxLength(250)
@@ -61,20 +66,16 @@ namespace NarrationApp.Server.Data.Migrations
                         .HasColumnType("character varying(255)")
                         .HasColumnName("password_hash");
 
-                    b.Property<string>("PreferredLanguage")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("character varying(10)")
-                        .HasColumnName("preferred_language");
-
                     b.Property<string>("Phone")
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)")
                         .HasColumnName("phone");
 
-                    b.Property<DateTime?>("LastLoginAtUtc")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("last_login_at_utc");
+                    b.Property<string>("PreferredLanguage")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("preferred_language");
 
                     b.Property<Guid>("RoleId")
                         .HasColumnType("uuid")
@@ -824,11 +825,23 @@ namespace NarrationApp.Server.Data.Migrations
                     b.HasKey("Id")
                         .HasName("pk_visit_events");
 
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("ix_visit_events_created_at");
+
                     b.HasIndex("UserId")
                         .HasDatabaseName("ix_visit_events_user_id");
 
+                    b.HasIndex("DeviceId", "CreatedAt")
+                        .HasDatabaseName("ix_visit_events_device_id_created_at");
+
+                    b.HasIndex("EventType", "CreatedAt")
+                        .HasDatabaseName("ix_visit_events_event_type_created_at");
+
                     b.HasIndex("PoiId", "CreatedAt")
                         .HasDatabaseName("ix_visit_events_poi_id_created_at");
+
+                    b.HasIndex("PoiId", "EventType", "CreatedAt")
+                        .HasDatabaseName("ix_visit_events_poi_id_event_type_created_at");
 
                     b.ToTable("visit_events", (string)null);
                 });

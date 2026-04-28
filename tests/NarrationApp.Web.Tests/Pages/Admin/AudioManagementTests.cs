@@ -15,6 +15,51 @@ namespace NarrationApp.Web.Tests.Pages.Admin;
 public sealed class AudioManagementTests : TestContext
 {
     [Fact]
+    public void Audio_management_behavior_is_split_into_focused_partials()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var pageRoot = Path.Combine(projectRoot, "src", "NarrationApp.Web", "Pages", "Admin");
+        var markupPath = Path.Combine(pageRoot, "AudioManagement.razor");
+        var expectedPartials = new[]
+        {
+            ("AudioManagement.razor.cs", "OnInitializedAsync"),
+            ("AudioManagement.Filters.razor.cs", "MatchesStatus"),
+            ("AudioManagement.Refresh.razor.cs", "RefreshProcessingAudioAsync"),
+            ("AudioManagement.Generation.razor.cs", "GenerateSelectedAudioAsync"),
+            ("AudioManagement.Retry.razor.cs", "RetryAllFailedAudioAsync"),
+            ("AudioManagement.Upload.razor.cs", "UploadSelectedAudioAsync"),
+            ("AudioManagement.Presentation.razor.cs", "GetStatusLabel")
+        };
+
+        var markup = File.ReadAllText(markupPath);
+        Assert.DoesNotContain("@code", markup, StringComparison.Ordinal);
+
+        foreach (var (fileName, marker) in expectedPartials)
+        {
+            var path = Path.Combine(pageRoot, fileName);
+            Assert.True(File.Exists(path), $"{fileName} should exist.");
+            var source = File.ReadAllText(path);
+            Assert.Contains("partial class AudioManagement", source, StringComparison.Ordinal);
+            Assert.Contains(marker, source, StringComparison.Ordinal);
+        }
+
+        var coreLines = File.ReadAllLines(Path.Combine(pageRoot, "AudioManagement.razor.cs")).Length;
+        Assert.True(coreLines <= 150, $"AudioManagement.razor.cs should stay focused on state/startup, but has {coreLines} lines.");
+        var filterLines = File.ReadAllLines(Path.Combine(pageRoot, "AudioManagement.Filters.razor.cs")).Length;
+        Assert.True(filterLines <= 120, $"AudioManagement.Filters.razor.cs should stay focused on filter logic, but has {filterLines} lines.");
+        var refreshLines = File.ReadAllLines(Path.Combine(pageRoot, "AudioManagement.Refresh.razor.cs")).Length;
+        Assert.True(refreshLines <= 120, $"AudioManagement.Refresh.razor.cs should stay focused on refresh/retry logic, but has {refreshLines} lines.");
+        var generationLines = File.ReadAllLines(Path.Combine(pageRoot, "AudioManagement.Generation.razor.cs")).Length;
+        Assert.True(generationLines <= 130, $"AudioManagement.Generation.razor.cs should stay focused on generate flow, but has {generationLines} lines.");
+        var retryLines = File.ReadAllLines(Path.Combine(pageRoot, "AudioManagement.Retry.razor.cs")).Length;
+        Assert.True(retryLines <= 120, $"AudioManagement.Retry.razor.cs should stay focused on retry flow, but has {retryLines} lines.");
+        var uploadLines = File.ReadAllLines(Path.Combine(pageRoot, "AudioManagement.Upload.razor.cs")).Length;
+        Assert.True(uploadLines <= 100, $"AudioManagement.Upload.razor.cs should stay focused on upload flow, but has {uploadLines} lines.");
+        var presentationLines = File.ReadAllLines(Path.Combine(pageRoot, "AudioManagement.Presentation.razor.cs")).Length;
+        Assert.True(presentationLines <= 180, $"AudioManagement.Presentation.razor.cs should stay focused on computed view helpers, but has {presentationLines} lines.");
+    }
+
+    [Fact]
     public void Audio_management_dashboard_uses_control_room_layout_and_generate_modal()
     {
         var audioService = new TestAudioPortalService();
@@ -80,6 +125,40 @@ public sealed class AudioManagementTests : TestContext
         Assert.Equal("en", audioService.GeneratedFromTranslationRequests[0].LanguageCode);
         Assert.Equal("ja", audioService.GeneratedFromTranslationRequests[1].LanguageCode);
         Assert.Empty(translationService.AutoRequests);
+    }
+
+    [Fact]
+    public void Audio_management_plays_preview_inline_without_opening_new_tab()
+    {
+        var audioService = new TestAudioPortalService();
+        var adminService = new TestAdminPortalService();
+        var translationService = new TestTranslationPortalService();
+        var languageService = new TestLanguagePortalService();
+        var refreshPump = new TestAudioRefreshPump();
+
+        Services.AddSingleton<IAudioPortalService>(audioService);
+        Services.AddSingleton<IAdminPortalService>(adminService);
+        Services.AddSingleton<ITranslationPortalService>(translationService);
+        Services.AddSingleton<ILanguagePortalService>(languageService);
+        Services.AddSingleton<IAudioRefreshPump>(refreshPump);
+
+        var cut = RenderComponent<AudioManagement>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.NotNull(cut.Find("button[data-action='toggle-preview-audio-88']"));
+            Assert.Empty(cut.FindAll("a.audio-preview[target='_blank']"));
+        });
+
+        cut.Find("button[data-action='toggle-preview-audio-88']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var player = cut.Find("audio[data-role='inline-preview-audio-88']");
+            Assert.Equal("https://localhost:5001/api/audio/88/stream", player.GetAttribute("src"));
+            Assert.NotNull(player.GetAttribute("autoplay"));
+            Assert.NotNull(player.GetAttribute("controls"));
+        });
     }
 
     [Fact]
@@ -247,6 +326,11 @@ public sealed class AudioManagementTests : TestContext
         }
 
         public Task<IReadOnlyList<UserSummaryDto>> GetUsersAsync(CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task<IReadOnlyList<VisitorDeviceSummaryDto>> GetVisitorDevicesAsync(CancellationToken cancellationToken = default)
         {
             throw new NotSupportedException();
         }
@@ -811,6 +895,11 @@ public sealed class AudioManagementTests : TestContext
         }
 
         public Task<IReadOnlyList<UserSummaryDto>> GetUsersAsync(CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task<IReadOnlyList<VisitorDeviceSummaryDto>> GetVisitorDevicesAsync(CancellationToken cancellationToken = default)
         {
             throw new NotSupportedException();
         }

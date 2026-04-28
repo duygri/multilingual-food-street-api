@@ -15,6 +15,42 @@ namespace NarrationApp.Web.Tests.Pages.Owner;
 public sealed class PoiCreateTests : TestContext
 {
     [Fact]
+    public void Create_page_behavior_is_split_into_focused_partials()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var pageRoot = Path.Combine(projectRoot, "src", "NarrationApp.Web", "Pages", "Owner");
+        var markupPath = Path.Combine(pageRoot, "PoiCreate.razor");
+        var expectedPartials = new[]
+        {
+            ("PoiCreate.razor.cs", "OnInitializedAsync"),
+            ("PoiCreate.Actions.razor.cs", "PersistPoiAsync"),
+            ("PoiCreate.Presentation.razor.cs", "GetNarrationLabel"),
+            ("PoiCreate.EditorModel.razor.cs", "PoiCreateModel")
+        };
+
+        var markup = File.ReadAllText(markupPath);
+        Assert.DoesNotContain("@code", markup, StringComparison.Ordinal);
+
+        foreach (var (fileName, marker) in expectedPartials)
+        {
+            var path = Path.Combine(pageRoot, fileName);
+            Assert.True(File.Exists(path), $"{fileName} should exist.");
+            var source = File.ReadAllText(path);
+            Assert.Contains("partial class PoiCreate", source, StringComparison.Ordinal);
+            Assert.Contains(marker, source, StringComparison.Ordinal);
+        }
+
+        var coreLines = File.ReadAllLines(Path.Combine(pageRoot, "PoiCreate.razor.cs")).Length;
+        Assert.True(coreLines <= 70, $"PoiCreate.razor.cs should stay focused on state/startup, but has {coreLines} lines.");
+        var actionLines = File.ReadAllLines(Path.Combine(pageRoot, "PoiCreate.Actions.razor.cs")).Length;
+        Assert.True(actionLines <= 110, $"PoiCreate.Actions.razor.cs should stay focused on create/submit flows, but has {actionLines} lines.");
+        var presentationLines = File.ReadAllLines(Path.Combine(pageRoot, "PoiCreate.Presentation.razor.cs")).Length;
+        Assert.True(presentationLines <= 50, $"PoiCreate.Presentation.razor.cs should stay focused on view helpers, but has {presentationLines} lines.");
+        var editorLines = File.ReadAllLines(Path.Combine(pageRoot, "PoiCreate.EditorModel.razor.cs")).Length;
+        Assert.True(editorLines <= 80, $"PoiCreate.EditorModel.razor.cs should stay focused on editor mapping, but has {editorLines} lines.");
+    }
+
+    [Fact]
     public void Create_page_renders_workspace_sections_file_picker_and_dual_actions()
     {
         Services.AddSingleton<IOwnerPortalService>(new TestOwnerPortalService());

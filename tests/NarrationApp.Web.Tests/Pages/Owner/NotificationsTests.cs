@@ -10,6 +10,36 @@ namespace NarrationApp.Web.Tests.Pages.Owner;
 public sealed class NotificationsTests : TestContext
 {
     [Fact]
+    public void Notifications_behavior_is_split_into_focused_partials()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var pageRoot = Path.Combine(projectRoot, "src", "NarrationApp.Web", "Pages", "Owner");
+        var markupPath = Path.Combine(pageRoot, "Notifications.razor");
+        var expectedPartials = new[]
+        {
+            ("Notifications.razor.cs", "OnInitializedAsync"),
+            ("Notifications.Actions.razor.cs", "MarkAllReadAsync"),
+            ("Notifications.Presentation.razor.cs", "GetNotificationTypeLabel")
+        };
+
+        var markup = File.ReadAllText(markupPath);
+        Assert.DoesNotContain("@code", markup, StringComparison.Ordinal);
+
+        foreach (var (fileName, marker) in expectedPartials)
+        {
+            var path = Path.Combine(pageRoot, fileName);
+            Assert.True(File.Exists(path), $"{fileName} should exist.");
+            var source = File.ReadAllText(path);
+            Assert.Contains("partial class Notifications", source, StringComparison.Ordinal);
+            Assert.Contains(marker, source, StringComparison.Ordinal);
+        }
+
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "Notifications.razor.cs")).Length <= 80);
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "Notifications.Actions.razor.cs")).Length <= 90);
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "Notifications.Presentation.razor.cs")).Length <= 90);
+    }
+
+    [Fact]
     public void Notifications_page_renders_unread_summary_filters_and_items()
     {
         Services.AddSingleton<INotificationCenterService>(new TestNotificationCenterService(BuildNotifications()));

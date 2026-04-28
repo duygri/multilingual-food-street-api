@@ -13,6 +13,10 @@ public sealed class QrCodeDto
     public string? LocationHint { get; init; }
 
     public DateTime? ExpiresAtUtc { get; init; }
+
+    public string? PublicUrl { get; init; }
+
+    public string? AppDeepLink { get; init; }
 }
 
 public sealed class CreateQrRequest

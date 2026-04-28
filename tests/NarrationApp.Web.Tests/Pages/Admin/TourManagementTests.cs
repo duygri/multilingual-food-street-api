@@ -11,6 +11,38 @@ namespace NarrationApp.Web.Tests.Pages.Admin;
 public sealed class TourManagementTests : TestContext
 {
     [Fact]
+    public void Tour_management_behavior_is_split_into_focused_partials()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var pageRoot = Path.Combine(projectRoot, "src", "NarrationApp.Web", "Pages", "Admin");
+        var markupPath = Path.Combine(pageRoot, "TourManagement.razor");
+        var expectedPartials = new[]
+        {
+            ("TourManagement.razor.cs", "OnInitializedAsync"),
+            ("TourManagement.Editor.razor.cs", "BeginCreateTour"),
+            ("TourManagement.Actions.razor.cs", "SaveTourAsync"),
+            ("TourManagement.Presentation.razor.cs", "GetTourStatusLabel")
+        };
+
+        var markup = File.ReadAllText(markupPath);
+        Assert.DoesNotContain("@code", markup, StringComparison.Ordinal);
+
+        foreach (var (fileName, marker) in expectedPartials)
+        {
+            var path = Path.Combine(pageRoot, fileName);
+            Assert.True(File.Exists(path), $"{fileName} should exist.");
+            var source = File.ReadAllText(path);
+            Assert.Contains("partial class TourManagement", source, StringComparison.Ordinal);
+            Assert.Contains(marker, source, StringComparison.Ordinal);
+        }
+
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "TourManagement.razor.cs")).Length <= 90);
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "TourManagement.Editor.razor.cs")).Length <= 110);
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "TourManagement.Actions.razor.cs")).Length <= 120);
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "TourManagement.Presentation.razor.cs")).Length <= 80);
+    }
+
+    [Fact]
     public void Create_publish_and_delete_tour_updates_sample_strict_tour_table()
     {
         var service = new TestTourPortalService();

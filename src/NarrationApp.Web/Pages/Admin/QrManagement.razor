@@ -1,9 +1,12 @@
 @page "/admin/qr-management"
 @attribute [Authorize(Roles = "admin")]
 @using System.Linq
+@using NarrationApp.Web.Configuration
+@using NarrationApp.Web.Features.Qr
 
 @inject ITourPortalService TourPortalService
 @inject IQrPortalService QrPortalService
+@inject QrPublicUrlOptions QrPublicUrlOptions
 
 <PageTitle>QR Codes</PageTitle>
 
@@ -40,7 +43,6 @@ else
         <section class="metric-grid qr-surface__metrics">
             <MetricCard Label="QR hoạt động" Value="@_qrItems.Count.ToString("N0")" Hint="Tổng mã đang dùng" />
             <MetricCard Label="Link đến POI" Value="@CountByTarget("poi").ToString("N0")" Hint="Mở chi tiết điểm đến" />
-            <MetricCard Label="Link đến Tour" Value="@CountByTarget("tour").ToString("N0")" Hint="Mở hành trình có sẵn" />
             <MetricCard Label="Mở App" Value="@CountByTarget("open_app").ToString("N0")" Hint="Deep link vào ứng dụng" />
         </section>
 
@@ -58,7 +60,6 @@ else
                             @onchange="args => ChangeQrFilterAsync(args.Value?.ToString())">
                         <option value="">Tất cả target</option>
                         <option value="poi">POI</option>
-                        <option value="tour">Tour</option>
                         <option value="open_app">Open App</option>
                     </select>
                     <button class="app-button app-button--primary" data-action="new-qr" type="button" @onclick="ShowComposer">
@@ -147,7 +148,6 @@ else
                                     value="@_qrEditor.TargetType"
                                     @onchange="args => UpdateQrTargetType(args.Value?.ToString())">
                                 <option value="poi">POI</option>
-                                <option value="tour">Tour</option>
                                 <option value="open_app">Open App</option>
                             </select>
                         </div>
@@ -164,22 +164,6 @@ else
                                     @foreach (var poi in _poiOptions)
                                     {
                                         <option value="@poi.Id">@poi.Name</option>
-                                    }
-                                </select>
-                            </div>
-                        }
-                        else if (string.Equals(_qrEditor.TargetType, "tour", StringComparison.OrdinalIgnoreCase))
-                        {
-                            <div class="editor-field">
-                                <label for="qr-tour-id">Tour đích</label>
-                                <select id="qr-tour-id"
-                                        class="editor-select"
-                                        data-field="qr-tour-id"
-                                        value="@_qrEditor.TourId.ToString()"
-                                        @onchange="args => UpdateQrTour(args.Value?.ToString())">
-                                    @foreach (var tour in _tours)
-                                    {
-                                        <option value="@tour.Id">@tour.Title</option>
                                     }
                                 </select>
                             </div>
@@ -219,6 +203,8 @@ else
 
         @if (_previewQr is not null)
         {
+            var previewPublicUrl = BuildPreviewPublicUrl(_previewQr);
+            var previewQrImageSource = BuildPreviewQrImageSource(_previewQr);
             <div class="qr-preview-backdrop" @onclick="ClosePreview">
                 <section class="panel-shell qr-preview-shell" data-panel="qr-preview" @onclick:stopPropagation="true">
                     <div class="sample-surface__header">
@@ -233,224 +219,33 @@ else
 
                     <div class="qr-preview-shell__content">
                         <div class="qr-preview-shell__code" aria-label="qr-code">
-                            <span>@_previewQr.Code</span>
+                            <img data-role="qr-image"
+                                 src="@previewQrImageSource"
+                                 alt="QR code @_previewQr.Code" />
                         </div>
 
                         <div class="qr-preview-shell__meta">
                             <strong>@GetQrTargetLabel(_previewQr)</strong>
+                            <p class="qr-preview-shell__label">@_previewQr.Code</p>
                             <p>@GetQrTypeLabel(_previewQr.TargetType)</p>
                             <p>@(_previewQr.LocationHint ?? "Chưa có vị trí gợi ý")</p>
+                            <a class="qr-preview-shell__link"
+                               href="@previewPublicUrl"
+                               target="_blank"
+                               rel="noopener noreferrer">
+                                @previewPublicUrl
+                            </a>
+                            @if (QrPublicUrlOptions.BaseAddress.IsLoopback)
+                            {
+                                <p class="qr-preview-shell__warning">
+                                    QR này đang trỏ về <code>localhost</code> của máy hiện tại nên điện thoại khác sẽ không mở được.
+                                    Hãy cấu hình <code>QrPublicBaseUrl</code> thành domain public hoặc IP LAN thật.
+                                </p>
+                            }
                         </div>
                     </div>
                 </section>
             </div>
         }
     </div>
-}
-
-@code {
-    private bool _isLoading = true;
-    private bool _showComposer;
-    private string? _errorMessage;
-    private string? _statusMessage;
-    private IReadOnlyList<TourDto> _tours = Array.Empty<TourDto>();
-    private IReadOnlyList<PoiDto> _poiOptions = Array.Empty<PoiDto>();
-    private IReadOnlyList<QrCodeDto> _qrItems = Array.Empty<QrCodeDto>();
-    private QrEditorModel _qrEditor = QrEditorModel.CreateDefault();
-    private QrCodeDto? _previewQr;
-    private string _qrFilter = string.Empty;
-
-    protected override async Task OnInitializedAsync()
-    {
-        try
-        {
-            var poiTask = TourPortalService.GetPoiOptionsAsync();
-            var tourTask = TourPortalService.GetToursAsync();
-            await Task.WhenAll(poiTask, tourTask);
-
-            _poiOptions = poiTask.Result;
-            _tours = tourTask.Result;
-            await LoadQrItemsAsync();
-        }
-        catch (ApiException exception)
-        {
-            _errorMessage = exception.Message;
-        }
-        finally
-        {
-            _isLoading = false;
-        }
-    }
-
-    private void ShowComposer()
-    {
-        _showComposer = true;
-        EnsureQrDefaults();
-    }
-
-    private void CloseComposer()
-    {
-        _showComposer = false;
-    }
-
-    private void ViewQr(QrCodeDto qr)
-    {
-        _previewQr = qr;
-    }
-
-    private void ClosePreview()
-    {
-        _previewQr = null;
-    }
-
-    private int CountByTarget(string targetType) =>
-        _qrItems.Count(item => string.Equals(item.TargetType, targetType, StringComparison.OrdinalIgnoreCase));
-
-    private async Task LoadQrItemsAsync()
-    {
-        _qrItems = await QrPortalService.GetAsync(string.IsNullOrWhiteSpace(_qrFilter) ? null : _qrFilter);
-        EnsureQrDefaults();
-    }
-
-    private void EnsureQrDefaults()
-    {
-        if (_poiOptions.Count > 0 && _qrEditor.PoiId <= 0)
-        {
-            _qrEditor.PoiId = _poiOptions[0].Id;
-        }
-
-        if (_tours.Count > 0 && _qrEditor.TourId <= 0)
-        {
-            _qrEditor.TourId = _tours[0].Id;
-        }
-    }
-
-    private void UpdateQrTargetType(string? value)
-    {
-        _qrEditor.TargetType = string.IsNullOrWhiteSpace(value) ? "poi" : value;
-        EnsureQrDefaults();
-    }
-
-    private void UpdateQrPoi(string? value)
-    {
-        if (int.TryParse(value, out var poiId))
-        {
-            _qrEditor.PoiId = poiId;
-        }
-    }
-
-    private void UpdateQrTour(string? value)
-    {
-        if (int.TryParse(value, out var tourId))
-        {
-            _qrEditor.TourId = tourId;
-        }
-    }
-
-    private async Task ChangeQrFilterAsync(string? value)
-    {
-        _qrFilter = value ?? string.Empty;
-        await LoadQrItemsAsync();
-    }
-
-    private async Task CreateQrAsync()
-    {
-        try
-        {
-            var created = await QrPortalService.CreateAsync(_qrEditor.ToRequest());
-            _statusMessage = $"Đã tạo QR mới: {created.Code}.";
-            await LoadQrItemsAsync();
-            _showComposer = false;
-            _previewQr = created;
-        }
-        catch (ApiException exception)
-        {
-            _statusMessage = exception.Message;
-        }
-    }
-
-    private async Task DeleteQrAsync(int qrId)
-    {
-        try
-        {
-            await QrPortalService.DeleteAsync(qrId);
-            _statusMessage = "Đã xóa QR khỏi hệ thống.";
-            await LoadQrItemsAsync();
-            if (_previewQr?.Id == qrId)
-            {
-                _previewQr = null;
-            }
-        }
-        catch (ApiException exception)
-        {
-            _statusMessage = exception.Message;
-        }
-    }
-
-    private string GetQrTargetLabel(QrCodeDto qr)
-    {
-        return qr.TargetType switch
-        {
-            "poi" => _poiOptions.FirstOrDefault(item => item.Id == qr.TargetId)?.Name ?? $"POI #{qr.TargetId}",
-            "tour" => _tours.FirstOrDefault(item => item.Id == qr.TargetId)?.Title ?? $"Tour #{qr.TargetId}",
-            "open_app" => "Mở ứng dụng chính",
-            _ => $"Target #{qr.TargetId}"
-        };
-    }
-
-    private static int GetScanCount(QrCodeDto qr) => 42 + (qr.Id * 17) + (qr.TargetType switch
-    {
-        "poi" => 30,
-        "tour" => 12,
-        _ => 80
-    });
-
-    private static string GetQrTypeLabel(string targetType) => targetType switch
-    {
-        "open_app" => "Open App",
-        "poi" => "POI",
-        "tour" => "Tour",
-        _ => targetType
-    };
-
-    private static StatusTone GetQrTone(string targetType) => targetType switch
-    {
-        "open_app" => StatusTone.Neutral,
-        "poi" => StatusTone.Good,
-        "tour" => StatusTone.Info,
-        _ => StatusTone.Neutral
-    };
-
-    private sealed class QrEditorModel
-    {
-        public string TargetType { get; set; } = "poi";
-
-        public int PoiId { get; set; }
-
-        public int TourId { get; set; }
-
-        public string? LocationHint { get; set; }
-
-        public string ExpiresAtLocal { get; set; } = string.Empty;
-
-        public static QrEditorModel CreateDefault() => new();
-
-        public CreateQrRequest ToRequest()
-        {
-            return new CreateQrRequest
-            {
-                TargetType = TargetType,
-                TargetId = TargetType switch
-                {
-                    "tour" => TourId,
-                    "open_app" => 0,
-                    _ => PoiId
-                },
-                LocationHint = string.IsNullOrWhiteSpace(LocationHint) ? null : LocationHint.Trim(),
-                ExpiresAtUtc = DateTime.TryParse(ExpiresAtLocal, out var localDateTime)
-                    ? DateTime.SpecifyKind(localDateTime, DateTimeKind.Local).ToUniversalTime()
-                    : null
-            };
-        }
-    }
 }

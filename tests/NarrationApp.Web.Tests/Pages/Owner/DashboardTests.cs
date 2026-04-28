@@ -12,6 +12,34 @@ namespace NarrationApp.Web.Tests.Pages.Owner;
 public sealed class DashboardTests : TestContext
 {
     [Fact]
+    public void Dashboard_behavior_is_split_into_focused_partials()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var pageRoot = Path.Combine(projectRoot, "src", "NarrationApp.Web", "Pages", "Owner");
+        var markupPath = Path.Combine(pageRoot, "Dashboard.razor");
+        var expectedPartials = new[]
+        {
+            ("Dashboard.razor.cs", "OnInitializedAsync"),
+            ("Dashboard.Presentation.razor.cs", "GetRelativeTimeLabel")
+        };
+
+        var markup = File.ReadAllText(markupPath);
+        Assert.DoesNotContain("@code", markup, StringComparison.Ordinal);
+
+        foreach (var (fileName, marker) in expectedPartials)
+        {
+            var path = Path.Combine(pageRoot, fileName);
+            Assert.True(File.Exists(path), $"{fileName} should exist.");
+            var source = File.ReadAllText(path);
+            Assert.Contains("partial class Dashboard", source, StringComparison.Ordinal);
+            Assert.Contains(marker, source, StringComparison.Ordinal);
+        }
+
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "Dashboard.razor.cs")).Length <= 60);
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "Dashboard.Presentation.razor.cs")).Length <= 50);
+    }
+
+    [Fact]
     public void Dashboard_renders_workspace_stat_cards_published_table_and_recent_activity_panel()
     {
         ConfigureDashboard();

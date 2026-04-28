@@ -12,6 +12,45 @@ namespace NarrationApp.Web.Tests.Pages.Admin;
 public sealed class PoiManagementTests : TestContext
 {
     [Fact]
+    public void Poi_management_behavior_is_split_into_focused_partials()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var pageRoot = Path.Combine(projectRoot, "src", "NarrationApp.Web", "Pages", "Admin");
+        var markupPath = Path.Combine(pageRoot, "PoiManagement.razor");
+        var expectedPartials = new[]
+        {
+            ("PoiManagement.razor.cs", "OnInitializedAsync"),
+            ("PoiManagement.Filters.razor.cs", "MatchesSearch"),
+            ("PoiManagement.Navigation.razor.cs", "GoToPage"),
+            ("PoiManagement.Actions.razor.cs", "ApprovePoiAsync"),
+            ("PoiManagement.Presentation.razor.cs", "GetStatusLabel")
+        };
+
+        var markup = File.ReadAllText(markupPath);
+        Assert.DoesNotContain("@code", markup, StringComparison.Ordinal);
+
+        foreach (var (fileName, marker) in expectedPartials)
+        {
+            var path = Path.Combine(pageRoot, fileName);
+            Assert.True(File.Exists(path), $"{fileName} should exist.");
+            var source = File.ReadAllText(path);
+            Assert.Contains("partial class PoiManagement", source, StringComparison.Ordinal);
+            Assert.Contains(marker, source, StringComparison.Ordinal);
+        }
+
+        var coreLines = File.ReadAllLines(Path.Combine(pageRoot, "PoiManagement.razor.cs")).Length;
+        Assert.True(coreLines <= 90, $"PoiManagement.razor.cs should stay focused on state/startup, but has {coreLines} lines.");
+        var filterLines = File.ReadAllLines(Path.Combine(pageRoot, "PoiManagement.Filters.razor.cs")).Length;
+        Assert.True(filterLines <= 90, $"PoiManagement.Filters.razor.cs should stay focused on filtering, but has {filterLines} lines.");
+        var navigationLines = File.ReadAllLines(Path.Combine(pageRoot, "PoiManagement.Navigation.razor.cs")).Length;
+        Assert.True(navigationLines <= 90, $"PoiManagement.Navigation.razor.cs should stay focused on paging/detail navigation, but has {navigationLines} lines.");
+        var actionLines = File.ReadAllLines(Path.Combine(pageRoot, "PoiManagement.Actions.razor.cs")).Length;
+        Assert.True(actionLines <= 120, $"PoiManagement.Actions.razor.cs should stay focused on moderation/delete flows, but has {actionLines} lines.");
+        var presentationLines = File.ReadAllLines(Path.Combine(pageRoot, "PoiManagement.Presentation.razor.cs")).Length;
+        Assert.True(presentationLines <= 150, $"PoiManagement.Presentation.razor.cs should stay focused on labels and computed view models, but has {presentationLines} lines.");
+    }
+
+    [Fact]
     public void Filters_and_search_update_admin_poi_table_surface()
     {
         var adminService = new TestAdminPortalService();
@@ -106,6 +145,51 @@ public sealed class PoiManagementTests : TestContext
         Assert.Equal(new[] { 12 }, poiOperationsService.DeletedPoiIds);
     }
 
+    [Fact]
+    public void Published_poi_with_stale_pending_id_does_not_render_moderation_actions_or_pending_counts()
+    {
+        var adminService = new TestAdminPortalService();
+        adminService.AddPoi(new AdminPoiDto
+        {
+            Id = 14,
+            Name = "Cà phê góc chợ",
+            Slug = "ca-phe-goc-cho",
+            OwnerName = "Owner Bốn",
+            OwnerEmail = "owner-4@narration.app",
+            CategoryId = 4,
+            CategoryName = "Đồ uống",
+            Description = "Quầy cà phê đã xuất bản nhưng còn stale moderation id.",
+            TtsScript = "POI này đã xuất bản từ trước.",
+            Priority = 9,
+            Lat = 10.757,
+            Lng = 106.704,
+            Status = PoiStatus.Published,
+            AudioAssetCount = 1,
+            TranslationCount = 1,
+            GeofenceCount = 1,
+            PendingModerationId = 404,
+            CreatedAtUtc = DateTime.UtcNow.AddHours(-10)
+        });
+        var poiOperationsService = new TestAdminPoiOperationsService(adminService);
+
+        Services.AddSingleton<IAdminPortalService>(adminService);
+        Services.AddSingleton<IAdminPoiOperationsService>(poiOperationsService);
+
+        var cut = RenderComponent<PoiManagement>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("1 POI đang chờ duyệt", cut.Markup);
+            Assert.Contains("Tất cả (4)", cut.Markup);
+            Assert.Contains("Đã xuất bản (2)", cut.Markup);
+            Assert.Contains("Chờ duyệt (1)", cut.Markup);
+            Assert.Contains("Cà phê góc chợ", cut.Markup);
+            Assert.DoesNotContain("approve-poi-14", cut.Markup);
+            Assert.DoesNotContain("reject-poi-14", cut.Markup);
+            Assert.Contains("delete-poi-14", cut.Markup);
+        });
+    }
+
     private sealed class TestAdminPortalService : IAdminPortalService
     {
         private readonly List<AdminPoiDto> _pois =
@@ -190,6 +274,11 @@ public sealed class PoiManagementTests : TestContext
             throw new NotSupportedException();
         }
 
+        public Task<IReadOnlyList<VisitorDeviceSummaryDto>> GetVisitorDevicesAsync(CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+
         public Task<IReadOnlyList<ModerationRequestDto>> GetPendingModerationAsync(CancellationToken cancellationToken = default)
         {
             throw new NotSupportedException();
@@ -263,6 +352,11 @@ public sealed class PoiManagementTests : TestContext
         public void DeletePoi(int poiId)
         {
             _pois.RemoveAll(item => item.Id == poiId);
+        }
+
+        public void AddPoi(AdminPoiDto poi)
+        {
+            _pois.Add(poi);
         }
     }
 

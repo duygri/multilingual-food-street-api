@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using NarrationApp.Server.Services;
 using NarrationApp.Server.Tests.Support;
 using NarrationApp.Shared.DTOs.Languages;
@@ -12,6 +13,7 @@ public sealed class ManagedLanguageServiceTests
     {
         await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
         var sut = new ManagedLanguageService(dbContext);
+        var totalPois = await dbContext.Pois.CountAsync();
 
         var result = await sut.GetAsync();
 
@@ -20,8 +22,8 @@ public sealed class ManagedLanguageServiceTests
         var vietnamese = Assert.Single(result.Where(item => item.Code == "vi"));
         Assert.Equal(ManagedLanguageRole.Source, vietnamese.Role);
         Assert.True(vietnamese.IsActive);
-        Assert.Equal(5, vietnamese.TranslationCoverageCount);
-        Assert.Equal(5, vietnamese.TranslationCoverageTotal);
+        Assert.Equal(totalPois, vietnamese.TranslationCoverageCount);
+        Assert.Equal(totalPois, vietnamese.TranslationCoverageTotal);
     }
 
     [Fact]

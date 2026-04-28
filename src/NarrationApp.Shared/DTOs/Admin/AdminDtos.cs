@@ -45,7 +45,11 @@ public sealed class UserSummaryDto
 {
     public Guid Id { get; init; }
 
+    public string DisplayName { get; init; } = string.Empty;
+
     public string Email { get; init; } = string.Empty;
+
+    public string DeviceId { get; init; } = string.Empty;
 
     public string PreferredLanguage { get; init; } = string.Empty;
 
@@ -58,6 +62,35 @@ public sealed class UserSummaryDto
     public int DeviceCount { get; init; }
 
     public int ActiveDeviceCount { get; init; }
+
+    public DateTime? LastSeenAtUtc { get; init; }
+}
+
+public sealed class VisitorDeviceSummaryDto
+{
+    public Guid Id { get; init; }
+
+    public string DisplayName { get; init; } = string.Empty;
+
+    public string AccountLabel { get; init; } = string.Empty;
+
+    public string DeviceId { get; init; } = string.Empty;
+
+    public string PreferredLanguage { get; init; } = string.Empty;
+
+    public string RoleName { get; init; } = string.Empty;
+
+    public bool IsOnline { get; init; }
+
+    public bool AutoPlayEnabled { get; init; }
+
+    public bool BackgroundTrackingEnabled { get; init; }
+
+    public int TrackingCount { get; init; }
+
+    public int VisitCount { get; init; }
+
+    public int TriggerCount { get; init; }
 
     public DateTime? LastSeenAtUtc { get; init; }
 }

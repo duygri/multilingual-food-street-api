@@ -19,6 +19,6 @@ public sealed class MauiProgramConfigurationTests
         var source = File.ReadAllText(Path.GetFullPath(filePath));
 
         Assert.Contains("#elif DEBUG || SMOKE", source, StringComparison.Ordinal);
-        Assert.Contains("return TouristApiDeploymentEnvironment.Development;", source, StringComparison.Ordinal);
+        Assert.Contains("return VisitorApiDeploymentEnvironment.Development;", source, StringComparison.Ordinal);
     }
 }

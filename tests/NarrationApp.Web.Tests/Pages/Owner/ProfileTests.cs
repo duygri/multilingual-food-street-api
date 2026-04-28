@@ -13,6 +13,36 @@ namespace NarrationApp.Web.Tests.Pages.Owner;
 public sealed class ProfileTests : TestContext
 {
     [Fact]
+    public void Profile_behavior_is_split_into_focused_partials()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var pageRoot = Path.Combine(projectRoot, "src", "NarrationApp.Web", "Pages", "Owner");
+        var markupPath = Path.Combine(pageRoot, "Profile.razor");
+        var expectedPartials = new[]
+        {
+            ("Profile.razor.cs", "OnInitializedAsync"),
+            ("Profile.Actions.razor.cs", "SaveProfileAsync"),
+            ("Profile.EditorModels.razor.cs", "OwnerProfileEditModel")
+        };
+
+        var markup = File.ReadAllText(markupPath);
+        Assert.DoesNotContain("@code", markup, StringComparison.Ordinal);
+
+        foreach (var (fileName, marker) in expectedPartials)
+        {
+            var path = Path.Combine(pageRoot, fileName);
+            Assert.True(File.Exists(path), $"{fileName} should exist.");
+            var source = File.ReadAllText(path);
+            Assert.Contains("partial class Profile", source, StringComparison.Ordinal);
+            Assert.Contains(marker, source, StringComparison.Ordinal);
+        }
+
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "Profile.razor.cs")).Length <= 40);
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "Profile.Actions.razor.cs")).Length <= 110);
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "Profile.EditorModels.razor.cs")).Length <= 80);
+    }
+
+    [Fact]
     public void Profile_page_renders_owner_values_and_activity_summary()
     {
         ConfigureProfile();

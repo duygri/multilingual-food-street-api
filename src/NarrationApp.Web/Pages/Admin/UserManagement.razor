@@ -1,114 +1,109 @@
 @page "/admin/user-management"
+@page "/admin/visitor-devices"
 @attribute [Authorize(Roles = "admin")]
 
 @inject IAdminPortalService AdminPortalService
 
-<PageTitle>User Manager</PageTitle>
+<PageTitle>Thiết bị visitor</PageTitle>
 
 @if (_isLoading)
 {
     <section class="panel-shell">
         <p class="panel-shell__eyebrow">Admin</p>
-        <h2>Đang tải User Manager...</h2>
-    </section>
-}
-else if (!string.IsNullOrWhiteSpace(_errorMessage))
-{
-    <section class="panel-shell">
-        <p class="panel-shell__eyebrow">Admin</p>
-        <h2>Không thể tải User Manager</h2>
-        <p class="panel-shell__copy">@_errorMessage</p>
+        <h2>Đang tải thiết bị visitor...</h2>
     </section>
 }
 else
 {
-    <div class="dashboard-stack user-surface">
-        <section class="sample-page-title">
-            <h1>User Manager</h1>
-            <p>Admin / Vận hành &gt; Users</p>
-        </section>
-
-        <section class="metric-grid user-surface__metrics">
-            <MetricCard Label="Tổng users" Value="@ManagedUsers.Count.ToString("N0")" Hint="Tài khoản owner + tourist" />
-            <MetricCard Label="Online" Value="@OnlineTouristsCount.ToString("N0")" Hint="Tourist đang online" />
-            <MetricCard Label="POI Owners" Value="@OwnerCount.ToString("N0")" Hint="Chủ POI đang có quyền" />
-            <MetricCard Label="Tourists" Value="@TouristCount.ToString("N0")" Hint="Khách du lịch đang dùng app" />
-        </section>
-
-        <section class="panel-shell user-table-shell">
-            <div class="sample-surface__header">
-                <div>
-                    <p class="panel-shell__eyebrow">Users</p>
-                    <h2>Quản lý người dùng</h2>
-                </div>
-
-                <div class="user-filter-group" role="tablist" aria-label="Lọc người dùng">
-                    <button class="user-filter-button @GetFilterClass(UserFilter.All)"
-                            data-action="filter-user-all"
-                            type="button"
-                            @onclick="() => SetFilter(UserFilter.All)">
-                        Tất cả
-                    </button>
-                    <button class="user-filter-button @GetFilterClass(UserFilter.Owner)"
-                            data-action="filter-user-owner"
-                            type="button"
-                            @onclick="() => SetFilter(UserFilter.Owner)">
-                        POI owner
-                    </button>
-                    <button class="user-filter-button @GetFilterClass(UserFilter.Tourist)"
-                            data-action="filter-user-tourist"
-                            type="button"
-                            @onclick="() => SetFilter(UserFilter.Tourist)">
-                        Tourist
-                    </button>
-                </div>
+    <div class="visitor-page">
+        <section class="visitor-page__hero">
+            <div>
+                <h1>Thiết bị visitor</h1>
+                <p>Theo dõi số visitor hiện có và những thiết bị đang online gần realtime.</p>
+                <p class="visitor-page__note">Danh sách bên dưới hiển thị theo tên thiết bị và tự làm mới mỗi 5 giây.</p>
             </div>
 
-            @if (FilteredUsers.Count == 0)
+            <button class="visitor-page__refresh"
+                    data-action="refresh-visitor-data"
+                    type="button"
+                    disabled="@_isRefreshing"
+                    @onclick="RefreshAsync">
+                @(_isRefreshing ? "Đang làm mới..." : "Làm mới dữ liệu")
+            </button>
+        </section>
+
+        @if (!string.IsNullOrWhiteSpace(_errorMessage))
+        {
+            <section class="visitor-page__error">
+                <strong>Không thể tải thiết bị visitor.</strong>
+                <span>@_errorMessage</span>
+            </section>
+        }
+
+        <section class="visitor-page__metric-grid">
+            <article class="visitor-page__metric-card">
+                <span class="visitor-page__metric-label">Tổng visitor</span>
+                <strong class="visitor-page__metric-value">@TotalVisitorCount.ToString("N0")</strong>
+                <span class="visitor-page__metric-copy">Tổng số thiết bị visitor đã phát sinh visit event.</span>
+            </article>
+
+            <article class="visitor-page__metric-card">
+                <span class="visitor-page__metric-label">Đang online</span>
+                <strong class="visitor-page__metric-value visitor-page__metric-value--positive">@ActiveVisitorCount.ToString("N0")</strong>
+                <span class="visitor-page__metric-copy">Có tương tác trong vòng 15 phút gần nhất.</span>
+            </article>
+        </section>
+
+        <section class="visitor-page__table-shell">
+            @if (Visitors.Count == 0)
             {
-                <EmptyStateBlock Eyebrow="Users"
-                                 Title="Không có người dùng phù hợp"
-                                 Message="Bộ lọc hiện tại chưa có owner hoặc tourist phù hợp để hiển thị." />
+                <div class="visitor-page__empty">
+                    <strong>Chưa có visitor</strong>
+                    <span>Khi app mobile ghi nhận visit event, danh sách thiết bị visitor sẽ xuất hiện tại đây.</span>
+                </div>
             }
             else
             {
-                <div class="table-wrap">
-                    <table class="app-table user-table">
+                <div class="visitor-page__table-wrap">
+                    <table class="visitor-page__table">
                         <thead>
                             <tr>
-                                <th>User</th>
-                                <th>Email</th>
-                                <th>Ngôn ngữ</th>
+                                <th>Thiết bị</th>
                                 <th>Trạng thái</th>
-                                <th>Last Seen</th>
-                                <th>Hoạt động</th>
+                                <th>Ngôn ngữ</th>
+                                <th>Lần cuối</th>
+                                <th>Tracking</th>
+                                <th>Visit</th>
+                                <th>Trigger</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var row in FilteredUsers.Select((user, index) => new { user, index }))
+                            @foreach (var visitor in Visitors)
                             {
-                                <tr>
+                                <tr data-visitor-id="@visitor.Id">
                                     <td>
-                                        <div class="user-identity">
-                                            <div class="user-avatar">@GetAvatarText(row.user.Email)</div>
-                                            <div class="user-identity__copy">
-                                                <strong>@GetDisplayName(row.user.Email)</strong>
-                                                <span>@($"ID: USR-{row.index + 1:000} · {row.user.DeviceCount} thiết bị")</span>
-                                            </div>
+                                        <div class="visitor-page__identity">
+                                            <strong>@visitor.DisplayName</strong>
+                                            <span>@GetIdentityLine(visitor)</span>
                                         </div>
                                     </td>
-                                    <td>@row.user.Email</td>
-                                    <td><StatusBadge Label="@row.user.PreferredLanguage" Tone="StatusTone.Info" /></td>
                                     <td>
-                                        <span class="presence-dot @(row.user.IsOnline ? "presence-dot--online" : "presence-dot--offline")"></span>
-                                        @GetPresenceLabel(row.user)
+                                        <span class="visitor-page__status @(visitor.IsOnline ? "is-online" : "is-offline")">
+                                            @(visitor.IsOnline ? "Online" : "Offline")
+                                        </span>
                                     </td>
-                                    <td>@GetPresenceMeta(row.user)</td>
                                     <td>
-                                        <div class="user-activity">
-                                            <button class="app-button app-button--ghost" type="button">Lịch sử</button>
+                                        <span class="visitor-page__language">@GetLanguageLabel(visitor.PreferredLanguage)</span>
+                                    </td>
+                                    <td>
+                                        <div class="visitor-page__last-seen">
+                                            <span>@GetLastSeenAbsolute(visitor.LastSeenAtUtc)</span>
+                                            <small>@GetLastSeenRelative(visitor.LastSeenAtUtc)</small>
                                         </div>
                                     </td>
+                                    <td>@visitor.TrackingCount.ToString("N0")</td>
+                                    <td>@visitor.VisitCount.ToString("N0")</td>
+                                    <td>@visitor.TriggerCount.ToString("N0")</td>
                                 </tr>
                             }
                         </tbody>
@@ -117,125 +112,4 @@ else
             }
         </section>
     </div>
-}
-
-@code {
-    private bool _isLoading = true;
-    private string? _errorMessage;
-    private IReadOnlyList<UserSummaryDto> _users = Array.Empty<UserSummaryDto>();
-    private UserFilter _activeFilter = UserFilter.All;
-
-    private IReadOnlyList<UserSummaryDto> ManagedUsers => _users
-        .Where(item => IsOwner(item) || IsTourist(item))
-        .ToArray();
-
-    private IReadOnlyList<UserSummaryDto> FilteredUsers => ManagedUsers
-        .Where(MatchesFilter)
-        .ToArray();
-
-    private int OwnerCount => ManagedUsers.Count(IsOwner);
-
-    private int TouristCount => ManagedUsers.Count(IsTourist);
-
-    private int OnlineTouristsCount => ManagedUsers.Count(item => IsTourist(item) && item.IsOnline);
-
-    protected override async Task OnInitializedAsync()
-    {
-        try
-        {
-            _users = await AdminPortalService.GetUsersAsync();
-        }
-        catch (ApiException exception)
-        {
-            _errorMessage = exception.Message;
-        }
-        finally
-        {
-            _isLoading = false;
-        }
-    }
-
-    private void SetFilter(UserFilter filter)
-    {
-        _activeFilter = filter;
-    }
-
-    private string GetFilterClass(UserFilter filter)
-    {
-        return filter == _activeFilter ? "is-active" : string.Empty;
-    }
-
-    private bool MatchesFilter(UserSummaryDto user)
-    {
-        return _activeFilter switch
-        {
-            UserFilter.Owner => IsOwner(user),
-            UserFilter.Tourist => IsTourist(user),
-            _ => true
-        };
-    }
-
-    private static bool IsOwner(UserSummaryDto user) =>
-        string.Equals(user.RoleName, "poi_owner", StringComparison.OrdinalIgnoreCase);
-
-    private static bool IsTourist(UserSummaryDto user) =>
-        string.Equals(user.RoleName, "tourist", StringComparison.OrdinalIgnoreCase);
-
-    private static string GetDisplayName(string email)
-    {
-        var localPart = email.Split('@', 2)[0];
-        var chunks = localPart
-            .Split(['.', '_', '-'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Select(value => char.ToUpperInvariant(value[0]) + value[1..])
-            .ToArray();
-
-        return chunks.Length == 0 ? email : string.Join(" ", chunks);
-    }
-
-    private static string GetAvatarText(string email)
-    {
-        var localPart = email.Split('@', 2)[0];
-        var characters = localPart
-            .Where(char.IsLetterOrDigit)
-            .Take(2)
-            .ToArray();
-
-        return characters.Length == 0 ? "U" : new string(characters).ToUpperInvariant();
-    }
-
-    private static string GetPresenceLabel(UserSummaryDto user) => user.IsOnline ? "Online" : "Offline";
-
-    private static string GetPresenceMeta(UserSummaryDto user)
-    {
-        if (user.IsOnline)
-        {
-            return "Đang hoạt động";
-        }
-
-        if (user.LastSeenAtUtc is null)
-        {
-            return "Chưa có tín hiệu";
-        }
-
-        var elapsed = DateTime.UtcNow - user.LastSeenAtUtc.Value;
-
-        if (elapsed.TotalMinutes < 60)
-        {
-            return $"{Math.Max(1, (int)Math.Floor(elapsed.TotalMinutes))} phút trước";
-        }
-
-        if (elapsed.TotalHours < 24)
-        {
-            return $"{Math.Max(1, (int)Math.Floor(elapsed.TotalHours))} giờ trước";
-        }
-
-        return $"{Math.Max(1, (int)Math.Floor(elapsed.TotalDays))} ngày trước";
-    }
-
-    private enum UserFilter
-    {
-        All,
-        Owner,
-        Tourist
-    }
 }

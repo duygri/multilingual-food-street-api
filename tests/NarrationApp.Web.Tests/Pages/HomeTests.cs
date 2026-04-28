@@ -10,6 +10,19 @@ namespace NarrationApp.Web.Tests.Pages;
 public sealed class HomeTests : TestContext
 {
     [Fact]
+    public void Home_behavior_is_split_out_of_inline_code()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var pagePath = Path.Combine(projectRoot, "src", "NarrationApp.Web", "Pages", "Home.razor");
+        var codeBehindPath = Path.Combine(projectRoot, "src", "NarrationApp.Web", "Pages", "Home.razor.cs");
+
+        var markup = File.ReadAllText(pagePath);
+        Assert.DoesNotContain("@code", markup, StringComparison.Ordinal);
+        Assert.True(File.Exists(codeBehindPath));
+        Assert.Contains("partial class Home", File.ReadAllText(codeBehindPath), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Unauthenticated_users_are_redirected_to_login()
     {
         Services.AddSingleton<AuthenticationStateProvider>(new TestAuthenticationStateProvider(new ClaimsPrincipal(new ClaimsIdentity())));

@@ -9,6 +9,38 @@ namespace NarrationApp.Web.Tests.Pages.Admin;
 public sealed class CategoryManagementTests : TestContext
 {
     [Fact]
+    public void Category_management_behavior_is_split_into_focused_partials()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var pageRoot = Path.Combine(projectRoot, "src", "NarrationApp.Web", "Pages", "Admin");
+        var markupPath = Path.Combine(pageRoot, "CategoryManagement.razor");
+        var expectedPartials = new[]
+        {
+            ("CategoryManagement.razor.cs", "OnInitializedAsync"),
+            ("CategoryManagement.Editor.razor.cs", "BeginCreate"),
+            ("CategoryManagement.Actions.razor.cs", "SaveAsync"),
+            ("CategoryManagement.Presentation.razor.cs", "GetIcon")
+        };
+
+        var markup = File.ReadAllText(markupPath);
+        Assert.DoesNotContain("@code", markup, StringComparison.Ordinal);
+
+        foreach (var (fileName, marker) in expectedPartials)
+        {
+            var path = Path.Combine(pageRoot, fileName);
+            Assert.True(File.Exists(path), $"{fileName} should exist.");
+            var source = File.ReadAllText(path);
+            Assert.Contains("partial class CategoryManagement", source, StringComparison.Ordinal);
+            Assert.Contains(marker, source, StringComparison.Ordinal);
+        }
+
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "CategoryManagement.razor.cs")).Length <= 70);
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "CategoryManagement.Editor.razor.cs")).Length <= 60);
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "CategoryManagement.Actions.razor.cs")).Length <= 80);
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "CategoryManagement.Presentation.razor.cs")).Length <= 40);
+    }
+
+    [Fact]
     public void Create_update_and_delete_category_from_sample_table_surface()
     {
         var service = new TestCategoryPortalService();

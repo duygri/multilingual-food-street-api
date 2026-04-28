@@ -1,0 +1,118 @@
+@using NarrationApp.Mobile.Features.Home
+
+<section class="stack-section settings-screen">
+    <article class="setting-card settings-profile-card">
+        <div class="settings-profile-card__top">
+            <div class="settings-avatar">@Initials</div>
+            <div class="settings-row__copy">
+                <span class="eyebrow">Thiết bị hiện tại</span>
+                <strong class="settings-row__title">@DisplayName</strong>
+                <span class="settings-row__subtitle">@DisplayEmail</span>
+                <span class="settings-row__subtitle">@ModeLabel</span>
+            </div>
+            <button type="button" class="secondary-pill" @onclick="OnOpenProfile">Chỉnh sửa</button>
+        </div>
+
+        <div class="settings-stat-grid">
+            @foreach (var stat in Stats)
+            {
+                <div class="settings-stat">
+                    <strong>@stat.Value</strong>
+                    <span>@stat.Label</span>
+                </div>
+            }
+        </div>
+    </article>
+
+    <article class="setting-card">
+        <span class="sheet-label">Ngôn ngữ ưu tiên</span>
+        <strong>@CurrentLanguageLabel</strong>
+        <p>Nội dung thuyết minh sẽ ưu tiên ngôn ngữ này khi có recorded hoặc Google TTS phù hợp.</p>
+
+        <div class="settings-language-strip">
+            @foreach (var language in Languages)
+            {
+                <button
+                    type="button"
+                    class="language-chip @LanguageChipClassSelector(language.Code)"
+                    @onclick="() => OnSelectLanguage.InvokeAsync(language.Code)">
+                    @language.ChipLabel • @language.Label
+                </button>
+            }
+        </div>
+    </article>
+
+    <div class="settings-nav-list">
+        <button type="button" class="setting-card settings-row" @onclick="OnOpenAudio">
+            <div class="settings-row__copy">
+                <strong class="settings-row__title">Audio & thuyết minh</strong>
+                <span class="settings-row__subtitle">@AudioSummary</span>
+            </div>
+            <span class="settings-row__value">›</span>
+        </button>
+
+        <button type="button" class="setting-card settings-row" @onclick="OnOpenGps">
+            <div class="settings-row__copy">
+                <strong class="settings-row__title">Vị trí & GPS</strong>
+                <span class="settings-row__subtitle">@GpsSummary</span>
+            </div>
+            <span class="settings-row__value">›</span>
+        </button>
+
+        <button type="button" class="setting-card settings-row" @onclick="OnOpenCache">
+            <div class="settings-row__copy">
+                <strong class="settings-row__title">Audio đã cache</strong>
+                <span class="settings-row__subtitle">@CacheSummary</span>
+            </div>
+            <span class="settings-row__value">›</span>
+        </button>
+
+        <button type="button" class="setting-card settings-row" @onclick="OnOpenHistory">
+            <div class="settings-row__copy">
+                <strong class="settings-row__title">Lịch sử nghe</strong>
+                <span class="settings-row__subtitle">@HistorySummary</span>
+            </div>
+            <span class="settings-row__value">›</span>
+        </button>
+
+        <button type="button" class="setting-card settings-row" @onclick="OnOpenAbout">
+            <div class="settings-row__copy">
+                <strong class="settings-row__title">Về ứng dụng</strong>
+                <span class="settings-row__subtitle">@AboutSummary</span>
+            </div>
+            <span class="settings-row__value">›</span>
+        </button>
+
+        <button type="button" class="setting-card settings-row" @onclick="OnOpenProfile">
+            <div class="settings-row__copy">
+                <strong class="settings-row__title">Hồ sơ cục bộ</strong>
+                <span class="settings-row__subtitle">@ProfileSummary</span>
+            </div>
+            <span class="settings-row__value">›</span>
+        </button>
+    </div>
+</section>
+
+@code {
+    [Parameter] public string Initials { get; set; } = "GT";
+    [Parameter] public string DisplayName { get; set; } = string.Empty;
+    [Parameter] public string DisplayEmail { get; set; } = string.Empty;
+    [Parameter] public string ModeLabel { get; set; } = string.Empty;
+    [Parameter] public IReadOnlyList<VisitorSettingsStat> Stats { get; set; } = [];
+    [Parameter] public string CurrentLanguageLabel { get; set; } = string.Empty;
+    [Parameter] public IReadOnlyList<VisitorLanguageOption> Languages { get; set; } = [];
+    [Parameter] public Func<string, string> LanguageChipClassSelector { get; set; } = static _ => string.Empty;
+    [Parameter] public string AudioSummary { get; set; } = string.Empty;
+    [Parameter] public string GpsSummary { get; set; } = string.Empty;
+    [Parameter] public string CacheSummary { get; set; } = string.Empty;
+    [Parameter] public string HistorySummary { get; set; } = string.Empty;
+    [Parameter] public string AboutSummary { get; set; } = string.Empty;
+    [Parameter] public string ProfileSummary { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> OnSelectLanguage { get; set; }
+    [Parameter] public EventCallback OnOpenAudio { get; set; }
+    [Parameter] public EventCallback OnOpenGps { get; set; }
+    [Parameter] public EventCallback OnOpenCache { get; set; }
+    [Parameter] public EventCallback OnOpenHistory { get; set; }
+    [Parameter] public EventCallback OnOpenAbout { get; set; }
+    [Parameter] public EventCallback OnOpenProfile { get; set; }
+}

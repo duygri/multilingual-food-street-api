@@ -48,12 +48,20 @@ var googleCloudOptions =
 var cloudflareR2Options =
     builder.Configuration.GetSection(CloudflareR2Options.SectionName).Get<CloudflareR2Options>()
     ?? new CloudflareR2Options();
+var publicQrOptions =
+    builder.Configuration.GetSection(PublicQrOptions.SectionName).Get<PublicQrOptions>()
+    ?? new PublicQrOptions();
+var visitEventRetentionOptions =
+    builder.Configuration.GetSection(VisitEventRetentionOptions.SectionName).Get<VisitEventRetentionOptions>()
+    ?? new VisitEventRetentionOptions();
 
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
 builder.Services.Configure<RateLimitingOptions>(builder.Configuration.GetSection(RateLimitingOptions.SectionName));
 builder.Services.Configure<RequestDiagnosticsOptions>(builder.Configuration.GetSection(RequestDiagnosticsOptions.SectionName));
 builder.Services.Configure<GoogleCloudOptions>(builder.Configuration.GetSection(GoogleCloudOptions.SectionName));
 builder.Services.Configure<CloudflareR2Options>(builder.Configuration.GetSection(CloudflareR2Options.SectionName));
+builder.Services.Configure<PublicQrOptions>(builder.Configuration.GetSection(PublicQrOptions.SectionName));
+builder.Services.Configure<VisitEventRetentionOptions>(builder.Configuration.GetSection(VisitEventRetentionOptions.SectionName));
 builder.Services.AddProblemDetails(options =>
 {
     options.CustomizeProblemDetails = context =>
@@ -175,15 +183,18 @@ builder.Services.AddScoped<IAudioService, AudioService>();
 builder.Services.AddScoped<IAudioGenerationScheduler, AudioGenerationScheduler>();
 builder.Services.AddScoped<IAudioGenerationProcessor, AudioGenerationProcessor>();
 builder.Services.AddScoped<IQrService, QrService>();
+builder.Services.AddSingleton<QrPublicLinkBuilder>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IModerationService, ModerationService>();
 builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
 builder.Services.AddScoped<IVisitEventService, VisitEventService>();
+builder.Services.AddScoped<IVisitEventRetentionService, VisitEventRetentionService>();
 builder.Services.AddScoped<ITourService, TourService>();
 builder.Services.AddScoped<IManagedLanguageService, ManagedLanguageService>();
 builder.Services.AddSingleton<INotificationBroadcaster, SignalRNotificationBroadcaster>();
 builder.Services.AddSingleton<IAudioGenerationQueue, InMemoryAudioGenerationQueue>();
 builder.Services.AddHostedService<AudioGenerationWorker>();
+builder.Services.AddHostedService<VisitEventRetentionWorker>();
 
 if (googleCloudOptions.IsConfigured)
 {
@@ -232,6 +243,18 @@ if (cloudflareR2Options.IsConfigured && string.IsNullOrWhiteSpace(cloudflareR2Op
     app.Logger.LogInformation("Cloudflare R2 is configured without a PublicBaseUrl. Audio assets will fall back to /api/audio/{{id}}/stream URLs.");
 }
 
+if (!string.IsNullOrWhiteSpace(publicQrOptions.BaseUrl))
+{
+    app.Logger.LogInformation("Public QR links are configured to use {PublicQrBaseUrl}", publicQrOptions.BaseUrl);
+}
+
+if (visitEventRetentionOptions.Enabled)
+{
+    app.Logger.LogInformation(
+        "Visit event retention is enabled for {RetentionDays} days.",
+        Math.Clamp(visitEventRetentionOptions.RawEventRetentionDays, 1, 365));
+}
+
 app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
@@ -240,7 +263,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 app.UseStaticFiles();
 app.UseRouting();
 app.UseCors(AppConstants.DefaultCorsPolicyName);

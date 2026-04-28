@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PRD v1.6 - Ứng dụng Thuyết Minh Tự Động</title>
+<title>PRD v1.7 - Ứng dụng Thuyết Minh Tự Động</title>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -80,7 +80,7 @@ tr:hover td{background:rgba(19,35,59,.32)}
 <body>
 <nav class="sidebar">
   <div class="brand">
-    PRD v1.6
+    PRD v1.7
     <small>Ứng dụng Thuyết Minh Tự Động</small>
   </div>
   <div class="nav-group">
@@ -99,7 +99,7 @@ tr:hover td{background:rgba(19,35,59,.32)}
     <a class="nav-link" href="#requirements">Yêu cầu chức năng</a>
     <a class="nav-link" href="#nfr">Yêu cầu phi chức năng</a>
     <a class="nav-link" href="#permissions">Chức năng theo vai trò</a>
-    <a class="nav-link" href="#guest-mode">Guest Mode</a>
+    <a class="nav-link" href="#guest-mode">Direct Access (Tourist)</a>
     <a class="nav-link" href="#api">Module API</a>
     <a class="nav-link" href="#flows">Luồng vận hành</a>
     <a class="nav-link" href="#deployment">Deployment</a>
@@ -115,12 +115,12 @@ tr:hover td{background:rgba(19,35,59,.32)}
 </nav>
 
 <main class="main">
-  <span class="version-badge">v1.6</span>
+  <span class="version-badge">v1.7</span>
 
   <!-- ========== 1. TỔNG QUAN ========== -->
   <section id="overview">
     <div class="hero">
-      <h1>PRD & UML v1.6 — Ứng dụng Thuyết Minh Tự Động</h1>
+      <h1>PRD & UML v1.7 — Ứng dụng Thuyết Minh Tự Động</h1>
       <p class="subtitle">Tài liệu đặc tả sản phẩm và UML — Ứng dụng Android thuyết minh tự động dựa trên vị trí GPS, geofencing và TTS đa ngôn ngữ cho du khách. Kèm web portal quản trị cho Admin/Owner.</p>
       <div class="alert">
         Đây là dự án <strong>độc lập</strong>, tách biệt hoàn toàn khỏi hệ thống FoodStreet/Vĩnh Khánh. Ứng dụng hướng tới việc thuyết minh tự động tại các điểm tham quan khi du khách di chuyển qua các khu vực POI.
@@ -221,7 +221,7 @@ tr:hover td{background:rgba(19,35,59,.32)}
           <td>Du khách sử dụng app Android</td>
           <td>.NET MAUI Android</td>
           <td>Xem bản đồ, nghe thuyết minh tự động theo GPS/geofence, chọn ngôn ngữ, xem tour. Nhận deep link từ QR (quét ngoài app)</td>
-          <td>Guest mode (không bắt buộc login)</td>
+          <td>Không có (truy cập trực tiếp, không login/register)</td>
         </tr>
         <tr>
           <td><span class="badge badge-orange">POI Owner</span></td>
@@ -560,15 +560,15 @@ graph TB
         <tr><td>FR-06</td><td>Map Discovery</td><td>Hiển thị vị trí user + tất cả POI trên bản đồ Mapbox. Highlight POI gần nhất. Xem chi tiết POI khi tap marker.</td><td><span class="badge badge-green">Must</span></td><td>Map load nhanh, marker đúng vị trí, nearest POI được highlight</td></tr>
         <tr><td>FR-07</td><td>POI Content Management</td><td>Mỗi POI có: tọa độ <code>lat/lng</code>, bán kính kích hoạt, mức ưu tiên, mô tả văn bản, ảnh minh họa, link bản đồ, file audio hoặc script TTS. Owner CRUD POI và gửi duyệt; Admin duyệt.</td><td><span class="badge badge-green">Must</span></td><td>CRUD thành công, lưu đủ metadata POI, phân quyền đúng</td></tr>
         <tr><td>FR-08</td><td>POI Translation</td><td>Nội dung đa ngôn ngữ do Admin kiểm tra, xóa hoặc tạo mới bằng Google Cloud Translation; hỗ trợ mở rộng tất cả ngôn ngữ theo danh sách Google Cloud Translation hỗ trợ. Khi chưa có bản dịch, hệ thống fallback về tiếng Việt.</td><td><span class="badge badge-green">Must</span></td><td>Hiển thị đúng ngôn ngữ, fallback vi khi thiếu, Admin tạo/xóa được ngôn ngữ mới</td></tr>
-        <tr><td>FR-09</td><td>Authentication & Authorization</td><td>Đăng nhập JWT, phân quyền admin/owner/tourist. Tourist có guest mode cho map + nghe audio.</td><td><span class="badge badge-green">Must</span></td><td>Login/logout đúng, role-based access hoạt động</td></tr>
+        <tr><td>FR-09</td><td>Authentication & Authorization</td><td>Đăng nhập JWT cho Admin/Owner trên web portal. Tourist <strong>không cần đăng nhập</strong> — mở app là dùng ngay, truy cập toàn bộ tính năng (map, geofence, nghe thuyết minh, xem tour, chọn ngôn ngữ) mà không cần tài khoản.</td><td><span class="badge badge-green">Must</span></td><td>Admin/Owner login đúng, Tourist truy cập trực tiếp không cần auth</td></tr>
         <tr><td>FR-10</td><td>QR Code Deep Link</td><td>QR Code được quét ngoài app bằng camera thiết bị hoặc app QR bên ngoài. Deep link URL (narration.app/qr/{code}) mở app và điều hướng đến target tương ứng. 3 loại target: (1) open_app — mở trang chính, (2) poi — hiển thị chi tiết POI + phát thuyết minh, (3) tour — hiển thị chi tiết tour. Nếu app chưa cài → chuyển đến trang tải app. Không có tính năng QR scanner bên trong app.</td><td><span class="badge badge-orange">Should</span></td><td>Deep link resolve đúng target, app mở và điều hướng chính xác, fallback web page khi chưa cài app</td></tr>
         <tr><td>FR-11</td><td>Offline Audio Cache</td><td>Audio được cache local (SQLite) sau lần nghe đầu. Phát lại khi mạng yếu.</td><td><span class="badge badge-orange">Should</span></td><td>Lần phát sau ưu tiên local cache, gọi network khi cache miss</td></tr>
         <tr><td>FR-12</td><td>CMS Web Portal</td><td>Blazor WASM quản trị: Owner quản lý POI và nội dung nguồn của POI; Admin quản lý Audio, Bản dịch, Lịch sử và Tour theo role.</td><td><span class="badge badge-orange">Should</span></td><td>Admin/Owner truy cập đúng tính năng theo role</td></tr>
         <tr><td>FR-13</td><td>Analytics Dashboard</td><td>Lưu tuyến di chuyển ẩn danh, top địa điểm được nghe nhiều nhất, thời gian trung bình nghe 1 POI, heatmap vị trí người dùng.</td><td><span class="badge badge-orange">Should</span></td><td>Dashboard hiển thị 4 loại dữ liệu analytics chính xác</td></tr>
-        <tr><td>FR-14</td><td>Tour Management</td><td>Gom POI thành tour có thứ tự, ước lượng thời gian. User đã login start/resume tour session.</td><td><span class="badge badge-orange">Should</span></td><td>Tour creation + completion flow hoạt động</td></tr>
+        <tr><td>FR-14</td><td>Tour Management</td><td>Gom POI thành tour có thứ tự, ước lượng thời gian. Tourist xem tour và geofence tự động phát narration khi đến stop — không cần đăng nhập.</td><td><span class="badge badge-orange">Should</span></td><td>Tour creation + xem tour + auto-play tại stops hoạt động</td></tr>
         <tr><td>FR-15</td><td>Moderation Flow</td><td>Owner gửi duyệt thay đổi POI → Admin approve/reject. SignalR thông báo realtime.</td><td><span class="badge badge-orange">Should</span></td><td>Trạng thái moderation thay đổi đúng, thông báo realtime</td></tr>
         <tr><td>FR-16</td><td>Language Selection</td><td>Tourist chọn ngôn ngữ ưu tiên → ảnh hưởng narration và nội dung hiển thị.</td><td><span class="badge badge-green">Must</span></td><td>Đổi ngôn ngữ → nội dung + audio thay đổi tương ứng</td></tr>
-        <tr><td>FR-17</td><td>Notification Center</td><td>Trung tâm thông báo hiển thị ở góc trên bên phải (bell icon) trên cả web portal và mobile app. Nhận thông báo realtime qua SignalR: kết quả moderation, audio ready, tour mới xuất bản, cập nhật POI. Dropdown panel từ bell icon — không đặt trong sidebar. Có badge đếm số thông báo chưa đọc. Hỗ trợ đánh dấu đã đọc và xem lịch sử thông báo.</td><td><span class="badge badge-orange">Should</span></td><td>Bell icon hiển thị đúng vị trí (top-right), badge count chính xác, dropdown hiển thị danh sách thông báo, mark as read hoạt động</td></tr>
+        <tr><td>FR-17</td><td>Notification Center</td><td>Trung tâm thông báo hiển thị ở góc trên bên phải (bell icon) trên web portal (Admin/Owner). Nhận thông báo realtime qua SignalR: kết quả moderation, audio ready, tour mới xuất bản, cập nhật POI. Dropdown panel từ bell icon — không đặt trong sidebar. Có badge đếm số thông báo chưa đọc. Hỗ trợ đánh dấu đã đọc và xem lịch sử thông báo. <strong>Tourist không có notification (không có login).</strong></td><td><span class="badge badge-orange">Should</span></td><td>Bell icon hiển thị đúng vị trí (top-right) trên web portal, badge count chính xác, dropdown hiển thị danh sách thông báo, mark as read hoạt động</td></tr>
         <tr><td>FR-18</td><td>Categories (Danh mục)</td><td>Admin tạo/sửa/xóa danh mục phân loại POI (ví dụ: Hải sản, Bún/Phở, Ăn vặt, Đồ uống). Owner chọn danh mục khi tạo/sửa POI. Tourist có thể lọc POI theo danh mục trên bản đồ.</td><td><span class="badge badge-orange">Should</span></td><td>CRUD danh mục hoạt động, POI gán danh mục đúng, filter theo danh mục trên map</td></tr>
         <tr><td>FR-19</td><td>User Usage History</td><td>Admin xem lịch sử sử dụng của từng user: login/logout, POI đã nghe, tour đã tham gia, QR scans, thiết bị sử dụng. Hỗ trợ lọc theo khoảng thời gian và loại hành động.</td><td><span class="badge badge-orange">Should</span></td><td>Admin xem được lịch sử chi tiết, lọc hoạt động, dữ liệu chính xác</td></tr>
       </table>
@@ -637,14 +637,16 @@ graph TB
       </div>
       <div class="card">
         <h3>🧳 Tourist (App Android)</h3>
+        <div class="alert" style="margin-bottom:12px">
+          <strong>Không yêu cầu đăng nhập.</strong> Tourist mở app là dùng được ngay — không có màn login/register. Mọi tính năng đều truy cập trực tiếp.
+        </div>
         <ul>
           <li><code>Chọn ngôn ngữ</code>: đổi ngôn ngữ hiển thị + narration.</li>
           <li><code>Bản đồ</code>: xem vị trí user, marker POI, nearest POI.</li>
           <li><code>Chi tiết POI</code>: ảnh, mô tả, map link.</li>
           <li><code>Nghe thuyết minh</code>: tự động (geofence) hoặc thủ công.</li>
           <li><code>QR Deep Link</code>: nhận deep link từ QR (quét ngoài app bằng camera thiết bị) → app tự điều hướng đến POI hoặc tour tương ứng.</li>
-          <li><code>Xem tour</code>: read-only hoặc start/resume (cần login).</li>
-          <li><code>Notification</code>: nhận thông báo tour mới, cập nhật POI (bell icon góc trên bên phải, cần login).</li>
+          <li><code>Xem tour</code>: xem danh sách tour và chi tiết. Geofence tự động phát narration khi đến tour stop.</li>
         </ul>
       </div>
     </div>
@@ -667,58 +669,53 @@ graph TB
         <tr><td><span class="badge badge-blue">Tourist</span></td><td>Map Discovery</td><td>Xem bản đồ + POI markers</td><td>20.11</td></tr>
         <tr><td><span class="badge badge-blue">Tourist</span></td><td>Geofence → Narration</td><td>Tự động trigger thuyết minh khi vào vùng</td><td>20.12</td></tr>
         <tr><td><span class="badge badge-blue">Tourist</span></td><td>QR Deep Link</td><td>Nhận deep link từ QR (quét ngoài app) → mở app / xem POI / xem tour</td><td>20.13</td></tr>
-        <tr><td><span class="badge badge-blue">Tourist</span></td><td>Tour</td><td>Xem / start / resume tour</td><td>20.14</td></tr>
+        <tr><td><span class="badge badge-blue">Tourist</span></td><td>Tour</td><td>Xem tour + geofence tự động phát narration khi đến stop</td><td>20.14</td></tr>
         <tr><td><span class="badge badge-red">Admin</span></td><td>Notification Center</td><td>Xem thông báo hệ thống (bell icon top-right)</td><td>—</td></tr>
         <tr><td><span class="badge badge-orange">Owner</span></td><td>Notification Center</td><td>Nhận kết quả duyệt, yêu cầu bổ sung (bell icon top-right)</td><td>20.9</td></tr>
-        <tr><td><span class="badge badge-blue">Tourist</span></td><td>Notification Center</td><td>Nhận thông báo tour mới, cập nhật POI (bell icon top-right, cần login)</td><td>—</td></tr>
       </table>
     </div>
   </section>
 
-  <!-- ========== 14. GUEST MODE ========== -->
+  <!-- ========== 14. DIRECT ACCESS MODE (Tourist) ========== -->
   <section id="guest-mode">
-    <h2>14. Guest Mode — Chế độ khách (Tourist)</h2>
-    <div class="alert info">
-      Tourist mặc định sử dụng app ở <strong>Guest Mode</strong> — không bắt buộc đăng nhập. Mục tiêu: giảm ma sát tối đa, du khách mở app là dùng được ngay. Login chỉ cần khi muốn <strong>theo dõi tiến trình tour cá nhân</strong>.
+    <h2>14. Direct Access — Truy cập trực tiếp (Tourist)</h2>
+    <div class="alert success">
+      Tourist <strong>không cần đăng nhập / đăng ký</strong>. Mở app là sử dụng được ngay toàn bộ tính năng. Không có màn login/register. Mục tiêu: <strong>zero friction</strong> — du khách cài app, mở lên, chọn ngôn ngữ và bắt đầu khám phá.
     </div>
 
-    <h3>14.1 Phân quyền Guest vs Logged-in Tourist</h3>
+    <h3>14.1 Tất cả tính năng Tourist — Không cần đăng nhập</h3>
     <div class="table-wrap">
       <table>
-        <tr><th>Chức năng</th><th>Guest (không login)</th><th>Logged-in Tourist</th><th>API liên quan</th></tr>
-        <tr><td>Xem bản đồ + POI markers</td><td><span class="badge badge-green">✅</span></td><td><span class="badge badge-green">✅</span></td><td><code>GET /api/pois, /api/pois/near</code></td></tr>
-        <tr><td>Xem chi tiết POI (ảnh, mô tả, map link)</td><td><span class="badge badge-green">✅</span></td><td><span class="badge badge-green">✅</span></td><td><code>GET /api/pois/{id}</code></td></tr>
-        <tr><td>Nghe thuyết minh tự động (geofence)</td><td><span class="badge badge-green">✅</span></td><td><span class="badge badge-green">✅</span></td><td><code>GET /api/audio/{id}/stream</code></td></tr>
-        <tr><td>Nghe thuyết minh thủ công (tap POI)</td><td><span class="badge badge-green">✅</span></td><td><span class="badge badge-green">✅</span></td><td><code>GET /api/audio/{id}/stream</code></td></tr>
-        <tr><td>Chọn ngôn ngữ ưu tiên</td><td><span class="badge badge-green">✅</span></td><td><span class="badge badge-green">✅</span></td><td>Client-side (lưu local)</td></tr>
-
-        <tr><td>Xem danh sách tour (read-only)</td><td><span class="badge badge-green">✅</span></td><td><span class="badge badge-green">✅</span></td><td><code>GET /api/tours</code></td></tr>
-        <tr><td>Xem bản dịch đa ngôn ngữ</td><td><span class="badge badge-green">✅</span></td><td><span class="badge badge-green">✅</span></td><td><code>GET /api/translations/poi/{id}</code></td></tr>
-        <tr><td>Nhận QR deep link (quét ngoài app)</td><td><span class="badge badge-green">✅</span></td><td><span class="badge badge-green">✅</span></td><td>Deep link → <code>GET /api/qr/{code}</code></td></tr>
-        <tr><td>Ghi visit event (ẩn danh)</td><td><span class="badge badge-green">✅</span> (user_id = null)</td><td><span class="badge badge-green">✅</span> (có user_id)</td><td><code>POST /api/visit-events</code></td></tr>
-        <tr><td>Offline audio cache</td><td><span class="badge badge-green">✅</span></td><td><span class="badge badge-green">✅</span></td><td>SQLite local</td></tr>
-        <tr><td>Start / Resume Tour session</td><td><span class="badge badge-red">❌ Cần login</span></td><td><span class="badge badge-green">✅</span></td><td><code>POST /api/tours/{id}/start</code></td></tr>
-        <tr><td>Tour progress tracking</td><td><span class="badge badge-red">❌ Cần login</span></td><td><span class="badge badge-green">✅</span></td><td><code>POST /api/tours/{id}/progress</code></td></tr>
-        <tr><td>Xem lịch sử tour đã đi</td><td><span class="badge badge-red">❌ Cần login</span></td><td><span class="badge badge-green">✅</span></td><td><code>GET /api/tours/session/latest</code></td></tr>
-        <tr><td>Nhận notification cá nhân</td><td><span class="badge badge-red">❌ Cần login</span></td><td><span class="badge badge-green">✅</span></td><td>SignalR Hub</td></tr>
-        <tr><td>Cập nhật profile / đổi mật khẩu</td><td><span class="badge badge-red">❌ Cần login</span></td><td><span class="badge badge-green">✅</span></td><td><code>PUT /api/auth/update-profile</code></td></tr>
+        <tr><th>Chức năng</th><th>Trạng thái</th><th>API liên quan</th></tr>
+        <tr><td>Xem bản đồ + POI markers</td><td><span class="badge badge-green">✅ Truy cập trực tiếp</span></td><td><code>GET /api/pois, /api/pois/near</code></td></tr>
+        <tr><td>Xem chi tiết POI (ảnh, mô tả, map link)</td><td><span class="badge badge-green">✅ Truy cập trực tiếp</span></td><td><code>GET /api/pois/{id}</code></td></tr>
+        <tr><td>Nghe thuyết minh tự động (geofence)</td><td><span class="badge badge-green">✅ Truy cập trực tiếp</span></td><td><code>GET /api/audio/{id}/stream</code></td></tr>
+        <tr><td>Nghe thuyết minh thủ công (tap POI)</td><td><span class="badge badge-green">✅ Truy cập trực tiếp</span></td><td><code>GET /api/audio/{id}/stream</code></td></tr>
+        <tr><td>Chọn ngôn ngữ ưu tiên</td><td><span class="badge badge-green">✅ Truy cập trực tiếp</span></td><td>Client-side (lưu local)</td></tr>
+        <tr><td>Xem danh sách tour</td><td><span class="badge badge-green">✅ Truy cập trực tiếp</span></td><td><code>GET /api/tours</code></td></tr>
+        <tr><td>Xem chi tiết tour + geofence auto-play tại stops</td><td><span class="badge badge-green">✅ Truy cập trực tiếp</span></td><td><code>GET /api/tours/{id}</code></td></tr>
+        <tr><td>Xem bản dịch đa ngôn ngữ</td><td><span class="badge badge-green">✅ Truy cập trực tiếp</span></td><td><code>GET /api/translations/poi/{id}</code></td></tr>
+        <tr><td>Nhận QR deep link (quét ngoài app)</td><td><span class="badge badge-green">✅ Truy cập trực tiếp</span></td><td>Deep link → <code>GET /api/qr/{code}</code></td></tr>
+        <tr><td>Ghi visit event (ẩn danh)</td><td><span class="badge badge-green">✅ Tự động (device_id)</span></td><td><code>POST /api/visit-events</code></td></tr>
+        <tr><td>Offline audio cache</td><td><span class="badge badge-green">✅ Truy cập trực tiếp</span></td><td>SQLite local</td></tr>
+        <tr><td>Lọc POI theo danh mục</td><td><span class="badge badge-green">✅ Truy cập trực tiếp</span></td><td><code>GET /api/categories</code></td></tr>
       </table>
     </div>
-    <div class="alert success">
-      <strong>Kết luận:</strong> Guest Tourist sử dụng được <strong>~80% tính năng chính</strong> (bản đồ, GPS, geofence, nghe thuyết minh, chọn ngôn ngữ, offline cache) mà không cần đăng nhập. Chỉ cần login khi muốn <strong>theo dõi tiến trình tour cá nhân</strong>.
+    <div class="alert">
+      <strong>Kết luận:</strong> Tourist sử dụng được <strong>100% tính năng</strong> mà không cần đăng nhập. Không có tính năng nào yêu cầu tài khoản trên mobile app.
     </div>
 
-    <h3>14.2 Guest Onboarding Flow</h3>
+    <h3>14.2 Onboarding Flow — Lần đầu mở app</h3>
     <div class="card">
-      <h4>Lần đầu mở app (First Launch)</h4>
+      <h4>First Launch Flow (không có login/register)</h4>
       <div class="timeline">
         <div class="timeline-item">
           <h4>Bước 1: Welcome Screen</h4>
-          <p>Hiển thị màn welcome giới thiệu tính năng chính. Nút <strong>"Bắt đầu khám phá"</strong> (không yêu cầu login).</p>
+          <p>Hiển thị màn welcome giới thiệu tính năng chính. Nút <strong>"Bắt đầu khám phá"</strong> — vào app ngay, không có nút login.</p>
         </div>
         <div class="timeline-item">
           <h4>Bước 2: Chọn ngôn ngữ</h4>
-          <p>Hiển thị 5 ngôn ngữ hỗ trợ (vi, en, ja, ko, zh). Lưu vào <code>SharedPreferences</code> / <code>SecureStorage</code>. Có thể thay đổi sau.</p>
+          <p>Hiển thị 5 ngôn ngữ hỗ trợ (vi, en, ja, ko, zh). Lưu vào <code>SharedPreferences</code> / <code>SecureStorage</code>. Có thể thay đổi sau trong Settings.</p>
         </div>
         <div class="timeline-item">
           <h4>Bước 3: Yêu cầu Location Permission</h4>
@@ -726,126 +723,63 @@ graph TB
         </div>
         <div class="timeline-item">
           <h4>Bước 4: Vào Map Discovery</h4>
-          <p>Chuyển thẳng vào màn bản đồ. Du khách bắt đầu khám phá ngay. Guest ID được tạo tự động.</p>
+          <p>Chuyển thẳng vào màn bản đồ. Du khách bắt đầu khám phá ngay. Device ID được tạo tự động cho analytics ẩn danh.</p>
         </div>
       </div>
     </div>
 
-    <h3>14.3 Guest ID — Định danh thiết bị</h3>
-    <div class="grid-2">
-      <div class="card">
-        <h4>🔑 Cơ chế Guest ID</h4>
-        <ul>
-          <li>Khi mở app lần đầu, tạo <code>guest_device_id</code> = UUID v4 ngẫu nhiên.</li>
-          <li>Lưu vào <code>SecureStorage</code> trên thiết bị (persist qua lần mở app).</li>
-          <li>Gửi kèm header <code>X-Device-Id</code> trong mọi API request.</li>
-          <li>Server sử dụng <code>guest_device_id</code> để:<br>
-            – Quản lý cooldown/debounce trên server-side (tùy chọn).<br>
-            – Ghi analytics ẩn danh (<code>visit_events.user_id = null</code>, nhưng có <code>device_id</code> để đếm unique).<br>
-            – Không mapping ngược được về cá nhân → đảm bảo privacy.
-          </li>
-        </ul>
-      </div>
-      <div class="card">
-        <h4>🔄 Guest → Login Merge</h4>
-        <ul>
-          <li>Khi guest đăng ký tài khoản, hệ thống <strong>merge dữ liệu</strong>:<br>
-            – <code>visit_events</code> có cùng <code>device_id</code> → cập nhật <code>user_id</code>.<br>
-            – Audio cache local giữ nguyên (không ảnh hưởng).<br>
-            – Ngôn ngữ ưu tiên → sync lên profile server.
-          </li>
-          <li>Đảm bảo trải nghiệm liền mạch, không mất dữ liệu đã tương tác.</li>
-        </ul>
-      </div>
+    <h3>14.3 Device ID — Định danh thiết bị (ẩn danh)</h3>
+    <div class="card">
+      <h4>🔑 Cơ chế Device ID</h4>
+      <ul>
+        <li>Khi mở app lần đầu, tạo <code>device_id</code> = UUID v4 ngẫu nhiên.</li>
+        <li>Lưu vào <code>SecureStorage</code> trên thiết bị (persist qua lần mở app).</li>
+        <li>Gửi kèm header <code>X-Device-Id</code> trong mọi API request.</li>
+        <li>Server sử dụng <code>device_id</code> để:<br>
+          – Quản lý cooldown/debounce trên server-side (tùy chọn).<br>
+          – Ghi analytics ẩn danh (<code>visit_events.user_id = null</code>, có <code>device_id</code> để đếm unique).<br>
+          – Không mapping ngược được về cá nhân → đảm bảo privacy.
+        </li>
+      </ul>
     </div>
 
-    <h3>14.4 Điều kiện hiển thị Prompt Login</h3>
-    <div class="alert warn">
-      <strong>Nguyên tắc:</strong> Không ép login. Chỉ hiển thị prompt login khi du khách thực sự cần tính năng yêu cầu tài khoản. Tối đa hiển thị <strong>1 lần/phiên</strong> cho mỗi trigger.
-    </div>
-    <div class="table-wrap">
-      <table>
-        <tr><th>Trigger</th><th>Hành vi</th><th>UX</th></tr>
-        <tr><td>Tap <strong>"Bắt đầu Tour"</strong></td><td>Hiển thị bottom sheet: <em>"Đăng nhập để theo dõi tiến trình tour"</em></td><td>Nút Login + nút "Xem tour (không lưu)"</td></tr>
-        <tr><td>Tap <strong>"Tiếp tục Tour"</strong></td><td>Hiển thị bottom sheet: <em>"Đăng nhập để xem lại tour đã đi"</em></td><td>Nút Login + nút Đóng</td></tr>
-        <tr><td>Nghe xong <strong>POI thứ 5</strong> trong phiên</td><td>Hiển thị non-blocking snackbar: <em>"Thích ứng dụng? Tạo tài khoản để lưu hành trình"</em></td><td>Snackbar tự ẩn sau 5 giây, nút "Đăng ký" nhỏ</td></tr>
-        <tr><td>Mở app từ QR deep link lần đầu</td><td>Không hiển thị prompt — trải nghiệm liền mạch, điều hướng thẳng đến nội dung</td><td>—</td></tr>
-        <tr><td>Mở app từ lần thứ 3</td><td>Hiển thị non-blocking banner 1 lần: <em>"Tạo tài khoản để cá nhân hóa trải nghiệm"</em></td><td>Banner dismiss-able, không hiện lại</td></tr>
-      </table>
-    </div>
-
-    <h3>14.5 Giới hạn Guest Mode</h3>
-    <div class="grid-2">
-      <div class="card">
-        <h4>🟢 MVP: Không giới hạn</h4>
-        <ul>
-          <li>Guest được nghe <strong>không giới hạn</strong> số POI/ngày.</li>
-          <li>Guest được mở deep link từ QR không giới hạn.</li>
-          <li>Guest được xem tất cả tour (read-only).</li>
-          <li>Lý do: MVP ưu tiên adoption rate, chưa cần monetize.</li>
-        </ul>
-      </div>
-      <div class="card">
-        <h4>🟡 Future (v2+): Giới hạn tùy chọn</h4>
-        <ul>
-          <li>Giới hạn số POI nghe miễn phí/ngày (ví dụ: 10 POI/ngày).</li>
-          <li>Premium tour yêu cầu login + thanh toán.</li>
-          <li>Audio chuyên nghiệp (giọng người thật) yêu cầu đăng ký.</li>
-          <li>Cấu hình linh hoạt qua <code>appsettings.json</code> → API config.</li>
-        </ul>
-      </div>
-    </div>
-
-    <h3>14.6 Kỹ thuật triển khai Guest Mode</h3>
+    <h3>14.4 Kỹ thuật triển khai Direct Access</h3>
     <div class="card">
       <h4>📱 Client-side (Mobile App)</h4>
-      <div class="code-block">// Guest State Management
-public class GuestStateService
+      <div class="code-block">// Direct Access State Management
+public class AppStateService
 {
-    // Lưu trữ local
-    string DeviceId       → SecureStorage (persist)
+    // Lưu trữ local — KHÔNG có login state
+    string DeviceId       → SecureStorage (persist, UUID v4)
     string LanguageCode   → Preferences ("vi" default)
     bool   IsFirstLaunch  → Preferences (true → false sau onboarding)
-    bool   IsLoggedIn      → false (guest) / true (logged in)
     int    PoiListenCount  → Session counter (reset mỗi phiên)
-    int    AppOpenCount    → Preferences (đếm lần mở app)
 
     // Cooldown tracking (client-side)
     Dictionary&lt;Guid, DateTime&gt; PoiCooldowns → In-memory
 }
 
-// API Request Header
-X-Device-Id: {guest_device_id}     // Mọi request
-Authorization: Bearer {jwt}        // Chỉ khi logged in
-
-// Quyết định login prompt
-if (action requires login)
-  → Show login bottom sheet
-else
-  → Proceed as guest</div>
+// API Request Header — chỉ Device ID, KHÔNG có auth token
+X-Device-Id: {device_id}     // Mọi request
+// Không có Authorization header cho Tourist</div>
     </div>
     <div class="card">
       <h4>🖥️ Server-side (API)</h4>
-      <div class="code-block">// Controller xử lý Guest vs Authenticated
-[AllowAnonymous]  // Public endpoints cho Guest
+      <div class="code-block">// Tất cả Tourist endpoints đều [AllowAnonymous]
+[AllowAnonymous]  // Toàn bộ Tourist API — không cần auth
 GET  /api/pois, /api/pois/{id}, /api/pois/near
 GET  /api/audio/{id}/stream
-GET  /api/qr/{code}            // Deep link resolve (từ QR quét ngoài app)
+GET  /api/qr/{code}            // Deep link resolve
 GET  /api/tours, /api/tours/{id}
 GET  /api/translations/poi/{id}
 GET  /api/geofences
+GET  /api/categories
 POST /api/visit-events         // user_id = null, device_id from header
 POST /api/qr/{code}/open       // Log deep link open event
 
-[Authorize(Roles = "tourist")]  // Yêu cầu login
-POST /api/tours/{id}/start
-POST /api/tours/{id}/resume
-POST /api/tours/{id}/progress
-GET  /api/tours/session/latest
-
-// Visit Event xử lý Guest
+// Visit Event — luôn ẩn danh
 var visitEvent = new VisitEvent {
-    UserId = User.Identity.IsAuthenticated ? GetUserId() : null,
+    UserId = null,              // Tourist không có user account
     DeviceId = Request.Headers["X-Device-Id"],
     PoiId = dto.PoiId,
     EventType = dto.EventType,
@@ -854,7 +788,7 @@ var visitEvent = new VisitEvent {
     </div>
 
     <div class="diagram">
-      <h4>Guest Mode Flow Diagram</h4>
+      <h4>Direct Access Flow Diagram</h4>
       <pre class="mermaid">
 flowchart TD
   START(["Mở App"]) --> CHECK{"Lần đầu?"}
@@ -874,13 +808,10 @@ flowchart TD
 
   NARR --> ACTION{"Hành động tiếp?"}
   ACTION -->|Tiếp tục đi| GEO
-  ACTION -->|Tap Start Tour| LOGIN_CHECK{"Đã login?"}
+  ACTION -->|Xem Tour| TOUR["Xem Tour + Auto Geofence"]
   ACTION -->|Quét QR| BROWSE
 
-  LOGIN_CHECK -->|Đã login| TOUR["Start Tour Session"]
-  LOGIN_CHECK -->|Guest| PROMPT["Prompt Login"]
-  PROMPT -->|Login| TOUR
-  PROMPT -->|Bỏ qua| MAP
+  TOUR --> GEO
       </pre>
     </div>
   </section>
@@ -889,12 +820,14 @@ flowchart TD
   <section id="api">
     <h2>15. Module API</h2>
     <div class="grid-2">
-      <div class="card"><h3>Auth</h3>
-        <div class="code-block">POST   /api/auth/register
-POST   /api/auth/login
-GET    /api/auth/me
-POST   /api/auth/change-password
-PUT    /api/auth/update-profile</div>
+      <div class="card"><h3>Auth (Admin/Owner only)</h3>
+        <div class="code-block">POST   /api/auth/login                      # Admin/Owner (web portal)
+GET    /api/auth/me                          # Admin/Owner
+POST   /api/auth/change-password             # Admin/Owner
+PUT    /api/auth/update-profile               # Admin/Owner
+
+# Tourist: KHÔNG CÓ auth endpoints.
+# Mở app → truy cập trực tiếp, identify bằng X-Device-Id header.</div>
       </div>
       <div class="card"><h3>POI & Content</h3>
         <div class="code-block">GET    /api/pois                           # Public
@@ -926,15 +859,14 @@ GET    /api/geofences/poi/{poiId}          # Owner + Admin
 PUT    /api/geofences/{id}                 # Owner (own POI) + Admin
 POST   /api/geofences                      # Owner (own POI) + Admin</div>
       </div>
-      <div class="card"><h3>Tour & Session</h3>
-        <div class="code-block">GET    /api/tours                          # Public
-GET    /api/tours/{id}                     # Public
+      <div class="card"><h3>Tour (Public View + Admin Manage)</h3>
+        <div class="code-block">GET    /api/tours                          # Public (Tourist xem trực tiếp)
+GET    /api/tours/{id}                     # Public (Tourist xem trực tiếp)
 POST   /api/tours                          # Admin
 PUT    /api/tours/{id}                     # Admin
-POST   /api/tours/{id}/start              # Tourist (login)
-POST   /api/tours/{id}/resume             # Tourist (login)
-POST   /api/tours/{id}/progress           # Tourist (login)
-GET    /api/tours/session/latest           # Tourist (login)</div>
+
+# Tourist: không cần login để xem tour.
+# Geofence Engine tự động phát narration khi đến tour stop.</div>
       </div>
       <div class="card"><h3>QR Code (Deep Link + Admin Management)</h3>
         <div class="code-block">GET    /api/qr                             # Admin (danh sách tất cả QR codes)
@@ -985,12 +917,14 @@ DELETE /api/categories/{id}               # Admin (xóa danh mục)</div>
         <div class="code-block">POST   /api/moderation-requests            # Owner (gửi duyệt)
 GET    /api/moderation-requests/my         # Owner (xem yêu cầu)</div>
       </div>
-      <div class="card"><h3>Notification Center</h3>
-        <div class="code-block">GET    /api/notifications                   # Authenticated (danh sách thông báo)
-GET    /api/notifications/unread-count      # Authenticated (số chưa đọc → badge)
-PUT    /api/notifications/{id}/read        # Authenticated (đánh dấu đã đọc)
-PUT    /api/notifications/read-all         # Authenticated (đánh dấu tất cả đã đọc)
-DELETE /api/notifications/{id}             # Authenticated (xóa thông báo)</div>
+      <div class="card"><h3>Notification Center (Admin/Owner only)</h3>
+        <div class="code-block">GET    /api/notifications                   # Admin/Owner (danh sách thông báo)
+GET    /api/notifications/unread-count      # Admin/Owner (số chưa đọc → badge)
+PUT    /api/notifications/{id}/read        # Admin/Owner (đánh dấu đã đọc)
+PUT    /api/notifications/read-all         # Admin/Owner (đánh dấu tất cả đã đọc)
+DELETE /api/notifications/{id}             # Admin/Owner (xóa thông báo)
+
+# Tourist: KHÔNG có notification (không có login).</div>
       </div>
     </div>
     <div class="card">
@@ -1030,7 +964,7 @@ GET    /api/health/cloudflare-r2           # Admin</div>
         <tr><td><code>GET/PUT/POST /api/geofences</code></td><td>✅</td><td>❌</td><td>GET only (app)</td></tr>
         <tr><td><code>GET /api/tours, /api/tours/{id}</code></td><td>✅</td><td>✅</td><td>✅</td></tr>
         <tr><td><code>POST/PUT /api/tours</code></td><td>✅</td><td>❌</td><td>❌</td></tr>
-        <tr><td><code>POST /api/tours/{id}/start, /resume, /progress</code></td><td>❌</td><td>❌</td><td>✅ (login)</td></tr>
+        <tr><td><code>POST /api/tours/{id}/start, /resume, /progress</code></td><td>❌</td><td>❌</td><td>❌ (Bỏ — Tourist không login)</td></tr>
         <tr><td><code>POST /api/qr, GET /api/qr/{code}</code></td><td>✅ (POST)</td><td>❌</td><td>✅ (GET + open)</td></tr>
         <tr><td><code>POST /api/visit-events</code></td><td>❌</td><td>❌</td><td>✅</td></tr>
         <tr><td><code>GET /api/analytics/*</code></td><td>✅</td><td>❌</td><td>❌</td></tr>
@@ -1038,7 +972,7 @@ GET    /api/health/cloudflare-r2           # Admin</div>
         <tr><td><code>GET/POST /api/admin/*</code></td><td>✅</td><td>❌</td><td>❌</td></tr>
         <tr><td><code>POST /api/moderation-requests</code></td><td>❌</td><td>✅</td><td>❌</td></tr>
         <tr><td><code>GET /api/health/*</code></td><td>✅</td><td>❌</td><td>❌</td></tr>
-        <tr><td><code>GET/PUT/DELETE /api/notifications/*</code></td><td>✅</td><td>✅</td><td>✅ (login)</td></tr>
+        <tr><td><code>GET/PUT/DELETE /api/notifications/*</code></td><td>✅</td><td>✅</td><td>❌ (không có login)</td></tr>
         <tr><td><code>GET/POST/DELETE /api/admin/languages</code></td><td>✅</td><td>❌</td><td>❌</td></tr>
         <tr><td><code>GET /api/admin/users/{id}/usage-history</code></td><td>✅</td><td>❌</td><td>❌</td></tr>
         <tr><td><code>GET /api/categories, /api/categories/{id}</code></td><td>✅</td><td>✅</td><td>✅</td></tr>
@@ -1054,7 +988,7 @@ GET    /api/health/cloudflare-r2           # Admin</div>
     <div class="timeline">
       <div class="timeline-item">
         <h4>Hành trình du khách (Happy path)</h4>
-        <p>Cài app → mở app (guest/login) → chọn ngôn ngữ → bật GPS → xem bản đồ POI → di chuyển → Geofence Engine detect POI gần nhất → kiểm tra priority + debounce/cooldown → Narration Engine chọn nguồn audio (cache local → R2 audio đa ngôn ngữ đã pre-generate từ nguồn tiếng Việt → text fallback) → phát thuyết minh → ghi visit_event → tiếp tục di chuyển.</p>
+        <p>Cài app → mở app → chọn ngôn ngữ → bật GPS → xem bản đồ POI → di chuyển → Geofence Engine detect POI gần nhất → kiểm tra priority + debounce/cooldown → Narration Engine chọn nguồn audio (cache local → R2 audio đa ngôn ngữ đã pre-generate từ nguồn tiếng Việt → text fallback) → phát thuyết minh → ghi visit_event (ẩn danh) → tiếp tục di chuyển. <strong>Không cần đăng nhập ở bất kỳ bước nào.</strong></p>
       </div>
       <div class="timeline-item">
         <h4>Hành trình QR (thay thế GPS)</h4>
@@ -1973,11 +1907,7 @@ sequenceDiagram
 
   Tourist->>App: Mở Settings / Chọn ngôn ngữ
   Tourist->>App: Chọn ngôn ngữ ưu tiên (ví dụ: en)
-  App->>App: Lưu preference local
-  opt Đã đăng nhập
-    App->>API: PUT /api/auth/update-profile
-    API->>DB: Lưu preferred_language
-  end
+  App->>App: Lưu preference local (SharedPreferences)
   App->>API: GET /api/pois?lang=en
   API-->>App: Dữ liệu POI theo ngôn ngữ
   App-->>Tourist: Cập nhật UI + narration preference
@@ -2102,7 +2032,7 @@ sequenceDiagram
       </pre>
     </div>
 
-    <h4>20.14 Tourist — Tour</h4>
+    <h4>20.14 Tourist — Tour (Không cần đăng nhập)</h4>
     <div class="diagram">
       <pre class="mermaid">
 sequenceDiagram
@@ -2110,6 +2040,8 @@ sequenceDiagram
   participant App as Android App
   participant API
   participant DB
+  participant GeoEngine as Geofence Engine
+  participant NarrEngine as Narration Engine
 
   Tourist->>App: Mở danh sách Tour
   App->>API: GET /api/tours
@@ -2119,21 +2051,15 @@ sequenceDiagram
   Tourist->>App: Chọn tour
   App->>API: GET /api/tours/{id}
   API->>DB: Tour detail + stops
-  API-->>App: Tour data
-  alt Đã login → Start/Resume tour
-    Tourist->>App: Bấm Start Tour
-    App->>API: POST /api/tours/{id}/start
-    API->>DB: Tạo tour_session
-    API-->>App: Session data
-    Note over App: Geofence Engine tự động trigger<br/>narration cho từng tour_stop
-    loop Mỗi khi đến tour_stop
-      App->>API: POST /api/tours/{id}/progress
-      API->>DB: Cập nhật current_stop
-    end
-    App-->>Tourist: Hiển thị tiến trình tour
-  else Guest mode → chỉ xem
-    App-->>Tourist: Hiển thị tour read-only
+  API-->>App: Tour data (danh sách stops + thứ tự)
+  App-->>Tourist: Hiển thị tour + các điểm dừng trên bản đồ
+  Note over App: Tourist di chuyển theo tour.<br/>Geofence Engine tự động<br/>phát narration khi đến từng stop.
+  loop Mỗi khi đến tour_stop
+    GeoEngine->>NarrEngine: Trigger narration cho POI tại stop
+    NarrEngine-->>Tourist: Phát thuyết minh
+    App->>API: POST /api/visit-events (tour_progress, ẩn danh)
   end
+  App-->>Tourist: Hiển thị tiến trình tour trên map
       </pre>
     </div>
   </section>
@@ -2141,25 +2067,20 @@ sequenceDiagram
   <!-- ========== 20. ACTIVITY DIAGRAM ========== -->
   <section id="uml-activity">
     <h2>21. UML — Activity Diagram</h2>
-    <h3>Luồng chính: Tourist sử dụng app</h3>
+    <h3>Luồng chính: Tourist sử dụng app (Không login)</h3>
     <div class="diagram">
       <pre class="mermaid">
 flowchart TD
-  A[Mở app] --> B{Đã đăng nhập?}
-  B -->|No| C{Cần tính năng cá nhân?}
-  C -->|No| D[Vào Guest mode]
-  C -->|Yes| E[Login]
-  B -->|Yes| F[Chọn ngôn ngữ]
-  D --> F
-  E --> F
+  A[Mở app] --> B{Lần đầu?}
+  B -->|Có| C[Welcome + Chọn ngôn ngữ + GPS Permission]
+  B -->|Không| F[Load bản đồ + POI từ API]
+  C --> F
 
-  F --> G[Load bản đồ + POI từ API]
-  G --> H{Người dùng thao tác?}
+  F --> H{Người dùng thao tác?}
 
   H -->|Xem POI trên map| I[Mở chi tiết POI]
   H -->|QR Deep Link| J["Nhận deep link từ QR ngoài app"]
-  H -->|Xem tour| K[Xem tour read-only]
-  H -->|Start tour| L{Đã login?}
+  H -->|Xem tour| K[Xem tour + Geofence auto-play]
   H -->|Di chuyển| M1{GPS cập nhật vị trí}
 
   M1 --> M2{Có POI trong geofence?}
@@ -2168,12 +2089,9 @@ flowchart TD
   M3 -->|Yes| H
   M3 -->|No| M4[Chọn POI nearest + priority cao nhất]
 
-  L -->|No| E
-  L -->|Yes| N[Start/Resume tour session]
-
   I --> O[Lấy translation theo ngôn ngữ]
   J --> O
-  N --> O
+  K --> O
   M4 --> O
 
   O --> P{Audio ready?}
@@ -2181,13 +2099,11 @@ flowchart TD
   P -->|Cache miss + online| Q2[Tải từ R2 + cache + phát]
   P -->|No audio| R[Hiển thị text fallback]
 
-  Q1 --> S[Ghi visit_event]
+  Q1 --> S[Ghi visit_event ẩn danh]
   Q2 --> S
   R --> S
   S --> T[Refresh UI]
   T --> H
-
-  K --> H
       </pre>
     </div>
   </section>
@@ -2281,7 +2197,7 @@ stateDiagram-v2
 
   <!-- ========== FOOTER ========== -->
   <div class="footer">
-    PRD & UML v1.7 — Ứng dụng Thuyết Minh Tự Động &bull; Cập nhật: 18/04/2026 &bull; Tech Stack: .NET 8 / MAUI Android / Blazor WASM / PostgreSQL / Mapbox / Google Cloud Translation / Google Cloud Text-to-Speech / Cloudflare R2
+    PRD & UML v1.7 — Ứng dụng Thuyết Minh Tự Động &bull; Cập nhật: 22/04/2026 &bull; Tech Stack: .NET 8 / MAUI Android / Blazor WASM / PostgreSQL / Mapbox / Google Cloud Translation / Google Cloud Text-to-Speech / Cloudflare R2
   </div>
 </main>
 

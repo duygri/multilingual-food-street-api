@@ -1,16 +1,41 @@
 using System.IO;
+using System.Text;
 
 namespace NarrationApp.Web.Tests.Mobile;
 
 public sealed class MobileStylesTests
 {
     [Fact]
+    public void Mobile_styles_are_split_into_domain_modules()
+    {
+        var webRoot = GetMobileWebRoot();
+        var appStylePath = Path.Combine(webRoot, "app.css");
+        var entryCss = File.ReadAllText(appStylePath);
+        var moduleNames = new[]
+        {
+            "mobile-foundation.css",
+            "mobile-map.css",
+            "mobile-discovery.css",
+            "mobile-tours.css",
+            "mobile-settings.css",
+            "mobile-shell.css"
+        };
+
+        foreach (var moduleName in moduleNames)
+        {
+            Assert.Contains($"@import url(\"css/{moduleName}\");", entryCss, StringComparison.Ordinal);
+            Assert.True(File.Exists(Path.Combine(webRoot, "css", moduleName)), $"{moduleName} should exist under wwwroot/css.");
+        }
+
+        Assert.True(entryCss.Split('\n').Length <= 16, "app.css should stay as the mobile stylesheet entry point, not the full stylesheet.");
+        Assert.DoesNotContain(".map-screen", entryCss, StringComparison.Ordinal);
+        Assert.DoesNotContain(".settings-screen", entryCss, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Mobile_styles_define_bottom_safe_offsets_for_fixed_navigation()
     {
-        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
-        var stylePath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "wwwroot", "app.css");
-
-        var css = File.ReadAllText(stylePath);
+        var css = ReadMobileCss();
 
         Assert.Contains("--mobile-bottom-nav-height", css, StringComparison.Ordinal);
         Assert.Contains("--mobile-mini-player-height", css, StringComparison.Ordinal);
@@ -21,10 +46,7 @@ public sealed class MobileStylesTests
     [Fact]
     public void Mobile_styles_render_map_as_fullscreen_shell_with_floating_poi_sheet()
     {
-        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
-        var stylePath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "wwwroot", "app.css");
-
-        var css = File.ReadAllText(stylePath);
+        var css = ReadMobileCss();
 
         Assert.Contains(".map-screen", css, StringComparison.Ordinal);
         Assert.Contains(".map-top-overlay", css, StringComparison.Ordinal);
@@ -43,10 +65,7 @@ public sealed class MobileStylesTests
     [Fact]
     public void Mobile_styles_include_sample_strict_discover_poi_and_tour_sections()
     {
-        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
-        var stylePath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "wwwroot", "app.css");
-
-        var css = File.ReadAllText(stylePath);
+        var css = ReadMobileCss();
 
         Assert.Contains(".discover-screen", css, StringComparison.Ordinal);
         Assert.Contains(".discover-refresh-button", css, StringComparison.Ordinal);
@@ -79,7 +98,7 @@ public sealed class MobileStylesTests
         Assert.Contains("bottom: calc(var(--mobile-bottom-safe-offset) + env(safe-area-inset-bottom) + 16px);", css, StringComparison.Ordinal);
         Assert.Contains(".tour-list-screen", css, StringComparison.Ordinal);
         Assert.Contains(".tour-list-header__copy", css, StringComparison.Ordinal);
-        Assert.Contains(".tour-guest-prompt", css, StringComparison.Ordinal);
+        Assert.DoesNotContain(".tour-guest-prompt", css, StringComparison.Ordinal);
         Assert.Contains(".tour-showcase-card", css, StringComparison.Ordinal);
         Assert.Contains(".tour-showcase-card--skeleton", css, StringComparison.Ordinal);
         Assert.Contains(".tour-showcase-list--stagger", css, StringComparison.Ordinal);
@@ -87,14 +106,14 @@ public sealed class MobileStylesTests
         Assert.Contains(".tour-showcase-card__description", css, StringComparison.Ordinal);
         Assert.Contains(".tour-list-footer-stats", css, StringComparison.Ordinal);
         Assert.Contains(".tour-list-footer-stats__item", css, StringComparison.Ordinal);
-        Assert.Contains(".auth-screen", css, StringComparison.Ordinal);
-        Assert.Contains(".auth-screen__intro", css, StringComparison.Ordinal);
-        Assert.Contains(".auth-screen__panel", css, StringComparison.Ordinal);
-        Assert.Contains(".auth-feature-list", css, StringComparison.Ordinal);
-        Assert.Contains(".auth-feature-card__copy", css, StringComparison.Ordinal);
-        Assert.Contains(".auth-screen__guest", css, StringComparison.Ordinal);
-        Assert.Contains(".guest-auth-snackbar", css, StringComparison.Ordinal);
-        Assert.Contains(".guest-auth-snackbar__copy", css, StringComparison.Ordinal);
+        Assert.DoesNotContain(".auth-screen", css, StringComparison.Ordinal);
+        Assert.DoesNotContain(".auth-screen__intro", css, StringComparison.Ordinal);
+        Assert.DoesNotContain(".auth-screen__panel", css, StringComparison.Ordinal);
+        Assert.DoesNotContain(".auth-feature-list", css, StringComparison.Ordinal);
+        Assert.DoesNotContain(".auth-feature-card__copy", css, StringComparison.Ordinal);
+        Assert.DoesNotContain(".auth-screen__guest", css, StringComparison.Ordinal);
+        Assert.DoesNotContain(".guest-auth-snackbar", css, StringComparison.Ordinal);
+        Assert.DoesNotContain(".guest-auth-snackbar__copy", css, StringComparison.Ordinal);
         Assert.Contains(".settings-profile-card", css, StringComparison.Ordinal);
         Assert.Contains(".settings-avatar", css, StringComparison.Ordinal);
         Assert.Contains(".settings-stat-grid", css, StringComparison.Ordinal);
@@ -140,7 +159,7 @@ public sealed class MobileStylesTests
         Assert.Contains(".notification-panel__surface", css, StringComparison.Ordinal);
         Assert.Contains(".notification-panel__copy", css, StringComparison.Ordinal);
         Assert.Contains(".qr-modal__panel", css, StringComparison.Ordinal);
-        Assert.Contains(".auth-overlay__card", css, StringComparison.Ordinal);
+        Assert.DoesNotContain(".auth-overlay__card", css, StringComparison.Ordinal);
         Assert.Contains(".offline-banner", css, StringComparison.Ordinal);
         Assert.Contains(".geofence-toast", css, StringComparison.Ordinal);
         Assert.Contains("@keyframes mobile-screen-enter", css, StringComparison.Ordinal);
@@ -148,5 +167,39 @@ public sealed class MobileStylesTests
         Assert.Contains("@keyframes mobile-shimmer-sweep", css, StringComparison.Ordinal);
         Assert.Contains("@keyframes mobile-hero-float", css, StringComparison.Ordinal);
         Assert.Contains(".nav-pill.is-active::before", css, StringComparison.Ordinal);
+    }
+
+    private static string ReadMobileCss()
+    {
+        var webRoot = GetMobileWebRoot();
+        var entryCss = File.ReadAllText(Path.Combine(webRoot, "app.css"));
+        var builder = new StringBuilder(entryCss);
+
+        foreach (var line in entryCss.Split('\n'))
+        {
+            var trimmed = line.Trim();
+            const string prefix = "@import url(\"";
+            const string suffix = "\");";
+            if (!trimmed.StartsWith(prefix, StringComparison.Ordinal) || !trimmed.EndsWith(suffix, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var relativePath = trimmed[prefix.Length..^suffix.Length].Replace('/', Path.DirectorySeparatorChar);
+            var importedPath = Path.Combine(webRoot, relativePath);
+            if (File.Exists(importedPath))
+            {
+                builder.AppendLine();
+                builder.AppendLine(File.ReadAllText(importedPath));
+            }
+        }
+
+        return builder.ToString();
+    }
+
+    private static string GetMobileWebRoot()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        return Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "wwwroot");
     }
 }

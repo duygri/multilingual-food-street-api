@@ -15,17 +15,27 @@ public sealed class PoiServiceTests
     {
         await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
         var sut = new PoiService(dbContext);
+        const double requestLat = 10.75986;
+        const double requestLng = 106.70188;
 
         var result = await sut.GetNearbyAsync(new PoiNearRequest
         {
-            Lat = 10.75986,
-            Lng = 106.70188,
+            Lat = requestLat,
+            Lng = requestLng,
             RadiusMeters = 1200
         });
 
         Assert.NotEmpty(result);
-        Assert.Equal("pho-am-thuc-vinh-khanh", result[0].Slug);
         Assert.True(result.Count >= 2);
+
+        var orderedDistances = result
+            .Select(item => CalculateDistanceInMeters(requestLat, requestLng, item.Lat, item.Lng))
+            .ToArray();
+
+        for (var index = 1; index < orderedDistances.Length; index++)
+        {
+            Assert.True(orderedDistances[index - 1] <= orderedDistances[index]);
+        }
     }
 
     [Fact]
@@ -234,4 +244,23 @@ public sealed class PoiServiceTests
             return Task.CompletedTask;
         }
     }
+
+    private static double CalculateDistanceInMeters(double requestLat, double requestLng, double poiLat, double poiLng)
+    {
+        const double earthRadiusMeters = 6371000;
+        var latDelta = DegreesToRadians(poiLat - requestLat);
+        var lngDelta = DegreesToRadians(poiLng - requestLng);
+        var originLat = DegreesToRadians(requestLat);
+        var destinationLat = DegreesToRadians(poiLat);
+
+        var haversine =
+            Math.Sin(latDelta / 2) * Math.Sin(latDelta / 2) +
+            Math.Cos(originLat) * Math.Cos(destinationLat) *
+            Math.Sin(lngDelta / 2) * Math.Sin(lngDelta / 2);
+
+        var angularDistance = 2 * Math.Atan2(Math.Sqrt(haversine), Math.Sqrt(1 - haversine));
+        return earthRadiusMeters * angularDistance;
+    }
+
+    private static double DegreesToRadians(double value) => value * Math.PI / 180d;
 }

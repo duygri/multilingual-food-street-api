@@ -10,7 +10,7 @@
         <MOBILE_VERSION_NAME>1.0.0</MOBILE_VERSION_NAME>
         <MOBILE_VERSION_CODE>1</MOBILE_VERSION_CODE>
 
-        <!-- Optional: package a different API config JSON file as tourist-api.json -->
-        <TouristApiConfigFile>C:\configs\foodstreet\tourist-api.production.json</TouristApiConfigFile>
+        <!-- Optional: package a different API config JSON file as visitor-api.json -->
+        <VisitorApiConfigFile>C:\configs\foodstreet\visitor-api.production.json</VisitorApiConfigFile>
     </PropertyGroup>
 </Project>

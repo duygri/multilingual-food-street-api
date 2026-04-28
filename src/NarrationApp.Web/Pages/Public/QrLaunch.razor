@@ -1,0 +1,23 @@
+@page "/qr/{Code}"
+@attribute [AllowAnonymous]
+
+<PageTitle>Mở Food Street QR</PageTitle>
+
+<section class="panel-shell qr-launch-shell">
+    <p class="panel-shell__eyebrow">QR Link</p>
+    <h2>Mở Food Street từ mã QR</h2>
+    <p class="panel-shell__copy">
+        Máy của bạn vừa mở mã <strong>@NormalizedCode</strong>. Nhấn nút bên dưới để chuyển sang ứng dụng Food Street.
+    </p>
+
+    <div class="qr-launch-shell__actions">
+        <a class="app-button app-button--primary" href="@AppDeepLink">
+            Mở ứng dụng
+        </a>
+    </div>
+
+    <div class="qr-launch-shell__meta">
+        <p>Không tự mở được app? Hãy dùng nút phía trên hoặc quay lại camera để quét lại.</p>
+        <p>@AppDeepLink</p>
+    </div>
+</section>

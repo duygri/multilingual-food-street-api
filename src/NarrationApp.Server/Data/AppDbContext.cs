@@ -232,7 +232,11 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.HasKey(visitEvent => visitEvent.Id);
             entity.Property(visitEvent => visitEvent.DeviceId).HasMaxLength(120).IsRequired();
             entity.Property(visitEvent => visitEvent.Source).HasMaxLength(50).IsRequired();
+            entity.HasIndex(visitEvent => visitEvent.CreatedAt);
+            entity.HasIndex(visitEvent => new { visitEvent.EventType, visitEvent.CreatedAt });
+            entity.HasIndex(visitEvent => new { visitEvent.DeviceId, visitEvent.CreatedAt });
             entity.HasIndex(visitEvent => new { visitEvent.PoiId, visitEvent.CreatedAt });
+            entity.HasIndex(visitEvent => new { visitEvent.PoiId, visitEvent.EventType, visitEvent.CreatedAt });
             entity.HasOne(visitEvent => visitEvent.User)
                 .WithMany(user => user.VisitEvents)
                 .HasForeignKey(visitEvent => visitEvent.UserId)

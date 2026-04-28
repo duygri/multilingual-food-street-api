@@ -18,6 +18,13 @@ public sealed class AnalyticsController(IAnalyticsService analyticsService) : Co
         return Ok(new ApiResponse<DashboardDto> { Succeeded = true, Message = "Dashboard analytics loaded.", Data = response });
     }
 
+    [HttpGet("snapshot")]
+    public async Task<ActionResult<ApiResponse<AnalyticsSnapshotDto>>> SnapshotAsync(CancellationToken cancellationToken)
+    {
+        var response = await analyticsService.GetAnalyticsSnapshotAsync(cancellationToken);
+        return Ok(new ApiResponse<AnalyticsSnapshotDto> { Succeeded = true, Message = "Analytics snapshot loaded.", Data = response });
+    }
+
     [HttpGet("poi/{id:int}")]
     public async Task<ActionResult<ApiResponse<PoiAnalyticsDto>>> PoiAsync(int id, CancellationToken cancellationToken)
     {
@@ -26,10 +33,21 @@ public sealed class AnalyticsController(IAnalyticsService analyticsService) : Co
     }
 
     [HttpGet("heatmap")]
-    public async Task<ActionResult<ApiResponse<IReadOnlyList<HeatmapPointDto>>>> HeatmapAsync(CancellationToken cancellationToken)
+    public async Task<ActionResult<ApiResponse<IReadOnlyList<HeatmapPointDto>>>> HeatmapAsync([FromQuery] HeatmapQueryDto? query, CancellationToken cancellationToken)
     {
-        var response = await analyticsService.GetHeatmapAsync(cancellationToken);
+        var response = query is null
+            ? await analyticsService.GetHeatmapAsync(cancellationToken)
+            : await analyticsService.GetHeatmapAsync(query, cancellationToken);
         return Ok(new ApiResponse<IReadOnlyList<HeatmapPointDto>> { Succeeded = true, Message = "Heatmap loaded.", Data = response });
+    }
+
+    [HttpGet("movement-flows")]
+    public async Task<ActionResult<ApiResponse<IReadOnlyList<MovementFlowDto>>>> MovementFlowsAsync([FromQuery] MovementFlowQueryDto? query, CancellationToken cancellationToken)
+    {
+        var response = query is null
+            ? await analyticsService.GetMovementFlowsAsync(cancellationToken)
+            : await analyticsService.GetMovementFlowsAsync(query, cancellationToken);
+        return Ok(new ApiResponse<IReadOnlyList<MovementFlowDto>> { Succeeded = true, Message = "Movement flows loaded.", Data = response });
     }
 
     [HttpGet("top-pois")]
@@ -37,6 +55,13 @@ public sealed class AnalyticsController(IAnalyticsService analyticsService) : Co
     {
         var response = await analyticsService.GetTopPoisAsync(10, cancellationToken);
         return Ok(new ApiResponse<IReadOnlyList<TopPoiDto>> { Succeeded = true, Message = "Top POIs loaded.", Data = response });
+    }
+
+    [HttpGet("average-listen")]
+    public async Task<ActionResult<ApiResponse<IReadOnlyList<PoiAverageListenDto>>>> AverageListenAsync(CancellationToken cancellationToken)
+    {
+        var response = await analyticsService.GetAverageListenByPoiAsync(10, cancellationToken);
+        return Ok(new ApiResponse<IReadOnlyList<PoiAverageListenDto>> { Succeeded = true, Message = "Average listen analytics loaded.", Data = response });
     }
 
     [HttpGet("audio-plays")]

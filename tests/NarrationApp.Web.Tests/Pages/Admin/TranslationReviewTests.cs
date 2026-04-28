@@ -15,6 +15,40 @@ namespace NarrationApp.Web.Tests.Pages.Admin;
 public sealed class TranslationReviewTests : TestContext
 {
     [Fact]
+    public void Translation_review_behavior_is_split_into_focused_partials()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var pageRoot = Path.Combine(projectRoot, "src", "NarrationApp.Web", "Pages", "Admin");
+        var markupPath = Path.Combine(pageRoot, "TranslationReview.razor");
+        var expectedPartials = new[]
+        {
+            ("TranslationReview.razor.cs", "OnInitializedAsync"),
+            ("TranslationReview.Selection.razor.cs", "SelectPoiLanguage"),
+            ("TranslationReview.Actions.razor.cs", "SaveTranslationAsync"),
+            ("TranslationReview.Audio.razor.cs", "RetrySelectedAudioAsync"),
+            ("TranslationReview.Presentation.razor.cs", "GetMatrixLabel")
+        };
+
+        var markup = File.ReadAllText(markupPath);
+        Assert.DoesNotContain("@code", markup, StringComparison.Ordinal);
+
+        foreach (var (fileName, marker) in expectedPartials)
+        {
+            var path = Path.Combine(pageRoot, fileName);
+            Assert.True(File.Exists(path), $"{fileName} should exist.");
+            var source = File.ReadAllText(path);
+            Assert.Contains("partial class TranslationReview", source, StringComparison.Ordinal);
+            Assert.Contains(marker, source, StringComparison.Ordinal);
+        }
+
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "TranslationReview.razor.cs")).Length <= 120);
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "TranslationReview.Selection.razor.cs")).Length <= 140);
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "TranslationReview.Actions.razor.cs")).Length <= 180);
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "TranslationReview.Audio.razor.cs")).Length <= 130);
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "TranslationReview.Presentation.razor.cs")).Length <= 180);
+    }
+
+    [Fact]
     public void Auto_translate_save_and_delete_translation_from_admin_surface()
     {
         var adminService = new TestAdminPortalService();
@@ -363,6 +397,11 @@ public sealed class TranslationReviewTests : TestContext
         }
 
         public Task<IReadOnlyList<UserSummaryDto>> GetUsersAsync(CancellationToken cancellationToken = default)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task<IReadOnlyList<VisitorDeviceSummaryDto>> GetVisitorDevicesAsync(CancellationToken cancellationToken = default)
         {
             throw new NotSupportedException();
         }

@@ -1,0 +1,136 @@
+@using NarrationApp.Mobile.Features.Home
+
+<section class="tour-detail-screen">
+    <header class="tour-detail-hero @ThemeClass">
+        <div class="tour-detail-hero__actions">
+            <button type="button" class="poi-detail-hero__button" @onclick="OnBack">←</button>
+        </div>
+        <span class="tour-detail-hero__pill">@Tour.DifficultyLabel</span>
+        <span class="tour-detail-hero__icon">@HeroIcon</span>
+        <div class="tour-detail-hero__copy">
+            <h1>@Tour.Title</h1>
+            <p>@Tour.Description</p>
+        </div>
+    </header>
+
+    <section class="tour-detail-content">
+        <section class="tour-detail-overview">
+            <span class="sheet-label">Tour đã chọn</span>
+            <strong>@Tour.StopCountLabel • @Tour.DurationLabel</strong>
+            <p>@PrimaryActionLabel.ToLowerInvariant() để app dẫn bạn qua từng điểm dừng và tiếp tục lưu tiến trình nghe.</p>
+        </section>
+
+        <section class="tour-detail-stats">
+            <article class="poi-detail-stat-card">
+                <strong>@Tour.StopCountLabel.Replace(" điểm dừng", string.Empty)</strong>
+                <span>Điểm dừng</span>
+            </article>
+            <article class="poi-detail-stat-card">
+                <strong>@Tour.DurationLabel</strong>
+                <span>Thời gian</span>
+            </article>
+            <article class="poi-detail-stat-card">
+                <strong>@RouteDistanceLabel</strong>
+                <span>Quãng đường</span>
+            </article>
+            <article class="poi-detail-stat-card">
+                <strong>@ParticipationLabel</strong>
+                <span>Đã tham gia</span>
+            </article>
+        </section>
+
+        <section class="tour-progress-track">
+            <div class="tour-progress-track__head">
+                <strong>🗂 Tiến trình của bạn</strong>
+                <span>@ProgressLabel</span>
+            </div>
+            <div class="tour-progress-track__summary">
+                <span>Đi theo lộ trình đã gợi ý để mở từng điểm dừng theo đúng nhịp tour.</span>
+            </div>
+            <div class="tour-progress-track__bar">
+                <span style="width:@ProgressPercent"></span>
+            </div>
+        </section>
+
+        <section class="tour-stop-timeline">
+            <header class="tour-stop-timeline__header">🗺 Lộ trình</header>
+            @foreach (var stop in Stops)
+            {
+                <article class="tour-stop-timeline__item @GetStopClass(stop)">
+                    <div class="tour-stop-timeline__node">
+                        <span>@GetStopMarker(stop)</span>
+                    </div>
+                    <div class="tour-stop-timeline__body">
+                        <div class="tour-stop-timeline__copy">
+                            <strong>@stop.PoiName</strong>
+                            <p>@stop.Summary</p>
+                            <div class="tour-stop-timeline__chips">
+                                <span class="tour-stop-chip @GetStopChipClass(stop)">@stop.StateLabel</span>
+                                <span class="tour-stop-chip">@stop.DistanceLabel</span>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+            }
+        </section>
+
+        <div class="sheet-actions tour-detail-sheet-actions">
+            <button type="button" class="secondary-pill" @onclick="OnBack">Quay lại</button>
+            <button type="button" class="primary-pill" @onclick="OnPrimaryAction">@PrimaryActionLabel</button>
+        </div>
+    </section>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public VisitorTourCard Tour { get; set; } = default!;
+    [Parameter] public IReadOnlyList<VisitorTourStopItem> Stops { get; set; } = [];
+    [Parameter] public string HeroIcon { get; set; } = "🏛️";
+    [Parameter] public string ThemeClass { get; set; } = "is-history";
+    [Parameter] public string RouteDistanceLabel { get; set; } = "1.2km";
+    [Parameter] public string ParticipationLabel { get; set; } = "187";
+    [Parameter] public string ProgressLabel { get; set; } = "0/0 điểm";
+    [Parameter] public string ProgressPercent { get; set; } = "0%";
+    [Parameter] public string PrimaryActionLabel { get; set; } = "Bắt đầu";
+    [Parameter] public EventCallback OnBack { get; set; }
+    [Parameter] public EventCallback OnPrimaryAction { get; set; }
+
+    private static string GetStopClass(VisitorTourStopItem stop)
+    {
+        if (stop.IsCurrent || stop.IsNext)
+        {
+            return "is-current";
+        }
+
+        if (stop.IsCompleted)
+        {
+            return "is-complete";
+        }
+
+        return string.Empty;
+    }
+
+    private static string GetStopMarker(VisitorTourStopItem stop)
+    {
+        if (stop.IsCompleted)
+        {
+            return "✓";
+        }
+
+        return stop.Sequence.ToString();
+    }
+
+    private static string GetStopChipClass(VisitorTourStopItem stop)
+    {
+        if (stop.IsCompleted)
+        {
+            return "is-complete";
+        }
+
+        if (stop.IsCurrent || stop.IsNext)
+        {
+            return "is-current";
+        }
+
+        return string.Empty;
+    }
+}

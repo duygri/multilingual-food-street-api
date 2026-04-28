@@ -8,7 +8,7 @@ namespace NarrationApp.Server.Controllers;
 
 [ApiController]
 [Route("api/qr")]
-public sealed class QrController(IQrService qrService) : ControllerBase
+public sealed class QrController(IQrService qrService, QrPublicLinkBuilder qrPublicLinkBuilder) : ControllerBase
 {
     [Authorize(Roles = "admin")]
     [HttpGet]
@@ -17,7 +17,8 @@ public sealed class QrController(IQrService qrService) : ControllerBase
         try
         {
             var response = await qrService.GetAsync(targetType, cancellationToken);
-            return Ok(new ApiResponse<IReadOnlyList<QrCodeDto>> { Succeeded = true, Message = "QR codes loaded.", Data = response });
+            var hydrated = response.Select(item => qrPublicLinkBuilder.Enrich(HttpContext, item)).ToArray();
+            return Ok(new ApiResponse<IReadOnlyList<QrCodeDto>> { Succeeded = true, Message = "QR codes loaded.", Data = hydrated });
         }
         catch (ArgumentException ex)
         {
@@ -37,7 +38,8 @@ public sealed class QrController(IQrService qrService) : ControllerBase
         try
         {
             var response = await qrService.CreateAsync(request, cancellationToken);
-            return Ok(new ApiResponse<QrCodeDto> { Succeeded = true, Message = "QR code created.", Data = response });
+            var hydrated = qrPublicLinkBuilder.Enrich(HttpContext, response);
+            return Ok(new ApiResponse<QrCodeDto> { Succeeded = true, Message = "QR code created.", Data = hydrated });
         }
         catch (ArgumentException ex)
         {
@@ -64,7 +66,8 @@ public sealed class QrController(IQrService qrService) : ControllerBase
     public async Task<ActionResult<ApiResponse<QrCodeDto>>> ResolveAsync(string code, CancellationToken cancellationToken)
     {
         var response = await qrService.ResolveAsync(code, cancellationToken);
-        return Ok(new ApiResponse<QrCodeDto> { Succeeded = true, Message = "QR code resolved.", Data = response });
+        var hydrated = qrPublicLinkBuilder.Enrich(HttpContext, response);
+        return Ok(new ApiResponse<QrCodeDto> { Succeeded = true, Message = "QR code resolved.", Data = hydrated });
     }
 
     [AllowAnonymous]
@@ -72,7 +75,8 @@ public sealed class QrController(IQrService qrService) : ControllerBase
     public async Task<ActionResult<ApiResponse<QrCodeDto>>> ScanAsync(string code, [FromHeader(Name = "X-Device-Id")] string? deviceId, CancellationToken cancellationToken)
     {
         var response = await qrService.ScanAsync(code, string.IsNullOrWhiteSpace(deviceId) ? "anonymous-device" : deviceId, cancellationToken);
-        return Ok(new ApiResponse<QrCodeDto> { Succeeded = true, Message = "QR code scanned.", Data = response });
+        var hydrated = qrPublicLinkBuilder.Enrich(HttpContext, response);
+        return Ok(new ApiResponse<QrCodeDto> { Succeeded = true, Message = "QR code scanned.", Data = hydrated });
     }
 
     [Authorize(Roles = "admin")]

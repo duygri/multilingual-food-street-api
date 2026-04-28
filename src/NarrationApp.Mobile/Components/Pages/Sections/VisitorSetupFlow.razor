@@ -1,0 +1,61 @@
+@using NarrationApp.Mobile.Features.Home
+
+<main class="visitor-app visitor-app--setup">
+    <section class="setup-card">
+        @switch (State.CurrentStep)
+        {
+            case VisitorIntroStep.Language:
+                <div class="setup-stack">
+                    <span class="eyebrow">Ngôn ngữ</span>
+                    <h1>Chọn ngôn ngữ audio ưu tiên.</h1>
+                    <p class="setup-copy">
+                        Nội dung gốc là tiếng Việt, còn audio du lịch sẽ được phát theo ngôn ngữ bạn chọn.
+                    </p>
+                    <div class="language-grid">
+                        @foreach (var language in State.Languages)
+                        {
+                            <button
+                                type="button"
+                                class="language-tile @LanguageTileClassSelector(language.Code)"
+                                @onclick="() => OnSelectLanguage.InvokeAsync(language.Code)">
+                                <span class="language-chip">@language.ChipLabel</span>
+                                <strong>@language.Label</strong>
+                                <span>@language.SubLabel</span>
+                            </button>
+                        }
+                    </div>
+                </div>
+                break;
+
+            case VisitorIntroStep.Permissions:
+                <div class="setup-stack">
+                    <span class="eyebrow">Quyền truy cập</span>
+                    <h1>Bật vị trí để nhận gợi ý POI gần bạn.</h1>
+                    <p class="setup-copy">
+                        App dùng vị trí cho map, geofence cơ bản và gợi ý phát audio khi bạn đến gần điểm tham quan.
+                    </p>
+                    <div class="permission-card">
+                        <strong>Ngôn ngữ hiện tại: @State.CurrentLanguage.Label</strong>
+                        <span>Bạn có thể đổi lại quyền vị trí bất kỳ lúc nào trong phần cài đặt.</span>
+                    </div>
+                    <div class="setup-actions">
+                        <button type="button" class="primary-pill" @onclick="OnEnableLocation">
+                            Bật vị trí
+                        </button>
+                        <button type="button" class="secondary-pill" @onclick="OnSkipLocation">
+                            Để sau
+                        </button>
+                    </div>
+                </div>
+                break;
+        }
+    </section>
+</main>
+
+@code {
+    [Parameter] public VisitorShellState State { get; set; } = default!;
+    [Parameter] public Func<string, string> LanguageTileClassSelector { get; set; } = static _ => string.Empty;
+    [Parameter] public EventCallback<string> OnSelectLanguage { get; set; }
+    [Parameter] public EventCallback OnEnableLocation { get; set; }
+    [Parameter] public EventCallback OnSkipLocation { get; set; }
+}

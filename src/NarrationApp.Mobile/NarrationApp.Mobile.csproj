@@ -21,27 +21,27 @@
                <MauiXaml Update="MyPage.xaml" Inflator="Runtime" /> (force runtime inflation) -->
         <MauiXamlInflator>SourceGen</MauiXamlInflator>
 
-        <ApplicationTitle>Food Street Tourist</ApplicationTitle>
+        <ApplicationTitle>Food Street Visitor</ApplicationTitle>
         <ApplicationId>com.foodstreet.tourist</ApplicationId>
 
         <!-- Versions -->
         <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
         <ApplicationVersion>1</ApplicationVersion>
         <AndroidPackageFormats>apk</AndroidPackageFormats>
-        <TouristApiConfigFile></TouristApiConfigFile>
+        <VisitorApiConfigFile></VisitorApiConfigFile>
 
         <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">24.0</SupportedOSPlatformVersion>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
-        <ApplicationTitle>Food Street Tourist Dev</ApplicationTitle>
+        <ApplicationTitle>Food Street Visitor Dev</ApplicationTitle>
         <ApplicationId>com.foodstreet.tourist.dev</ApplicationId>
         <AndroidPackageFormats>apk</AndroidPackageFormats>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)' == 'Smoke'">
         <DefineConstants>$(DefineConstants);SMOKE</DefineConstants>
-        <ApplicationTitle>Food Street Tourist Smoke</ApplicationTitle>
+        <ApplicationTitle>Food Street Visitor Smoke</ApplicationTitle>
         <ApplicationId>com.foodstreet.tourist.smoke</ApplicationId>
         <AndroidPackageFormats>apk</AndroidPackageFormats>
         <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
@@ -50,7 +50,7 @@
 
     <PropertyGroup Condition="'$(Configuration)' == 'Staging'">
         <DefineConstants>$(DefineConstants);STAGING</DefineConstants>
-        <ApplicationTitle>Food Street Tourist Staging</ApplicationTitle>
+        <ApplicationTitle>Food Street Visitor Staging</ApplicationTitle>
         <ApplicationId>com.foodstreet.tourist.staging</ApplicationId>
         <AndroidPackageFormats>apk</AndroidPackageFormats>
     </PropertyGroup>
@@ -75,8 +75,8 @@
         <AndroidSigningKeyPass>$(ANDROID_KEY_PASSWORD)</AndroidSigningKeyPass>
     </PropertyGroup>
 
-    <Target Name="ValidateTouristApiConfigFile" BeforeTargets="PrepareForBuild" Condition="'$(TouristApiConfigFile)' != '' and !Exists('$(TouristApiConfigFile)')">
-        <Error Text="TouristApiConfigFile '$(TouristApiConfigFile)' was not found." />
+    <Target Name="ValidateVisitorApiConfigFile" BeforeTargets="PrepareForBuild" Condition="'$(VisitorApiConfigFile)' != '' and !Exists('$(VisitorApiConfigFile)')">
+        <Error Text="VisitorApiConfigFile '$(VisitorApiConfigFile)' was not found." />
     </Target>
 
     <ItemGroup>
@@ -94,10 +94,10 @@
         <MauiFont Include="Resources\Fonts\*" />
 
         <!-- Raw Assets (also remove the "Resources\Raw" prefix) -->
-        <MauiAsset Include="Resources\Raw\**" Exclude="Resources\Raw\AboutAssets.txt;Resources\Raw\tourist-api.json" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+        <MauiAsset Include="Resources\Raw\**" Exclude="Resources\Raw\AboutAssets.txt;Resources\Raw\visitor-api.json" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
         <MauiAsset Include="Resources\Raw\AboutAssets.txt" LogicalName="AboutAssets.txt" />
-        <MauiAsset Include="Resources\Raw\tourist-api.json" Condition="'$(TouristApiConfigFile)' == ''" LogicalName="tourist-api.json" />
-        <MauiAsset Include="$(TouristApiConfigFile)" Condition="'$(TouristApiConfigFile)' != '' and Exists('$(TouristApiConfigFile)')" LogicalName="tourist-api.json" />
+        <MauiAsset Include="Resources\Raw\visitor-api.json" Condition="'$(VisitorApiConfigFile)' == ''" LogicalName="visitor-api.json" />
+        <MauiAsset Include="$(VisitorApiConfigFile)" Condition="'$(VisitorApiConfigFile)' != '' and Exists('$(VisitorApiConfigFile)')" LogicalName="visitor-api.json" />
     </ItemGroup>
 
     <ItemGroup>

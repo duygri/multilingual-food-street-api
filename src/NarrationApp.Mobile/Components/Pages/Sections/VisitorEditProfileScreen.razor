@@ -1,0 +1,81 @@
+@using NarrationApp.Mobile.Features.Home
+
+<section class="settings-detail-screen">
+    <header class="settings-detail-header">
+        <button type="button" class="icon-button" @onclick="OnBack">←</button>
+        <div>
+            <span class="eyebrow">Thiết bị</span>
+            <h2>Hồ sơ cục bộ</h2>
+            <p>Cập nhật tên hiển thị và email liên hệ tùy chọn cho thiết bị đang dùng.</p>
+        </div>
+    </header>
+
+    <article class="setting-card profile-editor-card">
+        <div class="settings-profile-card__top">
+            <div class="settings-avatar settings-avatar--large">@Initials</div>
+            <div class="settings-row__copy">
+                <strong class="settings-row__title">@ModeLabel</strong>
+                <span class="settings-row__subtitle">@DisplayName</span>
+                <span class="settings-row__subtitle">@DisplayEmail</span>
+            </div>
+        </div>
+
+        <div class="profile-editor-stats">
+            @foreach (var stat in Stats)
+            {
+                <div class="settings-stat">
+                    <strong>@stat.Value</strong>
+                    <span>@stat.Label</span>
+                </div>
+            }
+        </div>
+    </article>
+
+    <article class="setting-card profile-editor-card">
+        <label class="form-field">
+            <span class="field-label">Tên hiển thị</span>
+            <input class="auth-inline__input" type="text" value="@Name" @oninput="HandleNameChangedAsync" />
+        </label>
+
+        <label class="form-field">
+            <span class="field-label">Email liên hệ (tùy chọn)</span>
+            <input class="auth-inline__input" type="email" value="@Email" @oninput="HandleEmailChangedAsync" />
+        </label>
+
+        <div class="sheet-actions">
+            <button type="button" class="primary-pill" @onclick="OnSave">Lưu hồ sơ</button>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(StatusMessage))
+        {
+            <div class="auth-feedback auth-feedback--success">@StatusMessage</div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+        {
+            <div class="auth-feedback auth-feedback--error">@ErrorMessage</div>
+        }
+    </article>
+</section>
+
+@code {
+    [Parameter] public string DisplayName { get; set; } = string.Empty;
+    [Parameter] public string DisplayEmail { get; set; } = string.Empty;
+    [Parameter] public string ModeLabel { get; set; } = string.Empty;
+    [Parameter] public string Initials { get; set; } = "G";
+    [Parameter] public IReadOnlyList<VisitorSettingsStat> Stats { get; set; } = [];
+    [Parameter] public string Name { get; set; } = string.Empty;
+    [Parameter] public string Email { get; set; } = string.Empty;
+    [Parameter] public string? StatusMessage { get; set; }
+    [Parameter] public string? ErrorMessage { get; set; }
+    [Parameter] public EventCallback OnBack { get; set; }
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback<string> OnNameChanged { get; set; }
+    [Parameter] public EventCallback<string> OnEmailChanged { get; set; }
+
+    private Task HandleNameChangedAsync(ChangeEventArgs args) =>
+        OnNameChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty);
+
+    private Task HandleEmailChangedAsync(ChangeEventArgs args) =>
+        OnEmailChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty);
+}

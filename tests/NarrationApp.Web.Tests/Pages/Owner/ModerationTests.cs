@@ -12,6 +12,34 @@ namespace NarrationApp.Web.Tests.Pages.Owner;
 public sealed class ModerationTests : TestContext
 {
     [Fact]
+    public void Moderation_behavior_is_split_into_focused_partials()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var pageRoot = Path.Combine(projectRoot, "src", "NarrationApp.Web", "Pages", "Owner");
+        var markupPath = Path.Combine(pageRoot, "Moderation.razor");
+        var expectedPartials = new[]
+        {
+            ("Moderation.razor.cs", "OnInitializedAsync"),
+            ("Moderation.Presentation.razor.cs", "GetResultClass")
+        };
+
+        var markup = File.ReadAllText(markupPath);
+        Assert.DoesNotContain("@code", markup, StringComparison.Ordinal);
+
+        foreach (var (fileName, marker) in expectedPartials)
+        {
+            var path = Path.Combine(pageRoot, fileName);
+            Assert.True(File.Exists(path), $"{fileName} should exist.");
+            var source = File.ReadAllText(path);
+            Assert.Contains("partial class Moderation", source, StringComparison.Ordinal);
+            Assert.Contains(marker, source, StringComparison.Ordinal);
+        }
+
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "Moderation.razor.cs")).Length <= 50);
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "Moderation.Presentation.razor.cs")).Length <= 50);
+    }
+
+    [Fact]
     public void Moderation_page_renders_workspace_stat_cards_pending_table_and_history_table()
     {
         Services.AddSingleton<IModerationPortalService>(new TestModerationPortalService());

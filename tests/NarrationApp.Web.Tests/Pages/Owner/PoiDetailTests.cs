@@ -19,6 +19,48 @@ namespace NarrationApp.Web.Tests.Pages.Owner;
 public sealed class PoiDetailTests : TestContext
 {
     [Fact]
+    public void Detail_page_behavior_is_split_into_focused_partials()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var pageRoot = Path.Combine(projectRoot, "src", "NarrationApp.Web", "Pages", "Owner");
+        var markupPath = Path.Combine(pageRoot, "PoiDetail.razor");
+        var expectedPartials = new[]
+        {
+            ("PoiDetail.razor.cs", "OnParametersSetAsync"),
+            ("PoiDetail.PoiActions.razor.cs", "SavePoiAsync"),
+            ("PoiDetail.Uploads.razor.cs", "UploadSourceAudioAsync"),
+            ("PoiDetail.Moderation.razor.cs", "RequestReviewAsync"),
+            ("PoiDetail.Presentation.razor.cs", "GetPoiStatusLabel"),
+            ("PoiDetail.EditorModels.razor.cs", "PoiEditModel")
+        };
+
+        var markup = File.ReadAllText(markupPath);
+        Assert.DoesNotContain("@code", markup, StringComparison.Ordinal);
+
+        foreach (var (fileName, marker) in expectedPartials)
+        {
+            var path = Path.Combine(pageRoot, fileName);
+            Assert.True(File.Exists(path), $"{fileName} should exist.");
+            var source = File.ReadAllText(path);
+            Assert.Contains("partial class PoiDetail", source, StringComparison.Ordinal);
+            Assert.Contains(marker, source, StringComparison.Ordinal);
+        }
+
+        var coreLines = File.ReadAllLines(Path.Combine(pageRoot, "PoiDetail.razor.cs")).Length;
+        Assert.True(coreLines <= 100, $"PoiDetail.razor.cs should stay focused on state/load orchestration, but has {coreLines} lines.");
+        var poiActionLines = File.ReadAllLines(Path.Combine(pageRoot, "PoiDetail.PoiActions.razor.cs")).Length;
+        Assert.True(poiActionLines <= 140, $"PoiDetail.PoiActions.razor.cs should stay focused on poi/geofence actions, but has {poiActionLines} lines.");
+        var uploadLines = File.ReadAllLines(Path.Combine(pageRoot, "PoiDetail.Uploads.razor.cs")).Length;
+        Assert.True(uploadLines <= 120, $"PoiDetail.Uploads.razor.cs should stay focused on upload flows, but has {uploadLines} lines.");
+        var moderationLines = File.ReadAllLines(Path.Combine(pageRoot, "PoiDetail.Moderation.razor.cs")).Length;
+        Assert.True(moderationLines <= 90, $"PoiDetail.Moderation.razor.cs should stay focused on moderation state and actions, but has {moderationLines} lines.");
+        var presentationLines = File.ReadAllLines(Path.Combine(pageRoot, "PoiDetail.Presentation.razor.cs")).Length;
+        Assert.True(presentationLines <= 130, $"PoiDetail.Presentation.razor.cs should stay focused on view helpers, but has {presentationLines} lines.");
+        var editorLines = File.ReadAllLines(Path.Combine(pageRoot, "PoiDetail.EditorModels.razor.cs")).Length;
+        Assert.True(editorLines <= 120, $"PoiDetail.EditorModels.razor.cs should stay focused on editor mapping, but has {editorLines} lines.");
+    }
+
+    [Fact]
     public void Detail_page_renders_preview_stats_rejection_surface_and_audio_table()
     {
         ConfigureDetail();

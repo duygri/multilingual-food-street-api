@@ -121,10 +121,6 @@ public sealed class QrService(AppDbContext dbContext) : IQrService
                 _ = await dbContext.Pois.AsNoTracking().SingleOrDefaultAsync(item => item.Id == targetId, cancellationToken)
                     ?? throw new KeyNotFoundException("POI target was not found.");
                 return targetId;
-            case "tour":
-                _ = await dbContext.Tours.AsNoTracking().SingleOrDefaultAsync(item => item.Id == targetId, cancellationToken)
-                    ?? throw new KeyNotFoundException("Tour target was not found.");
-                return targetId;
             default:
                 throw new ArgumentException("Unsupported QR target type.", nameof(targetType));
         }
@@ -137,7 +133,6 @@ public sealed class QrService(AppDbContext dbContext) : IQrService
         {
             "open_app" => normalized,
             "poi" => normalized,
-            "tour" => normalized,
             _ => throw new ArgumentException("Unsupported QR target type.", nameof(targetType))
         };
     }

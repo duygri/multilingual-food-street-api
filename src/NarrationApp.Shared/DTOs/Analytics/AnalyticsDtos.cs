@@ -1,3 +1,5 @@
+using NarrationApp.Shared.Enums;
+
 namespace NarrationApp.Shared.DTOs.Analytics;
 
 public sealed class DashboardDto
@@ -23,7 +25,88 @@ public sealed class HeatmapPointDto
 
     public double Lng { get; init; }
 
+    public double Weight { get; init; }
+}
+
+public enum HeatmapTimeRange
+{
+    Last24Hours = 1,
+    Last7Days = 2,
+    Last30Days = 3,
+    AllTime = 4
+}
+
+public sealed class HeatmapQueryDto
+{
+    public HeatmapTimeRange TimeRange { get; init; } = HeatmapTimeRange.Last7Days;
+
+    public EventType? EventTypeFilter { get; init; }
+
+    public bool UseTimeDecay { get; init; } = true;
+
+    public double GridSizeMeters { get; init; } = 50d;
+
+    public double MaxWeight { get; init; } = 50d;
+
+    public bool ApplyGaussianSmoothing { get; init; } = true;
+
+    public DateTime? ReferenceTimeUtc { get; init; }
+}
+
+public sealed class MovementFlowQueryDto
+{
+    public HeatmapTimeRange TimeRange { get; init; } = HeatmapTimeRange.Last7Days;
+
+    public EventType? EventTypeFilter { get; init; }
+
+    public int MinimumUniqueSessions { get; init; } = 3;
+
+    public DateTime? ReferenceTimeUtc { get; init; }
+}
+
+public sealed class AnalyticsSnapshotDto
+{
+    public int GeofenceTriggers { get; init; }
+
+    public int AudioPlays { get; init; }
+
+    public int QrScans { get; init; }
+
+    public double AverageListenDurationSeconds { get; init; }
+}
+
+public sealed class MovementFlowDto
+{
+    public int FromPoiId { get; init; }
+
+    public string FromPoiName { get; init; } = string.Empty;
+
+    public double FromLat { get; init; }
+
+    public double FromLng { get; init; }
+
+    public int ToPoiId { get; init; }
+
+    public string ToPoiName { get; init; } = string.Empty;
+
+    public double ToLat { get; init; }
+
+    public double ToLng { get; init; }
+
     public int Weight { get; init; }
+
+    public int UniqueSessions { get; init; }
+}
+
+public sealed class PoiAverageListenDto
+{
+    public int PoiId { get; init; }
+
+    public string PoiName { get; init; } = string.Empty;
+
+    public double AverageListenDurationSeconds { get; init; }
+
+    public int AudioPlayCount { get; init; }
 }
 
 public sealed class TopPoiDto

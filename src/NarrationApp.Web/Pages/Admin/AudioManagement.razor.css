@@ -346,6 +346,17 @@
     background: rgba(11, 20, 37, 0.92);
     color: var(--text);
     text-decoration: none;
+    cursor: pointer;
+}
+
+.audio-preview-stack {
+    display: grid;
+    gap: 0.65rem;
+}
+
+.audio-preview__player {
+    width: min(18rem, 100%);
+    accent-color: #20e8bd;
 }
 
 .audio-preview__play {

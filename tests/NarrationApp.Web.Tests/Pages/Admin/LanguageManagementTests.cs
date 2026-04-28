@@ -10,6 +10,36 @@ namespace NarrationApp.Web.Tests.Pages.Admin;
 public sealed class LanguageManagementTests : TestContext
 {
     [Fact]
+    public void Language_management_behavior_is_split_into_focused_partials()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var pageRoot = Path.Combine(projectRoot, "src", "NarrationApp.Web", "Pages", "Admin");
+        var markupPath = Path.Combine(pageRoot, "LanguageManagement.razor");
+        var expectedPartials = new[]
+        {
+            ("LanguageManagement.razor.cs", "OnInitializedAsync"),
+            ("LanguageManagement.Actions.razor.cs", "SaveAsync"),
+            ("LanguageManagement.Presentation.razor.cs", "FormatCoverage")
+        };
+
+        var markup = File.ReadAllText(markupPath);
+        Assert.DoesNotContain("@code", markup, StringComparison.Ordinal);
+
+        foreach (var (fileName, marker) in expectedPartials)
+        {
+            var path = Path.Combine(pageRoot, fileName);
+            Assert.True(File.Exists(path), $"{fileName} should exist.");
+            var source = File.ReadAllText(path);
+            Assert.Contains("partial class LanguageManagement", source, StringComparison.Ordinal);
+            Assert.Contains(marker, source, StringComparison.Ordinal);
+        }
+
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "LanguageManagement.razor.cs")).Length <= 80);
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "LanguageManagement.Actions.razor.cs")).Length <= 70);
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "LanguageManagement.Presentation.razor.cs")).Length <= 70);
+    }
+
+    [Fact]
     public void Language_management_lists_languages_and_adds_new_one()
     {
         var languageService = new TestLanguagePortalService();

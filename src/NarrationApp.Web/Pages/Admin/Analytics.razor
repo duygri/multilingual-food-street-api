@@ -1,192 +1,269 @@
 @page "/admin/analytics"
 @attribute [Authorize(Roles = "admin")]
 
+@using NarrationApp.Web.Configuration
+@using NarrationApp.Shared.Enums
+@using Microsoft.JSInterop
 @inject IAdminPortalService AdminPortalService
+@inject IJSRuntime JsRuntime
+@inject AnalyticsMapOptions MapOptions
 
-<PageTitle>Báo cáo vận hành</PageTitle>
+<PageTitle>Analytics Dashboard</PageTitle>
 
 @if (_isLoading)
 {
     <section class="panel-shell">
         <p class="panel-shell__eyebrow">Analytics</p>
-        <h2>Đang tải báo cáo vận hành...</h2>
+        <h2>Đang tải analytics dashboard...</h2>
     </section>
 }
 else if (!string.IsNullOrWhiteSpace(_errorMessage))
 {
     <section class="panel-shell">
         <p class="panel-shell__eyebrow">Analytics</p>
-        <h2>Không thể tải báo cáo vận hành</h2>
+        <h2>Không thể tải analytics dashboard</h2>
         <p class="panel-shell__copy">@_errorMessage</p>
     </section>
 }
 else
 {
-    <div class="dashboard-stack">
+    <div class="dashboard-stack analytics-dashboard">
         <section class="metric-grid">
-            <MetricCard Label="Tổng POI" Value="@_overview.TotalPois.ToString("N0")" Hint="Toàn hệ thống" />
-            <MetricCard Label="Đã xuất bản" Value="@_overview.PublishedPois.ToString("N0")" Hint="Điểm đến đang phục vụ" />
-            <MetricCard Label="Tour" Value="@_overview.TotalTours.ToString("N0")" Hint="Tour đang quản lý" />
-            <MetricCard Label="Tài sản audio" Value="@_overview.TotalAudioAssets.ToString("N0")" Hint="Kho audio hiện tại" />
-            <MetricCard Label="Lượt phát audio" Value="@_audioInsights.TotalAudioPlays.ToString("N0")" Hint="Lượt nghe toàn hệ thống" />
-            <MetricCard Label="Giây lắng nghe" Value="@_audioInsights.TotalListenSeconds.ToString("N0")" Hint="Tổng thời lượng nghe" />
+            <MetricCard Label="Geofence triggers" Value="@_snapshot.GeofenceTriggers.ToString("N0")" Hint="@($"{_overview.TotalPois:N0} POI đang được theo dõi")" />
+            <MetricCard Label="Audio plays" Value="@_snapshot.AudioPlays.ToString("N0")" Hint="@($"{_overview.PublishedPois:N0} POI đã xuất bản")" />
+            <MetricCard Label="QR scans" Value="@_snapshot.QrScans.ToString("N0")" Hint="@($"{_overview.TotalTours:N0} tour đang hoạt động")" />
+            <MetricCard Label="TB thời gian nghe" Value="@FormatDurationShort(_snapshot.AverageListenDurationSeconds)" Hint="@($"{_averageListenByPoi.Count:N0} POI có đủ dữ liệu nghe")" />
         </section>
 
-        <section class="analytics-grid">
-            <div class="analytics-grid__main">
-                <PanelShell Eyebrow="Tầng tín hiệu"
-                            Title="Sàn tín hiệu thời gian thực"
-                            BadgeLabel="@($"{_heatmap.Count} điểm tín hiệu")"
-                            BadgeTone="StatusTone.Good">
-                    <div class="ops-info-list">
-                        <div class="ops-info-row">
-                            <div>
-                                <strong>Độ phủ heatmap</strong>
-                                <p>Số lượng điểm tín hiệu đã được ghi nhận trên lớp phân tích hiện tại.</p>
-                            </div>
-                            <StatusBadge Label="@($"{_heatmap.Count:N0} điểm")" Tone="StatusTone.Info" />
-                        </div>
+        <section class="analytics-map-grid">
+            <PanelShell Eyebrow="Bản đồ tín hiệu"
+                        Title="Heatmap vị trí người dùng"
+                        Description="Heatmap Mapbox từ unique session đã snap grid 50m, clamp 50 và Gaussian smoothing."
+                        BadgeLabel="@($"{_heatmap.Count:N0} điểm")"
+                        BadgeTone="StatusTone.Info">
+                <HeaderActions>
+                    <div class="analytics-filter-toolbar">
+                        @foreach (var option in HeatmapEventTypeOptions)
+                        {
+                            <button type="button"
+                                    class="analytics-filter-chip @(Equals(option.EventType, _selectedHeatmapEventType) ? "is-active" : null)"
+                                    data-heatmap-event="@option.Key"
+                                    disabled="@_isHeatmapLoading"
+                                    @onclick="() => ChangeHeatmapEventTypeAsync(option.EventType)">
+                                @option.Label
+                            </button>
+                        }
 
-                        <div class="ops-info-row">
-                            <div>
-                                <strong>Khối lượng kiểm duyệt</strong>
-                                <p>Khối lượng công việc admin còn phải xử lý để giữ chất lượng nội dung.</p>
-                            </div>
-                            <StatusBadge Label="@($"{_overview.PendingModerationRequests:N0} chờ duyệt")" Tone="StatusTone.Warn" />
-                        </div>
+                        @foreach (var option in HeatmapRangeOptions)
+                        {
+                            <button type="button"
+                                    class="analytics-filter-chip @(option.Range == _selectedHeatmapTimeRange ? "is-active" : null)"
+                                    data-heatmap-range="@option.Range"
+                                    disabled="@_isHeatmapLoading"
+                                    @onclick="() => ChangeHeatmapTimeRangeAsync(option.Range)">
+                                @option.Label
+                            </button>
+                        }
 
-                        <div class="ops-info-row">
-                            <div>
-                                <strong>Lưu lượng thông báo</strong>
-                                <p>Thông báo chưa đọc đang chờ xác nhận trong notification center.</p>
+                        <button type="button"
+                                class="analytics-filter-chip analytics-filter-chip--decay @(_useHeatmapDecay ? "is-active" : null)"
+                                data-heatmap-decay="@_useHeatmapDecay"
+                                disabled="@_isHeatmapLoading"
+                                @onclick="ToggleHeatmapDecayAsync">
+                            Decay @(_useHeatmapDecay ? "bật" : "tắt")
+                        </button>
+                    </div>
+                </HeaderActions>
+                <ChildContent>
+                    <div class="analytics-map-card">
+                        @if (!string.IsNullOrWhiteSpace(_heatmapErrorMessage))
+                        {
+                            <div class="analytics-map-placeholder">
+                                <strong>Không tải được heatmap</strong>
+                                <p>@_heatmapErrorMessage</p>
                             </div>
-                            <StatusBadge Label="@($"{_overview.UnreadNotifications:N0} chưa đọc")" Tone="StatusTone.Info" />
-                        </div>
+                        }
+                        else if (!MapOptions.HasAccessToken)
+                        {
+                            <div class="analytics-map-placeholder">
+                                <strong>Chưa có Mapbox access token</strong>
+                                <p>Điền `Mapbox:AccessToken` để bật heatmap trực tiếp trong admin portal.</p>
+                            </div>
+                        }
+                        else if (_isHeatmapLoading && _heatmap.Count == 0)
+                        {
+                            <div class="analytics-map-placeholder">
+                                <strong>Đang làm mới heatmap</strong>
+                                <p>Bộ lọc thời gian và decay đang được áp dụng lên unique session mới nhất.</p>
+                            </div>
+                        }
+                        else if (_heatmap.Count == 0)
+                        {
+                            <div class="analytics-map-placeholder">
+                                <strong>Chưa có tín hiệu vị trí</strong>
+                                <p>Heatmap sẽ hiển thị khi hệ thống ghi nhận đủ visit events có lat/lng.</p>
+                            </div>
+                        }
+                        else
+                        {
+                            <div id="@HeatmapContainerId" class="analytics-map-canvas" data-map-surface="heatmap"></div>
+                        }
 
-                        <div class="ops-info-row">
-                            <div>
-                                <strong>Tín hiệu audio</strong>
-                                <p>Mật độ nghe hiện tại trên toàn bộ lớp thuyết minh của hệ thống.</p>
-                            </div>
-                            <StatusBadge Label="@($"{_audioInsights.TotalAudioPlays:N0} lượt phát")" Tone="StatusTone.Good" />
+                        <div class="analytics-map-meta">
+                            <span>@($"{HighestHeatWeight:N1} peak sau clamp")</span>
+                            <span>@HeatmapModeSummary</span>
                         </div>
                     </div>
-                </PanelShell>
+                </ChildContent>
+            </PanelShell>
 
-                <DataTableShell Eyebrow="Nhiệt POI"
-                                Title="Làn nhiệt POI"
-                                BadgeLabel="@($"{_topPois.Count} hotspot")"
-                                BadgeTone="StatusTone.Warn"
-                                IsEmpty="@(_topPois.Count == 0)">
-                    <TableContent>
-                        <thead>
-                            <tr>
-                                <th>Hạng</th>
-                                <th>POI</th>
-                                <th>Lượt ghé</th>
-                                <th>Mức nhiệt</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var poi in RankedTopPois)
-                            {
-                                <tr>
-                                    <td>#@poi.Rank</td>
-                                    <td>@poi.Item.PoiName</td>
-                                    <td>@poi.Item.Visits.ToString("N0")</td>
-                                    <td><StatusBadge Label="@GetHeatLabel(poi.Item.Visits)" Tone="@GetHeatTone(poi.Item.Visits)" /></td>
-                                </tr>
-                            }
-                        </tbody>
-                    </TableContent>
-                    <EmptyStateContent>
-                        <EmptyStateBlock Eyebrow="Heatmap"
-                                         Title="Chưa có hotspot"
-                                         Message="Hệ thống chưa đủ dữ liệu để xếp hạng POI heat trong giai đoạn hiện tại." />
-                    </EmptyStateContent>
-                </DataTableShell>
-            </div>
+            <PanelShell Eyebrow="Luồng di chuyển"
+                        Title="Tuyến di chuyển ẩn danh"
+                        Description="Route polyline tổng hợp giữa các POI, không hiển thị device_id raw."
+                        BadgeLabel="@($"{_movementFlows.Count:N0} luồng")"
+                        BadgeTone="StatusTone.Good">
+                <HeaderActions>
+                    <div class="analytics-filter-toolbar">
+                        @foreach (var option in HeatmapEventTypeOptions)
+                        {
+                            <button type="button"
+                                    class="analytics-filter-chip @(Equals(option.EventType, _selectedMovementFlowEventType) ? "is-active" : null)"
+                                    data-flow-event="@option.Key"
+                                    disabled="@_isMovementFlowLoading"
+                                    @onclick="() => ChangeMovementFlowEventTypeAsync(option.EventType)">
+                                @option.Label
+                            </button>
+                        }
 
-            <div class="analytics-grid__side">
-                <SystemStatusRail Label="Trạng thái analytics" Items="StatusItems" />
+                        @foreach (var option in HeatmapRangeOptions)
+                        {
+                            <button type="button"
+                                    class="analytics-filter-chip @(option.Range == _selectedMovementFlowTimeRange ? "is-active" : null)"
+                                    data-flow-range="@option.Range"
+                                    disabled="@_isMovementFlowLoading"
+                                    @onclick="() => ChangeMovementFlowTimeRangeAsync(option.Range)">
+                                @option.Label
+                            </button>
+                        }
 
-                <PanelShell Eyebrow="Chẩn đoán heatmap"
-                            Title="Phân tích tín hiệu">
-                    <div class="ops-kpi-grid">
-                        <article class="ops-kpi-tile">
-                            <span>Đỉnh tín hiệu</span>
-                            <strong>@HighestHeatWeight.ToString("N0")</strong>
-                        </article>
-                        <article class="ops-kpi-tile">
-                            <span>Lượt phát audio</span>
-                            <strong>@_audioInsights.TotalAudioPlays.ToString("N0")</strong>
-                        </article>
-                        <article class="ops-kpi-tile">
-                            <span>Giây lắng nghe</span>
-                            <strong>@_audioInsights.TotalListenSeconds.ToString("N0")</strong>
-                        </article>
-                        <article class="ops-kpi-tile">
-                            <span>Hàng chờ duyệt</span>
-                            <strong>@_overview.PendingModerationRequests.ToString("N0")</strong>
-                        </article>
+                        @foreach (var minimumSessions in MovementFlowMinimumSessionOptions)
+                        {
+                            <button type="button"
+                                    class="analytics-filter-chip @(minimumSessions == _minimumMovementFlowSessions ? "is-active" : null)"
+                                    data-flow-min-sessions="@minimumSessions"
+                                    disabled="@_isMovementFlowLoading"
+                                    @onclick="() => ChangeMovementFlowMinimumSessionsAsync(minimumSessions)">
+                                Min @minimumSessions
+                            </button>
+                        }
                     </div>
-                </PanelShell>
-            </div>
+                </HeaderActions>
+                <ChildContent>
+                    <div class="analytics-map-card">
+                        @if (!string.IsNullOrWhiteSpace(_movementFlowErrorMessage))
+                        {
+                            <div class="analytics-map-placeholder">
+                                <strong>Không tải được tuyến di chuyển</strong>
+                                <p>@_movementFlowErrorMessage</p>
+                            </div>
+                        }
+                        else if (!MapOptions.HasAccessToken)
+                        {
+                            <div class="analytics-map-placeholder">
+                                <strong>Chưa có Mapbox access token</strong>
+                                <p>Map flow sẽ bật ngay khi admin portal có token Mapbox hợp lệ.</p>
+                            </div>
+                        }
+                        else if (_isMovementFlowLoading && _movementFlows.Count == 0)
+                        {
+                            <div class="analytics-map-placeholder">
+                                <strong>Đang làm mới tuyến di chuyển</strong>
+                                <p>Bộ lọc event, thời gian và ngưỡng ẩn danh đang được áp dụng.</p>
+                            </div>
+                        }
+                        else if (_movementFlows.Count == 0)
+                        {
+                            <div class="analytics-map-placeholder">
+                                <strong>Chưa đủ ngưỡng ẩn danh</strong>
+                                <p>Chỉ hiển thị những luồng có đủ số session tổng hợp để tránh trace theo thiết bị.</p>
+                            </div>
+                        }
+                        else
+                        {
+                            <div id="@MovementContainerId" class="analytics-map-canvas" data-map-surface="flows"></div>
+                        }
+
+                        <div class="analytics-map-meta">
+                            <span>@($"{TotalFlowTraversals:N0} lượt chuyển giữa các POI")</span>
+                            <span>@MovementFlowModeSummary</span>
+                        </div>
+                    </div>
+                </ChildContent>
+            </PanelShell>
+        </section>
+
+        <section class="analytics-ranking-grid">
+            <PanelShell Eyebrow="Hotspot"
+                        Title="Top địa điểm được nghe nhiều nhất"
+                        Description="Bar chart xếp hạng lượt nghe theo POI.">
+                @if (_topPois.Count == 0)
+                {
+                    <EmptyStateBlock Eyebrow="Hotspot"
+                                     Title="Chưa có dữ liệu nghe"
+                                     Message="Các POI sẽ được xếp hạng khi hệ thống ghi nhận audio plays." />
+                }
+                else
+                {
+                    <div class="analytics-ranking-list">
+                        @foreach (var poi in RankedTopPois)
+                        {
+                            <article class="analytics-ranking-row">
+                                <div class="analytics-ranking-head">
+                                    <div>
+                                        <strong>#@poi.Rank @poi.Item.PoiName</strong>
+                                        <p>@poi.Item.Visits.ToString("N0") lượt ghé nghe</p>
+                                    </div>
+                                    <StatusBadge Label="@GetHeatLabel(poi.Item.Visits)" Tone="@GetHeatTone(poi.Item.Visits)" />
+                                </div>
+                                <div class="analytics-bar-track">
+                                    <span class="analytics-bar-fill" style="@($"width: {BuildTopPoiBarWidth(poi.Item.Visits):0.##}%")"></span>
+                                </div>
+                            </article>
+                        }
+                    </div>
+                }
+            </PanelShell>
+
+            <PanelShell Eyebrow="Lắng nghe"
+                        Title="Thời gian trung bình nghe 1 POI"
+                        Description="Horizontal bar chart theo AVG(listen_duration_seconds) của audio plays.">
+                @if (_averageListenByPoi.Count == 0)
+                {
+                    <EmptyStateBlock Eyebrow="Listening"
+                                     Title="Chưa có dữ liệu thời lượng"
+                                     Message="Hệ thống sẽ hiển thị thời gian nghe trung bình khi đã có audio play events." />
+                }
+                else
+                {
+                    <div class="analytics-ranking-list">
+                        @foreach (var poi in _averageListenByPoi)
+                        {
+                            <article class="analytics-ranking-row">
+                                <div class="analytics-ranking-head analytics-ranking-head--compact">
+                                    <div>
+                                        <strong>@poi.PoiName</strong>
+                                        <p>@($"{Math.Round(poi.AverageListenDurationSeconds):N0} giây TB")</p>
+                                    </div>
+                                    <small>@($"{poi.AudioPlayCount:N0} lượt phát")</small>
+                                </div>
+                                <div class="analytics-bar-track">
+                                    <span class="analytics-bar-fill analytics-bar-fill--accent" style="@($"width: {BuildAverageListenBarWidth(poi.AverageListenDurationSeconds):0.##}%")"></span>
+                                </div>
+                            </article>
+                        }
+                    </div>
+                }
+            </PanelShell>
         </section>
     </div>
-}
-
-@code {
-    private bool _isLoading = true;
-    private string? _errorMessage;
-    private DashboardDto _overview = new();
-    private AudioPlayAnalyticsDto _audioInsights = new();
-    private IReadOnlyList<TopPoiDto> _topPois = Array.Empty<TopPoiDto>();
-    private IReadOnlyList<HeatmapPointDto> _heatmap = Array.Empty<HeatmapPointDto>();
-    private IReadOnlyList<(int Rank, TopPoiDto Item)> RankedTopPois => _topPois
-        .Select((item, index) => (index + 1, item))
-        .ToArray();
-
-    private int HighestHeatWeight => _heatmap.Count == 0 ? 0 : _heatmap.Max(item => item.Weight);
-
-    private IReadOnlyList<SystemStatusItem> StatusItems =>
-    [
-        new() { Label = "POIs", Value = _overview.TotalPois.ToString("N0"), Tone = StatusTone.Info },
-        new() { Label = "Heatmap", Value = $"{_heatmap.Count} điểm", Tone = _heatmap.Count > 0 ? StatusTone.Good : StatusTone.Neutral },
-        new() { Label = "Audio", Value = _audioInsights.TotalAudioPlays.ToString("N0"), Tone = _audioInsights.TotalAudioPlays > 0 ? StatusTone.Good : StatusTone.Warn },
-        new() { Label = "Queue", Value = $"{_overview.PendingModerationRequests} chờ duyệt", Tone = _overview.PendingModerationRequests > 0 ? StatusTone.Warn : StatusTone.Good }
-    ];
-
-    private static string GetHeatLabel(int visits) => visits switch
-    {
-        >= 900 => "Cao",
-        >= 500 => "Trung bình",
-        _ => "Thấp"
-    };
-
-    private static StatusTone GetHeatTone(int visits) => visits switch
-    {
-        >= 900 => StatusTone.Warn,
-        >= 500 => StatusTone.Info,
-        _ => StatusTone.Neutral
-    };
-
-    protected override async Task OnInitializedAsync()
-    {
-        try
-        {
-            _overview = await AdminPortalService.GetOverviewAsync();
-            _topPois = await AdminPortalService.GetTopPoisAsync();
-            _heatmap = await AdminPortalService.GetHeatmapAsync();
-            _audioInsights = await AdminPortalService.GetAudioPlayAnalyticsAsync();
-        }
-        catch (ApiException exception)
-        {
-            _errorMessage = exception.Message;
-        }
-        finally
-        {
-            _isLoading = false;
-        }
-    }
 }

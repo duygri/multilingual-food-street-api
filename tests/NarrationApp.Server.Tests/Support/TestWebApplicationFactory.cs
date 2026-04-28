@@ -32,7 +32,8 @@ internal sealed class TestWebApplicationFactory : WebApplicationFactory<Program>
                 ["CloudflareR2:AccessKeyId"] = string.Empty,
                 ["CloudflareR2:SecretAccessKey"] = string.Empty,
                 ["CloudflareR2:BucketName"] = string.Empty,
-                ["CloudflareR2:PublicBaseUrl"] = string.Empty
+                ["CloudflareR2:PublicBaseUrl"] = string.Empty,
+                ["PublicQr:BaseUrl"] = "https://public.foodstreet.test/"
             });
         });
 

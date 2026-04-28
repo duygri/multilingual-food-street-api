@@ -9,6 +9,56 @@ namespace NarrationApp.Server.Tests.Services.Moderation;
 public sealed class ModerationServiceTests
 {
     [Fact]
+    public async Task CreateAsync_reuses_existing_pending_request_for_the_same_poi()
+    {
+        await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
+        var owner = await dbContext.AppUsers.SingleAsync(user => user.Email == "owner@narration.app");
+        var notificationService = new NotificationService(dbContext, new NullNotificationBroadcaster());
+        var sut = new ModerationService(dbContext, notificationService);
+
+        var first = await sut.CreateAsync(owner.Id, new CreateModerationRequest
+        {
+            EntityType = "poi",
+            EntityId = "1"
+        });
+
+        var second = await sut.CreateAsync(owner.Id, new CreateModerationRequest
+        {
+            EntityType = "poi",
+            EntityId = "1"
+        });
+
+        Assert.Equal(first.Id, second.Id);
+        Assert.Equal(1, await dbContext.ModerationRequests.CountAsync(item =>
+            item.EntityType == "poi"
+            && item.EntityId == "1"
+            && item.Status == ModerationStatus.Pending));
+    }
+
+    [Fact]
+    public async Task GetPendingAsync_excludes_stale_poi_requests_when_target_is_not_pending_review()
+    {
+        await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
+        var owner = await dbContext.AppUsers.SingleAsync(user => user.Email == "owner@narration.app");
+        dbContext.ModerationRequests.Add(new Server.Data.Entities.ModerationRequest
+        {
+            EntityType = "poi",
+            EntityId = "1",
+            Status = ModerationStatus.Pending,
+            RequestedBy = owner.Id,
+            CreatedAt = DateTime.UtcNow
+        });
+        await dbContext.SaveChangesAsync();
+
+        var notificationService = new NotificationService(dbContext, new NullNotificationBroadcaster());
+        var sut = new ModerationService(dbContext, notificationService);
+
+        var result = await sut.GetPendingAsync();
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
     public async Task ReviewAsync_approves_request_and_creates_notification_for_requester()
     {
         await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();

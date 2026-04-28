@@ -12,16 +12,87 @@ public sealed class MobileSectionMarkupTests
 
         var markup = File.ReadAllText(homePath);
 
-        Assert.Contains("TouristDiscoverScreen", markup, StringComparison.Ordinal);
-        Assert.Contains("TouristPoiDetailScreen", markup, StringComparison.Ordinal);
-        Assert.Contains("TouristTourListScreen", markup, StringComparison.Ordinal);
-        Assert.Contains("TouristTourDetailScreen", markup, StringComparison.Ordinal);
+        Assert.Contains("VisitorDiscoverScreen", markup, StringComparison.Ordinal);
+        Assert.Contains("VisitorPoiDetailScreen", markup, StringComparison.Ordinal);
+        Assert.Contains("VisitorTourListScreen", markup, StringComparison.Ordinal);
+        Assert.Contains("VisitorTourDetailScreen", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mobile_home_uses_dedicated_setup_and_map_section_components()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var homePath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Home.razor");
+
+        var markup = File.ReadAllText(homePath);
+
+        Assert.Contains("VisitorSetupFlow", markup, StringComparison.Ordinal);
+        Assert.Contains("VisitorMapScreen", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mobile_home_uses_dedicated_settings_overview_component()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var homePath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Home.razor");
+
+        var markup = File.ReadAllText(homePath);
+
+        Assert.Contains("VisitorSettingsOverviewScreen", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mobile_setup_flow_component_keeps_language_and_permission_hooks()
+    {
+        var markup = ReadSectionMarkup("VisitorSetupFlow.razor");
+
+        Assert.Contains("case VisitorIntroStep.Language:", markup, StringComparison.Ordinal);
+        Assert.Contains("case VisitorIntroStep.Permissions:", markup, StringComparison.Ordinal);
+        Assert.Contains("language-grid", markup, StringComparison.Ordinal);
+        Assert.Contains("permission-card", markup, StringComparison.Ordinal);
+        Assert.Contains("Bật vị trí", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("VisitorAuthScreen", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mobile_map_screen_component_keeps_fullscreen_overlay_and_qr_hooks()
+    {
+        var markup = ReadSectionMarkup("VisitorMapScreen.razor");
+
+        Assert.Contains("map-screen", markup, StringComparison.Ordinal);
+        Assert.Contains("map-top-overlay", markup, StringComparison.Ordinal);
+        Assert.Contains("map-top-controls", markup, StringComparison.Ordinal);
+        Assert.Contains("map-category-rail", markup, StringComparison.Ordinal);
+        Assert.Contains("notification-panel__surface", markup, StringComparison.Ordinal);
+        Assert.Contains("qr-fab", markup, StringComparison.Ordinal);
+        Assert.Contains("qr-modal", markup, StringComparison.Ordinal);
+        Assert.Contains("poi-sheet__grabber", markup, StringComparison.Ordinal);
+        Assert.Contains("geofence-toast", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mobile_settings_overview_component_keeps_profile_language_and_navigation_hooks()
+    {
+        var markup = ReadSectionMarkup("VisitorSettingsOverviewScreen.razor");
+
+        Assert.Contains("settings-screen", markup, StringComparison.Ordinal);
+        Assert.Contains("settings-profile-card", markup, StringComparison.Ordinal);
+        Assert.Contains("settings-stat-grid", markup, StringComparison.Ordinal);
+        Assert.Contains("Thiết bị hiện tại", markup, StringComparison.Ordinal);
+        Assert.Contains("settings-language-strip", markup, StringComparison.Ordinal);
+        Assert.Contains("settings-nav-list", markup, StringComparison.Ordinal);
+        Assert.Contains("OnOpenAudio", markup, StringComparison.Ordinal);
+        Assert.Contains("OnOpenGps", markup, StringComparison.Ordinal);
+        Assert.Contains("OnOpenCache", markup, StringComparison.Ordinal);
+        Assert.Contains("OnOpenHistory", markup, StringComparison.Ordinal);
+        Assert.Contains("OnOpenAbout", markup, StringComparison.Ordinal);
+        Assert.Contains("OnOpenProfile", markup, StringComparison.Ordinal);
     }
 
     [Fact]
     public void Mobile_discover_screen_matches_sample_strict_layout_hooks()
     {
-        var markup = ReadSectionMarkup("TouristDiscoverScreen.razor");
+        var markup = ReadSectionMarkup("VisitorDiscoverScreen.razor");
 
         Assert.Contains("discover-screen", markup, StringComparison.Ordinal);
         Assert.Contains("IsLoading", markup, StringComparison.Ordinal);
@@ -46,7 +117,7 @@ public sealed class MobileSectionMarkupTests
     [Fact]
     public void Mobile_poi_detail_screen_matches_sample_strict_layout_hooks()
     {
-        var markup = ReadSectionMarkup("TouristPoiDetailScreen.razor");
+        var markup = ReadSectionMarkup("VisitorPoiDetailScreen.razor");
 
         Assert.Contains("poi-detail-screen", markup, StringComparison.Ordinal);
         Assert.Contains("poi-detail-hero", markup, StringComparison.Ordinal);
@@ -76,15 +147,15 @@ public sealed class MobileSectionMarkupTests
     [Fact]
     public void Mobile_tour_screens_match_sample_strict_layout_hooks()
     {
-        var listMarkup = ReadSectionMarkup("TouristTourListScreen.razor");
-        var detailMarkup = ReadSectionMarkup("TouristTourDetailScreen.razor");
+        var listMarkup = ReadSectionMarkup("VisitorTourListScreen.razor");
+        var detailMarkup = ReadSectionMarkup("VisitorTourDetailScreen.razor");
 
         Assert.Contains("tour-list-screen", listMarkup, StringComparison.Ordinal);
         Assert.Contains("tour-list-header__copy", listMarkup, StringComparison.Ordinal);
-        Assert.Contains("tour-guest-prompt", listMarkup, StringComparison.Ordinal);
-        Assert.Contains("ShowGuestPrompt", listMarkup, StringComparison.Ordinal);
         Assert.Contains("IsLoading", listMarkup, StringComparison.Ordinal);
-        Assert.Contains("OnOpenAuth", listMarkup, StringComparison.Ordinal);
+        Assert.DoesNotContain("tour-guest-prompt", listMarkup, StringComparison.Ordinal);
+        Assert.DoesNotContain("ShowGuestPrompt", listMarkup, StringComparison.Ordinal);
+        Assert.DoesNotContain("OnOpenAuth", listMarkup, StringComparison.Ordinal);
         Assert.Contains("tour-showcase-list--stagger", listMarkup, StringComparison.Ordinal);
         Assert.Contains("tour-showcase-card", listMarkup, StringComparison.Ordinal);
         Assert.Contains("tour-showcase-card--skeleton", listMarkup, StringComparison.Ordinal);
@@ -104,34 +175,23 @@ public sealed class MobileSectionMarkupTests
     }
 
     [Fact]
-    public void Mobile_auth_screen_matches_sample_strict_layout_hooks()
+    public void Mobile_auth_screen_component_has_been_removed_from_mobile_flow()
     {
-        var markup = ReadSectionMarkup("TouristAuthScreen.razor");
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var authScreenPath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Sections", "VisitorAuthScreen.razor");
 
-        Assert.Contains("auth-screen", markup, StringComparison.Ordinal);
-        Assert.Contains("auth-screen__intro", markup, StringComparison.Ordinal);
-        Assert.Contains("auth-screen__panel", markup, StringComparison.Ordinal);
-        Assert.Contains("auth-feature-list", markup, StringComparison.Ordinal);
-        Assert.Contains("auth-feature-card__copy", markup, StringComparison.Ordinal);
-        Assert.Contains("auth-mode-tabs", markup, StringComparison.Ordinal);
-        Assert.Contains("auth-form", markup, StringComparison.Ordinal);
-        Assert.Contains("auth-forgot-link", markup, StringComparison.Ordinal);
-        Assert.Contains("auth-screen__guest", markup, StringComparison.Ordinal);
-        Assert.Contains("guest-link-button", markup, StringComparison.Ordinal);
-        Assert.Contains("Xác nhận mật khẩu", markup, StringComparison.Ordinal);
-        Assert.DoesNotContain("Google", markup, StringComparison.Ordinal);
-        Assert.DoesNotContain("Apple", markup, StringComparison.Ordinal);
+        Assert.False(File.Exists(authScreenPath), $"Expected auth screen to be removed, but found '{authScreenPath}'.");
     }
 
     [Fact]
     public void Mobile_settings_screens_match_reviewed_subscreen_layout_hooks()
     {
-        var audioMarkup = ReadSectionMarkup("TouristAudioSettingsScreen.razor");
-        var gpsMarkup = ReadSectionMarkup("TouristGpsSettingsScreen.razor");
-        var cacheMarkup = ReadSectionMarkup("TouristCacheManagerScreen.razor");
-        var historyMarkup = ReadSectionMarkup("TouristListenHistoryScreen.razor");
-        var aboutMarkup = ReadSectionMarkup("TouristAboutScreen.razor");
-        var profileMarkup = ReadSectionMarkup("TouristEditProfileScreen.razor");
+        var audioMarkup = ReadSectionMarkup("VisitorAudioSettingsScreen.razor");
+        var gpsMarkup = ReadSectionMarkup("VisitorGpsSettingsScreen.razor");
+        var cacheMarkup = ReadSectionMarkup("VisitorCacheManagerScreen.razor");
+        var historyMarkup = ReadSectionMarkup("VisitorListenHistoryScreen.razor");
+        var aboutMarkup = ReadSectionMarkup("VisitorAboutScreen.razor");
+        var profileMarkup = ReadSectionMarkup("VisitorEditProfileScreen.razor");
 
         Assert.Contains("settings-detail-screen", audioMarkup, StringComparison.Ordinal);
         Assert.Contains("settings-toggle-row", audioMarkup, StringComparison.Ordinal);
@@ -157,17 +217,19 @@ public sealed class MobileSectionMarkupTests
         Assert.Contains("about-info-card", aboutMarkup, StringComparison.Ordinal);
         Assert.Contains("about-link-list", aboutMarkup, StringComparison.Ordinal);
         Assert.Contains("NarrationApp Mobile", aboutMarkup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Build dành cho visitor", aboutMarkup, StringComparison.Ordinal);
 
         Assert.Contains("settings-detail-screen", profileMarkup, StringComparison.Ordinal);
         Assert.Contains("profile-editor-card", profileMarkup, StringComparison.Ordinal);
         Assert.Contains("profile-editor-stats", profileMarkup, StringComparison.Ordinal);
-        Assert.Contains("OnLogout", profileMarkup, StringComparison.Ordinal);
+        Assert.Contains("Email liên hệ (tùy chọn)", profileMarkup, StringComparison.Ordinal);
+        Assert.DoesNotContain("OnLogout", profileMarkup, StringComparison.Ordinal);
     }
 
     [Fact]
     public void Mobile_search_screen_matches_sample_strict_layout_hooks()
     {
-        var markup = ReadSectionMarkup("TouristSearchScreen.razor");
+        var markup = ReadSectionMarkup("VisitorSearchScreen.razor");
 
         Assert.Contains("search-screen", markup, StringComparison.Ordinal);
         Assert.Contains("search-top", markup, StringComparison.Ordinal);
@@ -185,7 +247,7 @@ public sealed class MobileSectionMarkupTests
     [Fact]
     public void Mobile_full_player_screen_matches_sample_strict_layout_hooks()
     {
-        var markup = ReadSectionMarkup("TouristFullPlayerScreen.razor");
+        var markup = ReadSectionMarkup("VisitorFullPlayerScreen.razor");
 
         Assert.Contains("full-player-screen", markup, StringComparison.Ordinal);
         Assert.Contains("full-player-hero", markup, StringComparison.Ordinal);
@@ -201,25 +263,19 @@ public sealed class MobileSectionMarkupTests
     [Fact]
     public void Mobile_home_uses_polished_auxiliary_overlay_shells()
     {
-        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
-        var homePath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Home.razor");
-
-        var markup = File.ReadAllText(homePath);
+        var markup = ReadSectionMarkup("VisitorMapScreen.razor");
 
         Assert.Contains("notification-panel__surface", markup, StringComparison.Ordinal);
         Assert.Contains("notification-panel__copy", markup, StringComparison.Ordinal);
         Assert.Contains("qr-modal__panel", markup, StringComparison.Ordinal);
-        Assert.Contains("guest-auth-snackbar__copy", markup, StringComparison.Ordinal);
-        Assert.Contains("auth-overlay__card", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("guest-auth-snackbar__copy", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("auth-overlay__card", markup, StringComparison.Ordinal);
     }
 
     [Fact]
     public void Mobile_map_layout_removes_top_search_and_uses_sheet_safe_overlay_hooks()
     {
-        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
-        var homePath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Home.razor");
-
-        var markup = File.ReadAllText(homePath);
+        var markup = ReadSectionMarkup("VisitorMapScreen.razor");
 
         Assert.Contains("map-top-controls", markup, StringComparison.Ordinal);
         Assert.Contains("map-category-rail", markup, StringComparison.Ordinal);

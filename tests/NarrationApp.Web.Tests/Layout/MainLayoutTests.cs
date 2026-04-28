@@ -18,6 +18,49 @@ namespace NarrationApp.Web.Tests.Layout;
 public sealed class MainLayoutTests : TestContext
 {
     [Fact]
+    public void Main_layout_behavior_is_split_into_focused_partials()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var layoutRoot = Path.Combine(projectRoot, "src", "NarrationApp.Web", "Layout");
+        var markupPath = Path.Combine(layoutRoot, "MainLayout.razor");
+        var expectedPartials = new[]
+        {
+            ("MainLayout.razor.cs", "OwnerSidebarProfileContent"),
+            ("MainLayout.State.razor.cs", "RefreshLayoutStateAsync"),
+            ("MainLayout.RouteCopy.razor.cs", "UpdateRouteCopy"),
+            ("MainLayout.Navigation.razor.cs", "BuildNavigation")
+        };
+
+        var markup = File.ReadAllText(markupPath);
+        Assert.DoesNotContain("@code", markup, StringComparison.Ordinal);
+
+        foreach (var (fileName, marker) in expectedPartials)
+        {
+            var path = Path.Combine(layoutRoot, fileName);
+            Assert.True(File.Exists(path), $"{fileName} should exist.");
+            var source = File.ReadAllText(path);
+            Assert.Contains("partial class MainLayout", source, StringComparison.Ordinal);
+            Assert.Contains(marker, source, StringComparison.Ordinal);
+        }
+
+        var profileCardMarkupPath = Path.Combine(layoutRoot, "OwnerSidebarProfileCard.razor");
+        var profileCardCodePath = Path.Combine(layoutRoot, "OwnerSidebarProfileCard.razor.cs");
+        Assert.True(File.Exists(profileCardMarkupPath), "OwnerSidebarProfileCard.razor should exist.");
+        Assert.True(File.Exists(profileCardCodePath), "OwnerSidebarProfileCard.razor.cs should exist.");
+        Assert.Contains("layout-owner-card", File.ReadAllText(profileCardMarkupPath), StringComparison.Ordinal);
+        Assert.Contains("partial class OwnerSidebarProfileCard", File.ReadAllText(profileCardCodePath), StringComparison.Ordinal);
+
+        var coreLines = File.ReadAllLines(Path.Combine(layoutRoot, "MainLayout.razor.cs")).Length;
+        Assert.True(coreLines <= 90, $"MainLayout.razor.cs should stay focused on lifecycle and shell state, but has {coreLines} lines.");
+        var stateLines = File.ReadAllLines(Path.Combine(layoutRoot, "MainLayout.State.razor.cs")).Length;
+        Assert.True(stateLines <= 110, $"MainLayout.State.razor.cs should stay focused on state refresh, but has {stateLines} lines.");
+        var routeLines = File.ReadAllLines(Path.Combine(layoutRoot, "MainLayout.RouteCopy.razor.cs")).Length;
+        Assert.True(routeLines <= 90, $"MainLayout.RouteCopy.razor.cs should stay focused on route copy, but has {routeLines} lines.");
+        var navigationLines = File.ReadAllLines(Path.Combine(layoutRoot, "MainLayout.Navigation.razor.cs")).Length;
+        Assert.True(navigationLines <= 150, $"MainLayout.Navigation.razor.cs should stay focused on nav assembly, but has {navigationLines} lines.");
+    }
+
+    [Fact]
     public void Admin_navigation_restores_standalone_qr_menu_item()
     {
         ConfigureAuthenticatedAdmin();
@@ -80,6 +123,25 @@ public sealed class MainLayoutTests : TestContext
 
         Assert.DoesNotContain("top POIs", cut.Markup);
         Assert.DoesNotContain("audio consumption", cut.Markup);
+    }
+
+    [Fact]
+    public void Visitor_devices_route_copy_uses_visitor_device_wording()
+    {
+        ConfigureAuthenticatedAdmin();
+        Services.GetRequiredService<NavigationManager>().NavigateTo("http://localhost/admin/visitor-devices");
+
+        var cut = RenderComponent<MainLayout>(parameters => parameters
+            .Add(layout => layout.Body, (RenderFragment)(builder => builder.AddMarkupContent(0, "<div>Body</div>"))));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Thiết bị visitor", cut.Markup);
+            Assert.Contains("visitor đang online", cut.Markup);
+        });
+
+        Assert.DoesNotContain("User Manager", cut.Markup);
+        Assert.DoesNotContain("Users", cut.Markup);
     }
 
     [Fact]

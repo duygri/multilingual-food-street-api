@@ -15,6 +15,33 @@ namespace NarrationApp.Server.Tests.Controllers;
 public sealed class AdminControllerTests
 {
     [Fact]
+    public async Task PoisAsync_does_not_expose_pending_moderation_for_published_poi()
+    {
+        await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
+        var owner = await dbContext.AppUsers.SingleAsync(user => user.Email == "owner@narration.app");
+
+        dbContext.ModerationRequests.Add(new ModerationRequest
+        {
+            EntityType = "poi",
+            EntityId = "1",
+            Status = ModerationStatus.Pending,
+            RequestedBy = owner.Id,
+            CreatedAt = DateTime.UtcNow.AddMinutes(-5)
+        });
+        await dbContext.SaveChangesAsync();
+
+        var controller = new AdminController(new StubModerationService(), new StubAnalyticsService(), dbContext);
+
+        var actionResult = await controller.PoisAsync(CancellationToken.None);
+        var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
+        var response = Assert.IsType<ApiResponse<IReadOnlyList<AdminPoiDto>>>(okResult.Value);
+        var poi = Assert.Single(response.Data!.Where(item => item.Id == 1));
+
+        Assert.Equal(PoiStatus.Published, poi.Status);
+        Assert.Null(poi.PendingModerationId);
+    }
+
+    [Fact]
     public async Task UsersAsync_returns_device_and_presence_metrics()
     {
         await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
@@ -49,6 +76,24 @@ public sealed class AdminControllerTests
                 EventType = EventType.GeofenceEnter,
                 Source = "mobile-app",
                 CreatedAt = now.AddMinutes(-1)
+            },
+            new VisitEvent
+            {
+                UserId = null,
+                DeviceId = "android-pixel-7-guest001",
+                PoiId = poiId,
+                EventType = EventType.AudioPlay,
+                Source = "guest-mode",
+                CreatedAt = now.AddMinutes(-5)
+            },
+            new VisitEvent
+            {
+                UserId = null,
+                DeviceId = "android-pixel-7-guest001",
+                PoiId = poiId,
+                EventType = EventType.QrScan,
+                Source = "guest-mode",
+                CreatedAt = now.AddMinutes(-2)
             });
 
         await dbContext.SaveChangesAsync();
@@ -60,16 +105,104 @@ public sealed class AdminControllerTests
         var response = Assert.IsType<ApiResponse<IReadOnlyList<UserSummaryDto>>>(okResult.Value);
         var summary = Assert.Single(response.Data!.Where(item => item.Email == tourist.Email));
         var admin = Assert.Single(response.Data!.Where(item => item.Email == "admin@narration.app"));
+        var guest = Assert.Single(response.Data!.Where(item => item.RoleName == "guest"));
 
         Assert.Equal(2, summary.DeviceCount);
         Assert.Equal(1, summary.ActiveDeviceCount);
         Assert.True(summary.IsOnline);
         Assert.NotNull(summary.LastSeenAtUtc);
+        Assert.Equal("android-pixel-7-guest001", guest.DeviceId);
+        Assert.Contains("Android", guest.DisplayName, StringComparison.Ordinal);
+        Assert.Equal(1, guest.DeviceCount);
+        Assert.Equal(1, guest.ActiveDeviceCount);
+        Assert.True(guest.IsOnline);
+        Assert.NotNull(guest.LastSeenAtUtc);
 
         Assert.Equal(0, admin.DeviceCount);
         Assert.Equal(0, admin.ActiveDeviceCount);
         Assert.False(admin.IsOnline);
         Assert.Null(admin.LastSeenAtUtc);
+    }
+
+    [Fact]
+    public async Task VisitorDevicesAsync_returns_tourist_and_guest_devices_without_owner_rows()
+    {
+        await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
+        var tourist = await TestAppDbContextFactory.AddTouristAsync(dbContext, "visitor@narration.app");
+        var owner = await TestAppDbContextFactory.AddOwnerAsync(dbContext, "owner-device@narration.app");
+        var poiId = await dbContext.Pois.Select(item => item.Id).FirstAsync();
+        var now = DateTime.UtcNow;
+
+        dbContext.VisitEvents.AddRange(
+            new VisitEvent
+            {
+                UserId = tourist.Id,
+                DeviceId = "android-pixel-7-tourist001",
+                PoiId = poiId,
+                EventType = EventType.AudioPlay,
+                Source = "mobile-app",
+                CreatedAt = now.AddMinutes(-2)
+            },
+            new VisitEvent
+            {
+                UserId = tourist.Id,
+                DeviceId = "android-pixel-7-tourist001",
+                PoiId = poiId,
+                EventType = EventType.GeofenceEnter,
+                Source = "mobile-app",
+                CreatedAt = now.AddMinutes(-1)
+            },
+            new VisitEvent
+            {
+                UserId = null,
+                DeviceId = "qr-web-b35ca655340b",
+                PoiId = poiId,
+                EventType = EventType.QrScan,
+                Source = "qr-web",
+                CreatedAt = now.AddHours(-1)
+            },
+            new VisitEvent
+            {
+                UserId = owner.Id,
+                DeviceId = "owner-ios-001",
+                PoiId = poiId,
+                EventType = EventType.AudioPlay,
+                Source = "owner-app",
+                CreatedAt = now.AddMinutes(-4)
+            });
+
+        await dbContext.SaveChangesAsync();
+
+        var controller = new AdminController(new StubModerationService(), new StubAnalyticsService(), dbContext);
+
+        var actionResult = await controller.VisitorDevicesAsync(CancellationToken.None);
+        var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
+        var response = Assert.IsType<ApiResponse<IReadOnlyList<VisitorDeviceSummaryDto>>>(okResult.Value);
+
+        Assert.Equal(2, response.Data!.Count);
+
+        var touristDevice = Assert.Single(response.Data.Where(item => item.RoleName == "tourist"));
+        var guestDevice = Assert.Single(response.Data.Where(item => item.RoleName == "guest"));
+
+        Assert.Equal("visitor@narration.app", touristDevice.AccountLabel);
+        Assert.Equal("android-pixel-7-tourist001", touristDevice.DeviceId);
+        Assert.Equal("vi-VN", touristDevice.PreferredLanguage);
+        Assert.True(touristDevice.IsOnline);
+        Assert.True(touristDevice.AutoPlayEnabled);
+        Assert.True(touristDevice.BackgroundTrackingEnabled);
+        Assert.Equal(2, touristDevice.TrackingCount);
+        Assert.Equal(1, touristDevice.VisitCount);
+        Assert.Equal(1, touristDevice.TriggerCount);
+
+        Assert.Equal("qr-web-b35ca655340b", guestDevice.DeviceId);
+        Assert.Equal("guest", guestDevice.RoleName);
+        Assert.False(guestDevice.IsOnline);
+        Assert.False(guestDevice.AutoPlayEnabled);
+        Assert.False(guestDevice.BackgroundTrackingEnabled);
+        Assert.Equal(1, guestDevice.TrackingCount);
+        Assert.Equal(1, guestDevice.VisitCount);
+        Assert.Equal(0, guestDevice.TriggerCount);
+        Assert.DoesNotContain(response.Data, item => string.Equals(item.AccountLabel, owner.Email, StringComparison.OrdinalIgnoreCase));
     }
 
     private sealed class StubModerationService : IModerationService

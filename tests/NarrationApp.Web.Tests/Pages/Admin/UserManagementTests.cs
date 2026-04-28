@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using NarrationApp.Shared.DTOs.Admin;
 using NarrationApp.Shared.DTOs.Analytics;
 using NarrationApp.Shared.DTOs.Moderation;
-using NarrationApp.Shared.Enums;
 using NarrationApp.Web.Pages.Admin;
 using NarrationApp.Web.Services;
 
@@ -12,7 +11,37 @@ namespace NarrationApp.Web.Tests.Pages.Admin;
 public sealed class UserManagementTests : TestContext
 {
     [Fact]
-    public void Filters_user_manager_to_owner_and_tourist_without_role_controls()
+    public void User_management_behavior_is_split_into_focused_partials()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var pageRoot = Path.Combine(projectRoot, "src", "NarrationApp.Web", "Pages", "Admin");
+        var markupPath = Path.Combine(pageRoot, "UserManagement.razor");
+        var expectedPartials = new[]
+        {
+            ("UserManagement.razor.cs", "OnInitializedAsync"),
+            ("UserManagement.Actions.razor.cs", "RunRefreshLoopAsync"),
+            ("UserManagement.Presentation.razor.cs", "GetLastSeenRelative")
+        };
+
+        var markup = File.ReadAllText(markupPath);
+        Assert.DoesNotContain("@code", markup, StringComparison.Ordinal);
+
+        foreach (var (fileName, marker) in expectedPartials)
+        {
+            var path = Path.Combine(pageRoot, fileName);
+            Assert.True(File.Exists(path), $"{fileName} should exist.");
+            var source = File.ReadAllText(path);
+            Assert.Contains("partial class UserManagement", source, StringComparison.Ordinal);
+            Assert.Contains(marker, source, StringComparison.Ordinal);
+        }
+
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "UserManagement.razor.cs")).Length <= 60);
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "UserManagement.Actions.razor.cs")).Length <= 110);
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "UserManagement.Presentation.razor.cs")).Length <= 60);
+    }
+
+    [Fact]
+    public void Renders_visitor_device_surface_with_total_and_online_metrics_only()
     {
         var service = new TestAdminPortalService();
         Services.AddSingleton<IAdminPortalService>(service);
@@ -21,77 +50,65 @@ public sealed class UserManagementTests : TestContext
 
         cut.WaitForAssertion(() =>
         {
-            Assert.NotNull(cut.Find(".user-surface"));
-            Assert.Contains("User Manager", cut.Markup);
-            Assert.Contains("Quản lý người dùng", cut.Markup);
-            Assert.Contains("Tổng users", cut.Markup);
-            Assert.Contains("Online", cut.Markup);
-            Assert.Contains("POI Owners", cut.Markup);
-            Assert.Contains("Tourists", cut.Markup);
-            Assert.DoesNotContain("admin@narration.app", cut.Markup);
-            Assert.Contains("owner@narration.app", cut.Markup);
-            Assert.Contains("visitor@narration.app", cut.Markup);
-            Assert.DoesNotContain("Vai trò", cut.Markup);
-            Assert.DoesNotContain("Lưu role", cut.Markup);
-            Assert.DoesNotContain("Trung tâm quyền truy cập", cut.Markup);
-        });
-
-        cut.Find("button[data-action='filter-user-owner']").Click();
-
-        cut.WaitForAssertion(() =>
-        {
-            Assert.Contains("owner@narration.app", cut.Markup);
-            Assert.DoesNotContain("visitor@narration.app", cut.Markup);
-        });
-
-        cut.Find("button[data-action='filter-user-tourist']").Click();
-
-        cut.WaitForAssertion(() =>
-        {
+            Assert.NotNull(cut.Find(".visitor-page"));
+            Assert.Contains("Thiết bị visitor", cut.Markup);
+            Assert.Contains("Tổng visitor", cut.Markup);
+            Assert.Contains("Đang online", cut.Markup);
+            Assert.Contains("Android Pixel 7", cut.Markup);
+            Assert.Contains("Visitor quét QR", cut.Markup);
+            Assert.Contains("android-pixel-7-guest001", cut.Markup);
+            Assert.Contains("android-pixel-7-tourist001", cut.Markup);
+            Assert.Contains("vi-VN", cut.Markup);
+            Assert.Contains("en-US", cut.Markup);
+            Assert.Contains("Thiết bị", cut.Markup);
+            Assert.Contains("Visit", cut.Markup);
+            Assert.Contains("Trigger", cut.Markup);
             Assert.DoesNotContain("owner@narration.app", cut.Markup);
-            Assert.Contains("visitor@narration.app", cut.Markup);
+            Assert.DoesNotContain("visitor@narration.app", cut.Markup);
+            Assert.DoesNotContain("Không hoạt động", cut.Markup);
+            Assert.DoesNotContain("Auto play", cut.Markup);
+            Assert.DoesNotContain("Background", cut.Markup);
         });
+
+        Assert.Single(cut.FindAll("button[data-action='refresh-visitor-data']"));
+        Assert.Empty(cut.FindAll("button[data-action='visitor-row-edit']"));
     }
 
     private sealed class TestAdminPortalService : IAdminPortalService
     {
-        private readonly List<UserSummaryDto> _users =
+        private readonly List<VisitorDeviceSummaryDto> _visitorDevices =
         [
             new()
             {
                 Id = Guid.Parse("11111111-1111-1111-1111-111111111111"),
-                Email = "visitor@narration.app",
-                PreferredLanguage = "vi",
-                IsActive = true,
+                DisplayName = "Android Pixel 7",
+                AccountLabel = "visitor@narration.app",
+                DeviceId = "android-pixel-7-tourist001",
+                PreferredLanguage = "vi-VN",
                 RoleName = "tourist",
-                DeviceCount = 2,
-                ActiveDeviceCount = 1,
                 IsOnline = true,
+                AutoPlayEnabled = true,
+                BackgroundTrackingEnabled = true,
+                TrackingCount = 12,
+                VisitCount = 4,
+                TriggerCount = 2,
                 LastSeenAtUtc = DateTime.UtcNow.AddMinutes(-2)
             },
             new()
             {
                 Id = Guid.Parse("22222222-2222-2222-2222-222222222222"),
-                Email = "owner@narration.app",
-                PreferredLanguage = "en",
-                IsActive = true,
-                RoleName = "poi_owner",
-                DeviceCount = 1,
-                ActiveDeviceCount = 0,
+                DisplayName = "Visitor quét QR",
+                AccountLabel = string.Empty,
+                DeviceId = "android-pixel-7-guest001",
+                PreferredLanguage = "en-US",
+                RoleName = "guest",
                 IsOnline = false,
-                LastSeenAtUtc = DateTime.UtcNow.AddHours(-4)
-            },
-            new()
-            {
-                Id = Guid.Parse("33333333-3333-3333-3333-333333333333"),
-                Email = "admin@narration.app",
-                PreferredLanguage = "vi",
-                IsActive = true,
-                RoleName = "admin",
-                DeviceCount = 1,
-                ActiveDeviceCount = 1,
-                IsOnline = true,
-                LastSeenAtUtc = DateTime.UtcNow.AddMinutes(-1)
+                AutoPlayEnabled = false,
+                BackgroundTrackingEnabled = false,
+                TrackingCount = 3,
+                VisitCount = 1,
+                TriggerCount = 0,
+                LastSeenAtUtc = DateTime.UtcNow.AddHours(-2)
             }
         ];
 
@@ -107,7 +124,12 @@ public sealed class UserManagementTests : TestContext
 
         public Task<IReadOnlyList<UserSummaryDto>> GetUsersAsync(CancellationToken cancellationToken = default)
         {
-            return Task.FromResult<IReadOnlyList<UserSummaryDto>>(_users.ToArray());
+            return Task.FromResult<IReadOnlyList<UserSummaryDto>>(Array.Empty<UserSummaryDto>());
+        }
+
+        public Task<IReadOnlyList<VisitorDeviceSummaryDto>> GetVisitorDevicesAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<IReadOnlyList<VisitorDeviceSummaryDto>>(_visitorDevices.ToArray());
         }
 
         public Task<IReadOnlyList<ModerationRequestDto>> GetPendingModerationAsync(CancellationToken cancellationToken = default)
