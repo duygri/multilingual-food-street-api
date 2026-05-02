@@ -55,10 +55,34 @@
         </div>
         <p>@GetAccuracyDescription(Preferences.AccuracyMode)</p>
     </article>
+
+    <article class="setting-card settings-debug-log">
+        <span class="sheet-label">Nhật ký geofence</span>
+        @if (GeofenceDebugEvents.Count == 0)
+        {
+            <div class="debug-log-item debug-log-item--empty">
+                <strong>Chưa có sự kiện overlap</strong>
+                <span>Đi bộ vào vùng POI để xem app chọn active, queue và promote như thế nào.</span>
+            </div>
+        }
+        else
+        {
+            <div class="debug-log-list">
+                @foreach (var item in GeofenceDebugEvents)
+                {
+                    <article class="debug-log-item">
+                        <strong>@item.TimeLabel</strong>
+                        <span>@item.Message</span>
+                    </article>
+                }
+            </div>
+        }
+    </article>
 </section>
 
 @code {
     [Parameter] public VisitorGpsPreferences Preferences { get; set; } = new(true, true, VisitorGpsAccuracyMode.Adaptive, 0, string.Empty, string.Empty);
+    [Parameter] public IReadOnlyList<VisitorDebugEvent> GeofenceDebugEvents { get; set; } = [];
     [Parameter] public string StatusLabel { get; set; } = string.Empty;
     [Parameter] public EventCallback OnBack { get; set; }
     [Parameter] public EventCallback<bool> OnBackgroundTrackingChanged { get; set; }

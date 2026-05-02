@@ -4,8 +4,17 @@ namespace NarrationApp.Mobile.Components.Pages;
 
 public partial class Home
 {
-    private string GetAccountModeDescription() =>
-        VisitorSettingsPresentationFormatter.GetAccountModeDescription();
+    private VisitorModeSummary GetVisitorModeSummary() =>
+        VisitorSettingsPresentationFormatter.CreateVisitorModeSummary();
+
+    private VisitorSettingsOverviewSummary GetSettingsOverviewSummary() =>
+        VisitorSettingsPresentationFormatter.CreateOverviewSummary(
+            currentLanguageLabel: _state.CurrentLanguage.Label,
+            audioSummary: GetAudioSettingsSummary(),
+            gpsSummary: GetGpsSettingsSummary(),
+            cacheSummary: GetAudioCacheSummary(),
+            historySummary: GetListeningHistoryHeadline(),
+            aboutSummary: $"{GetAboutVersionLabel()} • {GetAboutRuntimeLabel()}");
 
     private string GetAudioSettingsSummary() =>
         VisitorSettingsPresentationFormatter.FormatAudioSettingsSummary(

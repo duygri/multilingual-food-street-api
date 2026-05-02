@@ -32,7 +32,7 @@ public partial class Home
         VisitorNavigationPresentationFormatter.GetSelectionClass(_state.SelectedPoiId == poiId);
 
     private string GetCategoryIcon(string categoryId) =>
-        VisitorNavigationPresentationFormatter.GetCategoryIcon(categoryId);
+        VisitorCategoryPresentationFormatter.GetCategoryIcon(categoryId, _state.Categories);
 
     private string GetPoiCategoryLabel(VisitorPoi poi) =>
         VisitorNavigationPresentationFormatter.GetPoiCategoryLabel(poi, _state.Categories);
@@ -47,4 +47,7 @@ public partial class Home
             _state.AudioPreferences.AutoPlayEnabled,
             _state.ActiveProximity,
             _state.IsAudioPlaying);
+
+    private string? GetGeofenceQueueBadge() =>
+        VisitorNavigationPresentationFormatter.GetGeofenceQueueBadge(_proximityQueueState.QueuedMatch);
 }

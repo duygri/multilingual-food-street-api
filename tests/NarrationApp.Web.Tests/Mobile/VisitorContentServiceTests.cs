@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using NarrationApp.Mobile.Features.Home;
+using NarrationApp.Shared.DTOs.Audio;
+using NarrationApp.Shared.DTOs.Category;
 using NarrationApp.Shared.DTOs.Common;
 using NarrationApp.Shared.DTOs.Geofence;
 using NarrationApp.Shared.DTOs.Poi;
@@ -27,9 +29,11 @@ public sealed class VisitorContentServiceTests
                     Slug = "ben-nha-rong",
                     Lat = 10.7609,
                     Lng = 106.7054,
+                    CategoryId = 5,
                     CategoryName = "Di tích",
                     Description = "Điểm tham quan ven sông.",
                     TtsScript = "Một câu chuyện dài về thương cảng.",
+                    ImageUrl = "/uploads/poi/ben-nha-rong.webp",
                     Status = PoiStatus.Published,
                     Translations =
                     [
@@ -72,6 +76,24 @@ public sealed class VisitorContentServiceTests
             ]
         };
 
+        var categoryResponse = new ApiResponse<IReadOnlyList<CategoryDto>>
+        {
+            Succeeded = true,
+            Data =
+            [
+                new CategoryDto
+                {
+                    Id = 5,
+                    Name = "Di tích",
+                    Slug = "di-tich",
+                    Description = "Nhóm lịch sử và di sản.",
+                    Icon = "🏛️",
+                    DisplayOrder = 10,
+                    IsActive = true
+                }
+            ]
+        };
+
         var locationService = new FakeVisitorLocationService(VisitorLocationSnapshot.Disabled());
         var service = CreateService(locationService, (request, cancellationToken) =>
         {
@@ -85,6 +107,11 @@ public sealed class VisitorContentServiceTests
                 return Task.FromResult(CreateJsonResponse(tourResponse));
             }
 
+            if (request.RequestUri!.AbsolutePath == "/api/categories")
+            {
+                return Task.FromResult(CreateJsonResponse(categoryResponse));
+            }
+
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
         });
 
@@ -92,9 +119,15 @@ public sealed class VisitorContentServiceTests
 
         Assert.False(result.IsFallback);
         Assert.Equal("Live API", result.SourceLabel);
+        var category = Assert.Single(result.Content.Categories!);
+        Assert.Equal("di-tich", category.Id);
+        Assert.Equal("Di tích", category.Label);
+        Assert.Equal("🏛️", category.MarkerLabel);
         var poi = Assert.Single(result.Content.Pois);
         Assert.Equal("Bến Nhà Rồng", poi.Name);
+        Assert.Equal("di-tich", poi.CategoryId);
         Assert.Equal("Di tích", poi.CategoryLabel);
+        Assert.Equal("https://10.0.2.2:5001/uploads/poi/ben-nha-rong.webp", poi.ImageUrl);
         Assert.NotEqual(poi.CategoryLabel, poi.District);
         Assert.Contains("Live API", poi.StoryTag);
         Assert.Equal(45, poi.GeofenceRadiusMeters);
@@ -106,7 +139,7 @@ public sealed class VisitorContentServiceTests
     }
 
     [Fact]
-    public async Task LoadAsync_FallsBackToDemoContentWhenApiFails()
+    public async Task LoadAsync_returns_empty_live_state_when_api_fails()
     {
         var locationService = new FakeVisitorLocationService(VisitorLocationSnapshot.Disabled());
         var service = CreateService(locationService, (_, _) => throw new HttpRequestException("backend down"));
@@ -114,9 +147,10 @@ public sealed class VisitorContentServiceTests
         var result = await service.LoadAsync();
 
         Assert.True(result.IsFallback);
-        Assert.Equal("Demo fallback", result.SourceLabel);
-        Assert.NotEmpty(result.Content.Pois);
-        Assert.NotEmpty(result.Content.Tours);
+        Assert.Equal("API unavailable", result.SourceLabel);
+        Assert.Empty(result.Content.Pois);
+        Assert.Empty(result.Content.Tours);
+        Assert.Empty(result.Content.Categories ?? []);
         Assert.Contains("backend down", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -158,6 +192,24 @@ public sealed class VisitorContentServiceTests
             Data = []
         };
 
+        var categoryResponse = new ApiResponse<IReadOnlyList<CategoryDto>>
+        {
+            Succeeded = true,
+            Data =
+            [
+                new CategoryDto
+                {
+                    Id = 8,
+                    Name = "Di tích",
+                    Slug = "di-tich",
+                    Description = "Nhóm lịch sử.",
+                    Icon = "🏛️",
+                    DisplayOrder = 10,
+                    IsActive = true
+                }
+            ]
+        };
+
         var service = CreateService(locationService, (request, cancellationToken) =>
         {
             requestedPaths.Add(request.RequestUri!.PathAndQuery);
@@ -172,6 +224,11 @@ public sealed class VisitorContentServiceTests
                 return Task.FromResult(CreateJsonResponse(tourResponse));
             }
 
+            if (request.RequestUri!.AbsolutePath == "/api/categories")
+            {
+                return Task.FromResult(CreateJsonResponse(categoryResponse));
+            }
+
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
         });
 
@@ -182,6 +239,248 @@ public sealed class VisitorContentServiceTests
         Assert.Contains("lat=10.7609", requestedPaths[0], StringComparison.Ordinal);
         Assert.True(result.Location.PermissionGranted);
         Assert.True(result.Location.IsLocationAvailable);
+    }
+
+    [Fact]
+    public async Task LoadAsync_maps_only_ready_audio_languages_into_poi_availability()
+    {
+        var poiResponse = new ApiResponse<IReadOnlyList<PoiDto>>
+        {
+            Succeeded = true,
+            Data =
+            [
+                new PoiDto
+                {
+                    Id = 17,
+                    Name = "Cầu Mống",
+                    Slug = "cau-mong",
+                    Lat = 10.7693,
+                    Lng = 106.7001,
+                    CategoryName = "Di tích",
+                    Description = "POI test audio language readiness.",
+                    TtsScript = "Một câu chuyện về cầu Mống.",
+                    Status = PoiStatus.Published
+                }
+            ]
+        };
+
+        var audioResponse = new ApiResponse<IReadOnlyList<AudioDto>>
+        {
+            Succeeded = true,
+            Data =
+            [
+                new AudioDto
+                {
+                    Id = 1001,
+                    PoiId = 17,
+                    LanguageCode = "vi",
+                    Status = AudioStatus.Ready
+                },
+                new AudioDto
+                {
+                    Id = 1002,
+                    PoiId = 17,
+                    LanguageCode = "en",
+                    Status = AudioStatus.Ready
+                },
+                new AudioDto
+                {
+                    Id = 1003,
+                    PoiId = 17,
+                    LanguageCode = "ja",
+                    Status = AudioStatus.Generating
+                }
+            ]
+        };
+
+        var locationService = new FakeVisitorLocationService(VisitorLocationSnapshot.Disabled());
+        var service = CreateService(locationService, (request, cancellationToken) =>
+        {
+            if (request.RequestUri!.AbsolutePath == "/api/pois")
+            {
+                return Task.FromResult(CreateJsonResponse(poiResponse));
+            }
+
+            if (request.RequestUri!.AbsolutePath == "/api/audio")
+            {
+                return Task.FromResult(CreateJsonResponse(audioResponse));
+            }
+
+            if (request.RequestUri!.AbsolutePath == "/api/tours")
+            {
+                return Task.FromResult(CreateJsonResponse(new ApiResponse<IReadOnlyList<TourDto>> { Succeeded = true, Data = [] }));
+            }
+
+            if (request.RequestUri!.AbsolutePath == "/api/categories")
+            {
+                return Task.FromResult(CreateJsonResponse(new ApiResponse<IReadOnlyList<CategoryDto>> { Succeeded = true, Data = [] }));
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        });
+
+        var result = await service.LoadAsync();
+
+        var poi = Assert.Single(result.Content.Pois);
+        Assert.Equal(["en", "vi"], poi.ReadyAudioLanguageCodes.OrderBy(code => code));
+        Assert.Equal(2, poi.AvailableLanguageCount);
+    }
+
+    [Fact]
+    public void Map_ProjectsRealDistanceMetersFromCurrentLocation()
+    {
+        IReadOnlyList<PoiDto> pois =
+        [
+            new PoiDto
+            {
+                Id = 21,
+                Name = "Ốc Oanh",
+                Slug = "oc-oanh-vinh-khanh",
+                Lat = 10.7607,
+                Lng = 106.7033,
+                CategoryName = "Hải sản",
+                Description = "POI kiểm tra khoảng cách thật.",
+                TtsScript = "Audio demo",
+                Status = PoiStatus.Published
+            }
+        ];
+
+        var location = new VisitorLocationSnapshot(
+            PermissionGranted: true,
+            IsLocationAvailable: true,
+            Latitude: 10.7607,
+            Longitude: 106.7033,
+            StatusLabel: "GPS live");
+
+        var snapshot = VisitorContentMapper.Map(pois, [], [], location);
+
+        var poi = Assert.Single(snapshot.Pois);
+        Assert.Equal(0, poi.DistanceMeters);
+    }
+
+    [Fact]
+    public void Map_ResolvesRelativeImageUrlsAgainstApiBaseAddress()
+    {
+        IReadOnlyList<PoiDto> pois =
+        [
+            new PoiDto
+            {
+                Id = 31,
+                Name = "Cầu Khánh Hội",
+                Slug = "cau-khanh-hoi",
+                Lat = 10.7609,
+                Lng = 106.7054,
+                CategoryName = "Di tích",
+                Description = "POI có ảnh tương đối từ API.",
+                TtsScript = "Audio demo",
+                ImageUrl = "uploads/poi/cau-khanh-hoi.webp",
+                Status = PoiStatus.Published
+            }
+        ];
+
+        var snapshot = VisitorContentMapper.Map(
+            pois,
+            [],
+            [],
+            VisitorLocationSnapshot.Disabled(),
+            new Uri("https://visitor.example/"));
+
+        var poi = Assert.Single(snapshot.Pois);
+        Assert.Equal("https://visitor.example/uploads/poi/cau-khanh-hoi.webp", poi.ImageUrl);
+    }
+
+    [Fact]
+    public async Task LoadAsync_FallsBackToAllPoisWhenNearbyEndpointReturnsEmpty()
+    {
+        var requestedPaths = new List<string>();
+        var locationService = new FakeVisitorLocationService(
+            new VisitorLocationSnapshot(
+                PermissionGranted: true,
+                IsLocationAvailable: true,
+                Latitude: 37.4220,
+                Longitude: -122.0840,
+                StatusLabel: "Đã định vị"));
+
+        var nearbyResponse = new ApiResponse<IReadOnlyList<PoiDto>>
+        {
+            Succeeded = true,
+            Data = []
+        };
+
+        var allPoisResponse = new ApiResponse<IReadOnlyList<PoiDto>>
+        {
+            Succeeded = true,
+            Data =
+            [
+                new PoiDto
+                {
+                    Id = 14,
+                    Name = "Ốc Oanh",
+                    Slug = "oc-oanh-vinh-khanh",
+                    Lat = 10.7607,
+                    Lng = 106.7033,
+                    CategoryId = 1,
+                    CategoryName = "Hải sản",
+                    Description = "Quán ốc lâu năm.",
+                    TtsScript = "Một câu chuyện về ốc Oanh.",
+                    Status = PoiStatus.Published
+                }
+            ]
+        };
+
+        var categoryResponse = new ApiResponse<IReadOnlyList<CategoryDto>>
+        {
+            Succeeded = true,
+            Data =
+            [
+                new CategoryDto
+                {
+                    Id = 1,
+                    Name = "Hải sản",
+                    Slug = "hai-san",
+                    Description = "Nhóm hải sản.",
+                    Icon = "🦐",
+                    DisplayOrder = 10,
+                    IsActive = true
+                }
+            ]
+        };
+
+        var service = CreateService(locationService, (request, cancellationToken) =>
+        {
+            requestedPaths.Add(request.RequestUri!.PathAndQuery);
+
+            if (request.RequestUri!.AbsolutePath == "/api/pois/near")
+            {
+                return Task.FromResult(CreateJsonResponse(nearbyResponse));
+            }
+
+            if (request.RequestUri!.AbsolutePath == "/api/pois")
+            {
+                return Task.FromResult(CreateJsonResponse(allPoisResponse));
+            }
+
+            if (request.RequestUri!.AbsolutePath == "/api/tours")
+            {
+                return Task.FromResult(CreateJsonResponse(new ApiResponse<IReadOnlyList<TourDto>> { Succeeded = true, Data = [] }));
+            }
+
+            if (request.RequestUri!.AbsolutePath == "/api/categories")
+            {
+                return Task.FromResult(CreateJsonResponse(categoryResponse));
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        });
+
+        var result = await service.LoadAsync(new VisitorContentLoadRequest(PreferNearbyPois: true, RequestLocationPermission: true));
+
+        Assert.False(result.IsFallback);
+        Assert.Contains(requestedPaths, path => path.StartsWith("/api/pois/near?", StringComparison.Ordinal));
+        Assert.Contains("/api/pois", requestedPaths);
+        Assert.Single(result.Content.Pois);
+        Assert.Equal("Ốc Oanh", result.Content.Pois[0].Name);
+        Assert.Contains("toàn bộ", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -211,6 +510,11 @@ public sealed class VisitorContentServiceTests
                     Succeeded = true,
                     Data = []
                 }),
+                "/api/categories" => CreateJsonResponse(new ApiResponse<IReadOnlyList<CategoryDto>>
+                {
+                    Succeeded = true,
+                    Data = []
+                }),
                 _ => new HttpResponseMessage(HttpStatusCode.NotFound)
             };
         });
@@ -222,6 +526,7 @@ public sealed class VisitorContentServiceTests
         {
             Assert.Contains("/api/pois", startedPaths);
             Assert.Contains("/api/tours", startedPaths);
+            Assert.Contains("/api/categories", startedPaths);
         }
 
         var result = await loadTask;

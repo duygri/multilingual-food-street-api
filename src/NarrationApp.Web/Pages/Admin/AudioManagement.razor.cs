@@ -50,6 +50,9 @@ public partial class AudioManagement : IAsyncDisposable
         .ThenBy(item => item.Code, StringComparer.OrdinalIgnoreCase)
         .Select(item => new AudioLanguageOption(item.Code, item.FlagCode))
         .ToArray();
+    private IReadOnlyList<AudioLanguageOption> GenerateLanguageOptions => _modalPoi is null
+        ? Array.Empty<AudioLanguageOption>()
+        : GetGenerateLanguageOptions(_modalPoi);
 
     private bool HasAnyPoi => _pois.Count > 0;
 

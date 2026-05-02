@@ -56,7 +56,10 @@ public sealed class TourManagementTests : TestContext
             Assert.Contains("Tour Management", cut.Markup);
             Assert.Contains("Quản lý Tour", cut.Markup);
             Assert.Contains("Khám phá Xóm Chiếu", cut.Markup);
+            Assert.Contains("Tổng điểm dừng", cut.Markup);
             Assert.Contains("Draft", cut.Markup);
+            Assert.DoesNotContain("Lượt tham gia", cut.Markup);
+            Assert.DoesNotContain("Ước lượng từ các tuyến đang có", cut.Markup);
             Assert.DoesNotContain("Tạo mã truy cập", cut.Markup);
             Assert.Empty(cut.FindAll("input[data-field='tour-title']"));
             Assert.Empty(cut.FindAll("[data-panel='tour-editor']"));

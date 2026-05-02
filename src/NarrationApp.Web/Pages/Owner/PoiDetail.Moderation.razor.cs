@@ -37,6 +37,9 @@ public partial class PoiDetail
                 EntityId = _poi.Id.ToString()
             });
 
+            _poi = await OwnerPortalService.GetPoiAsync(Id);
+            HydrateEditors(_poi);
+            await ReloadWorkspaceAsync();
             _moderationItems = await ModerationPortalService.GetMineAsync();
             NotifyOwnerPortalChanged();
             _statusMessage = $"Đã gửi {_poi.Name} vào hàng chờ duyệt.";

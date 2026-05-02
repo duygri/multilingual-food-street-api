@@ -5,8 +5,11 @@
 @using NarrationApp.Mobile.Components.Pages.Sections
 @using Microsoft.JSInterop
 @inject IVisitorContentService ContentService
+@inject IVisitorLocationService LocationService
+@inject IVisitorBackgroundLocationRuntime BackgroundLocationRuntime
 @inject IVisitorAudioCatalogService AudioCatalogService
 @inject IVisitorQrDeepLinkService DeepLinkService
+@inject IVisitorPresenceReporter PresenceReporter
 @inject IJSRuntime JS
 @inject VisitorMapOptions MapOptions
 
@@ -17,7 +20,8 @@
     <VisitorSetupFlow
         State="_state"
         LanguageTileClassSelector="GetLanguageTileClass"
-        OnSelectLanguage="@((string languageCode) => _state.SelectLanguage(languageCode))"
+        OnSelectLanguage="SelectSetupLanguage"
+        OnContinueLanguage="ContinueFromLanguageSelection"
         OnEnableLocation="EnableLocationAsync"
         OnSkipLocation="SkipLocationAsync" />
 }
@@ -43,13 +47,11 @@ else
             {
                 <VisitorMapScreen
                     State="_state"
-                    IsQrModalOpen="_isQrModalOpen"
-                    QrPreviewCode="@GetQrPreviewCode()"
-                    QrPreviewPoi="@GetQrPreviewPoi()"
                     CategoryChipClassSelector="GetCategoryChipClass"
                     CategoryIconSelector="GetCategoryIcon"
                     AutoAudioStatusProvider="GetAutoAudioStatus"
                     GeofenceToastMessageProvider="GetGeofenceToastMessage"
+                    GeofenceQueueBadgeProvider="GetGeofenceQueueBadge"
                     PoiCategoryLabelSelector="GetPoiCategoryLabel"
                     OnToggleNotifications="ToggleNotificationsPanel"
                     OnCycleLanguage="CycleLanguage"
@@ -58,10 +60,12 @@ else
                     OnZoomOut="ZoomMapOutAsync"
                     OnRefresh="RefreshDiscoverAsync"
                     OnSwitchToTours="@(() => SwitchTabFromShell(VisitorTab.Tours))"
-                    OnOpenQrModal="OpenQrModal"
-                    OnCloseQrModal="CloseQrModal"
-                    OnTriggerQrPreview="TriggerQrPreviewAsync"
+                    OnOpenSearch="OpenSearchOverlay"
                     OnClosePoiSheet="@(() => _state.ClosePoiSheet())"
+                    MapPoiAudioStatus="@GetMapPoiAudioStatus()"
+                    QueuedPoiStatus="@GetQueuedPoiStatus()"
+                    OnOpenDirections="OpenSelectedPoiDirectionsAsync"
+                    OnOpenPoiDetail="OpenSelectedPoiDetailFromMapAsync"
                     OnPlaySelectedPoi="PlaySelectedPoiAsync" />
             }
             else if (_state.CurrentTab == VisitorTab.Discover)
@@ -89,11 +93,14 @@ else
                 else
                 {
                     <VisitorDiscoverScreen
-                        Pois="_state.FeaturedPois"
+                        Pois="_state.FeaturedDiscoverPois"
                         Categories="_state.Categories"
                         SelectedCategoryId="@_state.SelectedCategoryId"
                         SearchTerm="@_state.SearchTerm"
                         IsLoading="@_isContentLoading"
+                        IsUsingFallbackData="@_state.IsUsingFallbackData"
+                        DataSourceLabel="@_state.DataSourceLabel"
+                        SyncMessage="@_state.SyncMessage"
                         OnOpenSearch="OpenSearchOverlay"
                         OnRefresh="RefreshDiscoverAsync"
                         OnSelectCategory="SelectDiscoverCategory"
@@ -143,6 +150,7 @@ else
                 {
                     <VisitorGpsSettingsScreen
                         Preferences="_state.GpsPreferences"
+                        GeofenceDebugEvents="GeofenceDebugEvents"
                         StatusLabel="@(_state.LocationPermissionGranted ? "Vị trí đã bật" : "Vị trí đang tắt")"
                         OnBack="CloseSettingsScreen"
                         OnBackgroundTrackingChanged="SetGpsBackgroundTrackingEnabledAsync"
@@ -173,51 +181,24 @@ else
                         TechStack="@GetAboutTechStack()"
                         Languages="_state.Languages"
                         Links="@GetAboutLinks()"
-                        StatusMessage="@_profileStatusMessage"
+                        StatusMessage="@_aboutStatusMessage"
                         OnBack="CloseSettingsScreen"
                         OnOpenLink="OpenAboutLinkAsync" />
-                }
-                else if (_state.CurrentSettingsScreen == VisitorSettingsScreen.Profile)
-                {
-                    <VisitorEditProfileScreen
-                        DisplayName="@GetProfileDisplayName()"
-                        DisplayEmail="@GetProfileDisplayEmail()"
-                        ModeLabel="@GetProfileModeLabel()"
-                        Initials="@GetProfileInitials()"
-                        Stats="@GetSettingsStats()"
-                        Name="@_profileDraftName"
-                        Email="@_profileDraftEmail"
-                        StatusMessage="@_profileStatusMessage"
-                        ErrorMessage="@_profileErrorMessage"
-                        OnBack="CloseSettingsScreen"
-                        OnSave="SaveProfileDraftAsync"
-                        OnNameChanged="SetProfileDraftNameAsync"
-                        OnEmailChanged="SetProfileDraftEmailAsync" />
                 }
                 else
                 {
                     <VisitorSettingsOverviewScreen
-                        Initials="@GetProfileInitials()"
-                        DisplayName="@GetProfileDisplayName()"
-                        DisplayEmail="@GetProfileDisplayEmail()"
-                        ModeLabel="@GetProfileModeLabel()"
+                        VisitorMode="@GetVisitorModeSummary()"
+                        Overview="@GetSettingsOverviewSummary()"
                         Stats="@GetSettingsStats()"
-                        CurrentLanguageLabel="@_state.CurrentLanguage.Label"
                         Languages="_state.Languages"
                         LanguageChipClassSelector="GetLanguageChipClass"
-                        AudioSummary="@GetAudioSettingsSummary()"
-                        GpsSummary="@GetGpsSettingsSummary()"
-                        CacheSummary="@GetAudioCacheSummary()"
-                        HistorySummary="@GetListeningHistoryHeadline()"
-                        AboutSummary="@($"{GetAboutVersionLabel()} • {GetAboutRuntimeLabel()}")"
-                        ProfileSummary="@GetAccountModeDescription()"
                         OnSelectLanguage="SelectSettingsLanguageAsync"
                         OnOpenAudio="@(() => OpenSettingsScreen(VisitorSettingsScreen.Audio))"
                         OnOpenGps="@(() => OpenSettingsScreen(VisitorSettingsScreen.Gps))"
                         OnOpenCache="@(() => OpenSettingsScreen(VisitorSettingsScreen.Cache))"
                         OnOpenHistory="@(() => OpenSettingsScreen(VisitorSettingsScreen.History))"
-                        OnOpenAbout="@(() => OpenSettingsScreen(VisitorSettingsScreen.About))"
-                        OnOpenProfile="@(() => OpenSettingsScreen(VisitorSettingsScreen.Profile))" />
+                        OnOpenAbout="@(() => OpenSettingsScreen(VisitorSettingsScreen.About))" />
                 }
             }
 
@@ -226,10 +207,8 @@ else
                 <VisitorSearchScreen
                     SearchTerm="@_state.SearchTerm"
                     SelectedCategoryId="@_state.SelectedCategoryId"
-                    ResultCount="@GetSearchResultCount()"
+                    Results="@GetSearchResultsSummary()"
                     Categories="_state.Categories"
-                    PoiResults="@GetSearchPoiResults()"
-                    TourResults="@GetSearchTourResults()"
                     OnClose="CloseSearchOverlay"
                     OnSearchChanged="OnSearchChanged"
                     OnSelectCategory="SelectSearchCategory"

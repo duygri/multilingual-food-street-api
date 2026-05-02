@@ -41,7 +41,7 @@ public sealed class UserManagementTests : TestContext
     }
 
     [Fact]
-    public void Renders_visitor_device_surface_with_total_and_online_metrics_only()
+    public void Renders_only_online_visitor_devices_and_hides_total_metric()
     {
         var service = new TestAdminPortalService();
         Services.AddSingleton<IAdminPortalService>(service);
@@ -52,17 +52,18 @@ public sealed class UserManagementTests : TestContext
         {
             Assert.NotNull(cut.Find(".visitor-page"));
             Assert.Contains("Thiết bị visitor", cut.Markup);
-            Assert.Contains("Tổng visitor", cut.Markup);
             Assert.Contains("Đang online", cut.Markup);
-            Assert.Contains("Android Pixel 7", cut.Markup);
-            Assert.Contains("Visitor quét QR", cut.Markup);
-            Assert.Contains("android-pixel-7-guest001", cut.Markup);
             Assert.Contains("android-pixel-7-tourist001", cut.Markup);
+            Assert.Contains("Android Pixel 7", cut.Markup);
             Assert.Contains("vi-VN", cut.Markup);
-            Assert.Contains("en-US", cut.Markup);
             Assert.Contains("Thiết bị", cut.Markup);
             Assert.Contains("Visit", cut.Markup);
             Assert.Contains("Trigger", cut.Markup);
+            Assert.DoesNotContain("Tổng visitor", cut.Markup);
+            Assert.DoesNotContain("android-pixel-7-guest001", cut.Markup);
+            Assert.DoesNotContain("Visitor quét QR", cut.Markup);
+            Assert.DoesNotContain("en-US", cut.Markup);
+            Assert.DoesNotContain("Offline", cut.Markup);
             Assert.DoesNotContain("owner@narration.app", cut.Markup);
             Assert.DoesNotContain("visitor@narration.app", cut.Markup);
             Assert.DoesNotContain("Không hoạt động", cut.Markup);
@@ -71,6 +72,7 @@ public sealed class UserManagementTests : TestContext
         });
 
         Assert.Single(cut.FindAll("button[data-action='refresh-visitor-data']"));
+        Assert.Single(cut.FindAll("tbody tr"));
         Assert.Empty(cut.FindAll("button[data-action='visitor-row-edit']"));
     }
 

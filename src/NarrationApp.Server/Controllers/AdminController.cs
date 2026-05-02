@@ -21,9 +21,11 @@ public sealed class AdminController(
     IModerationService moderationService,
     IAnalyticsService analyticsService,
     Server.Data.AppDbContext dbContext,
-    IQrWebPresenceTracker qrWebPresenceTracker) : ControllerBase
+    IQrWebPresenceTracker qrWebPresenceTracker,
+    IVisitorMobilePresenceTracker visitorMobilePresenceTracker) : ControllerBase
 {
     private static readonly TimeSpan QrWebOnlineWindow = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan MobilePresenceOnlineWindow = TimeSpan.FromSeconds(45);
 
     [HttpGet("pois")]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<AdminPoiDto>>>> PoisAsync(CancellationToken cancellationToken)
@@ -209,6 +211,13 @@ public sealed class AdminController(
     {
         var nowUtc = DateTime.UtcNow;
         var onlineThresholdUtc = DateTime.UtcNow.AddMinutes(-15);
+        var mobilePresenceByDeviceId = visitorMobilePresenceTracker.GetAll()
+            .Where(item => !string.IsNullOrWhiteSpace(item.DeviceId))
+            .GroupBy(item => item.DeviceId.Trim(), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group => group.OrderByDescending(item => item.LastSeenAtUtc).First(),
+                StringComparer.OrdinalIgnoreCase);
         var touristUsersById = await dbContext.AppUsers
             .AsNoTracking()
             .Include(user => user.Role)
@@ -241,6 +250,7 @@ public sealed class AdminController(
 
                 var latest = ordered[0];
                 var deviceId = latest.DeviceId.Trim();
+                mobilePresenceByDeviceId.TryGetValue(deviceId, out var mobilePresence);
                 string roleName;
                 Server.Data.Entities.AppUser? tourist = null;
 
@@ -258,27 +268,36 @@ public sealed class AdminController(
                     roleName = "guest";
                 }
 
+                var effectiveSource = ResolveEffectiveVisitorSource(latest.Source, latest.CreatedAt, mobilePresence);
                 var normalizedLanguage = NormalizeLanguageTag(tourist?.PreferredLanguage);
                 if (string.IsNullOrWhiteSpace(normalizedLanguage))
                 {
-                    normalizedLanguage = InferLanguageTag(latest.Source, deviceId);
+                    normalizedLanguage = NormalizeLanguageTag(mobilePresence?.PreferredLanguage);
                 }
 
-                var passiveVisitorDevice = IsPassiveVisitorDevice(latest.Source, deviceId);
-                var qrWebPresenceLastSeenUtc = IsQrWebVisitor(latest.Source, deviceId)
+                if (string.IsNullOrWhiteSpace(normalizedLanguage))
+                {
+                    normalizedLanguage = InferLanguageTag(effectiveSource, deviceId);
+                }
+
+                var passiveVisitorDevice = IsPassiveVisitorDevice(effectiveSource, deviceId);
+                var qrWebPresenceLastSeenUtc = IsQrWebVisitor(effectiveSource, deviceId)
                     ? qrWebPresenceTracker.GetLastSeenUtc(deviceId)
                     : null;
-                var effectiveLastSeenAtUtc = GetEffectiveVisitorLastSeenUtc(latest.CreatedAt, qrWebPresenceLastSeenUtc);
+                var effectiveLastSeenAtUtc = GetEffectiveVisitorLastSeenUtc(
+                    latest.CreatedAt,
+                    qrWebPresenceLastSeenUtc,
+                    mobilePresence?.LastSeenAtUtc);
 
                 return new VisitorDeviceSummaryDto
                 {
                     Id = CreateStableVisitorId(latest.UserId, deviceId),
-                    DisplayName = FormatVisitorDisplayName(deviceId, latest.Source, roleName, tourist?.FullName),
+                    DisplayName = FormatVisitorDisplayName(deviceId, effectiveSource, roleName, tourist?.FullName),
                     AccountLabel = roleName == "tourist" ? tourist?.Email ?? string.Empty : string.Empty,
                     DeviceId = deviceId,
                     PreferredLanguage = normalizedLanguage,
                     RoleName = roleName,
-                    IsOnline = IsVisitorOnline(latest.Source, deviceId, effectiveLastSeenAtUtc, onlineThresholdUtc, nowUtc),
+                    IsOnline = IsVisitorOnline(effectiveSource, deviceId, effectiveLastSeenAtUtc, onlineThresholdUtc, nowUtc),
                     AutoPlayEnabled = !passiveVisitorDevice,
                     BackgroundTrackingEnabled = !passiveVisitorDevice,
                     TrackingCount = ordered.Length,
@@ -292,6 +311,13 @@ public sealed class AdminController(
             })
             .Where(item => item is not null)
             .Cast<VisitorDeviceSummaryDto>()
+            .Concat(BuildPresenceOnlyVisitorDevices(mobilePresenceByDeviceId, nowUtc, onlineThresholdUtc))
+            .GroupBy(item => item.DeviceId, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group
+                .OrderByDescending(item => item.IsOnline)
+                .ThenByDescending(item => item.LastSeenAtUtc)
+                .ThenByDescending(item => item.TrackingCount)
+                .First())
             .OrderByDescending(item => item.IsOnline)
             .ThenByDescending(item => item.LastSeenAtUtc)
             .ThenBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase)
@@ -489,14 +515,22 @@ public sealed class AdminController(
             || combined.Contains("browser", StringComparison.Ordinal);
     }
 
-    private static DateTime GetEffectiveVisitorLastSeenUtc(DateTime latestEventAtUtc, DateTime? qrWebPresenceLastSeenUtc)
+    private static string? ResolveEffectiveVisitorSource(string? latestEventSource, DateTime latestEventAtUtc, VisitorMobilePresenceSnapshot? mobilePresence)
     {
-        if (!qrWebPresenceLastSeenUtc.HasValue || qrWebPresenceLastSeenUtc.Value <= latestEventAtUtc)
+        if (mobilePresence is null || mobilePresence.LastSeenAtUtc <= latestEventAtUtc)
         {
-            return latestEventAtUtc;
+            return latestEventSource;
         }
 
-        return qrWebPresenceLastSeenUtc.Value;
+        return mobilePresence.Source;
+    }
+
+    private static DateTime GetEffectiveVisitorLastSeenUtc(DateTime latestEventAtUtc, DateTime? qrWebPresenceLastSeenUtc, DateTime? mobilePresenceLastSeenUtc)
+    {
+        return new[] { latestEventAtUtc, qrWebPresenceLastSeenUtc, mobilePresenceLastSeenUtc }
+            .Where(item => item.HasValue)
+            .Select(item => item!.Value)
+            .Max();
     }
 
     private static bool IsVisitorOnline(string? source, string deviceId, DateTime effectiveLastSeenAtUtc, DateTime onlineThresholdUtc, DateTime nowUtc)
@@ -506,7 +540,52 @@ public sealed class AdminController(
             return effectiveLastSeenAtUtc >= nowUtc.Subtract(QrWebOnlineWindow);
         }
 
+        if (IsMobilePresenceSource(source))
+        {
+            return effectiveLastSeenAtUtc >= nowUtc.Subtract(MobilePresenceOnlineWindow);
+        }
+
         return effectiveLastSeenAtUtc >= onlineThresholdUtc;
+    }
+
+    private static bool IsMobilePresenceSource(string? source)
+    {
+        return (source ?? string.Empty).Contains("mobile-presence", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static IReadOnlyList<VisitorDeviceSummaryDto> BuildPresenceOnlyVisitorDevices(
+        IReadOnlyDictionary<string, VisitorMobilePresenceSnapshot> mobilePresenceByDeviceId,
+        DateTime nowUtc,
+        DateTime onlineThresholdUtc)
+    {
+        return mobilePresenceByDeviceId.Values
+            .Where(item => IsVisitorOnline(item.Source, item.DeviceId, item.LastSeenAtUtc, onlineThresholdUtc, nowUtc))
+            .Select(item =>
+            {
+                var normalizedLanguage = NormalizeLanguageTag(item.PreferredLanguage);
+                if (string.IsNullOrWhiteSpace(normalizedLanguage))
+                {
+                    normalizedLanguage = InferLanguageTag(item.Source, item.DeviceId);
+                }
+
+                return new VisitorDeviceSummaryDto
+                {
+                    Id = CreateStableVisitorId(null, item.DeviceId),
+                    DisplayName = FormatVisitorDisplayName(item.DeviceId, item.Source, "guest", null),
+                    AccountLabel = string.Empty,
+                    DeviceId = item.DeviceId,
+                    PreferredLanguage = normalizedLanguage,
+                    RoleName = "guest",
+                    IsOnline = true,
+                    AutoPlayEnabled = true,
+                    BackgroundTrackingEnabled = true,
+                    TrackingCount = 0,
+                    VisitCount = 0,
+                    TriggerCount = 0,
+                    LastSeenAtUtc = item.LastSeenAtUtc
+                };
+            })
+            .ToArray();
     }
 
     private static string InferDevicePlatform(string deviceId, string? source)

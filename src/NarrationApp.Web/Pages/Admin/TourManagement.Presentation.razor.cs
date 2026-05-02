@@ -9,5 +9,4 @@ public partial class TourManagement
     private string GetRowClass(TourDto tour) => !_isCreateMode && _selectedTour?.Id == tour.Id ? "tour-table__row--active" : string.Empty;
     private static StatusTone GetTourStatusTone(TourStatus status) => status switch { TourStatus.Published => StatusTone.Good, TourStatus.Draft => StatusTone.Neutral, TourStatus.Archived => StatusTone.Warn, _ => StatusTone.Info };
     private static string GetTourStatusLabel(TourStatus status) => status switch { TourStatus.Published => "Published", TourStatus.Draft => "Draft", TourStatus.Archived => "Archived", _ => status.ToString() };
-    private static int GetParticipationEstimate(TourDto tour) => (tour.Stops.Count * 28) + (tour.EstimatedMinutes * 3) + (tour.Id % 11);
 }

@@ -1,14 +1,13 @@
 @page "/qr/{Code}"
 @attribute [AllowAnonymous]
 
-<PageTitle>QR POI Public</PageTitle>
+<PageTitle>QR mở app</PageTitle>
 
 <section class="panel-shell qr-launch-shell">
-    <p class="panel-shell__eyebrow">QR POI Public</p>
-    <h2>Nghe thuyết minh từ mã QR</h2>
+    <p class="panel-shell__eyebrow">QR mở app</p>
+    <h2>Launcher mở ứng dụng</h2>
     <p class="panel-shell__copy">
-        Nếu route này được mở từ web app client, hãy dùng nút bên dưới để chuyển sang ứng dụng,
-        hoặc mở link public từ server để xem POI và audio đa ngôn ngữ trực tiếp trên web.
+        Đây là mã QR dành riêng cho luồng mở app. Nếu điện thoại đã có ứng dụng, bạn có thể chạm nút bên dưới để vào app ngay.
     </p>
 
     <div class="qr-launch-shell__actions">
@@ -19,7 +18,7 @@
 
     <div class="qr-launch-shell__meta">
         <p>Mã QR: <strong>@NormalizedCode</strong></p>
-        <p>Trang public server sẽ hiển thị POI, nội dung mô tả, và phần nghe thuyết minh theo từng ngôn ngữ.</p>
+        <p>QR này khác với QR POI. Nó chỉ đóng vai trò launcher để chuyển sang ứng dụng khi cần.</p>
         <p>@AppDeepLink</p>
     </div>
 </section>

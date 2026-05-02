@@ -50,6 +50,17 @@ public sealed class VisitorMapRenderState
                 .Append(marker.Accent);
         }
 
+        if (snapshot.UserLocation is not null)
+        {
+            builder
+                .Append("|user:")
+                .Append(snapshot.UserLocation.Latitude.ToString("F6", CultureInfo.InvariantCulture))
+                .Append(':')
+                .Append(snapshot.UserLocation.Longitude.ToString("F6", CultureInfo.InvariantCulture))
+                .Append(':')
+                .Append(snapshot.UserLocation.Label);
+        }
+
         return builder.ToString();
     }
 }

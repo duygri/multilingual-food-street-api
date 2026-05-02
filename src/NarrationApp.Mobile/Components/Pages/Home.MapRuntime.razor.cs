@@ -5,11 +5,20 @@ namespace NarrationApp.Mobile.Components.Pages;
 
 public partial class Home
 {
+    private static bool IsPlaceholderToken(string token)
+        => string.IsNullOrWhiteSpace(token)
+           || token.StartsWith("YOUR_", StringComparison.OrdinalIgnoreCase);
+
     private async Task RenderMapIfNeededAsync()
     {
         if (_state.CurrentStep != VisitorIntroStep.Ready || _state.CurrentTab != VisitorTab.Map)
         {
             _mapRenderState.Reset();
+            return;
+        }
+
+        if (IsPlaceholderToken(MapOptions.AccessToken))
+        {
             return;
         }
 
@@ -19,12 +28,19 @@ public partial class Home
             return;
         }
 
-        await JS.InvokeVoidAsync(
-            "visitorMap.render",
-            "discover-map",
-            MapOptions.AccessToken,
-            MapOptions.StyleUrl,
-            mapSnapshot,
-            _mapBridge);
+        try
+        {
+            await JS.InvokeVoidAsync(
+                "visitorMap.render",
+                "discover-map",
+                MapOptions.AccessToken,
+                MapOptions.StyleUrl,
+                mapSnapshot,
+                _mapBridge);
+        }
+        catch (JSException ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MapRuntime] MapBox render failed: {ex.Message}");
+        }
     }
 }

@@ -19,8 +19,8 @@ public partial class Home
 
     private async Task StartTourAsync(string tourId)
     {
-        _tourDetailId = null;
-        _discoverPoiDetailId = null;
+        CloseTourDetailSelection();
+        CloseDiscoverPoiDetailSelection();
         _lastAutoPlayedPoiId = null;
         _isAutoPlayingFromProximity = false;
         _state.StartTour(tourId);

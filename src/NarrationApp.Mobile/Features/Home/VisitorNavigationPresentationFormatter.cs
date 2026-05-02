@@ -54,6 +54,9 @@ public static class VisitorNavigationPresentationFormatter
             : activeProximity is null
                 ? "Sẵn sàng phát thuyết minh tự động."
                 : isAudioPlaying
-                    ? $"Đang phát thuyết minh tự động • {activeProximity.DistanceMeters}m"
-                    : $"Sẵn sàng phát thuyết minh • {activeProximity.DistanceMeters}m";
+                ? $"Đang phát thuyết minh tự động • {activeProximity.DistanceMeters}m"
+                : $"Sẵn sàng phát thuyết minh • {activeProximity.DistanceMeters}m";
+
+    public static string? GetGeofenceQueueBadge(VisitorProximityMatch? queuedMatch) =>
+        queuedMatch is null ? null : $"Chờ: {queuedMatch.PoiName}";
 }

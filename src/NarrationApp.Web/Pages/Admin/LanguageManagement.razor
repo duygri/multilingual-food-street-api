@@ -81,9 +81,34 @@ else
             @if (_isFormOpen)
             {
                 <div class="language-admin__form">
+                    <label class="language-admin__search-field">
+                        <span>Tìm ngôn ngữ</span>
+                        <input data-field="language-search"
+                               value="@_draft.SearchText"
+                               @oninput="args => UpdateSearchQuery(args.Value?.ToString())"
+                               placeholder="Ví dụ: French, Pháp, Japanese, Thai..." />
+                    </label>
+                    @if (_suggestions.Count > 0)
+                    {
+                        <div class="language-admin__suggestions">
+                            @foreach (var suggestion in _suggestions)
+                            {
+                                <button class="language-admin__suggestion"
+                                        data-action="language-suggestion-@suggestion.Code"
+                                        type="button"
+                                        @onclick="() => ApplySuggestion(suggestion.Code)">
+                                    <strong>@suggestion.DisplayName</strong>
+                                    <span>@suggestion.NativeName · @suggestion.Code.ToUpperInvariant() · @suggestion.FlagCode</span>
+                                </button>
+                            }
+                        </div>
+                    }
                     <label>
                         <span>Mã</span>
-                        <InputText data-field="language-code" @bind-Value="_draft.Code" />
+                        <input data-field="language-code"
+                               value="@_draft.Code"
+                               @oninput="args => UpdateLanguageCode(args.Value?.ToString())"
+                               @onchange="args => UpdateLanguageCode(args.Value?.ToString())" />
                     </label>
                     <label>
                         <span>Tên hiển thị</span>
@@ -97,6 +122,9 @@ else
                         <span>Mã cờ</span>
                         <InputText data-field="language-flag-code" @bind-Value="_draft.FlagCode" />
                     </label>
+                    <p class="language-admin__form-hint">
+                        Chọn nhanh từ danh sách để tự điền. Nếu chưa có trong thư viện, bạn vẫn có thể sửa tay các ô bên dưới.
+                    </p>
                     <div class="language-admin__form-actions">
                         <button class="app-button app-button--ghost" type="button" @onclick="ToggleForm">Đóng</button>
                         <button class="app-button app-button--primary" data-action="save-language" type="button" @onclick="SaveAsync">Lưu</button>

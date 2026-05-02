@@ -2,6 +2,7 @@ using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using NarrationApp.Shared.DTOs.Admin;
 using NarrationApp.Shared.DTOs.Analytics;
+using NarrationApp.Shared.DTOs.Languages;
 using NarrationApp.Shared.DTOs.Moderation;
 using NarrationApp.Shared.DTOs.QR;
 using NarrationApp.Shared.Enums;
@@ -45,6 +46,7 @@ public sealed class DashboardTests : TestContext
     {
         Services.AddSingleton<IAdminPortalService>(new TestAdminPortalService());
         Services.AddSingleton<IQrPortalService>(new TestQrPortalService());
+        Services.AddSingleton<ILanguagePortalService>(new TestLanguagePortalService());
 
         var cut = RenderComponent<Dashboard>();
 
@@ -58,9 +60,16 @@ public sealed class DashboardTests : TestContext
             Assert.Contains("Top POI được nghe nhiều nhất", cut.Markup);
             Assert.Contains("Moderation Queue gần đây", cut.Markup);
             Assert.Contains("Bún mắm Vĩnh Khánh", cut.Markup);
+            Assert.Contains("vi, en, ja", cut.Markup);
+            Assert.Contains("77", cut.Markup);
+            Assert.DoesNotContain("TB thời gian", cut.Markup);
+            Assert.DoesNotContain("Trend", cut.Markup);
+            Assert.DoesNotContain("Q5 · Tín ngưỡng", cut.Markup);
             Assert.DoesNotContain("Tuyến ưu tiên của ca trực", cut.Markup);
             Assert.DoesNotContain("Người dùng đang hoạt động", cut.Markup);
             Assert.DoesNotContain("Người dùng", cut.Markup);
+            Assert.DoesNotContain("4321", cut.Markup);
+            Assert.DoesNotContain("Từ audio plays gần nhất", cut.Markup);
         });
     }
 
@@ -161,6 +170,16 @@ public sealed class DashboardTests : TestContext
             ]);
         }
 
+        public Task<AnalyticsSnapshotDto> GetAnalyticsSnapshotAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(new AnalyticsSnapshotDto
+            {
+                GeofenceTriggers = 144,
+                CurrentMonthGeofenceTriggers = 77,
+                AudioPlays = 4321,
+                QrScans = 365,
+                AverageListenDurationSeconds = 154d
+            });
+
         public Task<ModerationRequestDto> ApproveModerationAsync(int requestId, ReviewModerationRequest request, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
@@ -176,7 +195,7 @@ public sealed class DashboardTests : TestContext
         public Task<AudioPlayAnalyticsDto> GetAudioPlayAnalyticsAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(new AudioPlayAnalyticsDto
             {
-                TotalAudioPlays = 1247,
+                TotalAudioPlays = 4321,
                 TotalListenSeconds = 87420
             });
 
@@ -199,6 +218,25 @@ public sealed class DashboardTests : TestContext
             => throw new NotSupportedException();
 
         public Task DeleteAsync(int qrId, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+    }
+
+    private sealed class TestLanguagePortalService : ILanguagePortalService
+    {
+        public Task<IReadOnlyList<ManagedLanguageDto>> GetAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<IReadOnlyList<ManagedLanguageDto>>(
+            [
+                new ManagedLanguageDto { Code = "vi", DisplayName = "Vietnamese", NativeName = "Tiếng Việt", FlagCode = "VN", IsActive = true },
+                new ManagedLanguageDto { Code = "en", DisplayName = "English", NativeName = "English", FlagCode = "GB", IsActive = true },
+                new ManagedLanguageDto { Code = "ja", DisplayName = "Japanese", NativeName = "日本語", FlagCode = "JP", IsActive = true }
+            ]);
+        }
+
+        public Task<ManagedLanguageDto> CreateAsync(CreateManagedLanguageRequest request, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task DeleteAsync(string code, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
     }
 }

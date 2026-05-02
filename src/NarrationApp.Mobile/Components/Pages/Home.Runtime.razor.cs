@@ -8,6 +8,16 @@ public partial class Home
     [JSInvokable]
     public Task SelectPoiFromMap(string poiId)
     {
+        var decision = VisitorMapMarkerTapBehavior.Decide(_state.SelectedPoiId, poiId, _state.ShowPoiSheet);
+        if (decision == VisitorMapMarkerTapAction.OpenDetail)
+        {
+            return InvokeAsync(async () =>
+            {
+                await OpenPoiDetailAsync(poiId);
+                StateHasChanged();
+            });
+        }
+
         _state.OpenPoi(poiId);
         _isAutoPlayingFromProximity = false;
         return InvokeAsync(async () =>
@@ -35,7 +45,7 @@ public partial class Home
 
             if (state is "ended" or "error")
             {
-                _isAutoPlayingFromProximity = false;
+                ClearCurrentAutoNarration();
             }
 
             StateHasChanged();

@@ -2,6 +2,11 @@ using Microsoft.Extensions.Logging;
 using NarrationApp.Mobile.Features.Home;
 using NarrationApp.Mobile.Services;
 using Microsoft.Maui.Storage;
+#if ANDROID
+using Android.OS;
+using Android.App;
+using NarrationApp.Mobile.Platforms.Android.Services;
+#endif
 
 namespace NarrationApp.Mobile;
 
@@ -29,7 +34,13 @@ public static class MauiProgram
         builder.Services.AddScoped<IVisitorAudioCatalogService, VisitorAudioCatalogService>();
         builder.Services.AddScoped<IVisitorQrApiService, VisitorQrApiService>();
         builder.Services.AddScoped<IVisitorQrDeepLinkService, VisitorQrDeepLinkService>();
+        builder.Services.AddScoped<IVisitorPresenceReporter, VisitorPresenceReporter>();
         builder.Services.AddScoped<IVisitorLocationService, DeviceVisitorLocationService>();
+#if ANDROID
+        builder.Services.AddSingleton<IVisitorBackgroundLocationRuntime>(_ => new AndroidVisitorBackgroundLocationRuntime(Android.App.Application.Context));
+#else
+        builder.Services.AddSingleton<IVisitorBackgroundLocationRuntime, NoopVisitorBackgroundLocationRuntime>();
+#endif
         builder.Services.AddScoped(_ =>
         {
             HttpMessageHandler handler = new HttpClientHandler();
@@ -77,12 +88,31 @@ public static class MauiProgram
 
     private static Uri ResolveVisitorApiBaseAddress(VisitorApiOptions options, VisitorApiDeploymentEnvironment environment)
     {
-#if ANDROID
-        const bool IsAndroid = true;
-#else
-        const bool IsAndroid = false;
-#endif
-
-        return VisitorApiEndpointResolver.Resolve(options, environment, IsAndroid);
+        return VisitorApiEndpointResolver.Resolve(options, environment, GetClientPlatform());
     }
+
+    private static VisitorApiClientPlatform GetClientPlatform()
+    {
+#if ANDROID
+        return IsAndroidEmulator()
+            ? VisitorApiClientPlatform.AndroidEmulator
+            : VisitorApiClientPlatform.AndroidDevice;
+#else
+        return VisitorApiClientPlatform.Default;
+#endif
+    }
+
+#if ANDROID
+    private static bool IsAndroidEmulator()
+    {
+        return VisitorAndroidRuntimeDetector.LooksLikeEmulator(
+            Build.Fingerprint,
+            Build.Model,
+            Build.Manufacturer,
+            Build.Brand,
+            Build.Device,
+            Build.Product,
+            Build.Hardware);
+    }
+#endif
 }

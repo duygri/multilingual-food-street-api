@@ -30,7 +30,7 @@ public sealed class AdminControllerTests
         });
         await dbContext.SaveChangesAsync();
 
-        var controller = new AdminController(new StubModerationService(), new StubAnalyticsService(), dbContext, new StubQrWebPresenceTracker());
+        var controller = new AdminController(new StubModerationService(), new StubAnalyticsService(), dbContext, new StubQrWebPresenceTracker(), new StubVisitorMobilePresenceTracker());
 
         var actionResult = await controller.PoisAsync(CancellationToken.None);
         var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
@@ -98,7 +98,7 @@ public sealed class AdminControllerTests
 
         await dbContext.SaveChangesAsync();
 
-        var controller = new AdminController(new StubModerationService(), new StubAnalyticsService(), dbContext, new StubQrWebPresenceTracker());
+        var controller = new AdminController(new StubModerationService(), new StubAnalyticsService(), dbContext, new StubQrWebPresenceTracker(), new StubVisitorMobilePresenceTracker());
 
         var actionResult = await controller.UsersAsync(CancellationToken.None);
         var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
@@ -173,7 +173,7 @@ public sealed class AdminControllerTests
 
         await dbContext.SaveChangesAsync();
 
-        var controller = new AdminController(new StubModerationService(), new StubAnalyticsService(), dbContext, new StubQrWebPresenceTracker());
+        var controller = new AdminController(new StubModerationService(), new StubAnalyticsService(), dbContext, new StubQrWebPresenceTracker(), new StubVisitorMobilePresenceTracker());
 
         var actionResult = await controller.VisitorDevicesAsync(CancellationToken.None);
         var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
@@ -224,13 +224,13 @@ public sealed class AdminControllerTests
 
         await dbContext.SaveChangesAsync();
 
-        var controller = new AdminController(new StubModerationService(), new StubAnalyticsService(), dbContext, new StubQrWebPresenceTracker());
+        var controller = new AdminController(new StubModerationService(), new StubAnalyticsService(), dbContext, new StubQrWebPresenceTracker(), new StubVisitorMobilePresenceTracker());
 
         var actionResult = await controller.VisitorDevicesAsync(CancellationToken.None);
         var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
         var response = Assert.IsType<ApiResponse<IReadOnlyList<VisitorDeviceSummaryDto>>>(okResult.Value);
 
-        var visitor = Assert.Single(response.Data);
+        var visitor = Assert.Single(response.Data!);
         Assert.Equal("qr-web-timeout-001", visitor.DeviceId);
         Assert.False(visitor.IsOnline);
     }
@@ -257,17 +257,46 @@ public sealed class AdminControllerTests
         var presenceTracker = new StubQrWebPresenceTracker();
         presenceTracker.Track("qr-web-heartbeat-001", now.AddSeconds(-5));
 
-        var controller = new AdminController(new StubModerationService(), new StubAnalyticsService(), dbContext, presenceTracker);
+        var controller = new AdminController(new StubModerationService(), new StubAnalyticsService(), dbContext, presenceTracker, new StubVisitorMobilePresenceTracker());
 
         var actionResult = await controller.VisitorDevicesAsync(CancellationToken.None);
         var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
         var response = Assert.IsType<ApiResponse<IReadOnlyList<VisitorDeviceSummaryDto>>>(okResult.Value);
 
-        var visitor = Assert.Single(response.Data);
+        var visitor = Assert.Single(response.Data!);
         Assert.Equal("qr-web-heartbeat-001", visitor.DeviceId);
         Assert.True(visitor.IsOnline);
         Assert.NotNull(visitor.LastSeenAtUtc);
         Assert.True(visitor.LastSeenAtUtc >= now.AddSeconds(-10));
+    }
+
+    [Fact]
+    public async Task VisitorDevicesAsync_includes_presence_only_mobile_device_as_online_guest()
+    {
+        await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
+        var now = DateTime.UtcNow;
+        var mobilePresenceTracker = new StubVisitorMobilePresenceTracker();
+        mobilePresenceTracker.Track("android-emulator-5554", "mobile-presence", "vi-VN", now.AddSeconds(-5));
+
+        var controller = new AdminController(
+            new StubModerationService(),
+            new StubAnalyticsService(),
+            dbContext,
+            new StubQrWebPresenceTracker(),
+            mobilePresenceTracker);
+
+        var actionResult = await controller.VisitorDevicesAsync(CancellationToken.None);
+        var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
+        var response = Assert.IsType<ApiResponse<IReadOnlyList<VisitorDeviceSummaryDto>>>(okResult.Value);
+
+        var visitor = Assert.Single(response.Data!);
+        Assert.Equal("android-emulator-5554", visitor.DeviceId);
+        Assert.Equal("guest", visitor.RoleName);
+        Assert.True(visitor.IsOnline);
+        Assert.Equal(0, visitor.TrackingCount);
+        Assert.Equal(0, visitor.VisitCount);
+        Assert.Equal(0, visitor.TriggerCount);
+        Assert.Equal("vi-VN", visitor.PreferredLanguage);
     }
 
     private sealed class StubModerationService : IModerationService
@@ -333,6 +362,30 @@ public sealed class AdminControllerTests
         public void Track(string deviceId, DateTime? seenAtUtc = null)
         {
             _lastSeenByDeviceId[deviceId] = seenAtUtc ?? DateTime.UtcNow;
+        }
+    }
+
+    private sealed class StubVisitorMobilePresenceTracker : IVisitorMobilePresenceTracker
+    {
+        private readonly Dictionary<string, VisitorMobilePresenceSnapshot> _presenceByDeviceId = new(StringComparer.OrdinalIgnoreCase);
+
+        public VisitorMobilePresenceSnapshot? Get(string deviceId)
+        {
+            return _presenceByDeviceId.TryGetValue(deviceId, out var value) ? value : null;
+        }
+
+        public IReadOnlyCollection<VisitorMobilePresenceSnapshot> GetAll()
+        {
+            return _presenceByDeviceId.Values.ToArray();
+        }
+
+        public void Track(string deviceId, string source, string? preferredLanguage, DateTime? seenAtUtc = null)
+        {
+            _presenceByDeviceId[deviceId] = new VisitorMobilePresenceSnapshot(
+                deviceId,
+                source,
+                preferredLanguage ?? string.Empty,
+                seenAtUtc ?? DateTime.UtcNow);
         }
     }
 }

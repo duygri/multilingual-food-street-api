@@ -339,7 +339,7 @@ else
             <div class="audio-modal__section">
                 <p class="panel-shell__eyebrow">Chọn ngôn ngữ</p>
                 <div class="audio-language-grid">
-                    @foreach (var language in ActiveLanguageOptions)
+                    @foreach (var language in GenerateLanguageOptions)
                     {
                         <label class="audio-language-option @(_selectedLanguages.Contains(language.Code) ? "is-selected" : string.Empty)">
                             <input type="checkbox"
@@ -350,6 +350,10 @@ else
                         </label>
                     }
                 </div>
+                @if (GenerateLanguageOptions.Count == 0)
+                {
+                    <p class="panel-shell__copy">Không còn ngôn ngữ nào cần generate: các ngôn ngữ đã có audio hoặc chưa có bản dịch sẽ không hiện ở đây.</p>
+                }
             </div>
 
             <div class="audio-modal__section">

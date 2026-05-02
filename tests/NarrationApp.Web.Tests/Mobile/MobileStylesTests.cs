@@ -44,6 +44,53 @@ public sealed class MobileStylesTests
     }
 
     [Fact]
+    public void Mobile_setup_flow_stays_top_aligned_with_balanced_language_cards()
+    {
+        var css = ReadMobileCss();
+
+        Assert.Contains(".visitor-app--setup", css, StringComparison.Ordinal);
+        Assert.Contains("justify-content: flex-start;", css, StringComparison.Ordinal);
+        Assert.Contains(".setup-card--language", css, StringComparison.Ordinal);
+        Assert.Contains(".setup-phone-chrome", css, StringComparison.Ordinal);
+        Assert.Contains(".setup-statusbar", css, StringComparison.Ordinal);
+        Assert.Contains(".setup-dynamic-island", css, StringComparison.Ordinal);
+        Assert.Contains(".setup-stack--language", css, StringComparison.Ordinal);
+        Assert.Contains(".setup-language-list", css, StringComparison.Ordinal);
+        Assert.Contains(".setup-language-option", css, StringComparison.Ordinal);
+        Assert.Contains(".setup-language-option__code", css, StringComparison.Ordinal);
+        Assert.Contains(".setup-language-option__indicator", css, StringComparison.Ordinal);
+        Assert.Contains(".setup-actions--stacked", css, StringComparison.Ordinal);
+        Assert.Contains(".setup-permission-icon", css, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mobile_setup_flow_uses_compact_phone_scale_for_intro_steps()
+    {
+        var css = ReadMobileCss();
+
+        Assert.Contains("width: min(100%, 392px);", css, StringComparison.Ordinal);
+        Assert.Contains("padding: 14px 18px 20px;", css, StringComparison.Ordinal);
+        Assert.Contains("gap: 16px;", css, StringComparison.Ordinal);
+        Assert.Contains("gap: 18px;", css, StringComparison.Ordinal);
+        Assert.Contains("font-size: clamp(1.72rem, 7.2vw, 2.08rem);", css, StringComparison.Ordinal);
+        Assert.Contains("font-size: 0.96rem;", css, StringComparison.Ordinal);
+        Assert.Contains("margin-bottom: 18px;", css, StringComparison.Ordinal);
+        Assert.Contains("min-height: 34px;", css, StringComparison.Ordinal);
+        Assert.Contains("width: 104px;", css, StringComparison.Ordinal);
+        Assert.Contains("height: 30px;", css, StringComparison.Ordinal);
+        Assert.Contains("width: 72px;", css, StringComparison.Ordinal);
+        Assert.Contains("height: 72px;", css, StringComparison.Ordinal);
+        Assert.Contains("min-height: 74px;", css, StringComparison.Ordinal);
+        Assert.Contains("padding: 13px 15px;", css, StringComparison.Ordinal);
+        Assert.Contains("font-size: 1.08rem;", css, StringComparison.Ordinal);
+        Assert.Contains("font-size: 0.9rem;", css, StringComparison.Ordinal);
+        Assert.Contains("width: 24px;", css, StringComparison.Ordinal);
+        Assert.Contains("min-height: 50px;", css, StringComparison.Ordinal);
+        Assert.Contains("font-size: 1rem;", css, StringComparison.Ordinal);
+        Assert.Contains("max-width: 320px;", css, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Mobile_styles_render_map_as_fullscreen_shell_with_floating_poi_sheet()
     {
         var css = ReadMobileCss();
@@ -51,15 +98,21 @@ public sealed class MobileStylesTests
         Assert.Contains(".map-screen", css, StringComparison.Ordinal);
         Assert.Contains(".map-top-overlay", css, StringComparison.Ordinal);
         Assert.Contains(".map-top-controls", css, StringComparison.Ordinal);
+        Assert.Contains(".map-top-search", css, StringComparison.Ordinal);
         Assert.Contains(".map-category-rail", css, StringComparison.Ordinal);
+        Assert.Contains(".map-shell::before", css, StringComparison.Ordinal);
+        Assert.Contains(".category-strip--map .category-chip", css, StringComparison.Ordinal);
+        Assert.Contains(".map-icon-button,", css, StringComparison.Ordinal);
         Assert.Contains(".map-top-overlay--sheet-open .map-category-rail", css, StringComparison.Ordinal);
+        Assert.Contains(".map-zoom-controls", css, StringComparison.Ordinal);
+        Assert.Contains(".map-pill", css, StringComparison.Ordinal);
         Assert.Contains(".map-shell", css, StringComparison.Ordinal);
         Assert.Contains(".poi-sheet--floating", css, StringComparison.Ordinal);
         Assert.Contains("max-height: calc(100% - 168px);", css, StringComparison.Ordinal);
         Assert.Contains("bottom: calc(var(--mobile-bottom-nav-height) + env(safe-area-inset-bottom) + 12px);", css, StringComparison.Ordinal);
-        Assert.Contains(".qr-fab", css, StringComparison.Ordinal);
-        Assert.Contains(".qr-modal", css, StringComparison.Ordinal);
-        Assert.Contains(".qr-target-btn", css, StringComparison.Ordinal);
+        Assert.DoesNotContain(".qr-fab", css, StringComparison.Ordinal);
+        Assert.DoesNotContain(".qr-modal", css, StringComparison.Ordinal);
+        Assert.DoesNotContain(".qr-target-btn", css, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -68,12 +121,19 @@ public sealed class MobileStylesTests
         var css = ReadMobileCss();
 
         Assert.Contains(".discover-screen", css, StringComparison.Ordinal);
+        Assert.Contains(".discover-header__title", css, StringComparison.Ordinal);
+        Assert.Contains(".discover-header__icon", css, StringComparison.Ordinal);
         Assert.Contains(".discover-refresh-button", css, StringComparison.Ordinal);
         Assert.Contains(".discover-search--strict", css, StringComparison.Ordinal);
+        Assert.Contains(".discover-chip-row", css, StringComparison.Ordinal);
         Assert.Contains(".discover-poi-card", css, StringComparison.Ordinal);
         Assert.Contains(".discover-poi-card--skeleton", css, StringComparison.Ordinal);
         Assert.Contains(".discover-poi-card__skeleton", css, StringComparison.Ordinal);
+        Assert.Contains(".discover-poi-card__media", css, StringComparison.Ordinal);
+        Assert.Contains(".discover-poi-card__image", css, StringComparison.Ordinal);
+        Assert.Contains(".discover-poi-card__image-fallback", css, StringComparison.Ordinal);
         Assert.Contains(".discover-list--stagger", css, StringComparison.Ordinal);
+        Assert.Contains(".discover-sync-banner", css, StringComparison.Ordinal);
         Assert.Contains(".discover-poi-card__topline", css, StringComparison.Ordinal);
         Assert.Contains(".discover-poi-card__title", css, StringComparison.Ordinal);
         Assert.Contains(".discover-poi-card__summary", css, StringComparison.Ordinal);
@@ -94,10 +154,13 @@ public sealed class MobileStylesTests
         Assert.Contains(".poi-detail-related", css, StringComparison.Ordinal);
         Assert.Contains(".poi-detail-related__header", css, StringComparison.Ordinal);
         Assert.Contains(".poi-detail-sticky-cta", css, StringComparison.Ordinal);
+        Assert.Contains(".discover-poi-card__image-fallback.is-drink", css, StringComparison.Ordinal);
         Assert.Contains("padding-bottom: calc(var(--mobile-bottom-safe-offset) + env(safe-area-inset-bottom) + 72px);", css, StringComparison.Ordinal);
         Assert.Contains("bottom: calc(var(--mobile-bottom-safe-offset) + env(safe-area-inset-bottom) + 16px);", css, StringComparison.Ordinal);
         Assert.Contains(".tour-list-screen", css, StringComparison.Ordinal);
         Assert.Contains(".tour-list-header__copy", css, StringComparison.Ordinal);
+        Assert.Contains(".tour-showcase-card__cover", css, StringComparison.Ordinal);
+        Assert.Contains(".tour-showcase-card__badge", css, StringComparison.Ordinal);
         Assert.DoesNotContain(".tour-guest-prompt", css, StringComparison.Ordinal);
         Assert.Contains(".tour-showcase-card", css, StringComparison.Ordinal);
         Assert.Contains(".tour-showcase-card--skeleton", css, StringComparison.Ordinal);
@@ -115,6 +178,7 @@ public sealed class MobileStylesTests
         Assert.DoesNotContain(".guest-auth-snackbar", css, StringComparison.Ordinal);
         Assert.DoesNotContain(".guest-auth-snackbar__copy", css, StringComparison.Ordinal);
         Assert.Contains(".settings-profile-card", css, StringComparison.Ordinal);
+        Assert.Contains(".settings-profile-card__top", css, StringComparison.Ordinal);
         Assert.Contains(".settings-avatar", css, StringComparison.Ordinal);
         Assert.Contains(".settings-stat-grid", css, StringComparison.Ordinal);
         Assert.Contains(".settings-nav-list", css, StringComparison.Ordinal);
@@ -149,6 +213,8 @@ public sealed class MobileStylesTests
         Assert.Contains(".search-result-item__summary", css, StringComparison.Ordinal);
         Assert.Contains(".search-suggestion-chips", css, StringComparison.Ordinal);
         Assert.Contains(".full-player-screen", css, StringComparison.Ordinal);
+        Assert.Contains(".full-player-topbar", css, StringComparison.Ordinal);
+        Assert.Contains(".full-player-hero", css, StringComparison.Ordinal);
         Assert.Contains(".full-player-summary__meta", css, StringComparison.Ordinal);
         Assert.Contains(".full-player-progress", css, StringComparison.Ordinal);
         Assert.Contains(".full-player-wave", css, StringComparison.Ordinal);
@@ -158,7 +224,10 @@ public sealed class MobileStylesTests
         Assert.Contains(".full-player-transcript__surface", css, StringComparison.Ordinal);
         Assert.Contains(".notification-panel__surface", css, StringComparison.Ordinal);
         Assert.Contains(".notification-panel__copy", css, StringComparison.Ordinal);
-        Assert.Contains(".qr-modal__panel", css, StringComparison.Ordinal);
+        Assert.Contains(".mini-player", css, StringComparison.Ordinal);
+        Assert.Contains(".bottom-nav", css, StringComparison.Ordinal);
+        Assert.Contains(".nav-pill", css, StringComparison.Ordinal);
+        Assert.DoesNotContain(".qr-modal__panel", css, StringComparison.Ordinal);
         Assert.DoesNotContain(".auth-overlay__card", css, StringComparison.Ordinal);
         Assert.Contains(".offline-banner", css, StringComparison.Ordinal);
         Assert.Contains(".geofence-toast", css, StringComparison.Ordinal);

@@ -13,13 +13,19 @@ namespace NarrationApp.Server.Tests.Support;
 internal sealed class TestWebApplicationFactory : WebApplicationFactory<Program>
 {
     private readonly string _databaseName = Guid.NewGuid().ToString("N");
+    private readonly IReadOnlyDictionary<string, string?> _additionalConfiguration;
+
+    public TestWebApplicationFactory(IReadOnlyDictionary<string, string?>? additionalConfiguration = null)
+    {
+        _additionalConfiguration = additionalConfiguration ?? new Dictionary<string, string?>();
+    }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
         builder.ConfigureAppConfiguration((_, configurationBuilder) =>
         {
-            configurationBuilder.AddInMemoryCollection(new Dictionary<string, string?>
+            var settings = new Dictionary<string, string?>
             {
                 ["RateLimiting:Auth:PermitLimit"] = "2",
                 ["RateLimiting:Auth:WindowSeconds"] = "60",
@@ -34,8 +40,17 @@ internal sealed class TestWebApplicationFactory : WebApplicationFactory<Program>
                 ["CloudflareR2:SecretAccessKey"] = string.Empty,
                 ["CloudflareR2:BucketName"] = string.Empty,
                 ["CloudflareR2:PublicBaseUrl"] = string.Empty,
-                ["PublicQr:BaseUrl"] = "https://public.foodstreet.test/"
-            });
+                ["PublicQr:BaseUrl"] = "https://public.foodstreet.test/",
+                ["MobileAppLinks:Android:0:PackageName"] = "com.foodstreet.tourist.dev",
+                ["MobileAppLinks:Android:0:Sha256CertFingerprints:0"] = "11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00"
+            };
+
+            foreach (var item in _additionalConfiguration)
+            {
+                settings[item.Key] = item.Value;
+            }
+
+            configurationBuilder.AddInMemoryCollection(settings);
         });
 
         builder.ConfigureServices(services =>

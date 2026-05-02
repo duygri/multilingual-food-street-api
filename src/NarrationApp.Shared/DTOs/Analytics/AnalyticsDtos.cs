@@ -68,6 +68,8 @@ public sealed class AnalyticsSnapshotDto
 {
     public int GeofenceTriggers { get; init; }
 
+    public int CurrentMonthGeofenceTriggers { get; init; }
+
     public int AudioPlays { get; init; }
 
     public int QrScans { get; init; }

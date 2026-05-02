@@ -78,6 +78,113 @@
     flex-wrap: wrap;
 }
 
+.translation-review__bulk-panel {
+    display: grid;
+    gap: 0.85rem;
+    padding: 1rem;
+    border: 1px solid rgba(56, 189, 248, 0.16);
+    border-radius: 0.85rem;
+    background: rgba(8, 17, 31, 0.72);
+}
+
+.translation-review__bulk-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(12rem, 18rem);
+    gap: 1rem;
+    align-items: center;
+}
+
+.translation-review__bulk-header > div,
+.translation-review__bulk-copy {
+    display: grid;
+    gap: 0.2rem;
+}
+
+.translation-review__bulk-eyebrow {
+    color: var(--vk-muted);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.translation-review__bulk-search {
+    width: 100%;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(79, 117, 171, 0.34);
+    background: rgba(9, 18, 34, 0.86);
+    color: var(--vk-text);
+    padding: 0.72rem 0.85rem;
+}
+
+.translation-review__bulk-status {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.75rem 0.85rem;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(52, 211, 153, 0.18);
+    background: rgba(11, 38, 40, 0.44);
+    color: #87f7d1;
+    font-weight: 650;
+}
+
+.translation-review__bulk-spinner {
+    width: 0.72rem;
+    height: 0.72rem;
+    border-radius: 999px;
+    background: #2fe1bd;
+}
+
+.translation-review__bulk-status.is-running .translation-review__bulk-spinner {
+    animation: translation-bulk-pulse 0.9s ease-in-out infinite;
+}
+
+.translation-review__bulk-list {
+    display: grid;
+    gap: 0.55rem;
+    max-height: 22rem;
+    overflow-y: auto;
+    padding-right: 0.2rem;
+}
+
+.translation-review__bulk-item {
+    display: grid;
+    grid-template-columns: 3.25rem minmax(0, 1fr) auto;
+    gap: 0.8rem;
+    align-items: center;
+    padding: 0.75rem;
+    border: 1px solid rgba(56, 189, 248, 0.12);
+    border-radius: 0.75rem;
+    background: rgba(14, 27, 49, 0.58);
+}
+
+.translation-review__bulk-code {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.25rem;
+    border-radius: 0.65rem;
+    background: rgba(15, 49, 70, 0.72);
+    color: #82dfff;
+    font-weight: 800;
+}
+
+.translation-review__bulk-copy strong,
+.translation-review__bulk-copy span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.translation-review__bulk-copy span {
+    color: var(--vk-muted);
+    font-size: 0.84rem;
+}
+
+.translation-review__bulk-action {
+    min-width: 6rem;
+}
+
 .translation-review__matrix-wrap {
     overflow-x: auto;
 }
@@ -340,5 +447,27 @@
     .translation-review__matrix-actions {
         flex-direction: column;
         align-items: stretch;
+    }
+
+    .translation-review__bulk-header,
+    .translation-review__bulk-item {
+        grid-template-columns: 1fr;
+    }
+
+    .translation-review__bulk-action {
+        width: 100%;
+    }
+}
+
+@keyframes translation-bulk-pulse {
+    0%,
+    100% {
+        opacity: 0.45;
+        transform: scale(0.88);
+    }
+
+    50% {
+        opacity: 1;
+        transform: scale(1);
     }
 }

@@ -16,6 +16,21 @@ public sealed class VisitorShellStateTests
     }
 
     [Fact]
+    public void CreateRuntimeDefault_starts_without_demo_content_or_seeded_cache()
+    {
+        var state = VisitorShellState.CreateRuntimeDefault();
+
+        Assert.Equal(VisitorIntroStep.Language, state.CurrentStep);
+        Assert.Empty(state.Pois);
+        Assert.Empty(state.Tours);
+        Assert.Equal(["all"], state.Categories.Select(category => category.Id));
+        Assert.Empty(state.CachedAudioItems);
+        Assert.Empty(state.ListeningHistoryDays);
+        Assert.True(state.IsUsingFallbackData);
+        Assert.Equal("Đang chờ đồng bộ dữ liệu từ máy chủ.", state.SyncMessage);
+    }
+
+    [Fact]
     public void CreateDefault_UsesExpandedLanguageSetForVisitorAudio()
     {
         var state = VisitorShellState.CreateDefault();
@@ -29,6 +44,7 @@ public sealed class VisitorShellStateTests
         var state = VisitorShellState.CreateDefault();
 
         state.SelectLanguage("en");
+        state.AdvanceFromLanguageSelection();
         state.CompletePermissions(granted: true);
 
         Assert.Equal(VisitorIntroStep.Ready, state.CurrentStep);
@@ -38,11 +54,23 @@ public sealed class VisitorShellStateTests
     }
 
     [Fact]
-    public void SelectingLanguage_MovesIntoPermissionsStep()
+    public void SelectingLanguage_UpdatesSelectionWithoutAdvancingStep()
     {
         var state = VisitorShellState.CreateDefault();
 
         state.SelectLanguage("en");
+
+        Assert.Equal("en", state.SelectedLanguageCode);
+        Assert.Equal(VisitorIntroStep.Language, state.CurrentStep);
+    }
+
+    [Fact]
+    public void AdvancingFromLanguageSelection_MovesIntoPermissionsStep()
+    {
+        var state = VisitorShellState.CreateDefault();
+
+        state.SelectLanguage("en");
+        state.AdvanceFromLanguageSelection();
 
         Assert.Equal(VisitorIntroStep.Permissions, state.CurrentStep);
     }
@@ -84,6 +112,74 @@ public sealed class VisitorShellStateTests
         state.ApplyContent(VisitorContentSnapshot.CreateDemo());
 
         Assert.NotSame(filteredAfterSearch, state.FilteredPois);
+    }
+
+    [Fact]
+    public void FeaturedDiscoverPois_only_show_pois_with_ready_audio_for_selected_language()
+    {
+        var state = VisitorShellState.CreateRuntimeDefault();
+        state.ApplyContent(
+            new VisitorContentSnapshot(
+                [
+                    new VisitorPoi(
+                        "poi-vi-only",
+                        "Bến Nhà Rồng",
+                        "river",
+                        "Di tích",
+                        "Quận 4",
+                        "Live API",
+                        "Chỉ có audio tiếng Việt.",
+                        "Ven sông",
+                        32,
+                        48,
+                        140,
+                        "2:40",
+                        "Từ máy chủ",
+                        10.7680,
+                        106.7068,
+                        ReadyAudioLanguageCodesRaw: ["vi"]),
+                    new VisitorPoi(
+                        "poi-en-ready",
+                        "Cầu Khánh Hội",
+                        "history",
+                        "Di tích",
+                        "Quận 4",
+                        "Live API",
+                        "Có audio English.",
+                        "Ven sông",
+                        28,
+                        44,
+                        120,
+                        "2:10",
+                        "Từ máy chủ",
+                        10.7609,
+                        106.7054,
+                        ReadyAudioLanguageCodesRaw: ["vi", "en"]),
+                    new VisitorPoi(
+                        "poi-ja-en-ready",
+                        "Phố đêm Xóm Chiếu",
+                        "night",
+                        "Đêm",
+                        "Quận 4",
+                        "Live API",
+                        "Có audio English và Nhật.",
+                        "Mở sau 18:00",
+                        56,
+                        51,
+                        260,
+                        "2:55",
+                        "Từ máy chủ",
+                        10.7597,
+                        106.7008,
+                        ReadyAudioLanguageCodesRaw: ["en", "ja"])
+                ],
+                []),
+            isFallback: false);
+
+        state.ChangeLanguage("en");
+
+        Assert.Equal(3, state.FilteredPois.Count);
+        Assert.Equal(["poi-en-ready", "poi-ja-en-ready"], state.FeaturedDiscoverPois.Select(poi => poi.Id));
     }
 
     [Fact]
@@ -192,12 +288,17 @@ public sealed class VisitorShellStateTests
                     "Dễ đi bộ",
                     "Tour lấy từ API",
                     ["poi-live-001"])
+            ],
+            [
+                new VisitorCategory("hai-san", "Hải sản", "🦐", "is-river"),
+                new VisitorCategory("bun-pho", "Bún/Phở", "🍜", "is-food")
             ]);
 
         state.ApplyContent(snapshot);
 
         Assert.Single(state.Pois);
         Assert.Single(state.Tours);
+        Assert.Equal(["all", "hai-san", "bun-pho"], state.Categories.Select(category => category.Id));
         Assert.Equal("poi-live-001", state.SelectedPoiId);
         Assert.Equal("tour-live-001", state.SelectedTourId);
         Assert.True(state.ShowPoiSheet);
@@ -217,6 +318,59 @@ public sealed class VisitorShellStateTests
         Assert.True(state.ShowMiniPlayer);
         Assert.True(state.HasAutoNarrationPrompt);
         Assert.Contains("42m", state.AutoNarrationPrompt);
+    }
+
+    [Fact]
+    public void UpdateLocation_ReprojectsPoiDistancesFromLatestCoordinates()
+    {
+        var state = VisitorShellState.CreateRuntimeDefault();
+        state.ApplyContent(
+            new VisitorContentSnapshot(
+                [
+                    new VisitorPoi(
+                        "poi-oc-oanh",
+                        "Ốc Oanh",
+                        "hai-san",
+                        "Hải sản",
+                        "Quận 4",
+                        "Live API",
+                        "POI test GPS",
+                        "Hải sản nổi bật",
+                        32,
+                        48,
+                        180,
+                        "2:40",
+                        "Sẵn sàng",
+                        10.7607,
+                        106.7033)
+                ],
+                [],
+                [new VisitorCategory("hai-san", "Hải sản", "🦐", "is-river")]),
+            isFallback: false);
+
+        state.UpdateLocation(new VisitorLocationSnapshot(
+            PermissionGranted: true,
+            IsLocationAvailable: true,
+            Latitude: 10.7607,
+            Longitude: 106.7033,
+            StatusLabel: "GPS live"));
+
+        var poi = Assert.Single(state.Pois);
+        Assert.Equal(0, poi.DistanceMeters);
+    }
+
+    [Fact]
+    public void ApplyBackgroundTrackingStatus_UpdatesGpsStatusLabel()
+    {
+        var state = VisitorShellState.CreateRuntimeDefault();
+
+        state.ApplyBackgroundTrackingStatus(new VisitorBackgroundTrackingStatus(
+            IsSupported: true,
+            IsRunning: true,
+            HasBackgroundPermission: true,
+            StatusLabel: "Background tracking đang chạy"));
+
+        Assert.Equal("Background tracking đang chạy", state.GpsPreferences.StatusLabel);
     }
 
     [Fact]
@@ -256,6 +410,56 @@ public sealed class VisitorShellStateTests
     }
 
     [Fact]
+    public void SetAudioPlaybackState_Playing_records_current_poi_in_listening_history_once()
+    {
+        var state = VisitorShellState.CreateRuntimeDefault();
+        state.ApplyContent(
+            new VisitorContentSnapshot(
+                [
+                    new VisitorPoi(
+                        "poi-live-001",
+                        "Cầu Khánh Hội",
+                        "history",
+                        "Di tích",
+                        "Quận 4",
+                        "Live API",
+                        "Điểm nối trung tâm với trục thương cảng xưa của Sài Gòn.",
+                        "Bắt đầu tour ven sông",
+                        18,
+                        52,
+                        180,
+                        "2:05",
+                        "Sẵn sàng",
+                        10.7609,
+                        106.7054)
+                ],
+                []),
+            isFallback: false);
+        state.OpenPoi("poi-live-001");
+        state.SetAudioCue(new VisitorAudioCue(
+            PoiId: "poi-live-001",
+            LanguageCode: "en",
+            StreamUrl: "https://10.0.2.2:5001/api/audio/20/stream",
+            DurationSeconds: 125,
+            IsAvailable: true,
+            StatusLabel: "Sẵn sàng phát",
+            IsPreferredLanguage: true));
+
+        state.SetAudioPlaybackState(VisitorAudioPlaybackState.Playing, "Đang phát");
+        state.SetAudioPlaybackState(VisitorAudioPlaybackState.Playing, "Đang phát");
+
+        var day = Assert.Single(state.ListeningHistoryDays);
+        var entry = Assert.Single(day.Entries);
+        Assert.Equal("Hôm nay", day.Label);
+        Assert.Equal("poi-live-001", entry.PoiId);
+        Assert.Equal("Cầu Khánh Hội", entry.PoiName);
+        Assert.Equal("Di tích", entry.CategoryLabel);
+        Assert.Equal("en", entry.LanguageCode);
+        Assert.Equal("2:05", entry.DurationLabel);
+        Assert.Equal(0, entry.CompletionPercent);
+    }
+
+    [Fact]
     public void UpdateAudioProgress_TracksElapsedTimeAndPercent()
     {
         var state = VisitorShellState.CreateDefault();
@@ -275,6 +479,50 @@ public sealed class VisitorShellStateTests
         Assert.Equal("0:50", state.AudioElapsedLabel);
         Assert.Equal("2:05", state.AudioDurationLabel);
         Assert.Equal(40d, state.AudioProgressPercent, 1);
+    }
+
+    [Fact]
+    public void UpdateAudioProgress_Refreshes_current_listening_history_completion()
+    {
+        var state = VisitorShellState.CreateRuntimeDefault();
+        state.ApplyContent(
+            new VisitorContentSnapshot(
+                [
+                    new VisitorPoi(
+                        "poi-live-001",
+                        "Cầu Khánh Hội",
+                        "history",
+                        "Di tích",
+                        "Quận 4",
+                        "Live API",
+                        "Điểm nối trung tâm với trục thương cảng xưa của Sài Gòn.",
+                        "Bắt đầu tour ven sông",
+                        18,
+                        52,
+                        180,
+                        "2:05",
+                        "Sẵn sàng",
+                        10.7609,
+                        106.7054)
+                ],
+                []),
+            isFallback: false);
+        state.OpenPoi("poi-live-001");
+        state.SetAudioCue(new VisitorAudioCue(
+            PoiId: "poi-live-001",
+            LanguageCode: "en",
+            StreamUrl: "https://10.0.2.2:5001/api/audio/20/stream",
+            DurationSeconds: 125,
+            IsAvailable: true,
+            StatusLabel: "Sẵn sàng phát",
+            IsPreferredLanguage: true));
+        state.SetAudioPlaybackState(VisitorAudioPlaybackState.Playing, "Đang phát");
+
+        state.UpdateAudioProgress(63, 125);
+
+        var entry = Assert.Single(Assert.Single(state.ListeningHistoryDays).Entries);
+        Assert.Equal(50, entry.CompletionPercent);
+        Assert.Equal("2:05", entry.DurationLabel);
     }
 
     [Fact]
@@ -348,6 +596,7 @@ public sealed class VisitorShellStateTests
     {
         var state = VisitorShellState.CreateDefault();
         state.SelectLanguage("en");
+        state.AdvanceFromLanguageSelection();
         state.SelectCategory("food");
         state.SetSearchTerm("banh");
         state.ApplyContent(new VisitorContentSnapshot(
@@ -386,6 +635,7 @@ public sealed class VisitorShellStateTests
     public void ApplyQrNavigationTarget_OpenApp_SkipsOnboardingWithoutBreakingDiscoverState()
     {
         var state = VisitorShellState.CreateDefault();
+        state.AdvanceFromLanguageSelection();
 
         state.ApplyQrNavigationTarget(new VisitorQrNavigationTarget("QR-APP-1", VisitorQrTargetKind.OpenApp, null));
 

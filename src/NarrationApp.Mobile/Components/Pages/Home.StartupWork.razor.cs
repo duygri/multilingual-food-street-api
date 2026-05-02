@@ -24,8 +24,8 @@ public partial class Home
         try
         {
             await LoadContentAsync();
+            await SyncBackgroundTrackingAsync();
             VisitorMobileDiagnostics.Log("Home", $"Content loaded; currentStep={_state.CurrentStep} pois={_state.Pois.Count} tours={_state.Tours.Count}");
-            SyncProfileDraftFromSession();
 
             await ProcessPendingDeepLinkAsync();
             VisitorMobileDiagnostics.Log("Home", $"RunStartupWorkAsync end currentStep={_state.CurrentStep} currentTab={_state.CurrentTab}");
@@ -33,7 +33,6 @@ public partial class Home
         catch (Exception ex)
         {
             VisitorMobileDiagnostics.Log("Home", $"RunStartupWorkAsync failed: {ex}");
-            _profileErrorMessage ??= ex.Message;
         }
         finally
         {

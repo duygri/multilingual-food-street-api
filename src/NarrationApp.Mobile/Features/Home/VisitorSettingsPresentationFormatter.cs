@@ -4,8 +4,12 @@ namespace NarrationApp.Mobile.Features.Home;
 
 public static class VisitorSettingsPresentationFormatter
 {
-    public static string GetAccountModeDescription() =>
-        "Ứng dụng lưu tên hiển thị và email liên hệ tùy chọn ngay trên thiết bị, không yêu cầu tài khoản.";
+    public static VisitorModeSummary CreateVisitorModeSummary() =>
+        new(
+            Title: "Khách tham quan",
+            Subtitle: "Chế độ anonymous-first trên thiết bị hiện tại.",
+            ModeLabel: "Không cần tài khoản • chưa đồng bộ hồ sơ backend",
+            Initials: "GT");
 
     public static string FormatPlaybackSpeed(double speed) =>
         $"{speed.ToString("0.##", CultureInfo.InvariantCulture)}x";
@@ -20,6 +24,21 @@ public static class VisitorSettingsPresentationFormatter
         bool locationPermissionGranted,
         VisitorGpsAccuracyMode accuracyMode) =>
         $"{(locationPermissionGranted ? "Vị trí đã bật" : "Vị trí đang tắt")} • {GetGpsAccuracyLabel(accuracyMode)}";
+
+    public static VisitorSettingsOverviewSummary CreateOverviewSummary(
+        string currentLanguageLabel,
+        string audioSummary,
+        string gpsSummary,
+        string cacheSummary,
+        string historySummary,
+        string aboutSummary) =>
+        new(
+            CurrentLanguageLabel: currentLanguageLabel,
+            AudioSummary: audioSummary,
+            GpsSummary: gpsSummary,
+            CacheSummary: cacheSummary,
+            HistorySummary: historySummary,
+            AboutSummary: aboutSummary);
 
     public static IReadOnlyList<VisitorSettingsStat> CreateSettingsStats(
         int listenedPoiCount,

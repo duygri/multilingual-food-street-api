@@ -31,6 +31,8 @@ public sealed class VisitorShellState
     private readonly List<VisitorListeningHistoryDay> _listeningHistoryDays = [];
     private IReadOnlyList<VisitorPoi>? _filteredPoisCache;
     private IReadOnlyList<VisitorPoi>? _featuredPoisCache;
+    private IReadOnlyList<VisitorPoi>? _discoverPoisCache;
+    private IReadOnlyList<VisitorPoi>? _featuredDiscoverPoisCache;
 
     private VisitorShellState(
         List<VisitorLanguageOption> languages,
@@ -72,7 +74,7 @@ public sealed class VisitorShellState
 
     public VisitorLocationSnapshot CurrentLocation { get; private set; } = VisitorLocationSnapshot.Disabled();
 
-    public string LocationStatusLabel { get; private set; } = "Chưa bật vị trí";
+    public string LocationStatusLabel { get; private set; } = "Chưa cấp quyền vị trí";
 
     public string DataSourceLabel { get; private set; } = "Demo fallback";
 
@@ -133,8 +135,8 @@ public sealed class VisitorShellState
         AutoAdvanceEnabled: false,
         SourcePreference: VisitorAudioSourcePreference.RecordedFirst,
         DefaultPlaybackSpeed: 1d,
-        CooldownLabel: "Cooldown geofence 45 giây",
-        QueueLabel: "Ưu tiên 1 POI tại mỗi lần tự phát");
+        CooldownLabel: "Cooldown geofence 5 phút",
+        QueueLabel: "Overlap ưu tiên priority, đổi POI sau 3 mẫu ổn định");
 
     public VisitorGpsPreferences GpsPreferences { get; private set; } = new(
         BackgroundTrackingEnabled: true,
@@ -160,25 +162,49 @@ public sealed class VisitorShellState
             .Take(5)
             .ToArray();
 
+    public IReadOnlyList<VisitorPoi> DiscoverPois =>
+        _discoverPoisCache ??= FilteredPois
+            .Where(HasReadyAudioForSelectedLanguage)
+            .ToArray();
+
+    public IReadOnlyList<VisitorPoi> FeaturedDiscoverPois =>
+        _featuredDiscoverPoisCache ??= DiscoverPois
+            .OrderBy(poi => poi.DistanceMeters)
+            .Take(5)
+            .ToArray();
+
     public static VisitorShellState CreateDefault()
     {
-        var state = new VisitorShellState(
+        var state = CreateBaseState();
+        state.ApplyContent(VisitorContentSnapshot.CreateDemo());
+        state.SeedSettingsDemoData();
+        return state;
+    }
+
+    public static VisitorShellState CreateRuntimeDefault()
+    {
+        var state = CreateBaseState();
+        state.DataSourceLabel = "Đang chờ đồng bộ";
+        state.SyncMessage = "Đang chờ đồng bộ dữ liệu từ máy chủ.";
+        state.IsUsingFallbackData = true;
+        return state;
+    }
+
+    private static VisitorShellState CreateBaseState()
+    {
+        return new VisitorShellState(
             languages:
             [
-                new VisitorLanguageOption("vi", "Tiếng Việt", "Nguồn chuẩn", "VN"),
-                new VisitorLanguageOption("en", "English", "English guide", "EN"),
-                new VisitorLanguageOption("ja", "日本語", "Japanese guide", "JP"),
-                new VisitorLanguageOption("ko", "한국어", "Korean guide", "KR"),
-                new VisitorLanguageOption("zh", "中文", "Chinese guide", "ZH"),
-                new VisitorLanguageOption("fr", "Français", "French guide", "FR")
+                new VisitorLanguageOption("vi", "Tiếng Việt", "Mặc định", "VN"),
+                new VisitorLanguageOption("en", "English", "Tiếng Anh", "GB"),
+                new VisitorLanguageOption("ja", "日本語", "Tiếng Nhật", "JP"),
+                new VisitorLanguageOption("ko", "한국어", "Tiếng Hàn", "KR"),
+                new VisitorLanguageOption("zh", "中文", "Tiếng Trung", "CN"),
+                new VisitorLanguageOption("fr", "Français", "Tiếng Pháp", "FR")
             ],
             categories:
             [
-                new VisitorCategory("all", "Tất cả", "◌"),
-                new VisitorCategory("food", "Ẩm thực", "●"),
-                new VisitorCategory("history", "Lịch sử", "▲"),
-                new VisitorCategory("river", "Ven sông", "■"),
-                new VisitorCategory("night", "Đêm", "✦")
+                new VisitorCategory("all", "Tất cả", "🏷️", "is-history")
             ],
             pois: [],
             notifications:
@@ -188,14 +214,13 @@ public sealed class VisitorShellState
                 new VisitorNotification("Ngôn ngữ English sẵn sàng", "Bạn có thể đổi ngôn ngữ ở header bất kỳ lúc nào.", "Hôm nay")
             ],
             tours: []);
-
-        state.ApplyContent(VisitorContentSnapshot.CreateDemo());
-        state.SeedSettingsDemoData();
-        return state;
     }
 
     public void ApplyContent(VisitorContentSnapshot snapshot, bool isFallback = true, string? sourceLabel = null, string? syncMessage = null)
     {
+        _categories.Clear();
+        _categories.AddRange(BuildCategoryFilters(snapshot));
+
         _pois.Clear();
         _pois.AddRange(snapshot.Pois);
         InvalidatePoiViews();
@@ -207,6 +232,7 @@ public sealed class VisitorShellState
         DataSourceLabel = sourceLabel ?? (isFallback ? "Demo fallback" : "Live API");
         SyncMessage = syncMessage ?? (isFallback ? "Đang dùng dữ liệu demo cục bộ." : "Đã đồng bộ dữ liệu từ máy chủ.");
 
+        EnsureSelectedCategoryStillVisible();
         EnsureSelectedPoiStillVisible();
         EnsureSelectedTourStillVisible();
         EnsureActiveTourStillVisible();
@@ -216,7 +242,15 @@ public sealed class VisitorShellState
     {
         CurrentLocation = location;
         LocationPermissionGranted = location.PermissionGranted;
-        LocationStatusLabel = location.StatusLabel;
+        LocationStatusLabel = VisitorLocationStatusFormatter.Build(location);
+
+        var projectedPois = VisitorPoiDistanceProjector.Apply(_pois, location);
+        if (!ReferenceEquals(projectedPois, _pois))
+        {
+            _pois.Clear();
+            _pois.AddRange(projectedPois);
+            InvalidatePoiViews();
+        }
     }
 
     public void ApplyProximityFocus(VisitorProximityMatch? proximity)
@@ -250,12 +284,18 @@ public sealed class VisitorShellState
         {
             AudioStatusLabel = statusLabel;
         }
+
+        if (playbackState == VisitorAudioPlaybackState.Playing)
+        {
+            UpsertCurrentListeningHistoryEntry();
+        }
     }
 
     public void UpdateAudioProgress(int elapsedSeconds, int? durationSeconds = null)
     {
         AudioDurationSeconds = durationSeconds is > 0 ? durationSeconds.Value : AudioDurationSeconds;
         AudioElapsedSeconds = Math.Clamp(elapsedSeconds, 0, Math.Max(AudioDurationSeconds, elapsedSeconds));
+        UpdateCurrentListeningHistoryProgress();
     }
 
     public void ContinueFromWelcome()
@@ -271,6 +311,11 @@ public sealed class VisitorShellState
         }
 
         SelectedLanguageCode = languageCode;
+        InvalidatePoiViews();
+    }
+
+    public void AdvanceFromLanguageSelection()
+    {
         CurrentStep = VisitorIntroStep.Permissions;
     }
 
@@ -279,6 +324,7 @@ public sealed class VisitorShellState
         if (_languages.Any(language => language.Code == languageCode))
         {
             SelectedLanguageCode = languageCode;
+            InvalidatePoiViews();
         }
     }
 
@@ -287,7 +333,7 @@ public sealed class VisitorShellState
         LocationPermissionGranted = granted;
         CurrentStep = VisitorIntroStep.Ready;
 
-        if (SelectedPoi is null)
+        if (SelectedPoi is null && _pois.Count > 0)
         {
             OpenPoi(_pois[0].Id);
         }
@@ -424,6 +470,15 @@ public sealed class VisitorShellState
     public void SetGpsBackgroundTrackingEnabled(bool isEnabled)
     {
         GpsPreferences = GpsPreferences with { BackgroundTrackingEnabled = isEnabled };
+    }
+
+    public void ApplyBackgroundTrackingStatus(VisitorBackgroundTrackingStatus status)
+    {
+        ArgumentNullException.ThrowIfNull(status);
+        GpsPreferences = GpsPreferences with
+        {
+            StatusLabel = status.StatusLabel
+        };
     }
 
     public void SetGpsAutoFocusEnabled(bool isEnabled)
@@ -699,6 +754,98 @@ public sealed class VisitorShellState
         ]);
     }
 
+    private void UpsertCurrentListeningHistoryEntry()
+    {
+        if (CurrentAudioCue is not { IsAvailable: true } cue || SelectedPoi is null)
+        {
+            return;
+        }
+
+        if (!string.Equals(cue.PoiId, SelectedPoi.Id, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var todayLabel = "Hôm nay";
+        var todayIndex = _listeningHistoryDays.FindIndex(day =>
+            string.Equals(day.Label, todayLabel, StringComparison.OrdinalIgnoreCase));
+        var entries = todayIndex >= 0
+            ? _listeningHistoryDays[todayIndex].Entries.ToList()
+            : [];
+        var existingIndex = entries.FindIndex(entry =>
+            string.Equals(entry.PoiId, cue.PoiId, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(entry.LanguageCode, cue.LanguageCode, StringComparison.OrdinalIgnoreCase));
+        var existingEntry = existingIndex >= 0 ? entries[existingIndex] : null;
+
+        if (existingIndex >= 0)
+        {
+            entries.RemoveAt(existingIndex);
+        }
+
+        entries.Insert(0, new VisitorListeningHistoryEntry(
+            existingEntry?.Id ?? $"history-{Guid.NewGuid():N}",
+            cue.PoiId,
+            SelectedPoi.Name,
+            SelectedPoi.CategoryLabel,
+            cue.LanguageCode,
+            DateTime.Now.ToString("HH:mm", CultureInfo.CurrentCulture),
+            FormatDuration(cue.DurationSeconds),
+            Math.Max(existingEntry?.CompletionPercent ?? 0, CalculateAudioCompletionPercent())));
+
+        var today = new VisitorListeningHistoryDay(todayLabel, entries);
+        if (todayIndex >= 0)
+        {
+            _listeningHistoryDays[todayIndex] = today;
+            return;
+        }
+
+        _listeningHistoryDays.Insert(0, today);
+    }
+
+    private void UpdateCurrentListeningHistoryProgress()
+    {
+        if (CurrentAudioCue is not { IsAvailable: true } cue)
+        {
+            return;
+        }
+
+        for (var dayIndex = 0; dayIndex < _listeningHistoryDays.Count; dayIndex++)
+        {
+            var day = _listeningHistoryDays[dayIndex];
+            var entries = day.Entries.ToList();
+            var entryIndex = entries.FindIndex(entry =>
+                string.Equals(entry.PoiId, cue.PoiId, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(entry.LanguageCode, cue.LanguageCode, StringComparison.OrdinalIgnoreCase));
+
+            if (entryIndex < 0)
+            {
+                continue;
+            }
+
+            var entry = entries[entryIndex];
+            entries[entryIndex] = entry with
+            {
+                DurationLabel = FormatDuration(AudioDurationSeconds),
+                CompletionPercent = Math.Max(entry.CompletionPercent, CalculateAudioCompletionPercent())
+            };
+            _listeningHistoryDays[dayIndex] = day with { Entries = entries };
+            return;
+        }
+    }
+
+    private int CalculateAudioCompletionPercent()
+    {
+        if (AudioDurationSeconds <= 0)
+        {
+            return 0;
+        }
+
+        return (int)Math.Clamp(
+            Math.Round(AudioElapsedSeconds * 100d / AudioDurationSeconds, MidpointRounding.AwayFromZero),
+            0d,
+            100d);
+    }
+
     private void ResetDiscoverFilters()
     {
         if (SelectedCategoryId == "all" && SearchTerm == string.Empty)
@@ -715,6 +862,61 @@ public sealed class VisitorShellState
     {
         _filteredPoisCache = null;
         _featuredPoisCache = null;
+        _discoverPoisCache = null;
+        _featuredDiscoverPoisCache = null;
+    }
+
+    private bool HasReadyAudioForSelectedLanguage(VisitorPoi poi)
+    {
+        return poi.ReadyAudioLanguageCodes.Any(languageCode =>
+            string.Equals(languageCode, SelectedLanguageCode, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void EnsureSelectedCategoryStillVisible()
+    {
+        if (_categories.Any(category => string.Equals(category.Id, SelectedCategoryId, StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
+
+        SelectedCategoryId = "all";
+    }
+
+    private static IReadOnlyList<VisitorCategory> BuildCategoryFilters(VisitorContentSnapshot snapshot)
+    {
+        var categories = new List<VisitorCategory>
+        {
+            new("all", "Tất cả", "🏷️", "is-history")
+        };
+
+        var liveCategories = (snapshot.Categories ?? [])
+            .Where(category => !string.IsNullOrWhiteSpace(category.Id) && !string.Equals(category.Id, "all", StringComparison.OrdinalIgnoreCase))
+            .GroupBy(category => category.Id, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .ToArray();
+
+        if (liveCategories.Length > 0)
+        {
+            categories.AddRange(liveCategories);
+            return categories;
+        }
+
+        categories.AddRange(
+            snapshot.Pois
+                .Where(poi => !string.IsNullOrWhiteSpace(poi.CategoryId))
+                .GroupBy(poi => poi.CategoryId, StringComparer.OrdinalIgnoreCase)
+                .Select(group =>
+                {
+                    var firstPoi = group.First();
+                    return new VisitorCategory(
+                        firstPoi.CategoryId,
+                        string.IsNullOrWhiteSpace(firstPoi.CategoryLabel) ? firstPoi.District : firstPoi.CategoryLabel,
+                        VisitorCategoryPresentationFormatter.GetPoiIcon(firstPoi, []),
+                        VisitorCategoryPresentationFormatter.GetCategoryTone(firstPoi.CategoryId, [], firstPoi.CategoryLabel));
+                })
+                .OrderBy(category => category.Label, StringComparer.CurrentCultureIgnoreCase));
+
+        return categories;
     }
 
     private string ResolvePoiName(string poiId)
@@ -758,7 +960,7 @@ public sealed class VisitorShellState
 
 public sealed record VisitorLanguageOption(string Code, string Label, string SubLabel, string ChipLabel);
 
-public sealed record VisitorCategory(string Id, string Label, string MarkerLabel);
+public sealed record VisitorCategory(string Id, string Label, string MarkerLabel, string ToneKey = "is-history");
 
 public sealed record VisitorPoi(
     string Id,
@@ -778,7 +980,12 @@ public sealed record VisitorPoi(
     double Longitude,
     int Priority = 1,
     int AvailableLanguageCount = 1,
-    int GeofenceRadiusMeters = 30);
+    int GeofenceRadiusMeters = 30,
+    string? ImageUrl = null,
+    IReadOnlyList<string>? ReadyAudioLanguageCodesRaw = null)
+{
+    public IReadOnlyList<string> ReadyAudioLanguageCodes { get; init; } = ReadyAudioLanguageCodesRaw ?? Array.Empty<string>();
+}
 
 public sealed record VisitorNotification(string Title, string Body, string TimeLabel);
 

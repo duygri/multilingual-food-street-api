@@ -4,7 +4,19 @@ namespace NarrationApp.Web.Pages.Admin;
 
 public partial class UserManagement
 {
-    private static string GetIdentityLine(VisitorDeviceSummaryDto visitor) => visitor.DeviceId;
+    private static string GetPrimaryIdentityLine(VisitorDeviceSummaryDto visitor) => visitor.DeviceId;
+
+    private static string? GetSecondaryIdentityLine(VisitorDeviceSummaryDto visitor)
+    {
+        if (string.Equals(visitor.RoleName, "guest", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return string.Equals(visitor.DisplayName, visitor.DeviceId, StringComparison.OrdinalIgnoreCase)
+            ? null
+            : visitor.DisplayName;
+    }
 
     private static string GetLanguageLabel(string? languageTag) => string.IsNullOrWhiteSpace(languageTag) ? "-" : languageTag.Trim();
 

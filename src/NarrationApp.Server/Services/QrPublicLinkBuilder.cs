@@ -21,6 +21,7 @@ public sealed class QrPublicLinkBuilder(IOptions<PublicQrOptions> options)
             TargetId = dto.TargetId,
             LocationHint = dto.LocationHint,
             ExpiresAtUtc = dto.ExpiresAtUtc,
+            ScanCount = dto.ScanCount,
             PublicUrl = publicUrl,
             AppDeepLink = BuildAppDeepLink(dto.Code)
         };

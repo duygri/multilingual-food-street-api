@@ -39,7 +39,7 @@ else
         <section class="metric-grid tour-surface__metrics">
             <MetricCard Label="Tour xuất bản" Value="@_tours.Count(item => item.Status == TourStatus.Published).ToString("N0")" Hint="Đang hiển thị cho khách" />
             <MetricCard Label="Draft" Value="@_tours.Count(item => item.Status == TourStatus.Draft).ToString("N0")" Hint="Đang biên tập" />
-            <MetricCard Label="Lượt tham gia" Value="@TotalParticipationEstimate.ToString("N0")" Hint="Ước lượng từ các tuyến đang có" />
+            <MetricCard Label="Tổng điểm dừng" Value="@TotalStops.ToString("N0")" Hint="Tổng số stop thật từ các tour hiện có" />
             <MetricCard Label="TB thời gian tour" Value="@AverageDurationLabel" Hint="Thời lượng hành trình" />
         </section>
 
@@ -65,14 +65,13 @@ else
                 <div class="table-wrap">
                     <table class="app-table tour-table">
                         <thead>
-                            <tr>
-                                <th>Tour</th>
-                                <th>Số điểm dừng</th>
-                                <th>Ước lượng</th>
-                                <th>Lượt tham gia</th>
-                                <th>Trạng thái</th>
-                                <th>Thao tác</th>
-                            </tr>
+                                <tr>
+                                    <th>Tour</th>
+                                    <th>Số điểm dừng</th>
+                                    <th>Ước lượng</th>
+                                    <th>Trạng thái</th>
+                                    <th>Thao tác</th>
+                                </tr>
                         </thead>
                         <tbody>
                             @foreach (var tour in _tours)
@@ -86,7 +85,6 @@ else
                                     </td>
                                     <td>@tour.Stops.Count POIs</td>
                                     <td>@tour.EstimatedMinutes phút</td>
-                                    <td>@GetParticipationEstimate(tour)</td>
                                     <td>
                                         <StatusBadge Label="@GetTourStatusLabel(tour.Status)" Tone="@GetTourStatusTone(tour.Status)" />
                                     </td>

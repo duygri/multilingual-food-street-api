@@ -6,7 +6,7 @@ public sealed class LanguagePortalService(ApiClient apiClient) : ILanguagePortal
 {
     public Task<IReadOnlyList<ManagedLanguageDto>> GetAsync(CancellationToken cancellationToken = default)
     {
-        return apiClient.GetAsync<IReadOnlyList<ManagedLanguageDto>>("api/admin/languages", cancellationToken);
+        return apiClient.GetAsync<IReadOnlyList<ManagedLanguageDto>>("api/languages", cancellationToken);
     }
 
     public Task<ManagedLanguageDto> CreateAsync(CreateManagedLanguageRequest request, CancellationToken cancellationToken = default)

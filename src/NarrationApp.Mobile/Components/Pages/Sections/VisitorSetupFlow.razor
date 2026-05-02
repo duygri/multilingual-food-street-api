@@ -1,49 +1,76 @@
 @using NarrationApp.Mobile.Features.Home
 
 <main class="visitor-app visitor-app--setup">
-    <section class="setup-card">
+    <section class="setup-card @(State.CurrentStep == VisitorIntroStep.Language ? "setup-card--language" : "setup-card--permissions")">
+        <div class="setup-phone-chrome">
+            <div class="setup-statusbar">
+                <span class="setup-statusbar__time">16:02</span>
+                <span class="setup-dynamic-island" aria-hidden="true"></span>
+                <span class="setup-statusbar__system">📶 🔋 85%</span>
+            </div>
+        </div>
+
         @switch (State.CurrentStep)
         {
             case VisitorIntroStep.Language:
-                <div class="setup-stack">
-                    <span class="eyebrow">Ngôn ngữ</span>
-                    <h1>Chọn ngôn ngữ audio ưu tiên.</h1>
-                    <p class="setup-copy">
-                        Nội dung gốc là tiếng Việt, còn audio du lịch sẽ được phát theo ngôn ngữ bạn chọn.
-                    </p>
-                    <div class="language-grid">
+                <div class="setup-stack setup-stack--language">
+                    <div class="setup-intro setup-intro--language">
+                        <span class="setup-hero-icon" aria-hidden="true">🌐</span>
+                        <div class="setup-intro__copy">
+                            <h1>Chọn ngôn ngữ</h1>
+                            <p class="setup-copy">
+                                Chọn ngôn ngữ bạn muốn nghe thuyết minh. Có thể thay đổi sau.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="setup-language-list">
                         @foreach (var language in State.Languages)
                         {
+                            var isSelected = string.Equals(State.SelectedLanguageCode, language.Code, StringComparison.Ordinal);
                             <button
                                 type="button"
-                                class="language-tile @LanguageTileClassSelector(language.Code)"
+                                class="setup-language-option @LanguageTileClassSelector(language.Code)"
                                 @onclick="() => OnSelectLanguage.InvokeAsync(language.Code)">
-                                <span class="language-chip">@language.ChipLabel</span>
-                                <strong>@language.Label</strong>
-                                <span>@language.SubLabel</span>
+                                <span class="setup-language-option__code">@language.ChipLabel</span>
+                                <span class="setup-language-option__copy">
+                                    <strong>@language.Label</strong>
+                                    <span>@language.SubLabel</span>
+                                </span>
+                                <span class="setup-language-option__indicator" aria-hidden="true">
+                                    @if (isSelected)
+                                    {
+                                        <span class="setup-language-option__indicator-dot">✓</span>
+                                    }
+                                </span>
                             </button>
                         }
+                    </div>
+
+                    <div class="setup-actions setup-actions--stacked">
+                        <button type="button" class="primary-pill primary-pill--wide setup-cta-button" @onclick="OnContinueLanguage">
+                            Tiếp tục →
+                        </button>
                     </div>
                 </div>
                 break;
 
             case VisitorIntroStep.Permissions:
-                <div class="setup-stack">
-                    <span class="eyebrow">Quyền truy cập</span>
-                    <h1>Bật vị trí để nhận gợi ý POI gần bạn.</h1>
-                    <p class="setup-copy">
-                        App dùng vị trí cho map, geofence cơ bản và gợi ý phát audio khi bạn đến gần điểm tham quan.
-                    </p>
-                    <div class="permission-card">
-                        <strong>Ngôn ngữ hiện tại: @State.CurrentLanguage.Label</strong>
-                        <span>Bạn có thể đổi lại quyền vị trí bất kỳ lúc nào trong phần cài đặt.</span>
+                <div class="setup-stack setup-stack--permissions">
+                    <div class="setup-permission-hero">
+                        <span class="setup-permission-icon" aria-hidden="true">📍</span>
+                        <h1>Cho phép truy cập vị trí</h1>
+                        <p class="setup-copy setup-copy--centered">
+                            Để tự động phát thuyết minh khi bạn đến gần điểm tham quan, ứng dụng cần truy cập GPS của bạn.
+                        </p>
                     </div>
-                    <div class="setup-actions">
-                        <button type="button" class="primary-pill" @onclick="OnEnableLocation">
-                            Bật vị trí
+
+                    <div class="setup-actions setup-actions--stacked">
+                        <button type="button" class="primary-pill primary-pill--wide setup-cta-button" @onclick="OnEnableLocation">
+                            Cho phép vị trí
                         </button>
-                        <button type="button" class="secondary-pill" @onclick="OnSkipLocation">
-                            Để sau
+                        <button type="button" class="secondary-pill secondary-pill--wide" @onclick="OnSkipLocation">
+                            Bỏ qua — Dùng QR / thủ công
                         </button>
                     </div>
                 </div>
@@ -56,6 +83,7 @@
     [Parameter] public VisitorShellState State { get; set; } = default!;
     [Parameter] public Func<string, string> LanguageTileClassSelector { get; set; } = static _ => string.Empty;
     [Parameter] public EventCallback<string> OnSelectLanguage { get; set; }
+    [Parameter] public EventCallback OnContinueLanguage { get; set; }
     [Parameter] public EventCallback OnEnableLocation { get; set; }
     [Parameter] public EventCallback OnSkipLocation { get; set; }
 }

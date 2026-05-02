@@ -9,12 +9,11 @@ namespace NarrationApp.Server.Tests.Services.Translations;
 public sealed class TranslationServiceTests
 {
     [Fact]
-    public async Task AutoTranslateAsync_creates_prefixed_mock_translation_for_target_language_and_enqueues_audio_generation()
+    public async Task AutoTranslateAsync_creates_prefixed_mock_translation_for_target_language_without_enqueuing_audio_generation()
     {
         await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
         var poi = await dbContext.Pois.FirstAsync();
-        var audioScheduler = new RecordingAudioGenerationScheduler();
-        var sut = new TranslationService(dbContext, new MockGoogleTranslationService(), audioScheduler);
+        var sut = new TranslationService(dbContext, new MockGoogleTranslationService());
 
         var result = await sut.AutoTranslateAsync(poi.Id, "en");
 
@@ -23,17 +22,14 @@ public sealed class TranslationServiceTests
         Assert.StartsWith("[AUTO] ", result.Description);
         Assert.StartsWith("[AUTO] ", result.Story);
         Assert.Equal(TranslationWorkflowStatus.AutoTranslated, result.WorkflowStatus);
-        Assert.Single(audioScheduler.Requests);
-        Assert.Equal((poi.Id, "en", "standard"), audioScheduler.Requests[0]);
     }
 
     [Fact]
-    public async Task UpsertAsync_marks_vietnamese_as_source_and_non_vietnamese_manual_save_as_reviewed_and_only_queues_non_vietnamese_audio()
+    public async Task UpsertAsync_marks_vietnamese_as_source_and_non_vietnamese_manual_save_as_reviewed_without_enqueuing_audio_generation()
     {
         await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
         var poi = await dbContext.Pois.FirstAsync();
-        var audioScheduler = new RecordingAudioGenerationScheduler();
-        var sut = new TranslationService(dbContext, new MockGoogleTranslationService(), audioScheduler);
+        var sut = new TranslationService(dbContext, new MockGoogleTranslationService());
 
         var vietnamese = await sut.UpsertAsync(new CreateTranslationRequest
         {
@@ -59,18 +55,16 @@ public sealed class TranslationServiceTests
 
         Assert.Equal(TranslationWorkflowStatus.Source, vietnamese.WorkflowStatus);
         Assert.Equal(TranslationWorkflowStatus.Reviewed, english.WorkflowStatus);
-        Assert.Single(audioScheduler.Requests);
-        Assert.Equal((poi.Id, "en", "standard"), audioScheduler.Requests[0]);
     }
 
-    private sealed class RecordingAudioGenerationScheduler : IAudioGenerationScheduler
+    [Fact]
+    public void TranslationService_does_not_reference_audio_generation_scheduler()
     {
-        public List<(int PoiId, string LanguageCode, string VoiceProfile)> Requests { get; } = [];
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var sourcePath = Path.Combine(projectRoot, "src", "NarrationApp.Server", "Services", "TranslationService.cs");
+        var source = File.ReadAllText(sourcePath);
 
-        public Task QueueFromTranslationAsync(int poiId, string languageCode, string voiceProfile = "standard", CancellationToken cancellationToken = default)
-        {
-            Requests.Add((poiId, languageCode, voiceProfile));
-            return Task.CompletedTask;
-        }
+        Assert.DoesNotContain("IAudioGenerationScheduler", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("QueueFromTranslationAsync", source, StringComparison.Ordinal);
     }
 }

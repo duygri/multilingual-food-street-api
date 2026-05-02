@@ -78,6 +78,72 @@ public sealed class LanguageManagementTests : TestContext
         Assert.Equal("fr", languageService.CreateRequests[0].Code);
     }
 
+    [Fact]
+    public void Language_management_autofills_language_metadata_from_search_selection()
+    {
+        var languageService = new TestLanguagePortalService();
+        Services.AddSingleton<ILanguagePortalService>(languageService);
+
+        var cut = RenderComponent<LanguageManagement>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Thêm ngôn ngữ mới", cut.Markup);
+        });
+
+        cut.Find("button[data-action='open-language-form']").Click();
+        cut.Find("input[data-field='language-search']").Input("pháp");
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("French", cut.Markup);
+            Assert.Contains("Français", cut.Markup);
+        });
+
+        cut.Find("button[data-action='language-suggestion-fr']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal("fr", cut.Find("input[data-field='language-code']").GetAttribute("value"));
+            Assert.Equal("French", cut.Find("input[data-field='language-display-name']").GetAttribute("value"));
+            Assert.Equal("Français", cut.Find("input[data-field='language-native-name']").GetAttribute("value"));
+            Assert.Equal("FR", cut.Find("input[data-field='language-flag-code']").GetAttribute("value"));
+        });
+
+        cut.Find("button[data-action='save-language']").Click();
+
+        Assert.Single(languageService.CreateRequests);
+        Assert.Equal("fr", languageService.CreateRequests[0].Code);
+        Assert.Equal("French", languageService.CreateRequests[0].DisplayName);
+        Assert.Equal("Français", languageService.CreateRequests[0].NativeName);
+        Assert.Equal("FR", languageService.CreateRequests[0].FlagCode);
+    }
+
+    [Fact]
+    public void Language_management_autofills_language_metadata_when_code_is_entered()
+    {
+        var languageService = new TestLanguagePortalService();
+        Services.AddSingleton<ILanguagePortalService>(languageService);
+
+        var cut = RenderComponent<LanguageManagement>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Thêm ngôn ngữ mới", cut.Markup);
+        });
+
+        cut.Find("button[data-action='open-language-form']").Click();
+        cut.Find("input[data-field='language-code']").Input("JP");
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal("ja", cut.Find("input[data-field='language-code']").GetAttribute("value"));
+            Assert.Equal("Japanese", cut.Find("input[data-field='language-display-name']").GetAttribute("value"));
+            Assert.Equal("日本語", cut.Find("input[data-field='language-native-name']").GetAttribute("value"));
+            Assert.Equal("JP", cut.Find("input[data-field='language-flag-code']").GetAttribute("value"));
+        });
+    }
+
     private sealed class TestLanguagePortalService : ILanguagePortalService
     {
         private readonly List<ManagedLanguageDto> _items =

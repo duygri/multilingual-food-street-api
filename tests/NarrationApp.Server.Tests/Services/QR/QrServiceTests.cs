@@ -43,6 +43,29 @@ public sealed class QrServiceTests
 
         Assert.Equal(qr.Code, resolved.Code);
         Assert.Equal(1, await dbContext.VisitEvents.CountAsync(item => item.EventType == EventType.QrScan && item.PoiId == poi.Id));
+        Assert.Equal(1, resolved.ScanCount);
+    }
+
+    [Fact]
+    public async Task ScanAsync_does_not_record_duplicate_qr_visit_for_same_device_and_poi_within_cooldown()
+    {
+        await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
+        var poi = await dbContext.Pois.FirstAsync();
+        var sut = new QrService(dbContext);
+        var qr = await sut.CreateAsync(new CreateQrRequest
+        {
+            TargetType = "poi",
+            TargetId = poi.Id,
+            LocationHint = "Bus stop"
+        });
+
+        _ = await sut.ScanAsync(qr.Code, "device-001");
+        _ = await sut.ScanAsync(qr.Code, "device-001");
+
+        Assert.Equal(1, await dbContext.VisitEvents.CountAsync(item =>
+            item.EventType == EventType.QrScan
+            && item.PoiId == poi.Id
+            && item.DeviceId == "device-001"));
     }
 
     [Fact]
@@ -71,6 +94,29 @@ public sealed class QrServiceTests
         Assert.Single(filtered);
         Assert.Equal("open_app", filtered[0].TargetType);
         Assert.Equal(0, filtered[0].TargetId);
+    }
+
+    [Fact]
+    public async Task GetAsync_returns_real_scan_count_for_poi_qr()
+    {
+        await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
+        var poi = await dbContext.Pois.FirstAsync();
+        var sut = new QrService(dbContext);
+
+        var poiQr = await sut.CreateAsync(new CreateQrRequest
+        {
+            TargetType = "poi",
+            TargetId = poi.Id,
+            LocationHint = "Front gate"
+        });
+
+        await sut.ScanAsync(poiQr.Code, "device-001");
+        await sut.ScanAsync(poiQr.Code, "device-002");
+
+        var items = await sut.GetAsync("poi");
+
+        Assert.Single(items);
+        Assert.Equal(2, items[0].ScanCount);
     }
 
     [Fact]

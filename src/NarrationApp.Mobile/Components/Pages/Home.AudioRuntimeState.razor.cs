@@ -32,37 +32,39 @@ public partial class Home
 
     private async Task FinalizePreparedAudioCueAsync(VisitorAudioCue cue, bool autoPlay, bool forceAutoPlay)
     {
-        if (!cue.IsAvailable)
+        try
         {
-            await JS.InvokeVoidAsync("visitorAudio.dispose");
-            return;
+            if (!cue.IsAvailable)
+            {
+                await JS.InvokeVoidAsync("visitorAudio.dispose");
+                return;
+            }
+
+            await JS.InvokeVoidAsync("visitorAudio.preload", cue.StreamUrl, _audioBridge);
+            await JS.InvokeVoidAsync("visitorAudio.setRate", AudioSpeedOptions[_audioSpeedIndex]);
+
+            var shouldAutoplay = ShouldAutoplayCue(cue, autoPlay, forceAutoPlay);
+
+            VisitorMobileDiagnostics.Log(
+                "Audio",
+                $"PrepareSelectedPoiAudioAsync poi={cue.PoiId} autoPlayRequested={autoPlay} forceAutoPlay={forceAutoPlay} activeProximity={_state.ActiveProximity?.PoiId ?? "<null>"} lastAutoPlayed={_lastAutoPlayedPoiId ?? "<null>"} shouldAutoplay={shouldAutoplay}");
+
+            if (!shouldAutoplay)
+            {
+                return;
+            }
+
+            MarkAutoNarrationStarted(cue, forceAutoPlay);
+            await JS.InvokeVoidAsync("visitorAudio.play", cue.StreamUrl, _audioBridge);
+            var playbackLabel = forceAutoPlay
+                ? $"Đang phát từ QR • {cue.LanguageCode.ToUpperInvariant()}"
+                : $"Đang phát tự động • {cue.LanguageCode.ToUpperInvariant()}";
+            _state.SetAudioPlaybackState(VisitorAudioPlaybackState.Playing, playbackLabel);
         }
-
-        await JS.InvokeVoidAsync("visitorAudio.preload", cue.StreamUrl, _audioBridge);
-        await JS.InvokeVoidAsync("visitorAudio.setRate", AudioSpeedOptions[_audioSpeedIndex]);
-
-        var shouldAutoplay = VisitorAudioAutoplayPolicy.ShouldAutoplay(
-            autoPlayRequested: autoPlay,
-            forceAutoPlay: forceAutoPlay,
-            cuePoiId: cue.PoiId,
-            activeProximityPoiId: _state.ActiveProximity?.PoiId,
-            lastAutoPlayedPoiId: _lastAutoPlayedPoiId);
-
-        VisitorMobileDiagnostics.Log(
-            "Audio",
-            $"PrepareSelectedPoiAudioAsync poi={cue.PoiId} autoPlayRequested={autoPlay} forceAutoPlay={forceAutoPlay} activeProximity={_state.ActiveProximity?.PoiId ?? "<null>"} lastAutoPlayed={_lastAutoPlayedPoiId ?? "<null>"} shouldAutoplay={shouldAutoplay}");
-
-        if (!shouldAutoplay)
+        catch (JSException ex)
         {
-            return;
+            System.Diagnostics.Debug.WriteLine($"[AudioRuntime] JS interop failed: {ex.Message}");
+            _state.SetAudioPlaybackState(VisitorAudioPlaybackState.Error, "Audio chưa sẵn sàng");
         }
-
-        _lastAutoPlayedPoiId = cue.PoiId;
-        _isAutoPlayingFromProximity = !forceAutoPlay;
-        await JS.InvokeVoidAsync("visitorAudio.play", cue.StreamUrl, _audioBridge);
-        var playbackLabel = forceAutoPlay
-            ? $"Đang phát từ QR • {cue.LanguageCode.ToUpperInvariant()}"
-            : $"Đang phát tự động • {cue.LanguageCode.ToUpperInvariant()}";
-        _state.SetAudioPlaybackState(VisitorAudioPlaybackState.Playing, playbackLabel);
     }
 }

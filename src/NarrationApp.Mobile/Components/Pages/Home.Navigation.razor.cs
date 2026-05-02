@@ -1,7 +1,3 @@
-using System.Globalization;
-using System.Text;
-using Microsoft.AspNetCore.Components;
-using Microsoft.JSInterop;
 using NarrationApp.Mobile.Components.Pages.Sections;
 using NarrationApp.Mobile.Features.Home;
 
@@ -11,19 +7,14 @@ public partial class Home
 {
     private void SwitchTabFromShell(VisitorTab tab)
     {
-        _isQrModalOpen = false;
-        _isSearchOverlayOpen = false;
-        _isFullPlayerOpen = false;
-        _discoverPoiDetailId = null;
-        _tourDetailId = null;
-        _state.CloseSettingsScreen();
+        PrepareForPrimaryTabSwitch();
         _state.SwitchTab(tab);
     }
 
     private void ToggleNotificationsPanel()
     {
-        _isSearchOverlayOpen = false;
-        _isFullPlayerOpen = false;
+        CloseSearchOverlaySurface();
+        CloseFullPlayerSurface();
 
         if (_state.CurrentTab != VisitorTab.Map)
         {

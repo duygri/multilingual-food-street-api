@@ -5,6 +5,17 @@ namespace NarrationApp.Web.Tests.Mobile;
 public sealed class VisitorSettingsPresentationFormatterTests
 {
     [Fact]
+    public void Visitor_mode_summary_matches_anonymous_first_mobile_copy()
+    {
+        var summary = VisitorSettingsPresentationFormatter.CreateVisitorModeSummary();
+
+        Assert.Equal("Khách tham quan", summary.Title);
+        Assert.Equal("Chế độ anonymous-first trên thiết bị hiện tại.", summary.Subtitle);
+        Assert.Equal("Không cần tài khoản • chưa đồng bộ hồ sơ backend", summary.ModeLabel);
+        Assert.Equal("GT", summary.Initials);
+    }
+
+    [Fact]
     public void Audio_and_gps_summaries_use_expected_labels()
     {
         var audioSummary = VisitorSettingsPresentationFormatter.FormatAudioSettingsSummary(
@@ -48,6 +59,25 @@ public sealed class VisitorSettingsPresentationFormatterTests
                 Assert.Equal("File cache", item.Label);
             });
         Assert.Equal("12 file audio • 48.4 MB cache nội bộ", cacheSummary);
+    }
+
+    [Fact]
+    public void Overview_summary_groups_settings_labels_for_the_overview_screen()
+    {
+        var summary = VisitorSettingsPresentationFormatter.CreateOverviewSummary(
+            currentLanguageLabel: "Tiếng Việt",
+            audioSummary: "Tự phát bật • Google TTS • 1.25x",
+            gpsSummary: "Vị trí đang tắt • High",
+            cacheSummary: "12 file audio • 48.4 MB cache nội bộ",
+            historySummary: "5 lượt nghe • 2 lượt hoàn tất",
+            aboutSummary: "v1.0.0 • .NET 9 Android Smoke-ready");
+
+        Assert.Equal("Tiếng Việt", summary.CurrentLanguageLabel);
+        Assert.Equal("Tự phát bật • Google TTS • 1.25x", summary.AudioSummary);
+        Assert.Equal("Vị trí đang tắt • High", summary.GpsSummary);
+        Assert.Equal("12 file audio • 48.4 MB cache nội bộ", summary.CacheSummary);
+        Assert.Equal("5 lượt nghe • 2 lượt hoàn tất", summary.HistorySummary);
+        Assert.Equal("v1.0.0 • .NET 9 Android Smoke-ready", summary.AboutSummary);
     }
 
     [Fact]

@@ -7,7 +7,12 @@ public static class VisitorAudioAutoplayPolicy
         bool forceAutoPlay,
         string cuePoiId,
         string? activeProximityPoiId,
-        string? lastAutoPlayedPoiId)
+        string? lastAutoPlayedPoiId,
+        DateTimeOffset? lastAutoPlayedAtUtc = null,
+        DateTimeOffset? nowUtc = null,
+        TimeSpan? cooldownWindow = null,
+        bool hasAutoNarrationLock = false,
+        string? currentAutoNarrationPoiId = null)
     {
         if (!autoPlayRequested)
         {
@@ -21,9 +26,45 @@ public static class VisitorAudioAutoplayPolicy
 
         if (forceAutoPlay)
         {
+            return CanProceedWithAutoplay(
+                cuePoiId,
+                lastAutoPlayedAtUtc,
+                nowUtc,
+                cooldownWindow,
+                hasAutoNarrationLock,
+                currentAutoNarrationPoiId);
+        }
+
+        return string.Equals(activeProximityPoiId, cuePoiId, StringComparison.OrdinalIgnoreCase)
+            && CanProceedWithAutoplay(
+                cuePoiId,
+                lastAutoPlayedAtUtc,
+                nowUtc,
+                cooldownWindow,
+                hasAutoNarrationLock,
+                currentAutoNarrationPoiId);
+    }
+
+    private static bool CanProceedWithAutoplay(
+        string cuePoiId,
+        DateTimeOffset? lastAutoPlayedAtUtc,
+        DateTimeOffset? nowUtc,
+        TimeSpan? cooldownWindow,
+        bool hasAutoNarrationLock,
+        string? currentAutoNarrationPoiId)
+    {
+        if (hasAutoNarrationLock
+            && !string.Equals(currentAutoNarrationPoiId, cuePoiId, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (lastAutoPlayedAtUtc is null || cooldownWindow is null)
+        {
             return true;
         }
 
-        return string.Equals(activeProximityPoiId, cuePoiId, StringComparison.OrdinalIgnoreCase);
+        var effectiveNowUtc = nowUtc ?? DateTimeOffset.UtcNow;
+        return effectiveNowUtc - lastAutoPlayedAtUtc.Value >= cooldownWindow.Value;
     }
 }

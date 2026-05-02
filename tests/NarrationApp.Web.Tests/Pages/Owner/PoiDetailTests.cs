@@ -209,6 +209,31 @@ public sealed class PoiDetailTests : TestContext
     }
 
     [Fact]
+    public void Request_review_refreshes_owner_status_and_hides_rejection_surface()
+    {
+        var (ownerService, _, moderationService, _, _) = ConfigureDetail();
+
+        var cut = RenderComponent<PoiDetail>(parameters => parameters.Add(page => page.Id, 1));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Bị từ chối", cut.Markup);
+            Assert.Contains("Cần chỉnh trước khi gửi lại", cut.Markup);
+        });
+
+        cut.Find("button[data-action='request-review-rejected']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Single(moderationService.CreatedRequests);
+            Assert.Equal(PoiStatus.PendingReview, ownerService.Status);
+            Assert.Contains("Đã gửi Bún mắm Vĩnh Khánh vào hàng chờ duyệt.", cut.Markup);
+            Assert.Contains("Chờ duyệt", cut.Markup);
+            Assert.DoesNotContain("Cần chỉnh trước khi gửi lại", cut.Markup);
+        });
+    }
+
+    [Fact]
     public void Detail_page_clears_stale_error_when_route_parameter_loads_successfully()
     {
         var (ownerService, _, _, _, _) = ConfigureDetail();
@@ -296,7 +321,7 @@ public sealed class PoiDetailTests : TestContext
     {
         var ownerService = new TestOwnerPortalService();
         var audioService = new TestAudioPortalService();
-        var moderationService = new TestModerationPortalService();
+        var moderationService = new TestModerationPortalService { OwnerService = ownerService };
         var geofenceService = new TestGeofencePortalService();
 
         Services.AddSingleton<IOwnerPortalService>(ownerService);
@@ -319,7 +344,18 @@ public sealed class PoiDetailTests : TestContext
             set
             {
                 _status = value;
-                _poi = BuildPoi(status: value);
+                _poi = BuildPoi(
+                    _poi.Name,
+                    _poi.Slug,
+                    _poi.Lat,
+                    _poi.Lng,
+                    _poi.Priority,
+                    _poi.NarrationMode,
+                    _poi.Description,
+                    _poi.TtsScript,
+                    _poi.MapLink,
+                    _poi.ImageUrl,
+                    value);
             }
         }
 
@@ -605,6 +641,8 @@ public sealed class PoiDetailTests : TestContext
 
     private sealed class TestModerationPortalService : IModerationPortalService
     {
+        public TestOwnerPortalService? OwnerService { get; init; }
+
         public List<ModerationRequestDto> Items { get; set; } =
         [
             new ModerationRequestDto
@@ -629,6 +667,10 @@ public sealed class PoiDetailTests : TestContext
         public Task<ModerationRequestDto> CreateAsync(CreateModerationRequest request, CancellationToken cancellationToken = default)
         {
             CreatedRequests.Add(request);
+            if (OwnerService is not null)
+            {
+                OwnerService.Status = PoiStatus.PendingReview;
+            }
 
             var item = new ModerationRequestDto
             {

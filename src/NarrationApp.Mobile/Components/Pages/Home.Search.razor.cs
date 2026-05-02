@@ -7,8 +7,7 @@ public partial class Home
 {
     private void OpenSearchOverlay()
     {
-        _isQrModalOpen = false;
-        _isFullPlayerOpen = false;
+        CloseFullPlayerSurface();
         _isSearchOverlayOpen = true;
 
         if (_state.ShowNotifications)
@@ -19,7 +18,7 @@ public partial class Home
 
     private void CloseSearchOverlay()
     {
-        _isSearchOverlayOpen = false;
+        CloseSearchOverlaySurface();
     }
 
     private void SelectSearchCategory(string categoryId)

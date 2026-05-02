@@ -8,6 +8,8 @@ namespace NarrationApp.Server.Services;
 
 public sealed class QrService(AppDbContext dbContext) : IQrService
 {
+    private static readonly TimeSpan DuplicateQrVisitCooldown = TimeSpan.FromMinutes(30);
+
     public async Task<QrCodeDto> CreateAsync(CreateQrRequest request, CancellationToken cancellationToken = default)
     {
         var targetType = NormalizeTargetType(request.TargetType);
@@ -25,7 +27,7 @@ public sealed class QrService(AppDbContext dbContext) : IQrService
         dbContext.QrCodes.Add(qrCode);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        return qrCode.ToDto();
+        return await BuildDtoAsync(qrCode, cancellationToken);
     }
 
     public async Task<IReadOnlyList<QrCodeDto>> GetAsync(string? targetType = null, CancellationToken cancellationToken = default)
@@ -44,34 +46,67 @@ public sealed class QrService(AppDbContext dbContext) : IQrService
             .OrderByDescending(item => item.Id)
             .ToListAsync(cancellationToken);
 
-        return items.Select(item => item.ToDto()).ToArray();
+        var poiTargetIds = items
+            .Where(item => string.Equals(item.TargetType, "poi", StringComparison.OrdinalIgnoreCase))
+            .Select(item => item.TargetId)
+            .Distinct()
+            .ToArray();
+
+        var qrScanCountsByPoiId = poiTargetIds.Length == 0
+            ? new Dictionary<int, int>()
+            : await dbContext.VisitEvents
+                .AsNoTracking()
+                .Where(item => poiTargetIds.Contains(item.PoiId) && item.EventType == EventType.QrScan)
+                .GroupBy(item => item.PoiId)
+                .Select(group => new
+                {
+                    PoiId = group.Key,
+                    ScanCount = group.Count()
+                })
+                .ToDictionaryAsync(item => item.PoiId, item => item.ScanCount, cancellationToken);
+
+        return items.Select(item => ToDto(item, qrScanCountsByPoiId)).ToArray();
     }
 
     public async Task<QrCodeDto> ResolveAsync(string code, CancellationToken cancellationToken = default)
     {
         var qrCode = await FindActiveCodeAsync(code, cancellationToken);
-        return qrCode.ToDto();
+        return await BuildDtoAsync(qrCode, cancellationToken);
     }
 
     public async Task<QrCodeDto> ScanAsync(string code, string deviceId, CancellationToken cancellationToken = default)
     {
         var qrCode = await FindActiveCodeAsync(code, cancellationToken);
+        var normalizedDeviceId = string.IsNullOrWhiteSpace(deviceId) ? "anonymous-device" : deviceId.Trim();
 
         if (string.Equals(qrCode.TargetType, "poi", StringComparison.OrdinalIgnoreCase))
         {
-            dbContext.VisitEvents.Add(new VisitEvent
+            var cooldownThresholdUtc = DateTime.UtcNow.Subtract(DuplicateQrVisitCooldown);
+            var alreadyTrackedRecently = await dbContext.VisitEvents
+                .AsNoTracking()
+                .AnyAsync(item =>
+                    item.PoiId == qrCode.TargetId
+                    && item.EventType == EventType.QrScan
+                    && item.DeviceId == normalizedDeviceId
+                    && item.CreatedAt >= cooldownThresholdUtc,
+                    cancellationToken);
+
+            if (!alreadyTrackedRecently)
             {
-                DeviceId = deviceId,
-                PoiId = qrCode.TargetId,
-                EventType = EventType.QrScan,
-                Source = "qr",
-                ListenDurationSeconds = 0,
-                CreatedAt = DateTime.UtcNow
-            });
+                dbContext.VisitEvents.Add(new VisitEvent
+                {
+                    DeviceId = normalizedDeviceId,
+                    PoiId = qrCode.TargetId,
+                    EventType = EventType.QrScan,
+                    Source = "qr",
+                    ListenDurationSeconds = 0,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
-        return qrCode.ToDto();
+        return await BuildDtoAsync(qrCode, cancellationToken);
     }
 
     public async Task DeleteAsync(int qrId, CancellationToken cancellationToken = default)
@@ -134,6 +169,46 @@ public sealed class QrService(AppDbContext dbContext) : IQrService
             "open_app" => normalized,
             "poi" => normalized,
             _ => throw new ArgumentException("Unsupported QR target type.", nameof(targetType))
+        };
+    }
+
+    private async Task<QrCodeDto> BuildDtoAsync(QrCode qrCode, CancellationToken cancellationToken)
+    {
+        if (!string.Equals(qrCode.TargetType, "poi", StringComparison.OrdinalIgnoreCase))
+        {
+            return qrCode.ToDto();
+        }
+
+        var scanCount = await dbContext.VisitEvents
+            .AsNoTracking()
+            .CountAsync(item => item.PoiId == qrCode.TargetId && item.EventType == EventType.QrScan, cancellationToken);
+
+        return CreateDto(qrCode, scanCount);
+    }
+
+    private static QrCodeDto ToDto(QrCode qrCode, IReadOnlyDictionary<int, int> qrScanCountsByPoiId)
+    {
+        var scanCount = string.Equals(qrCode.TargetType, "poi", StringComparison.OrdinalIgnoreCase)
+            ? qrScanCountsByPoiId.TryGetValue(qrCode.TargetId, out var count) ? (int?)count : 0
+            : null;
+
+        return CreateDto(qrCode, scanCount);
+    }
+
+    private static QrCodeDto CreateDto(QrCode qrCode, int? scanCount)
+    {
+        var dto = qrCode.ToDto();
+        return new QrCodeDto
+        {
+            Id = dto.Id,
+            Code = dto.Code,
+            TargetType = dto.TargetType,
+            TargetId = dto.TargetId,
+            LocationHint = dto.LocationHint,
+            ExpiresAtUtc = dto.ExpiresAtUtc,
+            ScanCount = scanCount,
+            PublicUrl = dto.PublicUrl,
+            AppDeepLink = dto.AppDeepLink
         };
     }
 }

@@ -97,7 +97,7 @@ else
                                     <td><StatusBadge Label="@GetQrTypeLabel(qr.TargetType)" Tone="@GetQrTone(qr.TargetType)" /></td>
                                     <td>@GetQrTargetLabel(qr)</td>
                                     <td>@(qr.LocationHint ?? "Chưa có vị trí")</td>
-                                    <td>@GetScanCount(qr)</td>
+                                    <td>@GetScanCountLabel(qr)</td>
                                     <td><StatusBadge Label="Active" Tone="StatusTone.Good" /></td>
                                     <td>
                                         <div class="table-actions">
@@ -235,7 +235,7 @@ else
                                rel="noopener noreferrer">
                                 @previewPublicUrl
                             </a>
-                            @if (QrPublicUrlOptions.BaseAddress.IsLoopback)
+                            @if (ShouldWarnPreviewUrlIsNotShareable(_previewQr))
                             {
                                 <p class="qr-preview-shell__warning">
                                     QR này đang trỏ về <code>localhost</code> của máy hiện tại nên điện thoại khác sẽ không mở được.

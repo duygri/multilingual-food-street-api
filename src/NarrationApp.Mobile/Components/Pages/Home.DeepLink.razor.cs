@@ -31,7 +31,6 @@ public partial class Home
                 if (!resolution.Succeeded || resolution.NavigationTarget is null)
                 {
                     VisitorMobileDiagnostics.Log("Home", resolution.ErrorMessage ?? $"Deep link failed for code={request.Code}");
-                    _profileErrorMessage = resolution.ErrorMessage;
                     continue;
                 }
 

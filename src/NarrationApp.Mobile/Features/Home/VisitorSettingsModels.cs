@@ -7,8 +7,7 @@ public enum VisitorSettingsScreen
     Gps,
     Cache,
     History,
-    About,
-    Profile
+    About
 }
 
 public enum VisitorAudioSourcePreference
@@ -41,6 +40,8 @@ public sealed record VisitorGpsPreferences(
     string StatusLabel,
     string BatteryLabel);
 
+public sealed record VisitorDebugEvent(string TimeLabel, string Message);
+
 public sealed record VisitorCachedAudioItem(
     string Id,
     string PoiId,
@@ -67,6 +68,25 @@ public sealed record VisitorListeningHistoryEntry(
 public sealed record VisitorSettingsStat(
     string Value,
     string Label);
+
+public sealed record VisitorModeSummary(
+    string Title,
+    string Subtitle,
+    string ModeLabel,
+    string Initials);
+
+public sealed record VisitorSettingsOverviewSummary(
+    string CurrentLanguageLabel,
+    string AudioSummary,
+    string GpsSummary,
+    string CacheSummary,
+    string HistorySummary,
+    string AboutSummary);
+
+public sealed record VisitorSearchResultsSummary(
+    int ResultCount,
+    IReadOnlyList<VisitorPoi> PoiResults,
+    IReadOnlyList<VisitorTourCard> TourResults);
 
 public sealed record VisitorAboutLinkItem(
     string Label,

@@ -5,6 +5,7 @@ using System.Text;
 using Amazon.Runtime;
 using Amazon.S3;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -51,6 +52,9 @@ var cloudflareR2Options =
 var publicQrOptions =
     builder.Configuration.GetSection(PublicQrOptions.SectionName).Get<PublicQrOptions>()
     ?? new PublicQrOptions();
+var mobileAppLinksOptions =
+    builder.Configuration.GetSection(MobileAppLinksOptions.SectionName).Get<MobileAppLinksOptions>()
+    ?? new MobileAppLinksOptions();
 var visitEventRetentionOptions =
     builder.Configuration.GetSection(VisitEventRetentionOptions.SectionName).Get<VisitEventRetentionOptions>()
     ?? new VisitEventRetentionOptions();
@@ -61,7 +65,15 @@ builder.Services.Configure<RequestDiagnosticsOptions>(builder.Configuration.GetS
 builder.Services.Configure<GoogleCloudOptions>(builder.Configuration.GetSection(GoogleCloudOptions.SectionName));
 builder.Services.Configure<CloudflareR2Options>(builder.Configuration.GetSection(CloudflareR2Options.SectionName));
 builder.Services.Configure<PublicQrOptions>(builder.Configuration.GetSection(PublicQrOptions.SectionName));
+builder.Services.Configure<MobileAppLinksOptions>(builder.Configuration.GetSection(MobileAppLinksOptions.SectionName));
 builder.Services.Configure<VisitEventRetentionOptions>(builder.Configuration.GetSection(VisitEventRetentionOptions.SectionName));
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders =
+        ForwardedHeaders.XForwardedFor
+        | ForwardedHeaders.XForwardedProto
+        | ForwardedHeaders.XForwardedHost;
+});
 builder.Services.AddProblemDetails(options =>
 {
     options.CustomizeProblemDetails = context =>
@@ -185,6 +197,7 @@ builder.Services.AddScoped<IAudioGenerationProcessor, AudioGenerationProcessor>(
 builder.Services.AddScoped<IQrService, QrService>();
 builder.Services.AddSingleton<QrPublicLinkBuilder>();
 builder.Services.AddSingleton<IQrWebPresenceTracker, InMemoryQrWebPresenceTracker>();
+builder.Services.AddSingleton<IVisitorMobilePresenceTracker, InMemoryVisitorMobilePresenceTracker>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IModerationService, ModerationService>();
 builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
@@ -239,6 +252,8 @@ else
 
 var app = builder.Build();
 
+app.UseForwardedHeaders();
+
 if (cloudflareR2Options.IsConfigured && string.IsNullOrWhiteSpace(cloudflareR2Options.PublicBaseUrl))
 {
     app.Logger.LogInformation("Cloudflare R2 is configured without a PublicBaseUrl. Audio assets will fall back to /api/audio/{{id}}/stream URLs.");
@@ -247,6 +262,11 @@ if (cloudflareR2Options.IsConfigured && string.IsNullOrWhiteSpace(cloudflareR2Op
 if (!string.IsNullOrWhiteSpace(publicQrOptions.BaseUrl))
 {
     app.Logger.LogInformation("Public QR links are configured to use {PublicQrBaseUrl}", publicQrOptions.BaseUrl);
+}
+
+if (mobileAppLinksOptions.Android.Count > 0)
+{
+    app.Logger.LogInformation("Android app links are configured for {AndroidAppLinkCount} package targets.", mobileAppLinksOptions.Android.Count);
 }
 
 if (visitEventRetentionOptions.Enabled)

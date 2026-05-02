@@ -1,8 +1,3 @@
-using System.Globalization;
-using System.Text;
-using Microsoft.AspNetCore.Components;
-using Microsoft.JSInterop;
-using NarrationApp.Mobile.Components.Pages.Sections;
 using NarrationApp.Mobile.Features.Home;
 
 namespace NarrationApp.Mobile.Components.Pages;

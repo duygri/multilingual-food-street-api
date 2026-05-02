@@ -1,5 +1,16 @@
 namespace NarrationApp.Mobile.Features.Home;
 
+public enum VisitorLocationSource
+{
+    Live,
+    LastKnown,
+    Disabled,
+    Unavailable,
+    DeviceGpsOff,
+    Unsupported,
+    Error
+}
+
 public interface IVisitorLocationService
 {
     Task<VisitorLocationSnapshot> GetCurrentAsync(bool requestPermission, CancellationToken cancellationToken = default);
@@ -10,7 +21,8 @@ public sealed record VisitorLocationSnapshot(
     bool IsLocationAvailable,
     double? Latitude,
     double? Longitude,
-    string StatusLabel)
+    string StatusLabel,
+    VisitorLocationSource Source = VisitorLocationSource.Live)
 {
     public static VisitorLocationSnapshot Disabled(string statusLabel = "Chưa bật vị trí")
     {
@@ -19,7 +31,8 @@ public sealed record VisitorLocationSnapshot(
             IsLocationAvailable: false,
             Latitude: null,
             Longitude: null,
-            StatusLabel: statusLabel);
+            StatusLabel: statusLabel,
+            Source: VisitorLocationSource.Disabled);
     }
 }
 

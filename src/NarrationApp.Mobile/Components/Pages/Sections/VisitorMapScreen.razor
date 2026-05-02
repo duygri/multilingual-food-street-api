@@ -21,6 +21,16 @@
                     </button>
                 </div>
 
+                <label class="map-top-search" @onclick="OnOpenSearch" @onfocusin="OnOpenSearch">
+                    <span class="search-icon">⌕</span>
+                    <input
+                        class="search-input"
+                        type="text"
+                        placeholder="Tìm theo tên, danh mục..."
+                        value="@State.SearchTerm"
+                        readonly />
+                </label>
+
                 <div class="map-category-rail">
                     <section class="category-strip category-strip--map">
                         @foreach (var category in State.Categories)
@@ -80,7 +90,7 @@
                 </aside>
             }
 
-            <div class="map-zoom-controls">
+            <div class="map-zoom-controls @(State.ShowPoiSheet ? "map-zoom-controls--sheet-open" : string.Empty)">
                 <button type="button" class="map-fab-button" @onclick="OnZoomIn">+</button>
                 <button type="button" class="map-fab-button" @onclick="OnZoomOut">−</button>
             </div>
@@ -89,49 +99,6 @@
                 <button type="button" class="map-fab-button" @onclick="OnRefresh">↻</button>
                 <button type="button" class="map-fab-button map-fab-button--accent" @onclick="OnSwitchToTours">🎧</button>
             </div>
-
-            <button type="button" class="qr-fab" @onclick="OnOpenQrModal">📱</button>
-
-            @if (IsQrModalOpen)
-            {
-                <section class="qr-modal" @onclick="OnCloseQrModal">
-                    <div class="qr-modal__content qr-modal__panel" @onclick:stopPropagation="true">
-                        <div class="qr-modal__header">
-                            <div>
-                                <span class="eyebrow">Mô phỏng quét QR</span>
-                                <strong>Xem trước deep link</strong>
-                            </div>
-                            <button type="button" class="panel-close" @onclick="OnCloseQrModal">Đóng</button>
-                        </div>
-
-                        <div class="qr-preview">
-                            <div class="qr-preview__code">@QrPreviewCode</div>
-                        </div>
-
-                        <div class="qr-targets">
-                            <button type="button" class="qr-target-btn" @onclick="() => OnTriggerQrPreview.InvokeAsync(VisitorQrTargetKind.OpenApp)">
-                                <span class="qr-target-btn__icon">📱</span>
-                                <span class="qr-target-btn__copy">
-                                    <strong>Mở ứng dụng</strong>
-                                    <span>foodstreet://qr/open-app</span>
-                                </span>
-                            </button>
-
-                            @if (QrPreviewPoi is { } previewPoi)
-                            {
-                                <button type="button" class="qr-target-btn" @onclick="() => OnTriggerQrPreview.InvokeAsync(VisitorQrTargetKind.Poi)">
-                                    <span class="qr-target-btn__icon">@CategoryIconSelector(previewPoi.CategoryId)</span>
-                                    <span class="qr-target-btn__copy">
-                                        <strong>Xem POI: @previewPoi.Name</strong>
-                                        <span>foodstreet://qr/@previewPoi.Id</span>
-                                    </span>
-                                </button>
-                            }
-
-                        </div>
-                    </div>
-                </section>
-            }
 
             @if (State.SelectedPoi is not null && State.ShowPoiSheet)
             {
@@ -159,8 +126,21 @@
                         <strong>@State.SelectedPoi.Highlight</strong>
                     </div>
 
+                    <div class="poi-sheet__audio-status">
+                        <span class="poi-meta-chip">🎧 @MapPoiAudioStatus</span>
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(QueuedPoiStatus))
+                    {
+                        <div class="poi-sheet__queue">
+                            <span class="poi-meta-chip poi-meta-chip--queue">⏭️ @QueuedPoiStatus</span>
+                        </div>
+                    }
+
                     <div class="sheet-actions sheet-actions--poi">
                         <button type="button" class="secondary-pill" @onclick="OnClosePoiSheet">Ẩn</button>
+                        <button type="button" class="secondary-pill" @onclick="OnOpenDirections">Dẫn tới đây</button>
+                        <button type="button" class="secondary-pill" @onclick="OnOpenPoiDetail">Xem chi tiết</button>
                         <button type="button" class="primary-pill" @onclick="OnPlaySelectedPoi">Nghe ngay</button>
                     </div>
                 </section>
@@ -171,6 +151,10 @@
                 <aside class="geofence-toast">
                     <strong>Đang ở gần @State.ActiveProximity.PoiName</strong>
                     <span>@GeofenceToastMessageProvider()</span>
+                    @if (!string.IsNullOrWhiteSpace(GeofenceQueueBadgeProvider()))
+                    {
+                        <span class="geofence-toast__queue">@GeofenceQueueBadgeProvider()</span>
+                    }
                 </aside>
             }
         </div>
@@ -179,13 +163,11 @@
 
 @code {
     [Parameter] public VisitorShellState State { get; set; } = default!;
-    [Parameter] public bool IsQrModalOpen { get; set; }
-    [Parameter] public string QrPreviewCode { get; set; } = "OPEN-APP";
-    [Parameter] public VisitorPoi? QrPreviewPoi { get; set; }
     [Parameter] public Func<string, string> CategoryChipClassSelector { get; set; } = static _ => string.Empty;
     [Parameter] public Func<string, string> CategoryIconSelector { get; set; } = static _ => string.Empty;
     [Parameter] public Func<string> AutoAudioStatusProvider { get; set; } = static () => string.Empty;
     [Parameter] public Func<string> GeofenceToastMessageProvider { get; set; } = static () => string.Empty;
+    [Parameter] public Func<string?> GeofenceQueueBadgeProvider { get; set; } = static () => null;
     [Parameter] public Func<VisitorPoi, string> PoiCategoryLabelSelector { get; set; } = static poi => poi.CategoryLabel;
     [Parameter] public EventCallback OnToggleNotifications { get; set; }
     [Parameter] public EventCallback OnCycleLanguage { get; set; }
@@ -194,9 +176,11 @@
     [Parameter] public EventCallback OnZoomOut { get; set; }
     [Parameter] public EventCallback OnRefresh { get; set; }
     [Parameter] public EventCallback OnSwitchToTours { get; set; }
-    [Parameter] public EventCallback OnOpenQrModal { get; set; }
-    [Parameter] public EventCallback OnCloseQrModal { get; set; }
-    [Parameter] public EventCallback<VisitorQrTargetKind> OnTriggerQrPreview { get; set; }
+    [Parameter] public EventCallback OnOpenSearch { get; set; }
     [Parameter] public EventCallback OnClosePoiSheet { get; set; }
+    [Parameter] public string MapPoiAudioStatus { get; set; } = string.Empty;
+    [Parameter] public string? QueuedPoiStatus { get; set; }
+    [Parameter] public EventCallback OnOpenDirections { get; set; }
+    [Parameter] public EventCallback OnOpenPoiDetail { get; set; }
     [Parameter] public EventCallback OnPlaySelectedPoi { get; set; }
 }

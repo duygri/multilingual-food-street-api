@@ -2,6 +2,7 @@
 @attribute [Authorize(Roles = "admin")]
 
 @inject IAdminPortalService AdminPortalService
+@inject ILanguagePortalService LanguagePortalService
 @inject IQrPortalService QrPortalService
 
 <PageTitle>Dashboard</PageTitle>
@@ -28,9 +29,9 @@ else
             <MetricCard Label="Tổng POI" Value="@_overview.TotalPois.ToString("N0")" Hint="@($"{_overview.PublishedPois:N0} đang xuất bản")" />
             <MetricCard Label="Audio Files" Value="@_overview.TotalAudioAssets.ToString("N0")" Hint="Kho audio đa ngôn ngữ" />
             <MetricCard Label="Ngôn ngữ" Value="@DistinctLanguageCount.ToString("N0")" Hint="@GetLanguageHint()" />
-            <MetricCard Label="Lượt trigger / tháng" Value="@_audioAnalytics.TotalAudioPlays.ToString("N0")" Hint="Từ audio plays gần nhất" />
+            <MetricCard Label="Lượt trigger / tháng" Value="@_analyticsSnapshot.CurrentMonthGeofenceTriggers.ToString("N0")" Hint="@CurrentMonthTriggerHint" />
             <MetricCard Label="Tour đã xuất bản" Value="@PublishedToursCount.ToString("N0")" Hint="@($"{_overview.TotalTours:N0} tour tổng")" />
-            <MetricCard Label="QR Codes hoạt động" Value="@_qrItems.Count.ToString("N0")" Hint="POI, tour và mở app" />
+            <MetricCard Label="QR Codes hoạt động" Value="@_qrItems.Count.ToString("N0")" Hint="POI và mở app" />
             <MetricCard Label="Thiết bị visitor" Value="@_visitorDevices.Count.ToString("N0")" Hint="@($"{OnlineVisitorCount:N0} đang online")" />
             <MetricCard Label="Chờ duyệt" Value="@_pendingModeration.Count.ToString("N0")" Hint="@($"{_overview.UnreadNotifications:N0} thông báo chưa đọc")" />
         </section>
@@ -42,7 +43,7 @@ else
                         <p class="panel-shell__eyebrow">🥇 Nghe nhiều</p>
                         <h2>Top POI được nghe nhiều nhất</h2>
                     </div>
-                    <button class="app-button app-button--ghost" type="button">Xem tất cả</button>
+                    <a class="app-button app-button--ghost" href="/admin/analytics">Xem tất cả</a>
                 </div>
 
                 @if (RankedTopPois.Count == 0)
@@ -60,8 +61,6 @@ else
                                     <th>#</th>
                                     <th>POI</th>
                                     <th>Lượt nghe</th>
-                                    <th>TB thời gian</th>
-                                    <th>Trend</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -72,19 +71,9 @@ else
                                         <td>
                                             <div class="dashboard-poi-cell">
                                                 <strong>@poi.Item.PoiName</strong>
-                                                <span>@GetPoiTagline(poi.Rank)</span>
                                             </div>
                                         </td>
                                         <td>@poi.Item.Visits.ToString("N0")</td>
-                                        <td>@GetAverageListenTime(poi.Item.Visits)</td>
-                                        <td>
-                                            <div class="trend-bars" aria-label="trend">
-                                                @foreach (var height in BuildTrendBars(poi.Item.Visits))
-                                                {
-                                                    <span style="@($"height:{height}px")"></span>
-                                                }
-                                            </div>
-                                        </td>
                                     </tr>
                                 }
                             </tbody>
@@ -99,7 +88,7 @@ else
                         <p class="panel-shell__eyebrow">⏳ Điều phối</p>
                         <h2>Moderation Queue gần đây</h2>
                     </div>
-                    <button class="app-button app-button--ghost" type="button">Xem tất cả</button>
+                    <a class="app-button app-button--ghost" href="/admin/moderation-queue">Xem tất cả</a>
                 </div>
 
                 @if (_pendingModeration.Count == 0)

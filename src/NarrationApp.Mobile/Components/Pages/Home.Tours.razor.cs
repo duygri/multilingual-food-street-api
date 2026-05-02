@@ -1,7 +1,3 @@
-using System.Globalization;
-using System.Text;
-using Microsoft.AspNetCore.Components;
-using Microsoft.JSInterop;
 using NarrationApp.Mobile.Components.Pages.Sections;
 using NarrationApp.Mobile.Features.Home;
 
@@ -11,17 +7,15 @@ public partial class Home
 {
     private void OpenTourDetail(string tourId)
     {
-        _isQrModalOpen = false;
-        _isSearchOverlayOpen = false;
-        _isFullPlayerOpen = false;
+        CloseNonContentSurfaces();
         _state.SelectTour(tourId);
         _tourDetailId = tourId;
-        _discoverPoiDetailId = null;
+        CloseDiscoverPoiDetailSelection();
     }
 
     private void CloseTourDetail()
     {
-        _tourDetailId = null;
+        CloseTourDetailSelection();
     }
 
     private IReadOnlyList<VisitorTourStopItem> GetSelectedTourStopItems()

@@ -1,8 +1,3 @@
-using System.Globalization;
-using System.Text;
-using Microsoft.AspNetCore.Components;
-using Microsoft.JSInterop;
-using NarrationApp.Mobile.Components.Pages.Sections;
 using NarrationApp.Mobile.Features.Home;
 
 namespace NarrationApp.Mobile.Components.Pages;
@@ -32,7 +27,7 @@ public partial class Home
 
     private Task OpenAboutLinkAsync(string label)
     {
-        _profileStatusMessage = $"{label} sẽ nối sang web/support ở lượt hoàn thiện tiếp theo.";
+        ShowSettingsFeedback($"{label} sẽ nối sang web/support ở lượt hoàn thiện tiếp theo.");
         return Task.CompletedTask;
     }
 

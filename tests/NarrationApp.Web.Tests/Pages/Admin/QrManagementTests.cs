@@ -59,6 +59,8 @@ public sealed class QrManagementTests : TestContext
             Assert.Contains("QR Codes", cut.Markup);
             Assert.Contains("Quản lý QR Code", cut.Markup);
             Assert.Contains("QR-POI-001", cut.Markup);
+            Assert.Contains(">12<", cut.Markup);
+            Assert.Contains("Chưa track", cut.Markup);
             Assert.Contains("Xem", cut.Markup);
             Assert.Contains("Link đến POI", cut.Markup);
             Assert.Contains("Mở App", cut.Markup);
@@ -118,6 +120,29 @@ public sealed class QrManagementTests : TestContext
         });
     }
 
+    [Fact]
+    public void Preview_warning_uses_the_actual_qr_url_instead_of_loopback_fallback_config()
+    {
+        Services.AddSingleton<ITourPortalService>(new TestTourPortalService());
+        Services.AddSingleton<IQrPortalService>(new TestQrPortalService());
+        Services.AddSingleton(new QrPublicUrlOptions { BaseAddress = new Uri("https://localhost:5001/") });
+
+        var cut = RenderComponent<QrManagement>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("QR-APP-002", cut.Markup);
+        });
+
+        cut.Find("button[data-action='view-qr-4']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("http://192.168.98.219:5000/qr/QR-APP-002", cut.Markup);
+            Assert.DoesNotContain("điện thoại khác sẽ không mở được", cut.Markup, StringComparison.OrdinalIgnoreCase);
+        });
+    }
+
     private sealed class TestTourPortalService : ITourPortalService
     {
         public Task<IReadOnlyList<PoiDto>> GetPoiOptionsAsync(CancellationToken cancellationToken = default)
@@ -160,7 +185,8 @@ public sealed class QrManagementTests : TestContext
                 Code = "QR-POI-001",
                 TargetType = "poi",
                 TargetId = 1,
-                LocationHint = "Khánh Hội"
+                LocationHint = "Khánh Hội",
+                ScanCount = 12
             },
             new QrCodeDto
             {
@@ -168,7 +194,18 @@ public sealed class QrManagementTests : TestContext
                 Code = "QR-APP-001",
                 TargetType = "open_app",
                 TargetId = 0,
-                LocationHint = "Bản đồ tổng"
+                LocationHint = "Bản đồ tổng",
+                ScanCount = null
+            },
+            new QrCodeDto
+            {
+                Id = 4,
+                Code = "QR-APP-002",
+                TargetType = "open_app",
+                TargetId = 0,
+                LocationHint = "Mở app qua LAN",
+                PublicUrl = "http://192.168.98.219:5000/qr/QR-APP-002",
+                ScanCount = null
             }
         ];
 
@@ -191,7 +228,8 @@ public sealed class QrManagementTests : TestContext
                 TargetType = request.TargetType,
                 TargetId = request.TargetId,
                 LocationHint = request.LocationHint,
-                ExpiresAtUtc = request.ExpiresAtUtc
+                ExpiresAtUtc = request.ExpiresAtUtc,
+                ScanCount = request.TargetType == "poi" ? 0 : null
             };
 
             _items.Add(created);

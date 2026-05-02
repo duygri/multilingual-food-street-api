@@ -9,7 +9,7 @@ namespace NarrationApp.Mobile.Components.Pages;
 
 public partial class Home : IAsyncDisposable
 {
-    private readonly VisitorShellState _state = VisitorShellState.CreateDefault();
+    private readonly VisitorShellState _state = VisitorShellState.CreateRuntimeDefault();
     private readonly VisitorMapRenderState _mapRenderState = new();
     private DotNetObjectReference<Home>? _mapBridge;
     private DotNetObjectReference<Home>? _audioBridge;
@@ -21,16 +21,14 @@ public partial class Home : IAsyncDisposable
     private bool _pendingSelectedPoiAutoPlay;
     private string? _discoverPoiDetailId;
     private string? _tourDetailId;
-    private bool _isQrModalOpen;
     private bool _isSearchOverlayOpen;
     private bool _isFullPlayerOpen;
     private bool _showFullPlayerTranscript;
     private bool _startupWorkQueued;
+    private CancellationTokenSource? _foregroundLocationLoopCts;
+    private Task? _foregroundLocationLoopTask;
     private int _audioSpeedIndex = 1;
-    private string _profileDraftName = "Khách tham quan";
-    private string _profileDraftEmail = string.Empty;
-    private string? _profileStatusMessage;
-    private string? _profileErrorMessage;
+    private string? _aboutStatusMessage;
     private static readonly double[] AudioSpeedOptions = [0.75d, 1d, 1.25d, 1.5d, 2d];
 
     private bool IsDiscoverPoiDetailVisible =>

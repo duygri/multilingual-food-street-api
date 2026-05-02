@@ -5,10 +5,12 @@
 
 .tour-showcase-card {
     overflow: hidden;
-    border-radius: 22px;
-    background: linear-gradient(180deg, rgba(18, 29, 51, 0.98), rgba(12, 21, 39, 0.96));
-    border: 1px solid rgba(90, 126, 180, 0.22);
-    box-shadow: 0 18px 34px rgba(3, 9, 19, 0.28);
+    border-radius: 24px;
+    background:
+        radial-gradient(circle at top right, rgba(89, 184, 255, 0.08), transparent 24%),
+        linear-gradient(180deg, rgba(17, 28, 49, 0.98), rgba(10, 18, 33, 0.96));
+    border: 1px solid rgba(84, 121, 178, 0.24);
+    box-shadow: 0 20px 34px rgba(3, 9, 19, 0.28);
 }
 
 .tour-showcase-card--skeleton .tour-showcase-card__cover {
@@ -18,9 +20,17 @@
 
 .tour-showcase-card__cover {
     position: relative;
-    min-height: 164px;
+    min-height: 172px;
     display: grid;
     place-items: center;
+}
+
+.tour-showcase-card__cover::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 0%, rgba(5, 12, 24, 0.18) 100%);
+    pointer-events: none;
 }
 
 .tour-showcase-card__badge {
@@ -30,19 +40,21 @@
     min-height: 30px;
     padding: 0 12px;
     border-radius: 999px;
-    background: rgba(6, 13, 23, 0.72);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(6, 13, 23, 0.74);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     font-weight: 600;
+    z-index: 1;
 }
 
 .tour-showcase-card__icon {
-    font-size: 3rem;
+    font-size: 3.15rem;
+    z-index: 1;
 }
 
 .tour-showcase-card__body {
     display: grid;
-    gap: 14px;
-    padding: 20px 18px 18px;
+    gap: 15px;
+    padding: 21px 18px 18px;
 }
 
 .tour-showcase-card__summary {
@@ -58,19 +70,19 @@
 .tour-list-footer-stats {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 10px;
-    margin-top: 6px;
+    gap: 12px;
+    margin-top: 8px;
 }
 
 .tour-list-footer-stats__item {
     display: grid;
     gap: 4px;
-    min-height: 76px;
-    padding: 14px 12px;
-    border-radius: 18px;
-    background: rgba(12, 21, 39, 0.92);
-    border: 1px solid rgba(90, 126, 180, 0.2);
-    box-shadow: 0 16px 28px rgba(3, 9, 19, 0.18);
+    min-height: 82px;
+    padding: 15px 13px;
+    border-radius: 20px;
+    background: linear-gradient(180deg, rgba(12, 21, 39, 0.96), rgba(17, 28, 49, 0.92));
+    border: 1px solid rgba(84, 121, 178, 0.22);
+    box-shadow: 0 18px 30px rgba(3, 9, 19, 0.18);
 }
 
 .tour-list-footer-stats__item strong {

@@ -48,26 +48,46 @@ public sealed class MobileSectionMarkupTests
 
         Assert.Contains("case VisitorIntroStep.Language:", markup, StringComparison.Ordinal);
         Assert.Contains("case VisitorIntroStep.Permissions:", markup, StringComparison.Ordinal);
-        Assert.Contains("language-grid", markup, StringComparison.Ordinal);
-        Assert.Contains("permission-card", markup, StringComparison.Ordinal);
-        Assert.Contains("Bật vị trí", markup, StringComparison.Ordinal);
+        Assert.Contains("setup-phone-chrome", markup, StringComparison.Ordinal);
+        Assert.Contains("setup-statusbar", markup, StringComparison.Ordinal);
+        Assert.Contains("setup-dynamic-island", markup, StringComparison.Ordinal);
+        Assert.Contains("setup-card--language", markup, StringComparison.Ordinal);
+        Assert.Contains("setup-stack--language", markup, StringComparison.Ordinal);
+        Assert.Contains("setup-card--permissions", markup, StringComparison.Ordinal);
+        Assert.Contains("setup-stack--permissions", markup, StringComparison.Ordinal);
+        Assert.Contains("setup-language-list", markup, StringComparison.Ordinal);
+        Assert.Contains("setup-language-option__code", markup, StringComparison.Ordinal);
+        Assert.Contains("setup-language-option__indicator", markup, StringComparison.Ordinal);
+        Assert.Contains("setup-permission-icon", markup, StringComparison.Ordinal);
+        Assert.Contains("Tiếp tục", markup, StringComparison.Ordinal);
+        Assert.Contains("Cho phép vị trí", markup, StringComparison.Ordinal);
+        Assert.Contains("Bỏ qua — Dùng QR / thủ công", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("VisitorAuthScreen", markup, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Mobile_map_screen_component_keeps_fullscreen_overlay_and_qr_hooks()
+    public void Mobile_map_screen_component_keeps_fullscreen_overlay_without_in_app_qr_hooks()
     {
         var markup = ReadSectionMarkup("VisitorMapScreen.razor");
 
         Assert.Contains("map-screen", markup, StringComparison.Ordinal);
         Assert.Contains("map-top-overlay", markup, StringComparison.Ordinal);
         Assert.Contains("map-top-controls", markup, StringComparison.Ordinal);
+        Assert.Contains("map-top-search", markup, StringComparison.Ordinal);
         Assert.Contains("map-category-rail", markup, StringComparison.Ordinal);
         Assert.Contains("notification-panel__surface", markup, StringComparison.Ordinal);
-        Assert.Contains("qr-fab", markup, StringComparison.Ordinal);
-        Assert.Contains("qr-modal", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("qr-fab", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("qr-modal", markup, StringComparison.Ordinal);
         Assert.Contains("poi-sheet__grabber", markup, StringComparison.Ordinal);
+        Assert.Contains("poi-sheet__audio-status", markup, StringComparison.Ordinal);
+        Assert.Contains("poi-sheet__queue", markup, StringComparison.Ordinal);
+        Assert.Contains("QueuedPoiStatus", markup, StringComparison.Ordinal);
+        Assert.Contains("Dẫn tới đây", markup, StringComparison.Ordinal);
+        Assert.Contains("OnOpenDirections", markup, StringComparison.Ordinal);
+        Assert.Contains("Xem chi tiết", markup, StringComparison.Ordinal);
+        Assert.Contains("OnOpenPoiDetail", markup, StringComparison.Ordinal);
         Assert.Contains("geofence-toast", markup, StringComparison.Ordinal);
+        Assert.Contains("geofence-toast__queue", markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -86,7 +106,8 @@ public sealed class MobileSectionMarkupTests
         Assert.Contains("OnOpenCache", markup, StringComparison.Ordinal);
         Assert.Contains("OnOpenHistory", markup, StringComparison.Ordinal);
         Assert.Contains("OnOpenAbout", markup, StringComparison.Ordinal);
-        Assert.Contains("OnOpenProfile", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("OnOpenProfile", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Hồ sơ cục bộ", markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -107,6 +128,9 @@ public sealed class MobileSectionMarkupTests
         Assert.Contains("discover-poi-card", markup, StringComparison.Ordinal);
         Assert.Contains("discover-poi-card--skeleton", markup, StringComparison.Ordinal);
         Assert.Contains("discover-poi-card__skeleton", markup, StringComparison.Ordinal);
+        Assert.Contains("discover-poi-card__media", markup, StringComparison.Ordinal);
+        Assert.Contains("discover-poi-card__image", markup, StringComparison.Ordinal);
+        Assert.Contains("discover-poi-card__image-fallback", markup, StringComparison.Ordinal);
         Assert.Contains("discover-poi-card__topline", markup, StringComparison.Ordinal);
         Assert.Contains("discover-poi-card__title", markup, StringComparison.Ordinal);
         Assert.Contains("discover-poi-card__summary", markup, StringComparison.Ordinal);
@@ -191,7 +215,6 @@ public sealed class MobileSectionMarkupTests
         var cacheMarkup = ReadSectionMarkup("VisitorCacheManagerScreen.razor");
         var historyMarkup = ReadSectionMarkup("VisitorListenHistoryScreen.razor");
         var aboutMarkup = ReadSectionMarkup("VisitorAboutScreen.razor");
-        var profileMarkup = ReadSectionMarkup("VisitorEditProfileScreen.razor");
 
         Assert.Contains("settings-detail-screen", audioMarkup, StringComparison.Ordinal);
         Assert.Contains("settings-toggle-row", audioMarkup, StringComparison.Ordinal);
@@ -202,6 +225,9 @@ public sealed class MobileSectionMarkupTests
         Assert.Contains("settings-gps-status", gpsMarkup, StringComparison.Ordinal);
         Assert.Contains("settings-toggle-row", gpsMarkup, StringComparison.Ordinal);
         Assert.Contains("settings-segment", gpsMarkup, StringComparison.Ordinal);
+        Assert.Contains("settings-debug-log", gpsMarkup, StringComparison.Ordinal);
+        Assert.Contains("GeofenceDebugEvents", gpsMarkup, StringComparison.Ordinal);
+        Assert.Contains("debug-log-item", gpsMarkup, StringComparison.Ordinal);
 
         Assert.Contains("settings-detail-screen", cacheMarkup, StringComparison.Ordinal);
         Assert.Contains("cache-summary-card", cacheMarkup, StringComparison.Ordinal);
@@ -218,12 +244,14 @@ public sealed class MobileSectionMarkupTests
         Assert.Contains("about-link-list", aboutMarkup, StringComparison.Ordinal);
         Assert.Contains("NarrationApp Mobile", aboutMarkup, StringComparison.Ordinal);
         Assert.DoesNotContain("Build dành cho visitor", aboutMarkup, StringComparison.Ordinal);
+    }
 
-        Assert.Contains("settings-detail-screen", profileMarkup, StringComparison.Ordinal);
-        Assert.Contains("profile-editor-card", profileMarkup, StringComparison.Ordinal);
-        Assert.Contains("profile-editor-stats", profileMarkup, StringComparison.Ordinal);
-        Assert.Contains("Email liên hệ (tùy chọn)", profileMarkup, StringComparison.Ordinal);
-        Assert.DoesNotContain("OnLogout", profileMarkup, StringComparison.Ordinal);
+    [Fact]
+    public void Mobile_profile_editor_screen_component_is_retired_and_no_longer_contains_editor_ui()
+    {
+        var retiredScreenPath = GetSectionPath("VisitorEditProfileScreen.razor");
+
+        Assert.False(File.Exists(retiredScreenPath), "VisitorEditProfileScreen.razor should stay retired instead of keeping hidden editor UI.");
     }
 
     [Fact]
@@ -267,7 +295,7 @@ public sealed class MobileSectionMarkupTests
 
         Assert.Contains("notification-panel__surface", markup, StringComparison.Ordinal);
         Assert.Contains("notification-panel__copy", markup, StringComparison.Ordinal);
-        Assert.Contains("qr-modal__panel", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("qr-modal__panel", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("guest-auth-snackbar__copy", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("auth-overlay__card", markup, StringComparison.Ordinal);
     }
@@ -278,16 +306,20 @@ public sealed class MobileSectionMarkupTests
         var markup = ReadSectionMarkup("VisitorMapScreen.razor");
 
         Assert.Contains("map-top-controls", markup, StringComparison.Ordinal);
+        Assert.Contains("map-top-search", markup, StringComparison.Ordinal);
         Assert.Contains("map-category-rail", markup, StringComparison.Ordinal);
         Assert.Contains("map-top-overlay--sheet-open", markup, StringComparison.Ordinal);
-        Assert.DoesNotContain("map-top-search", markup, StringComparison.Ordinal);
-        Assert.DoesNotContain("placeholder=\"Tìm điểm tham quan...\"", markup, StringComparison.Ordinal);
+        Assert.Contains("placeholder=\"Tìm theo tên, danh mục", markup, StringComparison.Ordinal);
     }
 
     private static string ReadSectionMarkup(string fileName)
     {
+        return File.ReadAllText(GetSectionPath(fileName));
+    }
+
+    private static string GetSectionPath(string fileName)
+    {
         var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
-        var sectionPath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Sections", fileName);
-        return File.ReadAllText(sectionPath);
+        return Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Sections", fileName);
     }
 }

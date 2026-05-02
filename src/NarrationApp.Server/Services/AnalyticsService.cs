@@ -9,6 +9,7 @@ public sealed class AnalyticsService(AppDbContext dbContext) : IAnalyticsService
 {
     private static readonly TimeSpan MovementSessionGap = TimeSpan.FromMinutes(30);
     private static readonly TimeSpan DefaultAllTimeDecayTau = TimeSpan.FromDays(30);
+    private static readonly GaussianKernelEntry[] GaussianKernel = BuildGaussianKernel();
     private const double EarthRadiusMeters = 6378137d;
     private const int GaussianKernelRadius = 2;
     private const double GaussianSigma = 1d;
@@ -31,6 +32,7 @@ public sealed class AnalyticsService(AppDbContext dbContext) : IAnalyticsService
 
     public async Task<AnalyticsSnapshotDto> GetAnalyticsSnapshotAsync(CancellationToken cancellationToken = default)
     {
+        var currentMonthStartUtc = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
         var eventCounts = await dbContext.VisitEvents
             .AsNoTracking()
             .GroupBy(item => item.EventType)
@@ -46,11 +48,19 @@ public sealed class AnalyticsService(AppDbContext dbContext) : IAnalyticsService
             .Where(item => item.EventType == EventType.AudioPlay)
             .AverageAsync(item => (double?)item.ListenDurationSeconds, cancellationToken) ?? 0d;
 
+        var currentMonthGeofenceTriggers = await dbContext.VisitEvents
+            .AsNoTracking()
+            .CountAsync(
+                item => item.EventType == EventType.GeofenceEnter
+                    && item.CreatedAt >= currentMonthStartUtc,
+                cancellationToken);
+
         return new AnalyticsSnapshotDto
         {
             GeofenceTriggers = eventCounts
                 .Where(item => item.EventType == EventType.GeofenceEnter)
                 .Sum(item => item.Count),
+            CurrentMonthGeofenceTriggers = currentMonthGeofenceTriggers,
             AudioPlays = eventCounts
                 .Where(item => item.EventType == EventType.AudioPlay)
                 .Sum(item => item.Count),
@@ -165,7 +175,7 @@ public sealed class AnalyticsService(AppDbContext dbContext) : IAnalyticsService
 
         foreach (var deviceGroup in events.GroupBy(item => item.DeviceId, StringComparer.Ordinal))
         {
-            var sessionStops = new List<MovementVisitRecord>();
+            List<MovementVisitRecord> sessionStops = [];
             DateTime? previousTimestamp = null;
 
             foreach (var visitEvent in deviceGroup)
@@ -278,7 +288,7 @@ public sealed class AnalyticsService(AppDbContext dbContext) : IAnalyticsService
             return;
         }
 
-        var sessionEdges = new HashSet<(int FromPoiId, int ToPoiId)>();
+        HashSet<(int FromPoiId, int ToPoiId)> sessionEdges = [];
 
         for (var index = 0; index < sessionStops.Count - 1; index++)
         {
@@ -435,12 +445,11 @@ public sealed class AnalyticsService(AppDbContext dbContext) : IAnalyticsService
 
     private static Dictionary<GridCellKey, double> ApplyGaussianSmoothing(IReadOnlyDictionary<GridCellKey, double> sourceWeights)
     {
-        var kernel = BuildGaussianKernel();
         var smoothed = new Dictionary<GridCellKey, double>();
 
         foreach (var sourceCell in sourceWeights)
         {
-            foreach (var entry in kernel)
+            foreach (var entry in GaussianKernel)
             {
                 var targetCell = new GridCellKey(
                     sourceCell.Key.X + entry.OffsetX,
@@ -461,9 +470,11 @@ public sealed class AnalyticsService(AppDbContext dbContext) : IAnalyticsService
         return smoothed;
     }
 
-    private static IReadOnlyList<GaussianKernelEntry> BuildGaussianKernel()
+    private static GaussianKernelEntry[] BuildGaussianKernel()
     {
-        var entries = new List<GaussianKernelEntry>();
+        var kernelWidth = (GaussianKernelRadius * 2) + 1;
+        var entries = new GaussianKernelEntry[kernelWidth * kernelWidth];
+        var index = 0;
         var total = 0d;
 
         for (var offsetY = -GaussianKernelRadius; offsetY <= GaussianKernelRadius; offsetY++)
@@ -471,14 +482,17 @@ public sealed class AnalyticsService(AppDbContext dbContext) : IAnalyticsService
             for (var offsetX = -GaussianKernelRadius; offsetX <= GaussianKernelRadius; offsetX++)
             {
                 var weight = Math.Exp(-((offsetX * offsetX) + (offsetY * offsetY)) / (2d * GaussianSigma * GaussianSigma));
-                entries.Add(new GaussianKernelEntry(offsetX, offsetY, weight));
+                entries[index++] = new GaussianKernelEntry(offsetX, offsetY, weight);
                 total += weight;
             }
         }
 
-        return entries
-            .Select(entry => entry with { Weight = entry.Weight / total })
-            .ToArray();
+        for (var entryIndex = 0; entryIndex < entries.Length; entryIndex++)
+        {
+            entries[entryIndex] = entries[entryIndex] with { Weight = entries[entryIndex].Weight / total };
+        }
+
+        return entries;
     }
 
     private static GridCellKey SnapToGrid(double lat, double lng, double gridSizeMeters)

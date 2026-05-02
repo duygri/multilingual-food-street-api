@@ -13,6 +13,10 @@ public partial class TranslationReview
     private string? _errorMessage;
     private string? _statusMessage;
     private bool _isReviewPanelOpen;
+    private bool _isBulkTranslationPanelOpen;
+    private string _bulkLanguageSearch = string.Empty;
+    private string? _bulkTranslationLanguageInProgress;
+    private string? _bulkTranslationStatusMessage;
     private string _selectedLanguage = "vi";
     private IReadOnlyList<ManagedLanguageDto> _languages = Array.Empty<ManagedLanguageDto>();
     private IReadOnlyList<AdminPoiDto> _pois = Array.Empty<AdminPoiDto>();
@@ -24,6 +28,8 @@ public partial class TranslationReview
     private TranslationEditorModel _editor = TranslationEditorModel.CreateDefault("vi");
 
     private AudioDto? SelectedAudio => _selectedPoi is null ? null : GetLatestAudio(_selectedPoi.Id, _selectedLanguage);
+    private IReadOnlyList<ManagedLanguageDto> BulkTranslationLanguages => _languages.Where(item => item.Role == ManagedLanguageRole.TranslationAudio).ToArray();
+    private bool IsBulkTranslationRunning => !string.IsNullOrWhiteSpace(_bulkTranslationLanguageInProgress);
     private IEnumerable<TranslationDto> AllTranslations => _translationsByPoi.Values.SelectMany(items => items);
     private int TotalTranslationCount => AllTranslations.Count();
     private int AutoTranslatedCount => AllTranslations.Count(item => item.WorkflowStatus == TranslationWorkflowStatus.AutoTranslated);

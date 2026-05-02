@@ -27,13 +27,7 @@ public partial class Home
 
     private void OpenDiscoverPoiDetailForQr(string poiId)
     {
-        _isQrModalOpen = false;
-        _isSearchOverlayOpen = false;
-        _isFullPlayerOpen = false;
-        _tourDetailId = null;
-        _state.SwitchTab(VisitorTab.Discover);
-        _state.PreviewPoi(poiId);
-        _discoverPoiDetailId = poiId;
+        ShowDiscoverPoiDetail(poiId);
     }
 
     private async Task HandlePoiDeepLinkAudioAsync()

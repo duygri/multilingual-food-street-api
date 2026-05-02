@@ -2,16 +2,28 @@ namespace NarrationApp.Mobile.Components.Pages;
 
 public partial class Home
 {
+    private Task SelectSetupLanguage(string languageCode)
+    {
+        _state.SelectLanguage(languageCode);
+        return Task.CompletedTask;
+    }
+
+    private Task ContinueFromLanguageSelection()
+    {
+        _state.AdvanceFromLanguageSelection();
+        return Task.CompletedTask;
+    }
+
     private async Task EnableLocationAsync()
     {
-        await LoadContentAsync(requestLocationPermission: true, preferNearbyPois: true);
-        _state.CompletePermissions(_state.LocationPermissionGranted);
+        await TryLoadContentBestEffortAsync(requestLocationPermission: true, preferNearbyPois: true);
+        await CompletePermissionFlowAsync(_state.LocationPermissionGranted);
     }
 
     private async Task SkipLocationAsync()
     {
-        await LoadContentAsync();
-        _state.CompletePermissions(false);
+        await TryLoadContentBestEffortAsync();
+        await CompletePermissionFlowAsync(false);
     }
 
     private async Task RefreshDiscoverAsync()

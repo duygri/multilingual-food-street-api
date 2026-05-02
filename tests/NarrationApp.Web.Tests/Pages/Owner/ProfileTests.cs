@@ -2,6 +2,7 @@ using Bunit;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using NarrationApp.Shared.DTOs.Auth;
+using NarrationApp.Shared.DTOs.Languages;
 using NarrationApp.Shared.DTOs.Owner;
 using NarrationApp.Shared.Enums;
 using NarrationApp.SharedUI.Auth;
@@ -22,7 +23,8 @@ public sealed class ProfileTests : TestContext
         {
             ("Profile.razor.cs", "OnInitializedAsync"),
             ("Profile.Actions.razor.cs", "SaveProfileAsync"),
-            ("Profile.EditorModels.razor.cs", "OwnerProfileEditModel")
+            ("Profile.EditorModels.razor.cs", "OwnerProfileEditModel"),
+            ("Profile.Languages.razor.cs", "BuildPreferredLanguageOptions")
         };
 
         var markup = File.ReadAllText(markupPath);
@@ -40,6 +42,7 @@ public sealed class ProfileTests : TestContext
         Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "Profile.razor.cs")).Length <= 40);
         Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "Profile.Actions.razor.cs")).Length <= 110);
         Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "Profile.EditorModels.razor.cs")).Length <= 80);
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "Profile.Languages.razor.cs")).Length <= 80);
     }
 
     [Fact]
@@ -59,10 +62,12 @@ public sealed class ProfileTests : TestContext
             Assert.Contains("4 POI", cut.Markup);
             Assert.Contains("2 published", cut.Markup);
             Assert.Contains("96 lượt nghe", cut.Markup);
+            Assert.Contains("Français", cut.Markup);
         });
 
         Assert.Equal("readonly", cut.Find("input[data-field='owner-email']").GetAttribute("readonly"));
         Assert.Equal("readonly", cut.Find("input[data-field='owner-role']").GetAttribute("readonly"));
+        Assert.Empty(cut.FindAll("option[value='ja']"));
     }
 
     [Fact]
@@ -225,6 +230,7 @@ public sealed class ProfileTests : TestContext
         var authStateProvider = new CustomAuthStateProvider(sessionStore);
 
         Services.AddSingleton<IOwnerProfileService>(service);
+        Services.AddSingleton<ILanguagePortalService>(new TestLanguagePortalService());
         Services.AddSingleton<IAuthSessionStore>(sessionStore);
         Services.AddSingleton(authStateProvider);
         Services.AddSingleton<AuthenticationStateProvider>(authStateProvider);
@@ -322,5 +328,48 @@ public sealed class ProfileTests : TestContext
             Session = null;
             return ValueTask.CompletedTask;
         }
+    }
+
+    private sealed class TestLanguagePortalService : ILanguagePortalService
+    {
+        public Task<IReadOnlyList<ManagedLanguageDto>> GetAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<IReadOnlyList<ManagedLanguageDto>>(
+            [
+                new ManagedLanguageDto
+                {
+                    Code = "vi",
+                    DisplayName = "Tiếng Việt",
+                    NativeName = "Tiếng Việt",
+                    FlagCode = "VN",
+                    IsActive = true,
+                    Role = ManagedLanguageRole.Source
+                },
+                new ManagedLanguageDto
+                {
+                    Code = "en",
+                    DisplayName = "English",
+                    NativeName = "English",
+                    FlagCode = "EN",
+                    IsActive = true,
+                    Role = ManagedLanguageRole.TranslationAudio
+                },
+                new ManagedLanguageDto
+                {
+                    Code = "fr",
+                    DisplayName = "French",
+                    NativeName = "Français",
+                    FlagCode = "FR",
+                    IsActive = true,
+                    Role = ManagedLanguageRole.TranslationAudio
+                }
+            ]);
+        }
+
+        public Task<ManagedLanguageDto> CreateAsync(CreateManagedLanguageRequest request, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task DeleteAsync(string code, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
     }
 }

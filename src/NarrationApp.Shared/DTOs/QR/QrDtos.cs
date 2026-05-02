@@ -14,6 +14,8 @@ public sealed class QrCodeDto
 
     public DateTime? ExpiresAtUtc { get; init; }
 
+    public int? ScanCount { get; init; }
+
     public string? PublicUrl { get; init; }
 
     public string? AppDeepLink { get; init; }

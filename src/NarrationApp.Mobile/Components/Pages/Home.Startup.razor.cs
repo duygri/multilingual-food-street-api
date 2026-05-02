@@ -9,7 +9,6 @@ public partial class Home
     {
         VisitorMobileDiagnostics.Log("Home", "OnInitialized start");
         VisitorPendingDeepLinkStore.PendingChanged += HandlePendingDeepLinkChanged;
-        SyncProfileDraftFromSession(force: true);
         VisitorMobileDiagnostics.Log("Home", $"OnInitialized end currentStep={_state.CurrentStep} currentTab={_state.CurrentTab}");
     }
 
@@ -19,6 +18,8 @@ public partial class Home
         {
             _mapBridge = DotNetObjectReference.Create(this);
             _audioBridge = DotNetObjectReference.Create(this);
+            StartPresenceHeartbeatLoopIfNeeded();
+            StartForegroundLocationLoopIfNeeded();
             QueueStartupWork();
         }
 

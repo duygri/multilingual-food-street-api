@@ -1,14 +1,20 @@
 {
   "development": {
-    "default": "https://localhost:5001/",
-    "android": "https://10.0.2.2:5001/"
+    "default": "http://localhost:5000/",
+    "android": "http://192.168.98.219:5000/",
+    "androidEmulator": "http://10.0.2.2:5000/",
+    "androidDevice": "http://192.168.98.219:5000/"
   },
   "staging": {
     "default": "https://staging-api.foodstreet.example/",
-    "android": "https://staging-api.foodstreet.example/"
+    "android": "https://staging-api.foodstreet.example/",
+    "androidEmulator": "https://staging-api.foodstreet.example/",
+    "androidDevice": "https://staging-api.foodstreet.example/"
   },
   "production": {
     "default": "https://api.foodstreet.example/",
-    "android": "https://api.foodstreet.example/"
+    "android": "https://api.foodstreet.example/",
+    "androidEmulator": "https://api.foodstreet.example/",
+    "androidDevice": "https://api.foodstreet.example/"
   }
 }

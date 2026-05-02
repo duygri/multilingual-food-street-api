@@ -27,7 +27,7 @@ public partial class LanguageManagement
         _isFormOpen = !_isFormOpen;
         if (_isFormOpen)
         {
-            _draft = new LanguageDraft();
+            ResetDraft();
         }
     }
 

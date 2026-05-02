@@ -53,7 +53,7 @@ if (-not [string]::IsNullOrWhiteSpace($ApiConfigFile)) {
     }
 
     $resolvedApiConfigFile = (Resolve-Path $ApiConfigFile).Path
-    $arguments += "-p:TouristApiConfigFile=$resolvedApiConfigFile"
+    $arguments += "-p:VisitorApiConfigFile=$resolvedApiConfigFile"
 }
 
 if (-not [string]::IsNullOrWhiteSpace($VersionName)) {

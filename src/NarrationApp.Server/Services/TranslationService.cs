@@ -8,8 +8,7 @@ namespace NarrationApp.Server.Services;
 
 public sealed class TranslationService(
     AppDbContext dbContext,
-    IGoogleTranslationService googleTranslationService,
-    IAudioGenerationScheduler? audioGenerationScheduler = null) : ITranslationService
+    IGoogleTranslationService googleTranslationService) : ITranslationService
 {
     public async Task<IReadOnlyList<TranslationDto>> GetByPoiAsync(int poiId, CancellationToken cancellationToken = default)
     {
@@ -51,12 +50,6 @@ public sealed class TranslationService(
         translation.IsFallback = normalizedLanguage != AppConstants.DefaultLanguage && request.IsFallback;
 
         await dbContext.SaveChangesAsync(cancellationToken);
-
-        if (!string.Equals(normalizedLanguage, AppConstants.DefaultLanguage, StringComparison.OrdinalIgnoreCase)
-            && audioGenerationScheduler is not null)
-        {
-            await audioGenerationScheduler.QueueFromTranslationAsync(request.PoiId, normalizedLanguage, cancellationToken: cancellationToken);
-        }
 
         return translation.ToDto();
     }

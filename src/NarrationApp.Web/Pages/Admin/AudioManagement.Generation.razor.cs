@@ -1,5 +1,6 @@
 using NarrationApp.Shared.DTOs.Admin;
 using NarrationApp.Shared.DTOs.Audio;
+using NarrationApp.Shared.Enums;
 using NarrationApp.Web.Services;
 
 namespace NarrationApp.Web.Pages.Admin;
@@ -16,12 +17,7 @@ public partial class AudioManagement
 
         _selectedPoi = targetPoi;
         _modalPoi = targetPoi;
-        _selectedLanguages = new HashSet<string>(
-            ActiveLanguageOptions
-                .Where(item => string.Equals(item.Code, "vi", StringComparison.OrdinalIgnoreCase)
-                    || GetTranslations(targetPoi.Id).Any(translation => translation.LanguageCode == item.Code))
-                .Select(item => item.Code),
-            StringComparer.OrdinalIgnoreCase);
+        _selectedLanguages = new HashSet<string>(GetGenerateLanguageOptions(targetPoi).Select(item => item.Code), StringComparer.OrdinalIgnoreCase);
         _selectedVoiceProfile = "standard";
         _isGenerateModalOpen = true;
     }
@@ -64,7 +60,7 @@ public partial class AudioManagement
         try
         {
             var generatedCount = 0;
-            foreach (var language in ActiveLanguageOptions.Where(item => _selectedLanguages.Contains(item.Code)))
+            foreach (var language in GetGenerateLanguageOptions(_modalPoi).Where(item => _selectedLanguages.Contains(item.Code)))
             {
                 if (string.Equals(language.Code, "vi", StringComparison.OrdinalIgnoreCase))
                 {
@@ -105,4 +101,29 @@ public partial class AudioManagement
             _isGenerating = false;
         }
     }
+
+    private IReadOnlyList<AudioLanguageOption> GetGenerateLanguageOptions(AdminPoiDto poi) =>
+        ActiveLanguageOptions
+            .Where(language => CanGenerateLanguage(poi.Id, language.Code))
+            .ToArray();
+
+    private bool CanGenerateLanguage(int poiId, string languageCode)
+    {
+        if (HasCurrentAudioForLanguage(poiId, languageCode))
+        {
+            return false;
+        }
+
+        if (string.Equals(languageCode, "vi", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return GetTranslations(poiId).Any(item => string.Equals(item.LanguageCode, languageCode, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private bool HasCurrentAudioForLanguage(int poiId, string languageCode) =>
+        GetAudioItems(poiId).Any(item =>
+            string.Equals(item.LanguageCode, languageCode, StringComparison.OrdinalIgnoreCase)
+            && item.Status is not AudioStatus.Deleted and not AudioStatus.Replaced);
 }

@@ -53,5 +53,7 @@ public sealed class VisitorNavigationPresentationFormatterTests
         Assert.Equal("Audio tự động đang tắt", VisitorNavigationPresentationFormatter.GetAutoAudioStatus(false, proximity));
         Assert.Equal("Đang phát thuyết minh tự động • 24m", VisitorNavigationPresentationFormatter.GetGeofenceToastMessage(true, proximity, true));
         Assert.Equal("Bạn đã tắt auto-play. Chạm vào POI để nghe thủ công.", VisitorNavigationPresentationFormatter.GetGeofenceToastMessage(false, proximity, false));
+        Assert.Equal("Chờ: Bến Nhà Rồng", VisitorNavigationPresentationFormatter.GetGeofenceQueueBadge(new VisitorProximityMatch("poi-2", "Bến Nhà Rồng", 38, 60, 9)));
+        Assert.Null(VisitorNavigationPresentationFormatter.GetGeofenceQueueBadge(null));
     }
 }

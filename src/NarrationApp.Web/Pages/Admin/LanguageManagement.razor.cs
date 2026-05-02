@@ -23,6 +23,7 @@ public partial class LanguageManagement
 
     private sealed class LanguageDraft
     {
+        public string SearchText { get; set; } = string.Empty;
         public string Code { get; set; } = string.Empty;
         public string DisplayName { get; set; } = string.Empty;
         public string NativeName { get; set; } = string.Empty;

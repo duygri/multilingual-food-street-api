@@ -17,7 +17,7 @@ public partial class TourManagement
     private IReadOnlyList<PoiDto> _poiOptions = Array.Empty<PoiDto>();
     private TourDto? _selectedTour;
     private TourEditorModel _editor = TourEditorModel.CreateDefault();
-    private int TotalParticipationEstimate => _tours.Sum(GetParticipationEstimate);
+    private int TotalStops => _tours.Sum(item => item.Stops.Count);
     private string AverageDurationLabel => _tours.Count == 0 ? "0 phút" : $"{Math.Round(_tours.Average(item => item.EstimatedMinutes))} phút";
 
     protected override async Task OnInitializedAsync()

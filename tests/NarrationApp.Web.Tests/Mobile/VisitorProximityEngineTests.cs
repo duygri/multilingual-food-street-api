@@ -35,4 +35,21 @@ public sealed class VisitorProximityEngineTests
 
         Assert.Null(match);
     }
+
+    [Fact]
+    public void Evaluate_PrefersHigherPriorityPoiWhenZonesOverlap()
+    {
+        var location = new VisitorLocationSnapshot(true, true, 10.76093, 106.70543, "Đã định vị");
+        var pois = new[]
+        {
+            new VisitorPoi("poi-near", "POI gần hơn", "history", "Lịch sử", "Quận 4", "Live API", "desc", "highlight", 18, 52, 180, "3:12", "Sẵn sàng", 10.76092, 106.70542, 4, 1, 120),
+            new VisitorPoi("poi-priority", "POI ưu tiên", "river", "Ven sông", "Quận 4", "Live API", "desc", "highlight", 42, 48, 120, "2:44", "Sẵn sàng", 10.76099, 106.70549, 9, 1, 120)
+        };
+
+        var match = VisitorProximityEngine.Evaluate(location, pois);
+
+        Assert.NotNull(match);
+        Assert.Equal("poi-priority", match!.PoiId);
+        Assert.Equal(9, match.Priority);
+    }
 }

@@ -363,7 +363,7 @@ Rule:
 
 ---
 
-## Data and API Changes
+## Data and Function Changes
 
 ### 1. Auth/session enrichment
 
@@ -372,6 +372,13 @@ Mở rộng `AuthResponse` và mapping session để shell có đủ dữ liệu
 - thêm `FullName`
 
 Không nhồi toàn bộ profile owner vào auth response.
+
+Function chain liên quan:
+
+1. `AuthClientService.GetCurrentSessionAsync()` hoặc login/register flow tương ứng
+2. `AuthController.GetCurrentUserAsync()` / login action tương ứng
+3. `AuthService.BuildAuthResponse(...)`
+4. `AuthResponse.FullName` được map vào session để `PortalShell` dựng owner profile card
 
 ### 2. AppUser fields
 
@@ -382,7 +389,12 @@ Mở rộng `AppUser` với các field cần thiết cho profile owner:
 - `LastLoginAtUtc`
 - `CreatedAtUtc` nếu chưa có metadata tương đương sẵn sàng dùng
 
-`LastLoginAtUtc` được cập nhật trong login flow của `AuthService`.
+`LastLoginAtUtc` được cập nhật qua chain thật:
+
+1. `AuthController.LoginAsync(...)`
+2. `AuthService.LoginAsync(...)`
+3. `AuthService` cập nhật `AppUser.LastLoginAtUtc`
+4. `AuthService.BuildAuthResponse(...)`
 
 ### 3. Owner profile contracts
 
@@ -392,16 +404,39 @@ Thêm DTO và request riêng cho owner profile:
 - `UpdateOwnerProfileRequest`
 - `OwnerActivitySummaryDto`
 
-Endpoints:
+Profile read chain:
 
-- `GET /api/owner/profile`
-- `PUT /api/owner/profile`
+1. `Profile.razor.cs.OnInitializedAsync()`
+2. `OwnerProfileService.GetProfileAsync()`
+3. `OwnerController.GetProfileAsync(CancellationToken)`
+4. `OwnerController.BuildProfileAsync(AppUser owner, CancellationToken)`
 
-`POST /api/auth/change-password` tiếp tục được dùng cho form đổi mật khẩu.
+Profile update chain:
+
+1. `Profile.Actions.razor.cs.SaveProfileAsync()`
+2. `OwnerProfileService.UpdateProfileAsync(UpdateOwnerProfileRequest request)`
+3. `OwnerController.UpdateProfileAsync(UpdateOwnerProfileRequest request, CancellationToken)`
+4. `OwnerController.ValidateProfileUpdate(...)`
+5. `OwnerController.BuildProfileAsync(AppUser owner, CancellationToken)`
+
+Password change chain:
+
+1. `Profile.Actions.razor.cs.ChangePasswordAsync()`
+2. `OwnerProfileService.ChangePasswordAsync(ChangePasswordRequest request)`
+3. `AuthController.ChangePasswordAsync(ChangePasswordRequest request, CancellationToken)`
+4. `AuthService.ChangePasswordAsync(Guid userId, ChangePasswordRequest request, CancellationToken)`
 
 ### 4. Dashboard contracts
 
-Giữ `GET /api/owner/dashboard`, nhưng mở rộng response để không chỉ trả số liệu KPI.
+Dashboard nên được mô tả bằng call-chain rõ hơn là chỉ nêu transport:
+
+1. `Dashboard.razor.cs.OnInitializedAsync()`
+2. `IOwnerPortalService.GetDashboardAsync()` hoặc `IOwnerPortalService.GetDashboardWorkspaceAsync()`
+3. `OwnerPortalService.GetDashboardAsync()` hoặc `OwnerPortalService.GetDashboardWorkspaceAsync()`
+4. `OwnerController.GetDashboardAsync(CancellationToken)` hoặc `OwnerController.GetDashboardWorkspaceAsync(CancellationToken)`
+5. `OwnerController.BuildShellSummaryAsync(...)`
+6. `OwnerController.BuildDashboardRecentActivities(...)`
+7. `OwnerController.BuildSevenDayTrend(...)`
 
 DTO đề xuất:
 
@@ -412,18 +447,18 @@ DTO đề xuất:
   - activity feed
   - moderation watch summary
 
-Nếu DTO hiện tại trở nên quá lớn, tách:
-
-- `GET /api/owner/dashboard`
-- `GET /api/owner/dashboard/activity`
-
-Ưu tiên đầu tiên là page DTO rõ nghĩa, không ép FE ghép dữ liệu quá tay.
+Nếu DTO hiện tại trở nên quá lớn, ưu tiên tách theo hàm compose trong `OwnerController` trước khi nghĩ tới việc buộc FE tự ghép nhiều nguồn nhỏ.
 
 ### 5. POI detail contracts
 
-Thêm owner detail endpoint:
+POI detail nên ghi theo chain thật:
 
-- `GET /api/owner/pois/{id}`
+1. `PoiDetail.razor.cs.OnParametersSetAsync()` / `PoiDetail.razor.cs.ReloadWorkspaceAsync()`
+2. `IOwnerPortalService.GetPoiAsync(int poiId)` hoặc `IOwnerPortalService.GetPoiWorkspaceAsync(int poiId)`
+3. `OwnerPortalService.GetPoiAsync(int poiId)` hoặc `OwnerPortalService.GetPoiWorkspaceAsync(int poiId)`
+4. `OwnerController.GetPoiAsync(int id, CancellationToken)` hoặc `OwnerController.GetPoiWorkspaceAsync(int id, CancellationToken)`
+5. controller compose thêm POI core info, geofence, stats, moderation summary, rejection note, audio language statuses
+6. `AudioPortalService.GetByPoiAsync(int poiId, ...)` được page dùng khi cần làm giàu matrix audio
 
 DTO đề xuất:
 
@@ -448,9 +483,14 @@ Audio language table dùng:
 
 ### 6. Moderation contracts
 
-Thêm endpoint moderation tổng hợp cho owner:
+Moderation overview nên ghi theo chain thật:
 
-- `GET /api/owner/moderation`
+1. `Moderation.razor.cs.OnInitializedAsync()`
+2. `IOwnerPortalService.GetModerationWorkspaceAsync()`
+3. `OwnerPortalService.GetModerationWorkspaceAsync()`
+4. `OwnerController.GetModerationWorkspaceAsync(CancellationToken)`
+5. `OwnerController.BuildPendingModerationRow(...)`
+6. `OwnerController.BuildHistoryModerationRow(...)`
 
 DTO đề xuất:
 
@@ -466,12 +506,12 @@ History row dùng:
 
 ### 7. Notifications
 
-Notifications tiếp tục dùng contract hiện có:
+Notifications tiếp tục dùng function chain hiện có:
 
-- `GET /api/notifications`
-- `GET /api/notifications/unread-count`
-- `PUT /api/notifications/{id}/read`
-- `PUT /api/notifications/read-all`
+1. `NotificationCenter` / page notifications gọi `NotificationCenterApiService`
+2. `NotificationCenterApiService.GetNotificationsAsync()` / `GetUnreadCountAsync()` / `MarkReadAsync()` / `MarkAllReadAsync()`
+3. `NotificationsController` xử lý read/list actions tương ứng
+4. unread count quay lại `PortalShell` badge và page notifications list
 
 Không tạo API owner-specific song song nếu behavior không khác.
 
@@ -481,12 +521,14 @@ Không tạo API owner-specific song song nếu behavior không khác.
 
 ### Owner services
 
-Mở rộng `IOwnerPortalService` và `OwnerPortalService` để phục vụ owner pages:
+Mở rộng `IOwnerPortalService` và `OwnerPortalService` theo call-chain rõ ràng cho owner pages:
 
-- dashboard aggregate
-- POI list
-- POI detail
-- moderation overview
+- `GetDashboardAsync()` / `GetDashboardWorkspaceAsync()`
+- `GetPoisAsync()` / `GetPoisWorkspaceAsync()`
+- `GetPoiAsync(int poiId)` / `GetPoiWorkspaceAsync(int poiId)`
+- `GetModerationWorkspaceAsync()`
+
+Mỗi hàm service nên map 1:1 sang hàm controller owner tương ứng, thay vì để page quay về mô hình tự gọi nhiều nguồn nhỏ rồi tự ghép.
 
 ### Owner profile service
 
@@ -501,6 +543,12 @@ Trách nhiệm:
 - update owner profile
 - bridge change password flow nếu cần wrapper riêng cho page
 
+Function chain chuẩn:
+
+- `GetProfileAsync()` -> `OwnerController.GetProfileAsync(...)`
+- `UpdateProfileAsync(...)` -> `OwnerController.UpdateProfileAsync(...)`
+- `ChangePasswordAsync(...)` -> `AuthController.ChangePasswordAsync(...)` -> `AuthService.ChangePasswordAsync(...)`
+
 ### Auth service boundary
 
 `AuthClientService` giữ trách nhiệm:
@@ -511,7 +559,7 @@ Trách nhiệm:
 - load current session
 - logout
 
-Không đẩy logic owner profile chi tiết vào `AuthClientService`.
+Không đẩy logic owner profile chi tiết vào `AuthClientService`; phần owner profile đầy đủ phải nằm ở `OwnerProfileService`.
 
 ---
 

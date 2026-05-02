@@ -2,7 +2,8 @@ namespace NarrationApp.Mobile.Features.Home;
 
 public sealed record VisitorContentSnapshot(
     IReadOnlyList<VisitorPoi> Pois,
-    IReadOnlyList<VisitorTourCard> Tours)
+    IReadOnlyList<VisitorTourCard> Tours,
+    IReadOnlyList<VisitorCategory>? Categories = null)
 {
     public static VisitorContentSnapshot CreateDemo()
     {
@@ -25,7 +26,8 @@ public sealed record VisitorContentSnapshot(
                     10.7609,
                     106.7054,
                     9,
-                    5),
+                    5,
+                    ReadyAudioLanguageCodesRaw: ["vi", "en", "ja"]),
                 new VisitorPoi(
                     "poi-cho-ben-thanh",
                     "Chợ Bến Thành",
@@ -43,7 +45,8 @@ public sealed record VisitorContentSnapshot(
                     10.7724,
                     106.6980,
                     10,
-                    5),
+                    5,
+                    ReadyAudioLanguageCodesRaw: ["vi", "en", "zh"]),
                 new VisitorPoi(
                     "poi-tiem-banh-mi-co-lan",
                     "Tiệm Bánh Mì Cô Lan",
@@ -61,7 +64,8 @@ public sealed record VisitorContentSnapshot(
                     10.7586,
                     106.7045,
                     7,
-                    4),
+                    4,
+                    ReadyAudioLanguageCodesRaw: ["vi"]),
                 new VisitorPoi(
                     "poi-ben-nha-rong",
                     "Bến Nhà Rồng",
@@ -79,7 +83,8 @@ public sealed record VisitorContentSnapshot(
                     10.7680,
                     106.7068,
                     8,
-                    5),
+                    5,
+                    ReadyAudioLanguageCodesRaw: ["vi", "en", "fr"]),
                 new VisitorPoi(
                     "poi-pho-dem-xom-chieu",
                     "Phố đêm Xóm Chiếu",
@@ -97,7 +102,8 @@ public sealed record VisitorContentSnapshot(
                     10.7597,
                     106.7008,
                     6,
-                    4)
+                    4,
+                    ReadyAudioLanguageCodesRaw: ["vi", "ko"])
             ],
             [
                 new VisitorTourCard(
@@ -124,6 +130,12 @@ public sealed record VisitorContentSnapshot(
                     "Buổi tối",
                     "Phù hợp sau 18:00 với audio ngắn, nhịp nhanh.",
                     ["poi-pho-dem-xom-chieu", "poi-khanh-hoi-bridge", "poi-ben-nha-rong"])
+            ],
+            [
+                new VisitorCategory("food", "Ẩm thực", "🍜", "is-food"),
+                new VisitorCategory("history", "Lịch sử", "🏛️", "is-history"),
+                new VisitorCategory("river", "Ven sông", "🌉", "is-river"),
+                new VisitorCategory("night", "Đêm", "🍢", "is-night")
             ]);
     }
 }

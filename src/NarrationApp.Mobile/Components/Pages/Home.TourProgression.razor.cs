@@ -9,7 +9,7 @@ public partial class Home
             return;
         }
 
-        _tourDetailId = null;
+        CloseTourDetailSelection();
         _state.OpenPoi(_state.ActiveTourSession.NextPoiId);
         _lastAutoPlayedPoiId = null;
         _isAutoPlayingFromProximity = false;

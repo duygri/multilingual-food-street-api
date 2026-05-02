@@ -12,6 +12,11 @@ public sealed class HomeMarkupTests
         var codeBehindPath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Home.razor.cs");
         var startupPath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Home.Startup.razor.cs");
         var startupWorkPath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Home.StartupWork.razor.cs");
+        var locationRuntimePath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Home.LocationRuntime.razor.cs");
+        var proximityRuntimePath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Home.ProximityRuntime.razor.cs");
+        var proximityAudioPath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Home.ProximityAudio.razor.cs");
+        var proximityDebugPath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Home.ProximityDebug.razor.cs");
+        var backgroundTrackingPath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Home.BackgroundTracking.razor.cs");
         var mapRuntimePath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Home.MapRuntime.razor.cs");
         var runtimePath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Home.Runtime.razor.cs");
         var runtimeDisposalPath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Home.RuntimeDisposal.razor.cs");
@@ -27,6 +32,11 @@ public sealed class HomeMarkupTests
         Assert.True(File.Exists(codeBehindPath), "Home.razor.cs should contain Home behavior so Home.razor stays focused on markup.");
         Assert.True(File.Exists(startupPath), "Home.Startup.razor.cs should isolate lifecycle/startup orchestration.");
         Assert.True(File.Exists(startupWorkPath), "Home.StartupWork.razor.cs should isolate deferred startup work orchestration.");
+        Assert.True(File.Exists(locationRuntimePath), "Home.LocationRuntime.razor.cs should isolate foreground location refresh orchestration.");
+        Assert.True(File.Exists(proximityRuntimePath), "Home.ProximityRuntime.razor.cs should isolate overlap/cooldown proximity orchestration.");
+        Assert.True(File.Exists(proximityAudioPath), "Home.ProximityAudio.razor.cs should isolate proximity-driven audio side effects.");
+        Assert.True(File.Exists(proximityDebugPath), "Home.ProximityDebug.razor.cs should isolate geofence debug-event tracking.");
+        Assert.True(File.Exists(backgroundTrackingPath), "Home.BackgroundTracking.razor.cs should isolate background tracking sync orchestration.");
         Assert.True(File.Exists(mapRuntimePath), "Home.MapRuntime.razor.cs should isolate map render orchestration.");
         Assert.True(File.Exists(runtimePath), "Home.Runtime.razor.cs should isolate bridge/dispose runtime behavior.");
         Assert.True(File.Exists(runtimeDisposalPath), "Home.RuntimeDisposal.razor.cs should isolate teardown/dispose behavior.");
@@ -38,6 +48,11 @@ public sealed class HomeMarkupTests
         var codeBehind = File.ReadAllText(codeBehindPath);
         var startupCode = File.ReadAllText(startupPath);
         var startupWorkCode = File.ReadAllText(startupWorkPath);
+        var locationRuntimeCode = File.ReadAllText(locationRuntimePath);
+        var proximityRuntimeCode = File.ReadAllText(proximityRuntimePath);
+        var proximityAudioCode = File.ReadAllText(proximityAudioPath);
+        var proximityDebugCode = File.ReadAllText(proximityDebugPath);
+        var backgroundTrackingCode = File.ReadAllText(backgroundTrackingPath);
         var mapRuntimeCode = File.ReadAllText(mapRuntimePath);
         var runtimeCode = File.ReadAllText(runtimePath);
         var runtimeDisposalCode = File.ReadAllText(runtimeDisposalPath);
@@ -50,6 +65,12 @@ public sealed class HomeMarkupTests
         Assert.Contains("OnAfterRenderAsync", startupCode, StringComparison.Ordinal);
         Assert.Contains("QueueStartupWork", startupWorkCode, StringComparison.Ordinal);
         Assert.Contains("RunStartupWorkAsync", startupWorkCode, StringComparison.Ordinal);
+        Assert.Contains("RunForegroundLocationLoopAsync", locationRuntimeCode, StringComparison.Ordinal);
+        Assert.Contains("ResolveNextProximity", proximityRuntimeCode, StringComparison.Ordinal);
+        Assert.Contains("ApplyProximityNarrationAsync", proximityAudioCode, StringComparison.Ordinal);
+        Assert.Contains("TrackProximityQueueTransition", proximityDebugCode, StringComparison.Ordinal);
+        Assert.Contains("SyncBackgroundTrackingAsync", backgroundTrackingCode, StringComparison.Ordinal);
+        Assert.Contains("ApplyBackgroundTrackingStateChangeAsync", backgroundTrackingCode, StringComparison.Ordinal);
         Assert.Contains("RenderMapIfNeededAsync", mapRuntimeCode, StringComparison.Ordinal);
         Assert.Contains("[JSInvokable]", runtimeCode, StringComparison.Ordinal);
         Assert.DoesNotContain("private async Task ProcessPendingDeepLinkAsync", runtimeCode, StringComparison.Ordinal);
@@ -71,17 +92,25 @@ public sealed class HomeMarkupTests
         {
             ("Home.Startup.razor.cs", "OnAfterRenderAsync"),
             ("Home.StartupWork.razor.cs", "RunStartupWorkAsync"),
+            ("Home.LocationRuntime.razor.cs", "RunForegroundLocationLoopAsync"),
+            ("Home.ProximityRuntime.razor.cs", "ResolveNextProximity"),
+            ("Home.ProximityAudio.razor.cs", "ApplyProximityNarrationAsync"),
+            ("Home.ProximityDebug.razor.cs", "TrackProximityQueueTransition"),
+            ("Home.BackgroundTracking.razor.cs", "SyncBackgroundTrackingAsync"),
             ("Home.MapRuntime.razor.cs", "RenderMapIfNeededAsync"),
             ("Home.RuntimeDisposal.razor.cs", "DisposeAsync"),
             ("Home.MapControls.razor.cs", "ZoomMapInAsync"),
+            ("Home.MapPoiSheet.razor.cs", "OpenSelectedPoiDirectionsAsync"),
             ("Home.Content.razor.cs", "LoadContentAsync"),
             ("Home.ContentActions.razor.cs", "EnableLocationAsync"),
+            ("Home.PermissionFlow.razor.cs", "CompletePermissionFlowAsync"),
             ("Home.Navigation.razor.cs", "SwitchTabFromShell"),
+            ("Home.ShellSurfaces.razor.cs", "PrepareForPrimaryTabSwitch"),
             ("Home.NavigationPresentation.razor.cs", "VisitorNavigationPresentationFormatter"),
             ("Home.PoiNavigation.razor.cs", "OpenPoiDetailAsync"),
-            ("Home.Qr.razor.cs", "VisitorQrPreviewSelector"),
+            ("Home.PoiDetailNavigation.razor.cs", "OpenSelectedPoiDetailFromMapAsync"),
             ("Home.Search.razor.cs", "OpenSearchOverlay"),
-            ("Home.SearchResults.razor.cs", "GetSearchResultCount"),
+            ("Home.SearchResults.razor.cs", "GetSearchResultsSummary"),
             ("Home.Player.razor.cs", "OpenFullPlayer"),
             ("Home.PlayerControls.razor.cs", "SeekAudioAsync"),
             ("Home.PlayerLanguage.razor.cs", "SelectAudioLanguageAsync"),
@@ -91,14 +120,13 @@ public sealed class HomeMarkupTests
             ("Home.AudioPlayback.razor.cs", "TogglePlaybackAsync"),
             ("Home.DeepLink.razor.cs", "ProcessPendingDeepLinkAsync"),
             ("Home.Settings.razor.cs", "OpenSettingsScreen"),
+            ("Home.SettingsFeedback.razor.cs", "ClearSettingsFeedback"),
             ("Home.SettingsPresentation.razor.cs", "VisitorSettingsPresentationFormatter"),
             ("Home.SettingsInsights.razor.cs", "GetListeningHistoryHeadline"),
             ("Home.SettingsActions.razor.cs", "SelectSettingsLanguageAsync"),
             ("Home.AudioSettingsActions.razor.cs", "SetAudioAutoPlayEnabledAsync"),
             ("Home.GpsSettingsActions.razor.cs", "SetGpsBackgroundTrackingEnabledAsync"),
             ("Home.CacheSettingsActions.razor.cs", "ClearCachedAudioItemsAsync"),
-            ("Home.Profile.razor.cs", "VisitorProfilePresentationFormatter"),
-            ("Home.ProfileActions.razor.cs", "SaveProfileDraftAsync"),
             ("Home.About.razor.cs", "GetAboutVersionLabel"),
             ("Home.Tours.razor.cs", "GetSelectedTourStopItems"),
             ("Home.TourPresentation.razor.cs", "VisitorTourPresentationFormatter"),
@@ -141,30 +169,54 @@ public sealed class HomeMarkupTests
         var startupWorkPath = Path.Combine(pageRoot, "Home.StartupWork.razor.cs");
         var startupWorkLineCount = File.ReadAllLines(startupWorkPath).Length;
         Assert.True(startupWorkLineCount <= 90, $"Home.StartupWork.razor.cs should stay focused on deferred startup work, but has {startupWorkLineCount} lines.");
+        var locationRuntimePath = Path.Combine(pageRoot, "Home.LocationRuntime.razor.cs");
+        var locationRuntimeLineCount = File.ReadAllLines(locationRuntimePath).Length;
+        Assert.True(locationRuntimeLineCount <= 90, $"Home.LocationRuntime.razor.cs should stay focused on foreground location refresh, but has {locationRuntimeLineCount} lines.");
+        var proximityRuntimePath = Path.Combine(pageRoot, "Home.ProximityRuntime.razor.cs");
+        var proximityRuntimeLineCount = File.ReadAllLines(proximityRuntimePath).Length;
+        Assert.True(proximityRuntimeLineCount <= 70, $"Home.ProximityRuntime.razor.cs should stay focused on overlap/cooldown orchestration, but has {proximityRuntimeLineCount} lines.");
+        var proximityAudioPath = Path.Combine(pageRoot, "Home.ProximityAudio.razor.cs");
+        var proximityAudioLineCount = File.ReadAllLines(proximityAudioPath).Length;
+        Assert.True(proximityAudioLineCount <= 50, $"Home.ProximityAudio.razor.cs should stay focused on proximity-driven audio consequences, but has {proximityAudioLineCount} lines.");
+        var proximityDebugPath = Path.Combine(pageRoot, "Home.ProximityDebug.razor.cs");
+        var proximityDebugLineCount = File.ReadAllLines(proximityDebugPath).Length;
+        Assert.True(proximityDebugLineCount <= 80, $"Home.ProximityDebug.razor.cs should stay focused on geofence debug-event tracking, but has {proximityDebugLineCount} lines.");
+        var backgroundTrackingPath = Path.Combine(pageRoot, "Home.BackgroundTracking.razor.cs");
+        var backgroundTrackingLineCount = File.ReadAllLines(backgroundTrackingPath).Length;
+        Assert.True(backgroundTrackingLineCount <= 70, $"Home.BackgroundTracking.razor.cs should stay focused on background tracking sync, but has {backgroundTrackingLineCount} lines.");
         var mapRuntimePath = Path.Combine(pageRoot, "Home.MapRuntime.razor.cs");
         var mapRuntimeLineCount = File.ReadAllLines(mapRuntimePath).Length;
         Assert.True(mapRuntimeLineCount <= 70, $"Home.MapRuntime.razor.cs should stay focused on map render orchestration, but has {mapRuntimeLineCount} lines.");
         var mapControlsPath = Path.Combine(pageRoot, "Home.MapControls.razor.cs");
         var mapControlsLineCount = File.ReadAllLines(mapControlsPath).Length;
         Assert.True(mapControlsLineCount <= 40, $"Home.MapControls.razor.cs should stay focused on map zoom controls, but has {mapControlsLineCount} lines.");
+        var mapPoiSheetPath = Path.Combine(pageRoot, "Home.MapPoiSheet.razor.cs");
+        var mapPoiSheetLineCount = File.ReadAllLines(mapPoiSheetPath).Length;
+        Assert.True(mapPoiSheetLineCount <= 55, $"Home.MapPoiSheet.razor.cs should stay focused on map-sheet actions/presentation, but has {mapPoiSheetLineCount} lines.");
         var contentPath = Path.Combine(pageRoot, "Home.Content.razor.cs");
         var contentLineCount = File.ReadAllLines(contentPath).Length;
         Assert.True(contentLineCount <= 70, $"Home.Content.razor.cs should stay focused on content load orchestration, but has {contentLineCount} lines.");
         var contentActionsPath = Path.Combine(pageRoot, "Home.ContentActions.razor.cs");
         var contentActionsLineCount = File.ReadAllLines(contentActionsPath).Length;
         Assert.True(contentActionsLineCount <= 70, $"Home.ContentActions.razor.cs should stay focused on user-triggered content actions, but has {contentActionsLineCount} lines.");
+        var permissionFlowPath = Path.Combine(pageRoot, "Home.PermissionFlow.razor.cs");
+        var permissionFlowLineCount = File.ReadAllLines(permissionFlowPath).Length;
+        Assert.True(permissionFlowLineCount <= 40, $"Home.PermissionFlow.razor.cs should stay focused on permission/content flow helpers, but has {permissionFlowLineCount} lines.");
         var navigationPath = Path.Combine(pageRoot, "Home.Navigation.razor.cs");
         var navigationLineCount = File.ReadAllLines(navigationPath).Length;
         Assert.True(navigationLineCount <= 90, $"Home.Navigation.razor.cs should stay focused on shell navigation, but has {navigationLineCount} lines.");
+        var shellSurfacesPath = Path.Combine(pageRoot, "Home.ShellSurfaces.razor.cs");
+        var shellSurfacesLineCount = File.ReadAllLines(shellSurfacesPath).Length;
+        Assert.True(shellSurfacesLineCount <= 70, $"Home.ShellSurfaces.razor.cs should stay focused on shell surface/detail reset helpers, but has {shellSurfacesLineCount} lines.");
         var navigationPresentationPath = Path.Combine(pageRoot, "Home.NavigationPresentation.razor.cs");
         var navigationPresentationLineCount = File.ReadAllLines(navigationPresentationPath).Length;
         Assert.True(navigationPresentationLineCount <= 55, $"Home.NavigationPresentation.razor.cs should stay focused on view-state wrappers, but has {navigationPresentationLineCount} lines.");
-        var qrPath = Path.Combine(pageRoot, "Home.Qr.razor.cs");
-        var qrLineCount = File.ReadAllLines(qrPath).Length;
-        Assert.True(qrLineCount <= 55, $"Home.Qr.razor.cs should stay focused on QR modal actions, but has {qrLineCount} lines.");
         var poiNavigationPath = Path.Combine(pageRoot, "Home.PoiNavigation.razor.cs");
         var poiNavigationLineCount = File.ReadAllLines(poiNavigationPath).Length;
         Assert.True(poiNavigationLineCount <= 60, $"Home.PoiNavigation.razor.cs should stay focused on POI navigation actions, but has {poiNavigationLineCount} lines.");
+        var poiDetailNavigationPath = Path.Combine(pageRoot, "Home.PoiDetailNavigation.razor.cs");
+        var poiDetailNavigationLineCount = File.ReadAllLines(poiDetailNavigationPath).Length;
+        Assert.True(poiDetailNavigationLineCount <= 55, $"Home.PoiDetailNavigation.razor.cs should stay focused on POI detail transitions, but has {poiDetailNavigationLineCount} lines.");
         var searchPath = Path.Combine(pageRoot, "Home.Search.razor.cs");
         var searchLineCount = File.ReadAllLines(searchPath).Length;
         Assert.True(searchLineCount <= 50, $"Home.Search.razor.cs should stay focused on search overlay actions, but has {searchLineCount} lines.");
@@ -174,6 +226,9 @@ public sealed class HomeMarkupTests
         var settingsPath = Path.Combine(pageRoot, "Home.Settings.razor.cs");
         var settingsLineCount = File.ReadAllLines(settingsPath).Length;
         Assert.True(settingsLineCount <= 80, $"Home.Settings.razor.cs should stay focused on settings shell/navigation, but has {settingsLineCount} lines.");
+        var settingsFeedbackPath = Path.Combine(pageRoot, "Home.SettingsFeedback.razor.cs");
+        var settingsFeedbackLineCount = File.ReadAllLines(settingsFeedbackPath).Length;
+        Assert.True(settingsFeedbackLineCount <= 40, $"Home.SettingsFeedback.razor.cs should stay focused on settings feedback/state wrappers, but has {settingsFeedbackLineCount} lines.");
         var settingsPresentationPath = Path.Combine(pageRoot, "Home.SettingsPresentation.razor.cs");
         var settingsPresentationLineCount = File.ReadAllLines(settingsPresentationPath).Length;
         Assert.True(settingsPresentationLineCount <= 45, $"Home.SettingsPresentation.razor.cs should stay focused on summary wrappers, but has {settingsPresentationLineCount} lines.");
@@ -192,12 +247,6 @@ public sealed class HomeMarkupTests
         var cacheSettingsActionsPath = Path.Combine(pageRoot, "Home.CacheSettingsActions.razor.cs");
         var cacheSettingsActionsLineCount = File.ReadAllLines(cacheSettingsActionsPath).Length;
         Assert.True(cacheSettingsActionsLineCount <= 40, $"Home.CacheSettingsActions.razor.cs should stay focused on cache settings actions, but has {cacheSettingsActionsLineCount} lines.");
-        var profilePath = Path.Combine(pageRoot, "Home.Profile.razor.cs");
-        var profileLineCount = File.ReadAllLines(profilePath).Length;
-        Assert.True(profileLineCount <= 60, $"Home.Profile.razor.cs should stay focused on profile presentation wrappers, but has {profileLineCount} lines.");
-        var profileActionsPath = Path.Combine(pageRoot, "Home.ProfileActions.razor.cs");
-        var profileActionsLineCount = File.ReadAllLines(profileActionsPath).Length;
-        Assert.True(profileActionsLineCount <= 60, $"Home.ProfileActions.razor.cs should stay focused on profile draft actions, but has {profileActionsLineCount} lines.");
         var toursPath = Path.Combine(pageRoot, "Home.Tours.razor.cs");
         var toursLineCount = File.ReadAllLines(toursPath).Length;
         Assert.True(toursLineCount <= 140, $"Home.Tours.razor.cs should stay focused on tour detail composition, but has {toursLineCount} lines.");
@@ -244,6 +293,7 @@ public sealed class HomeMarkupTests
         Assert.Contains("VisitorTab.Map", markup, StringComparison.Ordinal);
         Assert.Contains("Bản đồ", markup, StringComparison.Ordinal);
         Assert.Contains("CurrentTab != VisitorTab.Map", codeBehind, StringComparison.Ordinal);
+        Assert.Contains("OnOpenPoiDetail=\"OpenSelectedPoiDetailFromMapAsync\"", markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -258,6 +308,7 @@ public sealed class HomeMarkupTests
         Assert.DoesNotContain("VisitorAuthScreen", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("ContinueFromSetupAsync", markup, StringComparison.Ordinal);
         Assert.Contains("case VisitorIntroStep.Language:", markup, StringComparison.Ordinal);
+        Assert.Contains("setup-phone-chrome", markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -269,8 +320,10 @@ public sealed class HomeMarkupTests
         var markup = File.ReadAllText(homePath);
         var languageSection = ExtractSection(markup, "case VisitorIntroStep.Language:", "case VisitorIntroStep.Permissions:");
 
-        Assert.Contains("language-grid", languageSection, StringComparison.Ordinal);
-        Assert.Contains("Chọn ngôn ngữ audio ưu tiên.", languageSection, StringComparison.Ordinal);
+        Assert.Contains("setup-language-list", languageSection, StringComparison.Ordinal);
+        Assert.Contains("setup-language-option", languageSection, StringComparison.Ordinal);
+        Assert.Contains("Chọn ngôn ngữ", languageSection, StringComparison.Ordinal);
+        Assert.Contains("Tiếp tục", languageSection, StringComparison.Ordinal);
         Assert.DoesNotContain("VisitorAuthScreen", languageSection, StringComparison.Ordinal);
     }
 
@@ -289,6 +342,8 @@ public sealed class HomeMarkupTests
 
         Assert.DoesNotContain("guest", permissionsSection, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("đăng nhập", permissionsSection, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Cho phép truy cập vị trí", permissionsSection, StringComparison.Ordinal);
+        Assert.Contains("Bỏ qua — Dùng QR / thủ công", permissionsSection, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -306,7 +361,7 @@ public sealed class HomeMarkupTests
     }
 
     [Fact]
-    public void Mobile_home_settings_include_profile_overview_and_subscreen_navigation()
+    public void Mobile_home_settings_include_overview_and_subscreen_navigation_without_profile_editor()
     {
         var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
         var homePath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Home.razor");
@@ -324,13 +379,14 @@ public sealed class HomeMarkupTests
         Assert.Contains("OnOpenCache", settingsOverviewMarkup, StringComparison.Ordinal);
         Assert.Contains("OnOpenHistory", settingsOverviewMarkup, StringComparison.Ordinal);
         Assert.Contains("OnOpenAbout", settingsOverviewMarkup, StringComparison.Ordinal);
-        Assert.Contains("OnOpenProfile", settingsOverviewMarkup, StringComparison.Ordinal);
+        Assert.DoesNotContain("OnOpenProfile", settingsOverviewMarkup, StringComparison.Ordinal);
         Assert.Contains("VisitorAudioSettingsScreen", markup, StringComparison.Ordinal);
         Assert.Contains("VisitorGpsSettingsScreen", markup, StringComparison.Ordinal);
         Assert.Contains("VisitorCacheManagerScreen", markup, StringComparison.Ordinal);
         Assert.Contains("VisitorListenHistoryScreen", markup, StringComparison.Ordinal);
         Assert.Contains("VisitorAboutScreen", markup, StringComparison.Ordinal);
-        Assert.Contains("VisitorEditProfileScreen", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("VisitorEditProfileScreen", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("VisitorSettingsScreen.Profile", markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -392,16 +448,16 @@ public sealed class HomeMarkupTests
         Assert.Contains("map-screen", mapSection, StringComparison.Ordinal);
         Assert.Contains("map-top-overlay", mapSection, StringComparison.Ordinal);
         Assert.Contains("map-top-controls", mapSection, StringComparison.Ordinal);
+        Assert.Contains("map-top-search", mapSection, StringComparison.Ordinal);
         Assert.Contains("map-category-rail", mapSection, StringComparison.Ordinal);
         Assert.Contains("map-top-overlay--sheet-open", mapSection, StringComparison.Ordinal);
-        Assert.DoesNotContain("map-top-search", mapSection, StringComparison.Ordinal);
         Assert.Contains("map-fab-rail", mapSection, StringComparison.Ordinal);
         Assert.Contains("poi-sheet__grabber", mapSection, StringComparison.Ordinal);
         Assert.Contains("poi-sheet__meta-chips", mapSection, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Mobile_home_map_screen_includes_qr_fab_and_preview_modal()
+    public void Mobile_home_map_screen_removes_in_app_qr_preview_controls()
     {
         var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
         var homePath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Sections", "VisitorMapScreen.razor");
@@ -409,10 +465,10 @@ public sealed class HomeMarkupTests
         var markup = File.ReadAllText(homePath);
         var mapSection = markup;
 
-        Assert.Contains("qr-fab", mapSection, StringComparison.Ordinal);
-        Assert.Contains("qr-modal", mapSection, StringComparison.Ordinal);
-        Assert.Contains("qr-target-btn", mapSection, StringComparison.Ordinal);
-        Assert.Contains("OnTriggerQrPreview", mapSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("qr-fab", mapSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("qr-modal", mapSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("qr-target-btn", mapSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("OnTriggerQrPreview", mapSection, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -454,8 +510,9 @@ public sealed class HomeMarkupTests
         Assert.Contains("VisitorSearchScreen", markup, StringComparison.Ordinal);
         Assert.Contains("OpenSearchOverlay", markup, StringComparison.Ordinal);
         Assert.Contains("CloseSearchOverlay", markup, StringComparison.Ordinal);
-        Assert.DoesNotContain("readonly", mapSection, StringComparison.Ordinal);
-        Assert.DoesNotContain("Tìm điểm tham quan...", mapSection, StringComparison.Ordinal);
+        Assert.Contains("readonly", mapSection, StringComparison.Ordinal);
+        Assert.Contains("OnOpenSearch", mapSection, StringComparison.Ordinal);
+        Assert.Contains("Tìm theo tên, danh mục", mapSection, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -476,12 +533,25 @@ public sealed class HomeMarkupTests
     {
         var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
         var deepLinkPath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Home.DeepLinkNavigation.razor.cs");
+        var shellSurfacesPath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Home.ShellSurfaces.razor.cs");
 
-        var source = File.ReadAllText(deepLinkPath);
+        var deepLinkSource = File.ReadAllText(deepLinkPath);
+        var shellSurfacesSource = File.ReadAllText(shellSurfacesPath);
 
-        Assert.Contains("VisitorTab.Discover", source, StringComparison.Ordinal);
-        Assert.Contains("_discoverPoiDetailId", source, StringComparison.Ordinal);
-        Assert.Contains("_state.PreviewPoi", source, StringComparison.Ordinal);
+        Assert.Contains("OpenDiscoverPoiDetailForQr(_state.SelectedPoi.Id)", deepLinkSource, StringComparison.Ordinal);
+        Assert.Contains("ShowDiscoverPoiDetail(poiId)", deepLinkSource, StringComparison.Ordinal);
+        Assert.Contains("VisitorTab.Discover", shellSurfacesSource, StringComparison.Ordinal);
+        Assert.Contains("_discoverPoiDetailId", shellSurfacesSource, StringComparison.Ordinal);
+        Assert.Contains("_state.PreviewPoi", shellSurfacesSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mobile_home_no_longer_keeps_in_app_qr_preview_partial()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var qrPath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Home.Qr.razor.cs");
+
+        Assert.False(File.Exists(qrPath), $"Expected in-app QR preview partial to be removed, but found '{qrPath}'.");
     }
 
     private static string ExtractSection(string markup, string startMarker, string endMarker)

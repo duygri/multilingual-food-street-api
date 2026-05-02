@@ -9,7 +9,12 @@ public static class VisitorAutoNarrationDecider
         VisitorAudioPlaybackState playbackState)
     {
         var leftAutoNarrationZone = previousProximity is not null && nextProximity is null;
-        if (!leftAutoNarrationZone)
+        var switchedActivePoi =
+            previousProximity is not null
+            && nextProximity is not null
+            && !string.Equals(previousProximity.PoiId, nextProximity.PoiId, StringComparison.OrdinalIgnoreCase);
+
+        if (!leftAutoNarrationZone && !switchedActivePoi)
         {
             return VisitorAutoNarrationDecision.None;
         }

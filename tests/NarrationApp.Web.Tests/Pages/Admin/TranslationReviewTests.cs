@@ -25,6 +25,7 @@ public sealed class TranslationReviewTests : TestContext
             ("TranslationReview.razor.cs", "OnInitializedAsync"),
             ("TranslationReview.Selection.razor.cs", "SelectPoiLanguage"),
             ("TranslationReview.Actions.razor.cs", "SaveTranslationAsync"),
+            ("TranslationReview.BulkActions.razor.cs", "ToggleBulkTranslationPanel"),
             ("TranslationReview.Audio.razor.cs", "RetrySelectedAudioAsync"),
             ("TranslationReview.Presentation.razor.cs", "GetMatrixLabel")
         };
@@ -41,9 +42,10 @@ public sealed class TranslationReviewTests : TestContext
             Assert.Contains(marker, source, StringComparison.Ordinal);
         }
 
-        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "TranslationReview.razor.cs")).Length <= 120);
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "TranslationReview.razor.cs")).Length <= 130);
         Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "TranslationReview.Selection.razor.cs")).Length <= 140);
         Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "TranslationReview.Actions.razor.cs")).Length <= 180);
+        Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "TranslationReview.BulkActions.razor.cs")).Length <= 180);
         Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "TranslationReview.Audio.razor.cs")).Length <= 130);
         Assert.True(File.ReadAllLines(Path.Combine(pageRoot, "TranslationReview.Presentation.razor.cs")).Length <= 180);
     }
@@ -71,29 +73,49 @@ public sealed class TranslationReviewTests : TestContext
             Assert.Contains("Auto-translated", cut.Markup);
             Assert.Contains("Đã biên tập thủ công", cut.Markup);
             Assert.Contains("Quản lý bản dịch", cut.Markup);
-            Assert.Contains("Auto-translate All", cut.Markup);
+            Assert.Contains("Dịch hàng loạt", cut.Markup);
             Assert.Contains("VI VN", cut.Markup);
             Assert.Contains("EN GB", cut.Markup);
             Assert.Contains("JA JP", cut.Markup);
             Assert.DoesNotContain("Published POIs", cut.Markup);
             Assert.DoesNotContain("Translation review", cut.Markup);
             Assert.DoesNotContain("Quick actions", cut.Markup);
+            Assert.DoesNotContain("Auto-translate All", cut.Markup);
             Assert.Equal(4, cut.FindAll(".translation-review__kpi-card").Count);
             Assert.True(cut.FindAll(".translation-review__matrix-badge").Count >= 3);
             Assert.Empty(cut.FindAll(".translation-review__kpi-icon"));
             Assert.Empty(cut.FindAll("[data-panel='translation-review']"));
+            Assert.Empty(cut.FindAll("[data-panel='bulk-translation']"));
             Assert.Contains("data-audio-state=\"3-vi-ready\"", cut.Markup);
             Assert.Contains("data-audio-state=\"3-en-missing\"", cut.Markup);
             Assert.Contains("data-audio-state=\"3-ja-missing\"", cut.Markup);
         });
 
-        cut.Find("button[data-action='auto-translate-all']").Click();
+        cut.Find("button[data-action='toggle-bulk-translation']").Click();
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Contains("Đã tự động bổ sung 2 bản dịch.", cut.Markup);
-            Assert.Contains("data-audio-state=\"3-en-generating\"", cut.Markup);
-            Assert.Contains("data-audio-state=\"3-ja-generating\"", cut.Markup);
+            Assert.Single(cut.FindAll("[data-panel='bulk-translation']"));
+            Assert.Contains("English", cut.Markup);
+            Assert.Contains("Japanese", cut.Markup);
+            Assert.Contains("1 POI thiếu", cut.Markup);
+            Assert.Contains("data-bulk-running=\"idle\"", cut.Markup);
+        });
+
+        cut.Find("button[data-action='auto-translate-en']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Đã tự động bổ sung 1 bản dịch cho ngôn ngữ EN.", cut.Markup);
+            Assert.Contains("data-audio-state=\"3-en-missing\"", cut.Markup);
+        });
+
+        cut.Find("button[data-action='auto-translate-ja']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Đã tự động bổ sung 1 bản dịch cho ngôn ngữ JA.", cut.Markup);
+            Assert.Contains("data-audio-state=\"3-ja-missing\"", cut.Markup);
         });
 
         cut.Find("button[data-action='toggle-review-panel']").Click();
@@ -119,9 +141,48 @@ public sealed class TranslationReviewTests : TestContext
         });
 
         Assert.Equal(2, translationService.AutoRequests.Count);
+        Assert.Equal("en", translationService.AutoRequests[0]);
+        Assert.Equal("ja", translationService.AutoRequests[1]);
         Assert.Single(translationService.SaveRequests);
         Assert.Single(translationService.DeleteRequests);
         Assert.Equal("en", translationService.SaveRequests[0].LanguageCode);
+    }
+
+    [Fact]
+    public void Bulk_translate_panel_shows_running_state_while_language_is_processing()
+    {
+        var adminService = new TestAdminPortalService();
+        var translationService = new SlowTranslationPortalService();
+        var languageService = new TestLanguagePortalService();
+        var audioService = new TestAudioPortalService();
+
+        Services.AddSingleton<IAdminPortalService>(adminService);
+        Services.AddSingleton<ITranslationPortalService>(translationService);
+        Services.AddSingleton<ILanguagePortalService>(languageService);
+        Services.AddSingleton<IAudioPortalService>(audioService);
+
+        var cut = RenderComponent<TranslationReview>();
+
+        cut.WaitForAssertion(() => Assert.Contains("Dịch hàng loạt", cut.Markup));
+
+        cut.Find("button[data-action='toggle-bulk-translation']").Click();
+        cut.Find("button[data-action='auto-translate-en']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("data-bulk-running=\"en\"", cut.Markup);
+            Assert.Contains("Đang dịch EN", cut.Markup);
+            Assert.Contains("Đang chạy", cut.Markup);
+            Assert.True(cut.Find("button[data-action='auto-translate-en']").HasAttribute("disabled"));
+        });
+
+        cut.InvokeAsync(translationService.CompleteAutoTranslate);
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("data-bulk-running=\"idle\"", cut.Markup);
+            Assert.Contains("Đã tự động bổ sung 1 bản dịch cho ngôn ngữ EN.", cut.Markup);
+        });
     }
 
     [Fact]
@@ -521,6 +582,34 @@ public sealed class TranslationReviewTests : TestContext
         {
             DeleteRequests.Add(translationId);
             _translations.RemoveAll(item => item.Id == translationId);
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class SlowTranslationPortalService : ITranslationPortalService
+    {
+        private readonly TestTranslationPortalService _inner = new();
+        private TaskCompletionSource _autoTranslateGate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task<IReadOnlyList<TranslationDto>> GetByPoiAsync(int poiId, CancellationToken cancellationToken = default) =>
+            _inner.GetByPoiAsync(poiId, cancellationToken);
+
+        public Task<TranslationDto> SaveAsync(CreateTranslationRequest request, CancellationToken cancellationToken = default) =>
+            _inner.SaveAsync(request, cancellationToken);
+
+        public async Task<TranslationDto> AutoTranslateAsync(int poiId, string targetLanguage, CancellationToken cancellationToken = default)
+        {
+            await _autoTranslateGate.Task.WaitAsync(cancellationToken);
+            return await _inner.AutoTranslateAsync(poiId, targetLanguage, cancellationToken);
+        }
+
+        public Task DeleteAsync(int translationId, CancellationToken cancellationToken = default) =>
+            _inner.DeleteAsync(translationId, cancellationToken);
+
+        public Task CompleteAutoTranslate()
+        {
+            _autoTranslateGate.TrySetResult();
+            _autoTranslateGate = new(TaskCreationOptions.RunContinuationsAsynchronously);
             return Task.CompletedTask;
         }
     }

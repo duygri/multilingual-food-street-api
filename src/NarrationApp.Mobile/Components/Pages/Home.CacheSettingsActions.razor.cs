@@ -4,13 +4,11 @@ public partial class Home
 {
     private Task DeleteCachedAudioItemAsync(string itemId)
     {
-        _state.RemoveCachedAudioItem(itemId);
-        return Task.CompletedTask;
+        return ApplySettingsStateChangeAsync(() => _state.RemoveCachedAudioItem(itemId));
     }
 
     private Task ClearCachedAudioItemsAsync()
     {
-        _state.ClearCachedAudioItems();
-        return Task.CompletedTask;
+        return ApplySettingsStateChangeAsync(_state.ClearCachedAudioItems);
     }
 }

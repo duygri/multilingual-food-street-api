@@ -78,14 +78,64 @@ else
                         Kiểm định bản dịch
                     </button>
                     <button class="app-button app-button--primary"
-                            data-action="auto-translate-all"
+                            data-action="toggle-bulk-translation"
                             type="button"
-                            @onclick="AutoTranslateAllAsync"
-                            disabled="@(_pois.Count == 0 || _languages.Count <= 1)">
-                        Auto-translate All
+                            @onclick="ToggleBulkTranslationPanel"
+                            disabled="@(_pois.Count == 0 || BulkTranslationLanguages.Count == 0)">
+                        Dịch hàng loạt
                     </button>
                 </div>
             </div>
+
+            @if (_isBulkTranslationPanelOpen)
+            {
+                <div class="translation-review__bulk-panel"
+                     data-panel="bulk-translation"
+                     data-bulk-running="@(IsBulkTranslationRunning ? _bulkTranslationLanguageInProgress : "idle")">
+                    <div class="translation-review__bulk-header">
+                        <div>
+                            <span class="translation-review__bulk-eyebrow">Dịch theo ngôn ngữ</span>
+                            <strong>Dịch hàng loạt bản còn thiếu</strong>
+                        </div>
+                        <input class="translation-review__bulk-search"
+                               aria-label="Tìm ngôn ngữ cần dịch"
+                               placeholder="Tìm ngôn ngữ..."
+                               @bind="_bulkLanguageSearch"
+                               @bind:event="oninput" />
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(_bulkTranslationStatusMessage))
+                    {
+                        <div class="translation-review__bulk-status @(IsBulkTranslationRunning ? "is-running" : string.Empty)">
+                            <span class="translation-review__bulk-spinner" aria-hidden="true"></span>
+                            <span>@_bulkTranslationStatusMessage</span>
+                        </div>
+                    }
+
+                    <div class="translation-review__bulk-list">
+                        @foreach (var language in FilteredBulkTranslationLanguages)
+                        {
+                            var missingCount = GetMissingTranslationCount(language.Code);
+                            var isRunning = string.Equals(_bulkTranslationLanguageInProgress, language.Code, StringComparison.OrdinalIgnoreCase);
+
+                            <article class="translation-review__bulk-item">
+                                <span class="translation-review__bulk-code">@language.Code.ToUpperInvariant()</span>
+                                <span class="translation-review__bulk-copy">
+                                    <strong>@language.DisplayName</strong>
+                                    <span>@GetBulkLanguageSubtitle(language, missingCount)</span>
+                                </span>
+                                <button class="app-button app-button--ghost translation-review__bulk-action"
+                                        data-action="@($"auto-translate-{language.Code}")"
+                                        type="button"
+                                        @onclick="() => AutoTranslateLanguageAsync(language.Code)"
+                                        disabled="@(IsBulkTranslationRunning || missingCount == 0)">
+                                    @(isRunning ? "Đang chạy" : missingCount == 0 ? "Đủ" : "Dịch")
+                                </button>
+                            </article>
+                        }
+                    </div>
+                </div>
+            }
 
             <div class="translation-review__matrix-wrap">
                 <table class="translation-review__matrix">

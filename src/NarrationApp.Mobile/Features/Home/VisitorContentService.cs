@@ -1,4 +1,6 @@
 using System.Net.Http.Json;
+using NarrationApp.Shared.DTOs.Audio;
+using NarrationApp.Shared.DTOs.Category;
 using NarrationApp.Shared.DTOs.Common;
 using NarrationApp.Shared.DTOs.Poi;
 using NarrationApp.Shared.DTOs.Tour;
@@ -23,30 +25,40 @@ public sealed class VisitorContentService(HttpClient httpClient, IVisitorLocatio
             var poisEndpoint = BuildPoisEndpoint(request, location);
             var poisTask = httpClient.GetFromJsonAsync<ApiResponse<IReadOnlyList<PoiDto>>>(poisEndpoint, cancellationToken);
             var toursTask = httpClient.GetFromJsonAsync<ApiResponse<IReadOnlyList<TourDto>>>("api/tours", cancellationToken);
+            var categoriesTask = httpClient.GetFromJsonAsync<ApiResponse<IReadOnlyList<CategoryDto>>>("api/categories", cancellationToken);
 
-            await Task.WhenAll(poisTask, toursTask);
+            await Task.WhenAll(poisTask, toursTask, categoriesTask);
 
             var poisResponse = await poisTask;
             var toursResponse = await toursTask;
+            var categoriesResponse = await categoriesTask;
 
-            var pois = poisResponse?.Data ?? [];
+            var pois = await ResolvePoisAsync(request, location, poisEndpoint, poisResponse, cancellationToken);
             var tours = toursResponse?.Data ?? [];
+            var categories = categoriesResponse?.Data ?? [];
+            var readyAudioLanguageCodesByPoiId = await LoadReadyAudioLanguageCodesByPoiAsync(pois, cancellationToken);
 
-            var snapshot = VisitorContentMapper.Map(pois, tours);
+            var snapshot = VisitorContentMapper.Map(
+                pois,
+                tours,
+                categories,
+                location,
+                httpClient.BaseAddress,
+                readyAudioLanguageCodesByPoiId);
             return new VisitorContentResult(
                 snapshot,
                 IsFallback: false,
                 SourceLabel: "Live API",
-                Message: BuildSuccessMessage(snapshot, location),
+                Message: BuildSuccessMessage(snapshot, location, usedNearbyFallback: ShouldUseNearbyFallback(request, location, poisEndpoint, poisResponse)),
                 Location: location);
         }
         catch (Exception ex)
         {
             return new VisitorContentResult(
-                VisitorContentSnapshot.CreateDemo(),
+                new VisitorContentSnapshot([], []),
                 IsFallback: true,
-                SourceLabel: "Demo fallback",
-                Message: $"Không chạm được API thật, tạm dùng dữ liệu demo. {ex.Message}",
+                SourceLabel: "API unavailable",
+                Message: $"Không chạm được API thật. {ex.Message}",
                 Location: location);
         }
     }
@@ -84,8 +96,49 @@ public sealed class VisitorContentService(HttpClient httpClient, IVisitorLocatio
         return $"api/pois/near?lat={lat}&lng={lng}&radiusMeters={request.RadiusMeters}";
     }
 
-    private static string BuildSuccessMessage(VisitorContentSnapshot snapshot, VisitorLocationSnapshot location)
+    private async Task<IReadOnlyList<PoiDto>> ResolvePoisAsync(
+        VisitorContentLoadRequest request,
+        VisitorLocationSnapshot location,
+        string poisEndpoint,
+        ApiResponse<IReadOnlyList<PoiDto>>? poisResponse,
+        CancellationToken cancellationToken)
     {
+        var pois = poisResponse?.Data ?? [];
+        if (!ShouldUseNearbyFallback(request, location, poisEndpoint, poisResponse))
+        {
+            return pois;
+        }
+
+        var fallbackResponse = await httpClient.GetFromJsonAsync<ApiResponse<IReadOnlyList<PoiDto>>>("api/pois", cancellationToken);
+        return fallbackResponse?.Data ?? [];
+    }
+
+    private static bool ShouldUseNearbyFallback(
+        VisitorContentLoadRequest request,
+        VisitorLocationSnapshot location,
+        string poisEndpoint,
+        ApiResponse<IReadOnlyList<PoiDto>>? poisResponse)
+    {
+        return request.PreferNearbyPois
+            && location.PermissionGranted
+            && location.IsLocationAvailable
+            && location.Latitude is not null
+            && location.Longitude is not null
+            && string.Equals(poisEndpoint, BuildPoisEndpoint(request, location), StringComparison.Ordinal)
+            && poisEndpoint.StartsWith("api/pois/near", StringComparison.OrdinalIgnoreCase)
+            && (poisResponse?.Data?.Count ?? 0) == 0;
+    }
+
+    private static string BuildSuccessMessage(
+        VisitorContentSnapshot snapshot,
+        VisitorLocationSnapshot location,
+        bool usedNearbyFallback)
+    {
+        if (usedNearbyFallback)
+        {
+            return $"Không có POI gần vị trí hiện tại. Đang hiển thị toàn bộ {snapshot.Pois.Count} POI từ máy chủ.";
+        }
+
         if (location.PermissionGranted && location.IsLocationAvailable)
         {
             return $"Đã tải {snapshot.Pois.Count} POI gần bạn và {snapshot.Tours.Count} tour từ máy chủ.";
@@ -93,23 +146,118 @@ public sealed class VisitorContentService(HttpClient httpClient, IVisitorLocatio
 
         return $"Đã tải {snapshot.Pois.Count} POI và {snapshot.Tours.Count} tour từ máy chủ.";
     }
+
+    private async Task<IReadOnlyDictionary<int, IReadOnlyList<string>>> LoadReadyAudioLanguageCodesByPoiAsync(
+        IReadOnlyList<PoiDto> pois,
+        CancellationToken cancellationToken)
+    {
+        var publishedPoiIds = pois
+            .Where(poi => poi.Status == PoiStatus.Published || poi.Status == PoiStatus.Updated)
+            .Select(poi => poi.Id)
+            .Distinct()
+            .ToArray();
+
+        if (publishedPoiIds.Length == 0)
+        {
+            return new Dictionary<int, IReadOnlyList<string>>();
+        }
+
+        var tasksByPoiId = publishedPoiIds.ToDictionary(
+            poiId => poiId,
+            poiId => LoadReadyAudioLanguageCodesAsync(poiId, cancellationToken));
+
+        await Task.WhenAll(tasksByPoiId.Values);
+
+        return tasksByPoiId.ToDictionary(
+            pair => pair.Key,
+            pair => pair.Value.Result);
+    }
+
+    private async Task<IReadOnlyList<string>> LoadReadyAudioLanguageCodesAsync(int poiId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var response = await httpClient.GetFromJsonAsync<ApiResponse<IReadOnlyList<AudioDto>>>(
+                $"api/audio?poiId={poiId}",
+                cancellationToken);
+
+            return (response?.Data ?? [])
+                .Where(asset => asset.Status == AudioStatus.Ready)
+                .Select(asset => asset.LanguageCode?.Trim())
+                .Where(languageCode => !string.IsNullOrWhiteSpace(languageCode))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(languageCode => languageCode, StringComparer.OrdinalIgnoreCase)
+                .Cast<string>()
+                .ToArray();
+        }
+        catch
+        {
+            return [];
+        }
+    }
 }
 
 public static class VisitorContentMapper
 {
-    public static VisitorContentSnapshot Map(IReadOnlyList<PoiDto> pois, IReadOnlyList<TourDto> tours)
+    public static VisitorContentSnapshot Map(
+        IReadOnlyList<PoiDto> pois,
+        IReadOnlyList<TourDto> tours,
+        IReadOnlyList<CategoryDto> categories,
+        VisitorLocationSnapshot? location = null,
+        Uri? assetBaseAddress = null,
+        IReadOnlyDictionary<int, IReadOnlyList<string>>? readyAudioLanguageCodesByPoiId = null)
     {
-        var mappedPois = MapPois(pois);
+        var mappedCategories = MapCategories(categories, pois);
+        var mappedPois = MapPois(pois, categories, location, assetBaseAddress, readyAudioLanguageCodesByPoiId);
         var mappedTours = tours
             .Where(tour => tour.Status == TourStatus.Published)
             .Select(MapTour)
             .ToList();
 
-        return new VisitorContentSnapshot(mappedPois, mappedTours);
+        return new VisitorContentSnapshot(mappedPois, mappedTours, mappedCategories);
     }
 
-    private static IReadOnlyList<VisitorPoi> MapPois(IReadOnlyList<PoiDto> pois)
+    private static IReadOnlyList<VisitorCategory> MapCategories(IReadOnlyList<CategoryDto> categories, IReadOnlyList<PoiDto> pois)
     {
+        if (categories.Count > 0)
+        {
+            return categories
+                .OrderBy(category => category.DisplayOrder)
+                .ThenBy(category => category.Name, StringComparer.CurrentCultureIgnoreCase)
+                .Select(category => new VisitorCategory(
+                    category.Slug,
+                    category.Name,
+                    ResolveCategoryIcon(category),
+                    VisitorCategoryPresentationFormatter.GetCategoryTone(category.Slug, [], category.Name)))
+                .ToList();
+        }
+
+        return pois
+            .Where(poi => !string.IsNullOrWhiteSpace(poi.CategoryName))
+            .GroupBy(poi => ResolveFallbackCategoryId(poi), StringComparer.OrdinalIgnoreCase)
+            .Select(group =>
+            {
+                var firstPoi = group.First();
+                return VisitorCategoryPresentationFormatter.CreateCategory(
+                    group.Key,
+                    firstPoi.CategoryName ?? firstPoi.Name);
+            })
+            .OrderBy(category => category.Label, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+    }
+
+    private static IReadOnlyList<VisitorPoi> MapPois(
+        IReadOnlyList<PoiDto> pois,
+        IReadOnlyList<CategoryDto> categories,
+        VisitorLocationSnapshot? location,
+        Uri? assetBaseAddress,
+        IReadOnlyDictionary<int, IReadOnlyList<string>>? readyAudioLanguageCodesByPoiId)
+    {
+        var categoriesById = categories
+            .GroupBy(category => category.Id)
+            .Select(group => group.First())
+            .ToDictionary(category => category.Id, category => category);
+
         var publishedPois = pois
             .Where(poi => poi.Status == PoiStatus.Published || poi.Status == PoiStatus.Updated)
             .OrderByDescending(poi => poi.Priority)
@@ -126,7 +274,7 @@ public static class VisitorContentMapper
         var minLng = publishedPois.Min(poi => poi.Lng);
         var maxLng = publishedPois.Max(poi => poi.Lng);
 
-        return publishedPois
+        var mappedPois = publishedPois
             .Select((poi, index) =>
             {
                 var translationCount = poi.Translations
@@ -134,14 +282,15 @@ public static class VisitorContentMapper
                     .Where(languageCode => !string.IsNullOrWhiteSpace(languageCode))
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .Count();
+                var readyAudioLanguageCodes = ResolveReadyAudioLanguageCodes(poi.Id, readyAudioLanguageCodesByPoiId);
                 var geofenceRadiusMeters = Math.Max(30, poi.Geofences.FirstOrDefault()?.RadiusMeters ?? 30);
                 var nearbyDistanceMeters = Math.Max(geofenceRadiusMeters + 75, 120 + index * 30);
 
                 return new VisitorPoi(
                     Id: $"poi-{poi.Id}",
                     Name: poi.Name,
-                    CategoryId: ToCategoryId(poi),
-                    CategoryLabel: BuildCategoryLabel(poi),
+                    CategoryId: ResolveCategoryId(poi, categoriesById),
+                    CategoryLabel: BuildCategoryLabel(poi, categoriesById),
                     District: BuildAreaLabel(poi),
                     StoryTag: BuildStoryTag(poi),
                     Description: poi.Description,
@@ -155,10 +304,53 @@ public static class VisitorContentMapper
                     Latitude: poi.Lat,
                     Longitude: poi.Lng,
                     Priority: Math.Max(1, poi.Priority),
-                    AvailableLanguageCount: Math.Max(1, translationCount + 1),
-                    GeofenceRadiusMeters: geofenceRadiusMeters);
+                    AvailableLanguageCount: readyAudioLanguageCodes.Count > 0
+                        ? readyAudioLanguageCodes.Count
+                        : Math.Max(1, translationCount + 1),
+                    GeofenceRadiusMeters: geofenceRadiusMeters,
+                    ImageUrl: ResolveImageUrl(poi.ImageUrl, assetBaseAddress),
+                    ReadyAudioLanguageCodesRaw: readyAudioLanguageCodes);
             })
             .ToList();
+
+        return VisitorPoiDistanceProjector.Apply(mappedPois, location);
+    }
+
+    private static string? ResolveImageUrl(string? imageUrl, Uri? assetBaseAddress)
+    {
+        if (string.IsNullOrWhiteSpace(imageUrl))
+        {
+            return null;
+        }
+
+        if (Uri.TryCreate(imageUrl, UriKind.Absolute, out var absoluteUri))
+        {
+            return absoluteUri.ToString();
+        }
+
+        if (assetBaseAddress is not null && Uri.TryCreate(assetBaseAddress, imageUrl, out var combinedUri))
+        {
+            return combinedUri.ToString();
+        }
+
+        return imageUrl;
+    }
+
+    private static IReadOnlyList<string> ResolveReadyAudioLanguageCodes(
+        int poiId,
+        IReadOnlyDictionary<int, IReadOnlyList<string>>? readyAudioLanguageCodesByPoiId)
+    {
+        if (readyAudioLanguageCodesByPoiId is null
+            || !readyAudioLanguageCodesByPoiId.TryGetValue(poiId, out var readyAudioLanguageCodes))
+        {
+            return [];
+        }
+
+        return readyAudioLanguageCodes
+            .Where(languageCode => !string.IsNullOrWhiteSpace(languageCode))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(languageCode => languageCode, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     private static VisitorTourCard MapTour(TourDto tour)
@@ -199,14 +391,19 @@ public static class VisitorContentMapper
         };
     }
 
-    private static string BuildCategoryLabel(PoiDto poi)
+    private static string BuildCategoryLabel(PoiDto poi, IReadOnlyDictionary<int, CategoryDto> categoriesById)
     {
+        if (poi.CategoryId is int categoryId && categoriesById.TryGetValue(categoryId, out var category))
+        {
+            return category.Name;
+        }
+
         if (!string.IsNullOrWhiteSpace(poi.CategoryName))
         {
             return poi.CategoryName.Trim();
         }
 
-        return ToCategoryId(poi) switch
+        return ResolveFallbackCategoryId(poi) switch
         {
             "food" => "Ẩm thực",
             "night" => "Đêm",
@@ -237,7 +434,17 @@ public static class VisitorContentMapper
         return poi.Lat < 10.7670 ? "Q4, Khánh Hội" : "Q1, Sài Gòn";
     }
 
-    private static string ToCategoryId(PoiDto poi)
+    private static string ResolveCategoryId(PoiDto poi, IReadOnlyDictionary<int, CategoryDto> categoriesById)
+    {
+        if (poi.CategoryId is int categoryId && categoriesById.TryGetValue(categoryId, out var category))
+        {
+            return category.Slug;
+        }
+
+        return ResolveFallbackCategoryId(poi);
+    }
+
+    private static string ResolveFallbackCategoryId(PoiDto poi)
     {
         var normalized = $"{poi.CategoryName} {poi.Name} {poi.Slug}".Trim().ToLowerInvariant();
         if (string.IsNullOrWhiteSpace(normalized))
@@ -253,6 +460,20 @@ public static class VisitorContentMapper
             var value when value.Contains("di tích") || value.Contains("lịch sử") || value.Contains("tín ngưỡng") || value.Contains("chùa") || value.Contains("nhà thờ") || value.Contains("heritage") => "history",
             _ => "history"
         };
+    }
+
+    private static string ResolveCategoryIcon(CategoryDto category)
+    {
+        var icon = category.Icon?.Trim() ?? string.Empty;
+        if (!string.IsNullOrWhiteSpace(icon) && icon.Length <= 3)
+        {
+            return icon;
+        }
+
+        return VisitorCategoryPresentationFormatter.GetCategoryIcon(
+            category.Slug,
+            [],
+            $"{category.Name} {icon}".Trim());
     }
 
     private static double Normalize(double value, double min, double max, double outputMin, double outputMax, int index)

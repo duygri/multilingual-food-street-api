@@ -1,10 +1,16 @@
 <Project>
   <PropertyGroup>
-    <ArtifactsVersionSuffix>v3</ArtifactsVersionSuffix>
+    <ArtifactsVersionSuffix>v4</ArtifactsVersionSuffix>
     <ArtifactsSdkVersion>$([System.IO.Path]::GetFileName('$(MSBuildToolsPath)'))</ArtifactsSdkVersion>
     <ArtifactsSdkVersion Condition="'$(ArtifactsSdkVersion)' == ''">unknown-sdk</ArtifactsSdkVersion>
     <ArtifactsSdkSegment>sdk-$(ArtifactsSdkVersion)\</ArtifactsSdkSegment>
     <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory).artifacts\obj-$(ArtifactsVersionSuffix)\$(ArtifactsSdkSegment)$(MSBuildProjectName)\</BaseIntermediateOutputPath>
     <BaseOutputPath>$(MSBuildThisFileDirectory).artifacts\bin-$(ArtifactsVersionSuffix)\$(MSBuildProjectName)\</BaseOutputPath>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'NarrationApp.Server' and '$(BuildingInsideVisualStudio)' == 'true'">
+    <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory).artifacts\obj-$(ArtifactsVersionSuffix)-vs\$(ArtifactsSdkSegment)$(MSBuildProjectName)\</BaseIntermediateOutputPath>
+    <MSBuildProjectExtensionsPath>$(BaseIntermediateOutputPath)</MSBuildProjectExtensionsPath>
+    <BaseOutputPath>$(MSBuildThisFileDirectory).artifacts\bin-$(ArtifactsVersionSuffix)-vs\$(MSBuildProjectName)\</BaseOutputPath>
   </PropertyGroup>
 </Project>

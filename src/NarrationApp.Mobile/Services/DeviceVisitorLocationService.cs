@@ -22,8 +22,25 @@ public sealed class DeviceVisitorLocationService : IVisitorLocationService
         try
         {
             var request = new GeolocationRequest(GeolocationAccuracy.Medium, TimeSpan.FromSeconds(10));
-            var location = await Geolocation.Default.GetLocationAsync(request, cancellationToken)
-                ?? await Geolocation.Default.GetLastKnownLocationAsync();
+            var location = await Geolocation.Default.GetLocationAsync(request, cancellationToken);
+            if (location is not null)
+            {
+                return new VisitorLocationSnapshot(
+                    PermissionGranted: true,
+                    IsLocationAvailable: true,
+                    Latitude: location.Latitude,
+                    Longitude: location.Longitude,
+                    StatusLabel: VisitorLocationStatusFormatter.Build(new VisitorLocationSnapshot(
+                        PermissionGranted: true,
+                        IsLocationAvailable: true,
+                        Latitude: location.Latitude,
+                        Longitude: location.Longitude,
+                        StatusLabel: string.Empty,
+                        Source: VisitorLocationSource.Live)),
+                    Source: VisitorLocationSource.Live);
+            }
+
+            location = await Geolocation.Default.GetLastKnownLocationAsync();
 
             if (location is null)
             {
@@ -32,7 +49,8 @@ public sealed class DeviceVisitorLocationService : IVisitorLocationService
                     IsLocationAvailable: false,
                     Latitude: null,
                     Longitude: null,
-                    StatusLabel: "Đã bật quyền, chưa lấy được tọa độ");
+                    StatusLabel: "Đã bật quyền, chưa lấy được tọa độ",
+                    Source: VisitorLocationSource.Unavailable);
             }
 
             return new VisitorLocationSnapshot(
@@ -40,7 +58,14 @@ public sealed class DeviceVisitorLocationService : IVisitorLocationService
                 IsLocationAvailable: true,
                 Latitude: location.Latitude,
                 Longitude: location.Longitude,
-                StatusLabel: $"Đã định vị {location.Latitude:F4}, {location.Longitude:F4}");
+                StatusLabel: VisitorLocationStatusFormatter.Build(new VisitorLocationSnapshot(
+                    PermissionGranted: true,
+                    IsLocationAvailable: true,
+                    Latitude: location.Latitude,
+                    Longitude: location.Longitude,
+                    StatusLabel: string.Empty,
+                    Source: VisitorLocationSource.LastKnown)),
+                Source: VisitorLocationSource.LastKnown);
         }
         catch (FeatureNotEnabledException)
         {
@@ -49,15 +74,28 @@ public sealed class DeviceVisitorLocationService : IVisitorLocationService
                 IsLocationAvailable: false,
                 Latitude: null,
                 Longitude: null,
-                StatusLabel: "GPS đang tắt trên thiết bị");
+                StatusLabel: "GPS đang tắt trên thiết bị",
+                Source: VisitorLocationSource.DeviceGpsOff);
         }
         catch (FeatureNotSupportedException)
         {
-            return VisitorLocationSnapshot.Disabled("Thiết bị không hỗ trợ định vị");
+            return new VisitorLocationSnapshot(
+                PermissionGranted: false,
+                IsLocationAvailable: false,
+                Latitude: null,
+                Longitude: null,
+                StatusLabel: "Thiết bị không hỗ trợ định vị",
+                Source: VisitorLocationSource.Unsupported);
         }
         catch (PermissionException)
         {
-            return VisitorLocationSnapshot.Disabled("Không truy cập được vị trí");
+            return new VisitorLocationSnapshot(
+                PermissionGranted: false,
+                IsLocationAvailable: false,
+                Latitude: null,
+                Longitude: null,
+                StatusLabel: "Không truy cập được vị trí",
+                Source: VisitorLocationSource.Error);
         }
     }
 }

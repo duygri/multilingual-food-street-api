@@ -6,25 +6,18 @@ public partial class Home
 {
     private void SelectDiscoverCategory(string categoryId)
     {
-        _discoverPoiDetailId = null;
+        CloseDiscoverPoiDetailSelection();
         _state.SelectCategory(categoryId);
     }
 
     private async Task OpenPoiDetailAsync(string poiId)
     {
-        _isQrModalOpen = false;
-        _isSearchOverlayOpen = false;
-        _isFullPlayerOpen = false;
-        _state.PreviewPoi(poiId);
-        _discoverPoiDetailId = poiId;
-        _tourDetailId = null;
-        _isAutoPlayingFromProximity = false;
-        await PrepareSelectedPoiAudioAsync();
+        await OpenDiscoverPoiDetailCoreAsync(poiId);
     }
 
     private void ClosePoiDetail()
     {
-        _discoverPoiDetailId = null;
+        CloseDiscoverPoiDetailSelection();
     }
 
     private async Task OpenSelectedPoiOnMapAsync()
@@ -34,8 +27,8 @@ public partial class Home
             return;
         }
 
-        _isFullPlayerOpen = false;
-        _discoverPoiDetailId = null;
+        CloseFullPlayerSurface();
+        CloseDiscoverPoiDetailSelection();
         _state.OpenPoi(_state.SelectedPoi.Id);
         _isAutoPlayingFromProximity = false;
         await PrepareSelectedPoiAudioAsync();

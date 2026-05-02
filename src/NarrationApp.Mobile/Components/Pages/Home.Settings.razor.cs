@@ -1,8 +1,3 @@
-using System.Globalization;
-using System.Text;
-using Microsoft.AspNetCore.Components;
-using Microsoft.JSInterop;
-using NarrationApp.Mobile.Components.Pages.Sections;
 using NarrationApp.Mobile.Features.Home;
 
 namespace NarrationApp.Mobile.Components.Pages;
@@ -11,16 +6,13 @@ public partial class Home
 {
     private void OpenSettingsScreen(VisitorSettingsScreen screen)
     {
-        SyncProfileDraftFromSession();
-        _profileStatusMessage = null;
-        _profileErrorMessage = null;
+        ClearSettingsFeedback();
         _state.OpenSettingsScreen(screen);
     }
 
     private Task CloseSettingsScreen()
     {
-        _profileStatusMessage = null;
-        _profileErrorMessage = null;
+        ClearSettingsFeedback();
         _state.CloseSettingsScreen();
         return Task.CompletedTask;
     }
@@ -36,14 +28,14 @@ public partial class Home
     {
         if (_state.LocationPermissionGranted)
         {
-            await LoadContentAsync();
+            await TryLoadContentBestEffortAsync();
         }
         else
         {
-            await LoadContentAsync(requestLocationPermission: true, preferNearbyPois: true);
+            await TryLoadContentBestEffortAsync(requestLocationPermission: true, preferNearbyPois: true);
         }
 
-        _state.CompletePermissions(_state.LocationPermissionGranted);
+        await CompletePermissionFlowAsync(_state.LocationPermissionGranted);
         _state.SwitchTab(VisitorTab.Settings);
     }
 

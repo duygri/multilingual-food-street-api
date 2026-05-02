@@ -79,6 +79,12 @@
         <Error Text="VisitorApiConfigFile '$(VisitorApiConfigFile)' was not found." />
     </Target>
 
+    <Target Name="RequireRealVisitorApiConfigForSignedBuilds"
+            BeforeTargets="PrepareForBuild"
+            Condition="('$(Configuration)' == 'Staging' Or '$(Configuration)' == 'Release') and '$(VisitorApiConfigFile)' == ''">
+        <Error Text="Configuration '$(Configuration)' requires VisitorApiConfigFile so the packaged APK/AAB targets a real backend instead of the sample Resources\Raw\visitor-api.json endpoints." />
+    </Target>
+
     <ItemGroup>
         <!-- App Icon -->
         <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#1ED6AF" />

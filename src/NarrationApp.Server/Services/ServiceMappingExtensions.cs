@@ -110,7 +110,8 @@ internal static class ServiceMappingExtensions
             TargetType = qrCode.TargetType,
             TargetId = qrCode.TargetId,
             LocationHint = qrCode.LocationHint,
-            ExpiresAtUtc = qrCode.ExpiresAt
+            ExpiresAtUtc = qrCode.ExpiresAt,
+            ScanCount = null
         };
     }
 

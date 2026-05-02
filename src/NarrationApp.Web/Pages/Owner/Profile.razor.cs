@@ -13,13 +13,16 @@ public partial class Profile
     private OwnerProfileDto? _profile;
     private OwnerProfileEditModel? _editor;
     private PasswordEditModel _passwordEditor = new();
-
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            _profile = await OwnerProfileService.GetProfileAsync();
+            var profileTask = OwnerProfileService.GetProfileAsync();
+            var languagesTask = LanguagePortalService.GetAsync();
+            await Task.WhenAll(profileTask, languagesTask);
+            _profile = profileTask.Result;
             _editor = OwnerProfileEditModel.FromProfile(_profile);
+            PreferredLanguageOptions = BuildPreferredLanguageOptions(languagesTask.Result, _profile.PreferredLanguage);
         }
         catch (ApiException exception)
         {

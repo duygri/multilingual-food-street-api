@@ -173,30 +173,6 @@
     font-size: 0.74rem;
 }
 
-.portal-shell__sidebar-foot {
-    margin-top: auto;
-    padding: 1rem 1.35rem 0;
-    border-top: 1px solid rgba(40, 64, 94, 0.7);
-}
-
-.portal-shell__sidebar-foot span,
-.portal-shell__sidebar-foot strong {
-    display: block;
-}
-
-.portal-shell__sidebar-foot span {
-    color: var(--vk-muted);
-    font-size: 0.72rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-}
-
-.portal-shell__sidebar-foot strong {
-    margin-top: 0.35rem;
-    color: #9ef3d4;
-    font-size: 0.95rem;
-}
-
 .portal-shell__main {
     min-width: 0;
     display: flex;

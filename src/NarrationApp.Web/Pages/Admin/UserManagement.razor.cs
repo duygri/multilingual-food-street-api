@@ -12,7 +12,7 @@ public partial class UserManagement : IAsyncDisposable
     private CancellationTokenSource? _refreshCts;
     private Task _refreshLoop = Task.CompletedTask;
     private IReadOnlyList<VisitorDeviceSummaryDto> Visitors => _visitors;
-    private int TotalVisitorCount => Visitors.Count;
+    private IReadOnlyList<VisitorDeviceSummaryDto> OnlineVisitors => Visitors.Where(item => item.IsOnline).ToArray();
     private int ActiveVisitorCount => Visitors.Count(item => item.IsOnline);
 
     protected override async Task OnInitializedAsync()

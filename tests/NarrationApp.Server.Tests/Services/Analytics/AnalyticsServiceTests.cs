@@ -74,6 +74,8 @@ public sealed class AnalyticsServiceTests
     {
         await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
         var poi = await dbContext.Pois.FirstAsync();
+        var startOfCurrentMonthUtc = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var previousMonthUtc = startOfCurrentMonthUtc.AddDays(-1);
         dbContext.VisitEvents.AddRange(
             new VisitEvent
             {
@@ -83,6 +85,15 @@ public sealed class AnalyticsServiceTests
                 Source = "geofence",
                 ListenDurationSeconds = 0,
                 CreatedAt = DateTime.UtcNow
+            },
+            new VisitEvent
+            {
+                DeviceId = "device-snapshot-1b",
+                PoiId = poi.Id,
+                EventType = EventType.GeofenceEnter,
+                Source = "geofence",
+                ListenDurationSeconds = 0,
+                CreatedAt = previousMonthUtc
             },
             new VisitEvent
             {
@@ -116,7 +127,8 @@ public sealed class AnalyticsServiceTests
         var sut = new AnalyticsService(dbContext);
         var result = await sut.GetAnalyticsSnapshotAsync();
 
-        Assert.Equal(1, result.GeofenceTriggers);
+        Assert.Equal(2, result.GeofenceTriggers);
+        Assert.Equal(1, result.CurrentMonthGeofenceTriggers);
         Assert.Equal(2, result.AudioPlays);
         Assert.Equal(1, result.QrScans);
         Assert.Equal(150d, result.AverageListenDurationSeconds);

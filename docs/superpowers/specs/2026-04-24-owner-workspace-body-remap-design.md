@@ -288,9 +288,21 @@ The page needs real data for:
 - list of published POIs with category, listen count, and trend spark bars
 - recent activity feed tied to owner/admin actions
 
-### Recommended contract
+### Execution sequence
 
-Add:
+Dashboard load nên được mô tả theo call-chain thật:
+
+1. `Dashboard.razor.cs.OnInitializedAsync()`
+2. `IOwnerPortalService.GetDashboardWorkspaceAsync()`
+3. `OwnerPortalService.GetDashboardWorkspaceAsync()`
+4. `ApiClient.GetAsync<OwnerDashboardWorkspaceDto>("api/owner/dashboard/workspace")`
+5. `OwnerController.GetDashboardWorkspaceAsync(CancellationToken)`
+6. `OwnerController.BuildShellSummaryAsync(Guid ownerId, CancellationToken)`
+7. `OwnerController.BuildDashboardRecentActivities(...)`
+8. `OwnerController.BuildSevenDayTrend(IEnumerable<VisitEvent>)`
+9. `OwnerDashboardWorkspaceDto` trả về page để render stat cards, bảng POI đã xuất bản, và activity feed
+
+HTTP transport backing sequence này:
 
 - `GET /api/owner/dashboard/workspace`
 
@@ -384,9 +396,19 @@ The list needs row-level source presentation such as:
 
 Existing `PoiDto` is too thin to render this confidently for the new table.
 
-### Recommended contract
+### Execution sequence
 
-Add:
+POI list load nên được mô tả theo chuỗi hàm:
+
+1. `Pois.razor.cs.OnInitializedAsync()`
+2. `IOwnerPortalService.GetPoisWorkspaceAsync()`
+3. `OwnerPortalService.GetPoisWorkspaceAsync()`
+4. `ApiClient.GetAsync<OwnerPoisWorkspaceDto>("api/owner/pois/workspace")`
+5. `OwnerController.GetPoisWorkspaceAsync(CancellationToken)`
+6. `OwnerController.ResolveSourceContentKind(Poi poi, IEnumerable<AudioAsset> audioAssets)`
+7. `OwnerPoisWorkspaceDto` trả về page để hydrate stat strip, toolbar, và data table
+
+HTTP transport backing sequence này:
 
 - `GET /api/owner/pois/workspace`
 
@@ -448,23 +470,45 @@ Where each row includes:
 - creates moderation request
 - updates page state so admin can immediately see the submission in moderation
 
-### API integration
+### Save draft execution sequence
 
-Reuse:
+`Lưu nháp` nên được mô tả bằng sequence cụ thể:
+
+1. `PoiCreate.Actions.razor.cs.SaveDraftAsync()`
+2. `PoiCreate.Actions.razor.cs.PersistPoiAsync(submitForReview: false)`
+3. `IOwnerPortalService.CreatePoiAsync(CreatePoiRequest request)`
+4. `OwnerPortalService.CreatePoiAsync(CreatePoiRequest request)`
+5. `PoisController.CreateAsync(CreatePoiRequest request, CancellationToken)`
+6. `PoiService.CreateAsync(Guid ownerId, CreatePoiRequest request, CancellationToken)`
+7. nếu owner đã chọn ảnh:
+8. `PoiCreate.Actions.razor.cs.UploadRepresentativeImageAsync(int poiId)`
+9. `IOwnerPortalService.UploadPoiImageAsync(int poiId, string fileName, string contentType, Stream stream)`
+10. `OwnerPortalService.UploadPoiImageAsync(...)`
+11. `PoisController.UploadImageAsync(int id, UploadPoiImageFormRequest request, CancellationToken)`
+12. `PoiService.UploadImageAsync(Guid actorUserId, UserRole actorRole, int poiId, string fileName, string contentType, Stream content, CancellationToken)`
+13. `OwnerPortalRefreshService.NotifyChanged()`
+14. `NavigationManager.NavigateTo($"/owner/pois/{created.Id}")`
+
+### Submit for review execution sequence
+
+`Gửi duyệt` nên được mô tả bằng sequence cụ thể:
+
+1. `PoiCreate.Actions.razor.cs.SubmitReviewAsync()`
+2. `PoiCreate.Actions.razor.cs.PersistPoiAsync(submitForReview: true)`
+3. chạy lại đúng sequence tạo POI và upload ảnh như `SaveDraftAsync()`
+4. `IModerationPortalService.CreateAsync(CreateModerationRequest request)`
+5. `ModerationRequestsController.CreateAsync(CreateModerationRequest request, CancellationToken)`
+6. `ModerationService.CreateAsync(Guid requestedBy, CreateModerationRequest request, CancellationToken)`
+7. `OwnerPortalRefreshService.NotifyChanged()`
+8. page giữ nguyên trạng thái hiện tại và hiển thị `_statusMessage = "Đã gửi POI vào hàng chờ duyệt."`
+
+HTTP transport backing các sequence này:
 
 - `POST /api/pois`
-- `POST /api/audio/upload`
+- `POST /api/pois/{id}/image`
 - `POST /api/moderation-requests`
 
-Add:
-
-- `POST /api/pois/{id}/image`
-
-Optional helper if the page flow becomes simpler:
-
-- `POST /api/owner/pois/submit`
-
-The preferred first pass is **compose existing create + upload + moderation calls**, not invent a large orchestration endpoint unless the UI complexity forces it.
+Helper orchestration endpoint kiểu `POST /api/owner/pois/submit` chỉ nên thêm nếu sequence phía trên làm page code trở nên khó giữ ổn định.
 
 ---
 
@@ -508,19 +552,42 @@ Needed metrics:
 - QR scans
 - total listen duration
 
-### Recommended contract
+### Load execution sequence
 
-Preferred:
+POI detail load nên được mô tả theo chuỗi hàm:
+
+1. `PoiDetail.razor.cs.OnParametersSetAsync()` / `PoiDetail.razor.cs.ReloadWorkspaceAsync()`
+2. `IOwnerPortalService.GetPoiWorkspaceAsync(int poiId)`
+3. `OwnerPortalService.GetPoiWorkspaceAsync(int poiId)`
+4. `ApiClient.GetAsync<OwnerPoiDetailWorkspaceDto>($"api/owner/pois/{poiId}/workspace")`
+5. `OwnerController.GetPoiWorkspaceAsync(int id, CancellationToken)`
+6. controller compose thêm audio, moderation, categories, stats và QR/listen aggregates
+7. `AudioPortalService.GetByPoiAsync(int poiId, ...)` được page gọi để làm giàu matrix/audio trạng thái hiện hành
+8. `OwnerPoiDetailWorkspaceDto` trả về page để render summary hero, audio matrix, stats, và moderation surfaces
+
+HTTP transport backing sequence này:
 
 - `GET /api/owner/pois/{id}/workspace`
 
-Alternate acceptable implementation:
+### Save/update execution sequence
 
-- extend `GET /api/owner/pois/{id}`
-- extend `GET /api/owner/pois/{id}/stats`
-- continue joining audio/moderation separately on the client
+POI detail save nên được ghi rõ:
 
-Because the body remap is extensive, the preferred contract is the dedicated workspace endpoint to keep detail loading explicit and cohesive.
+1. `PoiDetail.PoiActions.razor.cs.SavePoiAsync()`
+2. `IOwnerPortalService.UpdatePoiAsync(int poiId, UpdatePoiRequest request)`
+3. `OwnerPortalService.UpdatePoiAsync(...)`
+4. `PoisController.UpdateAsync(int id, UpdatePoiRequest request, CancellationToken)`
+5. `PoiService.UpdateAsync(Guid actorUserId, UserRole actorRole, int poiId, UpdatePoiRequest request, CancellationToken)`
+6. `PoiDetail.HydrateEditors(PoiDto updated)`
+7. `PoiDetail.ReloadWorkspaceAsync()`
+8. `OwnerPortalRefreshService.NotifyChanged()`
+
+Geofence save nên được ghi riêng:
+
+1. `PoiDetail.PoiActions.razor.cs.SaveGeofenceAsync()`
+2. `GeofencePortalService.UpdateAsync(...)`
+3. `PoiDetail.WithUpdatedGeofence(PoiDto poi, GeofenceDto geofence)`
+4. `PoiDetail.ReloadWorkspaceAsync()`
 
 ### POI detail workspace DTO
 
@@ -581,9 +648,20 @@ Needed display values:
 - result
 - admin note
 
-### Recommended contract
+### Execution sequence
 
-Add:
+Moderation page load nên được mô tả theo chuỗi hàm:
+
+1. `Moderation.razor.cs.OnInitializedAsync()`
+2. `IOwnerPortalService.GetModerationWorkspaceAsync()`
+3. `OwnerPortalService.GetModerationWorkspaceAsync()`
+4. `ApiClient.GetAsync<OwnerModerationWorkspaceDto>("api/owner/moderation/workspace")`
+5. `OwnerController.GetModerationWorkspaceAsync(CancellationToken)`
+6. `OwnerController.BuildPendingModerationRow(...)`
+7. `OwnerController.BuildHistoryModerationRow(...)`
+8. `OwnerModerationWorkspaceDto` trả về page để render stat strip, flow strip, pending panel, và history panel
+
+HTTP transport backing sequence này:
 
 - `GET /api/owner/moderation/workspace`
 
@@ -619,15 +697,37 @@ Proposed DTO:
    - right top: change password
    - right bottom: activity summary
 
-### Data source
+### Profile read/update/password sequences
 
-Profile can continue to reuse:
+Profile load nên ghi theo sequence thật:
 
-- `GET /api/owner/profile`
-- `PUT /api/owner/profile`
+1. `Profile.razor.cs.OnInitializedAsync()`
+2. chạy song song `OwnerProfileService.GetProfileAsync()` và `LanguagePortalService.GetAsync()`
+3. `OwnerController.GetProfileAsync(CancellationToken)`
+4. `OwnerController.BuildProfileAsync(AppUser owner, CancellationToken)`
+5. `OwnerProfileDto` trả về để page dựng editor và danh sách ngôn ngữ ưu tiên
+
+Profile save nên ghi rõ:
+
+1. `Profile.Actions.razor.cs.SaveProfileAsync()`
+2. `OwnerProfileService.UpdateProfileAsync(UpdateOwnerProfileRequest request)`
+3. `OwnerController.UpdateProfileAsync(UpdateOwnerProfileRequest request, CancellationToken)`
+4. `OwnerController.ValidateProfileUpdate(...)`
+5. `OwnerController.BuildProfileAsync(AppUser owner, CancellationToken)`
+6. `Profile.Actions.razor.cs.RefreshAuthSessionAsync(OwnerProfileDto profile)`
+7. `AuthStateProvider.MarkUserAsAuthenticatedAsync(AuthSession session)`
+
+Password change nên ghi rõ:
+
+1. `Profile.Actions.razor.cs.ChangePasswordAsync()`
+2. `OwnerProfileService.ChangePasswordAsync(ChangePasswordRequest request)`
+3. `AuthController.ChangePasswordAsync(ChangePasswordRequest request, CancellationToken)`
+4. `AuthService.ChangePasswordAsync(Guid userId, ChangePasswordRequest request, CancellationToken)`
+5. page reset `PasswordEditModel` và hiển thị trạng thái thành công/thất bại
+
+HTTP transport backing sequence này:
+
 - `POST /api/auth/change-password`
-
-The backend already provides enough profile information for this first remap.
 
 ### Behavior to keep
 
@@ -643,11 +743,34 @@ The backend already provides enough profile information for this first remap.
 - upload source is a local file chosen by the owner
 - persisted target remains `Poi.ImageUrl`
 
-## Backend contract
+## Upload execution sequence
 
-Add:
+Upload ảnh đại diện nên được mô tả bằng hàm thật:
+
+1. `PoiCreate.Actions.razor.cs.HandleRepresentativeImageSelection(...)` hoặc `PoiDetail.Uploads.razor.cs.HandlePoiImageSelection(...)`
+2. `PoiCreate.Actions.razor.cs.UploadRepresentativeImageAsync(int poiId)` hoặc `PoiDetail.Uploads.razor.cs.UploadPoiImageAsync()`
+3. `IOwnerPortalService.UploadPoiImageAsync(int poiId, string fileName, string contentType, Stream stream)`
+4. `OwnerPortalService.UploadPoiImageAsync(...)`
+5. `PoisController.UploadImageAsync(int id, UploadPoiImageFormRequest request, CancellationToken)`
+6. `PoiService.UploadImageAsync(Guid actorUserId, UserRole actorRole, int poiId, string fileName, string contentType, Stream content, CancellationToken)`
+7. `IStorageService.SaveAsync(...)`
+8. `PoiDto.ImageUrl` được cập nhật và trả ngược về page
+
+Transport backing sequence này:
 
 - `POST /api/pois/{id}/image`
+
+### Remove image execution sequence
+
+1. `PoiDetail.Uploads.razor.cs.RemovePoiImageAsync()`
+2. `IOwnerPortalService.DeletePoiImageAsync(int poiId)`
+3. `OwnerPortalService.DeletePoiImageAsync(int poiId)`
+4. `PoisController.DeleteImageAsync(int id, CancellationToken)`
+5. `PoiService.DeleteImageAsync(Guid actorUserId, UserRole actorRole, int poiId, CancellationToken)`
+6. page reload workspace và phát `OwnerPortalRefreshService.NotifyChanged()`
+
+Transport backing sequence này:
+
 - `DELETE /api/pois/{id}/image`
 
 ### Upload behavior
@@ -657,8 +780,8 @@ Add:
 - owner must own the POI unless admin
 - accepted formats: JPG, PNG, WEBP
 - size limit enforced
-- file saved via `IStorageService`, matching the audio storage pattern
-- old image file deleted when replaced, when possible
+- file saved via `IStorageService.SaveAsync(...)`
+- old image file deleted when replaced, khi implementation storage hỗ trợ
 - response returns updated `PoiDto`
 
 ### Why this shape
@@ -697,53 +820,58 @@ POI list/dashboard/detail:
 
 The owner remap must stay coupled to the admin system in these ways:
 
-### 1. Moderation
+### 1. Moderation sequence linkage
 
-- owner `submit for review` creates the same moderation request records that appear in admin moderation queues
-- owner moderation history shows the same review outcomes and notes that admin produced
+- owner submit path chạy qua `PoiCreate.Actions.PersistPoiAsync(submitForReview: true)`
+- rồi tới `ModerationPortalService.CreateAsync(...)`
+- rồi tới `ModerationRequestsController.CreateAsync(...)`
+- rồi tới `ModerationService.CreateAsync(...)`
+- admin review path tiếp tục dùng `ModerationService.ReviewAsync(...)`
+- owner history page đọc kết quả đó qua `OwnerController.GetModerationWorkspaceAsync(...)`
 
-### 2. Audio
+### 2. Audio sequence linkage
 
-- owner detail audio matrix shows the same audio assets that admin generates from TTS or translations
-- owner source content remains the upstream input for admin audio generation
+- owner detail page đọc audio qua `AudioPortalService.GetByPoiAsync(...)`
+- server trả dữ liệu từ `AudioController.GetByPoiAsync(...)`
+- backend đọc asset thật từ `audioService.GetByPoiAsync(...)`
+- admin generate path tiếp tục đi qua `AudioController.GenerateFromTranslationAsync(...)` hoặc `AudioController.GenerateTtsAsync(...)`
 
-### 3. POI data
+### 3. POI data sequence linkage
 
-- owner image upload updates the shared POI record
-- admin POI pages can see the same representative image and base metadata
+- owner image upload/update đi qua `PoiService.UploadImageAsync(...)` hoặc `PoiService.UpdateAsync(...)`
+- admin read surfaces vẫn đọc cùng `PoiDto.ImageUrl`
+- không có read model ảnh riêng trong iteration này
 
-### 4. Activity feed
+### 4. Activity feed sequence linkage
 
-- owner dashboard activity feed should include meaningful admin-originating events:
-  - POI approved
-  - POI rejected
-  - audio ready
-  - request submitted
+- owner dashboard load chạy qua `OwnerController.GetDashboardWorkspaceAsync(...)`
+- feed rows được compose bởi `OwnerController.BuildDashboardRecentActivities(...)`
+- nguồn sự kiện gồm moderation result, audio ready, POI create/update transitions, và visit aggregates
 
 ---
 
-## API Strategy
+## Function Strategy
 
-Use a mixed strategy:
+Use a mixed strategy, but describe it in function boundaries instead of transport-only terms.
 
-### Reuse existing endpoints where the current contract is already good enough
+### Reuse existing function chains where the current boundary is already good enough
 
-- profile read/update
-- password change
-- create/update/delete POI
-- audio upload
-- create moderation request
+- `OwnerProfileService.GetProfileAsync()` -> `OwnerController.GetProfileAsync(...)`
+- `OwnerProfileService.UpdateProfileAsync(...)` -> `OwnerController.UpdateProfileAsync(...)`
+- `OwnerProfileService.ChangePasswordAsync(...)` -> `AuthController.ChangePasswordAsync(...)` -> `AuthService.ChangePasswordAsync(...)`
+- `OwnerPortalService.CreatePoiAsync(...)` -> `PoisController.CreateAsync(...)` -> `PoiService.CreateAsync(...)`
+- `OwnerPortalService.UpdatePoiAsync(...)` -> `PoisController.UpdateAsync(...)` -> `PoiService.UpdateAsync(...)`
+- `AudioPortalService.UploadAsync(...)` -> `AudioController.UploadAsync(...)`
+- `ModerationPortalService.CreateAsync(...)` -> `ModerationRequestsController.CreateAsync(...)` -> `ModerationService.CreateAsync(...)`
 
-### Add owner workspace endpoints where the mock requires pre-composed data
+### Add workspace function chains where the UI needs pre-composed data
 
-Add:
+- `OwnerPortalService.GetDashboardWorkspaceAsync()` -> `OwnerController.GetDashboardWorkspaceAsync(...)`
+- `OwnerPortalService.GetPoisWorkspaceAsync()` -> `OwnerController.GetPoisWorkspaceAsync(...)`
+- `OwnerPortalService.GetModerationWorkspaceAsync()` -> `OwnerController.GetModerationWorkspaceAsync(...)`
+- `OwnerPortalService.GetPoiWorkspaceAsync(int poiId)` -> `OwnerController.GetPoiWorkspaceAsync(int id, ...)`
 
-- `GET /api/owner/dashboard/workspace`
-- `GET /api/owner/pois/workspace`
-- `GET /api/owner/moderation/workspace`
-- `GET /api/owner/pois/{id}/workspace`
-
-This keeps the Blazor pages from reconstructing operator-grade tables and feeds out of many thin calls.
+This keeps the Blazor pages from reconstructing operator-grade tables and feeds out of many thin calls, while making the PRD explicit about which methods own the composition work.
 
 ---
 

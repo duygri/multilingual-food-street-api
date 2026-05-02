@@ -154,7 +154,10 @@ public sealed class QrLaunchController(
             background: rgba(15, 23, 42, 0.94);
             box-shadow: 0 24px 80px rgba(2, 6, 23, 0.32);
         }
-        .hero { overflow: hidden; }
+        .hero {
+            overflow: hidden;
+            position: relative;
+        }
         .hero-media img {
             display: block;
             width: 100%;
@@ -235,6 +238,23 @@ public sealed class QrLaunchController(
         .audio-toolbar {
             margin-bottom: 16px;
         }
+        .hero-open-app {
+            position: absolute;
+            top: 18px;
+            right: 18px;
+            min-height: 40px;
+            padding: 0 14px;
+            border-radius: 999px;
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            color: #e2e8f0;
+            background: rgba(15, 23, 42, 0.86);
+            text-decoration: none;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 12px 28px rgba(2, 6, 23, 0.26);
+        }
         .audio-chip {
             display: inline-flex;
             align-items: center;
@@ -291,12 +311,20 @@ public sealed class QrLaunchController(
             body { padding: 14px; }
             .hero-copy,
             .panel { padding: 18px; }
+            .hero-open-app {
+                top: 12px;
+                right: 12px;
+                min-height: 38px;
+                padding: 0 12px;
+                font-size: 0.88rem;
+            }
         }
     </style>
 </head>
 <body>
     <main class="shell">
         <section class="hero">
+            <a class="hero-open-app" href="{{safeAppDeepLink}}">Mở ứng dụng</a>
             {{imageBlock}}
             <div class="hero-copy">
                 <p class="eyebrow">QR POI Public</p>
@@ -308,7 +336,6 @@ public sealed class QrLaunchController(
                 </div>
                 {{highlightBlock}}
                 <div class="hero-actions">
-                    <a class="button button--primary" href="{{safeAppDeepLink}}">Mở ứng dụng</a>
                     {{mapAction}}
                 </div>
             </div>
@@ -524,15 +551,16 @@ public sealed class QrLaunchController(
 </head>
 <body>
     <main class="shell">
-        <p class="eyebrow">QR Launch</p>
-        <h1>Mở Food Street</h1>
-        <p>Điện thoại của bạn vừa quét một mã QR hợp lệ. Chạm nút bên dưới để mở ứng dụng Food Street.</p>
+        <p class="eyebrow">QR mở app</p>
+        <h1>Launcher mở Food Street</h1>
+        <p>Đây là mã QR dành riêng cho luồng mở ứng dụng. Chạm nút bên dưới để chuyển sang app Food Street.</p>
         <div class="code">{{safeCode}}</div>
         <div class="actions">
             <a class="button button--primary" href="{{safeDeepLink}}">Mở ứng dụng</a>
             <a class="button button--ghost" href="{{safePublicUrl}}">Tải lại trang QR</a>
         </div>
         <div class="meta">
+            <p>QR này khác với QR POI. Nó không hiển thị nội dung thuyết minh, mà chỉ đóng vai trò launcher vào app.</p>
             <p>Nếu ứng dụng chưa tự bật, hãy chạm lại nút <strong>Mở ứng dụng</strong>.</p>
             <p><a href="{{safeDeepLink}}">{{safeDeepLink}}</a></p>
         </div>

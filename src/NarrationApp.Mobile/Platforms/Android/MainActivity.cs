@@ -16,7 +16,7 @@ namespace NarrationApp.Mobile;
     [Intent.ActionView],
     Categories = [Intent.CategoryDefault, Intent.CategoryBrowsable],
     DataSchemes = ["https"],
-    DataHosts = ["narration.app"],
+    DataHosts = ["narration.app", "www.narration.app", "staging.narration.app"],
     DataPathPrefixes = ["/qr/"],
     AutoVerify = true)]
 [IntentFilter(

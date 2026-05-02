@@ -19,8 +19,8 @@ else
         <section class="visitor-page__hero">
             <div>
                 <h1>Thiết bị visitor</h1>
-                <p>Theo dõi số visitor hiện có và những thiết bị đang online gần realtime.</p>
-                <p class="visitor-page__note">Danh sách bên dưới hiển thị theo tên thiết bị và tự làm mới mỗi 5 giây.</p>
+                <p>Chỉ hiển thị những thiết bị visitor đang online gần realtime.</p>
+                <p class="visitor-page__note">Danh sách bên dưới tự làm mới mỗi 5 giây và ưu tiên hiển thị mã thiết bị thật.</p>
             </div>
 
             <button class="visitor-page__refresh"
@@ -42,24 +42,18 @@ else
 
         <section class="visitor-page__metric-grid">
             <article class="visitor-page__metric-card">
-                <span class="visitor-page__metric-label">Tổng visitor</span>
-                <strong class="visitor-page__metric-value">@TotalVisitorCount.ToString("N0")</strong>
-                <span class="visitor-page__metric-copy">Tổng số thiết bị visitor đã phát sinh visit event.</span>
-            </article>
-
-            <article class="visitor-page__metric-card">
                 <span class="visitor-page__metric-label">Đang online</span>
                 <strong class="visitor-page__metric-value visitor-page__metric-value--positive">@ActiveVisitorCount.ToString("N0")</strong>
-                <span class="visitor-page__metric-copy">Có tương tác trong vòng 15 phút gần nhất.</span>
+                <span class="visitor-page__metric-copy">Các thiết bị đang còn tín hiệu hoạt động ở thời điểm hiện tại.</span>
             </article>
         </section>
 
         <section class="visitor-page__table-shell">
-            @if (Visitors.Count == 0)
+            @if (OnlineVisitors.Count == 0)
             {
                 <div class="visitor-page__empty">
-                    <strong>Chưa có visitor</strong>
-                    <span>Khi app mobile ghi nhận visit event, danh sách thiết bị visitor sẽ xuất hiện tại đây.</span>
+                    <strong>Chưa có visitor online</strong>
+                    <span>Khi có thiết bị đang hoạt động, danh sách online sẽ xuất hiện tại đây.</span>
                 </div>
             }
             else
@@ -78,13 +72,16 @@ else
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var visitor in Visitors)
+                            @foreach (var visitor in OnlineVisitors)
                             {
                                 <tr data-visitor-id="@visitor.Id">
                                     <td>
                                         <div class="visitor-page__identity">
-                                            <strong>@visitor.DisplayName</strong>
-                                            <span>@GetIdentityLine(visitor)</span>
+                                            <strong>@GetPrimaryIdentityLine(visitor)</strong>
+                                            @if (!string.IsNullOrWhiteSpace(GetSecondaryIdentityLine(visitor)))
+                                            {
+                                                <span>@GetSecondaryIdentityLine(visitor)</span>
+                                            }
                                         </div>
                                     </td>
                                     <td>

@@ -106,22 +106,24 @@ public sealed class AudioManagementTests : TestContext
             Assert.Contains("Standard (Tiêu chuẩn — tiết kiệm)", cut.Markup);
             Assert.Contains("WaveNet (Tự nhiên — cao cấp)", cut.Markup);
             Assert.Contains("Neural2 (Tiên tiến nhất)", cut.Markup);
+            Assert.NotNull(cut.Find("input[data-field='language-en']"));
+            Assert.NotNull(cut.Find("input[data-field='language-ja']"));
+            Assert.Empty(cut.FindAll("input[data-field='language-vi']"));
+            Assert.Empty(cut.FindAll("input[data-field='language-ko']"));
         });
 
-        cut.Find("input[data-field='language-ko']").Change(true);
         cut.Find("select[data-field='voice-profile']").Change("neural2");
         cut.Find("button[data-action='generate-selected-audio']").Click();
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Contains("Đã tạo 3 audio cho Bún mắm Vĩnh Khánh.", cut.Markup);
+            Assert.Contains("Đã tạo 2 audio cho Bún mắm Vĩnh Khánh.", cut.Markup);
             Assert.DoesNotContain("Generate Audio Đa Ngôn Ngữ", cut.Markup);
         });
 
-        Assert.Single(audioService.GeneratedRequests);
-        Assert.Equal("vi", audioService.GeneratedRequests[0].LanguageCode);
-        Assert.All(audioService.GeneratedRequests, request => Assert.Equal("neural2", request.VoiceProfile));
+        Assert.Empty(audioService.GeneratedRequests);
         Assert.Equal(2, audioService.GeneratedFromTranslationRequests.Count);
+        Assert.All(audioService.GeneratedFromTranslationRequests, request => Assert.Equal("neural2", request.VoiceProfile));
         Assert.Equal("en", audioService.GeneratedFromTranslationRequests[0].LanguageCode);
         Assert.Equal("ja", audioService.GeneratedFromTranslationRequests[1].LanguageCode);
         Assert.Empty(translationService.AutoRequests);

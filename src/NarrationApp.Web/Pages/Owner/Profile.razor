@@ -1,6 +1,7 @@
 @page "/owner/profile"
 @attribute [Authorize(Roles = "poi_owner")]
 @inject IOwnerProfileService OwnerProfileService
+@inject ILanguagePortalService LanguagePortalService
 @inject IAuthSessionStore AuthSessionStore
 @inject CustomAuthStateProvider AuthStateProvider
 
@@ -87,10 +88,10 @@ else if (_profile is not null && _editor is not null)
                         <label class="owner-workspace-field">
                             <span>Ngôn ngữ ưu tiên</span>
                             <select data-field="owner-preferred-language" @bind="_editor.PreferredLanguage">
-                                <option value="vi">Tiếng Việt</option>
-                                <option value="en">English</option>
-                                <option value="ja">Japanese</option>
-                                <option value="ko">Korean</option>
+                                @foreach (var language in PreferredLanguageOptions)
+                                {
+                                    <option value="@language.Code">@language.NativeName</option>
+                                }
                             </select>
                         </label>
                     </div>

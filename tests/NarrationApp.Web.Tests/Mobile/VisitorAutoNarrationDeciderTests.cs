@@ -31,7 +31,20 @@ public sealed class VisitorAutoNarrationDeciderTests
     }
 
     [Fact]
-    public void Evaluate_DoesNothingWhenStillInsideAnyZone()
+    public void Evaluate_DoesNothingWhenStillInsideSamePoiZone()
+    {
+        var decision = VisitorAutoNarrationDecider.Evaluate(
+            previousProximity: new VisitorProximityMatch("poi-12", "Bến Nhà Rồng", 24, 120),
+            nextProximity: new VisitorProximityMatch("poi-12", "Bến Nhà Rồng", 18, 120),
+            isAutoPlayingFromProximity: true,
+            playbackState: VisitorAudioPlaybackState.Playing);
+
+        Assert.False(decision.ShouldPauseCurrentAudio);
+        Assert.False(decision.ShouldResetAutoPlayedPoiId);
+    }
+
+    [Fact]
+    public void Evaluate_PausesAndResetsWhenSwitchingToDifferentPoiDuringAutoPlayback()
     {
         var decision = VisitorAutoNarrationDecider.Evaluate(
             previousProximity: new VisitorProximityMatch("poi-12", "Bến Nhà Rồng", 24, 120),
@@ -39,7 +52,7 @@ public sealed class VisitorAutoNarrationDeciderTests
             isAutoPlayingFromProximity: true,
             playbackState: VisitorAudioPlaybackState.Playing);
 
-        Assert.False(decision.ShouldPauseCurrentAudio);
-        Assert.False(decision.ShouldResetAutoPlayedPoiId);
+        Assert.True(decision.ShouldPauseCurrentAudio);
+        Assert.True(decision.ShouldResetAutoPlayedPoiId);
     }
 }

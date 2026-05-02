@@ -4,28 +4,31 @@ public sealed record VisitorProximityMatch(
     string PoiId,
     string PoiName,
     int DistanceMeters,
-    int TriggerRadiusMeters);
+    int TriggerRadiusMeters,
+    int Priority = 1);
 
 public static class VisitorProximityEngine
 {
     public static VisitorProximityMatch? Evaluate(VisitorLocationSnapshot location, IReadOnlyList<VisitorPoi> pois)
     {
-        if (!location.PermissionGranted
-            || !location.IsLocationAvailable
-            || location.Latitude is null
-            || location.Longitude is null
-            || pois.Count == 0)
+        return EvaluateCandidates(location, pois).FirstOrDefault();
+    }
+
+    public static IReadOnlyList<VisitorProximityMatch> EvaluateCandidates(VisitorLocationSnapshot location, IReadOnlyList<VisitorPoi> pois)
+    {
+        if (pois.Count == 0
+            || !VisitorGeoMath.TryGetCoordinates(location, out var latitude, out var longitude))
         {
-            return null;
+            return [];
         }
 
-        VisitorProximityMatch? bestMatch = null;
+        var matches = new List<VisitorProximityMatch>();
 
         foreach (var poi in pois)
         {
-            var distanceMeters = CalculateDistanceMeters(
-                location.Latitude.Value,
-                location.Longitude.Value,
+            var distanceMeters = VisitorGeoMath.CalculateDistanceMeters(
+                latitude,
+                longitude,
                 poi.Latitude,
                 poi.Longitude);
 
@@ -35,36 +38,18 @@ public static class VisitorProximityEngine
                 continue;
             }
 
-            if (bestMatch is null || distanceMeters < bestMatch.DistanceMeters)
-            {
-                bestMatch = new VisitorProximityMatch(
-                    poi.Id,
-                    poi.Name,
-                    distanceMeters,
-                    triggerRadiusMeters);
-            }
+            matches.Add(new VisitorProximityMatch(
+                poi.Id,
+                poi.Name,
+                distanceMeters,
+                triggerRadiusMeters,
+                poi.Priority));
         }
 
-        return bestMatch;
+        return matches
+            .OrderByDescending(match => match.Priority)
+            .ThenBy(match => match.DistanceMeters)
+            .ThenBy(match => match.PoiName, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
-
-    private static int CalculateDistanceMeters(double lat1, double lng1, double lat2, double lng2)
-    {
-        const double earthRadiusMeters = 6371000d;
-
-        var lat1Radians = DegreesToRadians(lat1);
-        var lat2Radians = DegreesToRadians(lat2);
-        var deltaLat = DegreesToRadians(lat2 - lat1);
-        var deltaLng = DegreesToRadians(lng2 - lng1);
-
-        var haversine =
-            Math.Sin(deltaLat / 2d) * Math.Sin(deltaLat / 2d)
-            + Math.Cos(lat1Radians) * Math.Cos(lat2Radians)
-            * Math.Sin(deltaLng / 2d) * Math.Sin(deltaLng / 2d);
-
-        var c = 2d * Math.Atan2(Math.Sqrt(haversine), Math.Sqrt(1d - haversine));
-        return (int)Math.Round(earthRadiusMeters * c, MidpointRounding.AwayFromZero);
-    }
-
-    private static double DegreesToRadians(double degrees) => degrees * Math.PI / 180d;
 }

@@ -7,24 +7,22 @@ public partial class Home
 {
     private Task SetAudioAutoPlayEnabledAsync(bool isEnabled)
     {
-        _state.SetAudioAutoPlayEnabled(isEnabled);
-        return Task.CompletedTask;
+        return ApplySettingsStateChangeAsync(() => _state.SetAudioAutoPlayEnabled(isEnabled));
     }
 
     private Task SetAudioSpokenAnnouncementsEnabledAsync(bool isEnabled)
     {
-        _state.SetAudioSpokenAnnouncementsEnabled(isEnabled);
-        return Task.CompletedTask;
+        return ApplySettingsStateChangeAsync(() => _state.SetAudioSpokenAnnouncementsEnabled(isEnabled));
     }
 
     private Task SetAudioAutoAdvanceEnabledAsync(bool isEnabled)
     {
-        _state.SetAudioAutoAdvanceEnabled(isEnabled);
-        return Task.CompletedTask;
+        return ApplySettingsStateChangeAsync(() => _state.SetAudioAutoAdvanceEnabled(isEnabled));
     }
 
     private async Task SetAudioSourcePreferenceAsync(VisitorAudioSourcePreference preference)
     {
+        ClearSettingsFeedback();
         _state.SetAudioSourcePreference(preference);
 
         if (_state.SelectedPoi is not null)
@@ -41,6 +39,7 @@ public partial class Home
             return;
         }
 
+        ClearSettingsFeedback();
         _audioSpeedIndex = nextIndex;
         _state.SetAudioPlaybackSpeed(speed);
         await JS.InvokeVoidAsync("visitorAudio.setRate", speed);

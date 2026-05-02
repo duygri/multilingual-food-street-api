@@ -70,6 +70,32 @@ public sealed class QrPublicLinkIntegrationTests
     }
 
     [Fact]
+    public async Task Public_qr_route_returns_open_app_launcher_for_open_app_target()
+    {
+        await using var factory = new TestWebApplicationFactory();
+        await factory.SeedAsync();
+
+        var qr = await CreateOpenAppQrAsync(factory);
+
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("http://localhost"),
+            AllowAutoRedirect = false
+        });
+
+        var response = await client.GetAsync($"/qr/{qr.Code}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var html = await response.Content.ReadAsStringAsync();
+        Assert.Contains("QR mở app", html, StringComparison.Ordinal);
+        Assert.Contains("Launcher", html, StringComparison.Ordinal);
+        Assert.Contains($"foodstreet://qr/{qr.Code}", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Audio đa ngôn ngữ", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Nghe thuyết minh", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Public_qr_route_embeds_scan_tracking_for_visitor_devices()
     {
         await using var factory = new TestWebApplicationFactory();
@@ -98,6 +124,53 @@ public sealed class QrPublicLinkIntegrationTests
         Assert.Contains("15000", html, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task Assetlinks_endpoint_returns_android_associations_for_verified_qr_domain()
+    {
+        await using var factory = new TestWebApplicationFactory();
+        await factory.SeedAsync();
+
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("https://public.foodstreet.test")
+        });
+
+        var response = await client.GetAsync("/.well-known/assetlinks.json");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
+
+        var json = await response.Content.ReadAsStringAsync();
+        Assert.Contains("delegate_permission/common.handle_all_urls", json, StringComparison.Ordinal);
+        Assert.Contains("com.foodstreet.tourist.dev", json, StringComparison.Ordinal);
+        Assert.Contains("11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00", json, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Assetlinks_endpoint_omits_android_targets_with_placeholder_fingerprints()
+    {
+        await using var factory = new TestWebApplicationFactory(new Dictionary<string, string?>
+        {
+            ["MobileAppLinks:Android:1:PackageName"] = "com.foodstreet.tourist",
+            ["MobileAppLinks:Android:1:Sha256CertFingerprints:0"] = "REPLACE_WITH_RELEASE_SHA256_CERT_FINGERPRINT"
+        });
+        await factory.SeedAsync();
+
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("https://public.foodstreet.test")
+        });
+
+        var response = await client.GetAsync("/.well-known/assetlinks.json");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var json = await response.Content.ReadAsStringAsync();
+        Assert.Contains("\"package_name\":\"com.foodstreet.tourist.dev\"", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"package_name\":\"com.foodstreet.tourist\"", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("REPLACE_WITH_", json, StringComparison.Ordinal);
+    }
+
     private static async Task<QrCodeDto> CreatePoiQrAsync(TestWebApplicationFactory factory)
     {
         await using var scope = factory.Services.CreateAsyncScope();
@@ -110,6 +183,19 @@ public sealed class QrPublicLinkIntegrationTests
             TargetType = "poi",
             TargetId = poi.Id,
             LocationHint = "Integration gate"
+        });
+    }
+
+    private static async Task<QrCodeDto> CreateOpenAppQrAsync(TestWebApplicationFactory factory)
+    {
+        await using var scope = factory.Services.CreateAsyncScope();
+        var qrService = scope.ServiceProvider.GetRequiredService<IQrService>();
+
+        return await qrService.CreateAsync(new CreateQrRequest
+        {
+            TargetType = "open_app",
+            TargetId = 0,
+            LocationHint = "Integration launcher"
         });
     }
 
