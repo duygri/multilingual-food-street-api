@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using Microsoft.Extensions.Configuration;
 using NarrationApp.SharedUI.Auth;
 using NarrationApp.SharedUI.Services;
 using NarrationApp.Web;
@@ -8,6 +9,7 @@ using NarrationApp.Web.Configuration;
 using NarrationApp.Web.Services;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
+builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: false);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 

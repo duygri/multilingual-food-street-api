@@ -29,9 +29,14 @@ public static class MauiProgram
         builder.Services.AddMauiBlazorWebView();
         builder.Services.AddSingleton(new VisitorMapOptions());
         builder.Services.AddSingleton(visitorApiOptions);
+        builder.Services.AddSingleton<IVisitorOfflineCacheStore>(_ => new VisitorOfflineCacheStore(
+            Path.Combine(FileSystem.AppDataDirectory, "visitor-cache.db3"),
+            Path.Combine(FileSystem.AppDataDirectory, "audio-cache")));
         builder.Services.AddSingleton<IVisitorDeviceIdentityProvider, DeviceVisitorIdentityProvider>();
         builder.Services.AddScoped<IVisitorContentService, VisitorContentService>();
         builder.Services.AddScoped<IVisitorAudioCatalogService, VisitorAudioCatalogService>();
+        builder.Services.AddScoped<IVisitorAudioPreloadService, VisitorAudioPreloadService>();
+        builder.Services.AddScoped<IVisitorAudioPlayReporter, VisitorAudioPlayReporter>();
         builder.Services.AddScoped<IVisitorQrApiService, VisitorQrApiService>();
         builder.Services.AddScoped<IVisitorQrDeepLinkService, VisitorQrDeepLinkService>();
         builder.Services.AddScoped<IVisitorPresenceReporter, VisitorPresenceReporter>();

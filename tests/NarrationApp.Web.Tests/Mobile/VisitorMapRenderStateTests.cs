@@ -92,4 +92,29 @@ public sealed class VisitorMapRenderStateTests
         Assert.True(state.ShouldRender(initialSnapshot));
         Assert.True(state.ShouldRender(updatedSnapshot));
     }
+
+    [Fact]
+    public void ShouldRender_ReturnsFalseForMinorUserLocationJitter()
+    {
+        var state = new VisitorMapRenderState();
+        var initialSnapshot = new VisitorMapSnapshot(
+            10.760900,
+            106.705400,
+            14.8,
+            [
+                new VisitorMapMarker("poi-1", "Cầu Khánh Hội", 10.760900, 106.705400, false, true, "#59b8ff")
+            ],
+            new VisitorMapUserLocation(10.760900, 106.705400, "Vị trí của bạn"));
+        var jitteredSnapshot = new VisitorMapSnapshot(
+            10.760904,
+            106.705404,
+            14.8,
+            [
+                new VisitorMapMarker("poi-1", "Cầu Khánh Hội", 10.760900, 106.705400, false, true, "#59b8ff")
+            ],
+            new VisitorMapUserLocation(10.760904, 106.705404, "Vị trí của bạn"));
+
+        Assert.True(state.ShouldRender(initialSnapshot));
+        Assert.False(state.ShouldRender(jitteredSnapshot));
+    }
 }

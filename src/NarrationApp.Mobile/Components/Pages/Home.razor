@@ -8,6 +8,9 @@
 @inject IVisitorLocationService LocationService
 @inject IVisitorBackgroundLocationRuntime BackgroundLocationRuntime
 @inject IVisitorAudioCatalogService AudioCatalogService
+@inject IVisitorAudioPreloadService AudioPreloadService
+@inject IVisitorAudioPlayReporter AudioPlayReporter
+@inject IVisitorOfflineCacheStore OfflineCacheStore
 @inject IVisitorQrDeepLinkService DeepLinkService
 @inject IVisitorPresenceReporter PresenceReporter
 @inject IJSRuntime JS
@@ -161,8 +164,13 @@ else
                 {
                     <VisitorCacheManagerScreen
                         Items="_state.CachedAudioItems"
+                        PreloadActionLabel="@GetCachePreloadActionLabel()"
+                        PreloadStatusLabel="@_cachePreloadStatusLabel"
+                        PreloadProgressPercent="@_cachePreloadProgressPercent"
+                        IsPreloadRunning="@_isCachePreloadRunning"
                         OnBack="CloseSettingsScreen"
-                        OnRefresh="RefreshDiscoverAsync"
+                        OnRefresh="RefreshCachedAudioItemsAsync"
+                        OnPreload="PreloadSelectedLanguageAudioAsync"
                         OnClearAll="ClearCachedAudioItemsAsync"
                         OnDeleteItem="DeleteCachedAudioItemAsync" />
                 }

@@ -25,6 +25,9 @@ public partial class Home : IAsyncDisposable
     private bool _isFullPlayerOpen;
     private bool _showFullPlayerTranscript;
     private bool _startupWorkQueued;
+    private bool _isCachePreloadRunning;
+    private double _cachePreloadProgressPercent;
+    private string _cachePreloadStatusLabel = "Sẵn sàng tải trước audio cho ngôn ngữ hiện tại.";
     private CancellationTokenSource? _foregroundLocationLoopCts;
     private Task? _foregroundLocationLoopTask;
     private int _audioSpeedIndex = 1;

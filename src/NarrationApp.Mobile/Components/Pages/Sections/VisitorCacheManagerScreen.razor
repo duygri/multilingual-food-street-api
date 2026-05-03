@@ -19,8 +19,15 @@
             <span class="settings-progress__fill" style="@GetProgressStyle()"></span>
         </div>
         <div class="sheet-actions">
+            <button type="button" class="primary-pill" @onclick="OnPreload" disabled="@IsPreloadRunning">@PreloadActionLabel</button>
             <button type="button" class="secondary-pill" @onclick="OnRefresh">Quét lại cache</button>
             <button type="button" class="secondary-pill secondary-pill--danger" @onclick="OnClearAll" disabled="@(Items.Count == 0)">Xóa tất cả</button>
+        </div>
+        <div class="cache-preload-status @(IsPreloadRunning ? "is-running" : string.Empty)">
+            <span>@PreloadStatusLabel</span>
+            <div class="settings-progress">
+                <span class="settings-progress__fill" style="@GetPreloadProgressStyle()"></span>
+            </div>
         </div>
     </article>
 
@@ -52,8 +59,13 @@
 @code {
     [Parameter] public IReadOnlyList<VisitorCachedAudioItem> Items { get; set; } = [];
     [Parameter] public double CapacityMb { get; set; } = 64d;
+    [Parameter] public string PreloadActionLabel { get; set; } = "Tải trước audio";
+    [Parameter] public string PreloadStatusLabel { get; set; } = "Sẵn sàng tải trước audio.";
+    [Parameter] public double PreloadProgressPercent { get; set; }
+    [Parameter] public bool IsPreloadRunning { get; set; }
     [Parameter] public EventCallback OnBack { get; set; }
     [Parameter] public EventCallback OnRefresh { get; set; }
+    [Parameter] public EventCallback OnPreload { get; set; }
     [Parameter] public EventCallback OnClearAll { get; set; }
     [Parameter] public EventCallback<string> OnDeleteItem { get; set; }
 
@@ -67,6 +79,12 @@
     {
         var usedStorage = Items.Sum(item => item.SizeMb);
         var percent = CapacityMb <= 0 ? 0 : Math.Clamp(usedStorage * 100d / CapacityMb, 0d, 100d);
+        return $"width:{percent.ToString("0.##", CultureInfo.InvariantCulture)}%;";
+    }
+
+    private string GetPreloadProgressStyle()
+    {
+        var percent = Math.Clamp(PreloadProgressPercent, 0d, 100d);
         return $"width:{percent.ToString("0.##", CultureInfo.InvariantCulture)}%;";
     }
 

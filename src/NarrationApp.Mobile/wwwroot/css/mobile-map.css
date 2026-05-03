@@ -48,6 +48,113 @@
     z-index: 1;
 }
 
+.visitor-map-offline {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 18% 22%, rgba(30, 214, 175, 0.18), transparent 24%),
+        radial-gradient(circle at 82% 76%, rgba(89, 184, 255, 0.22), transparent 28%),
+        linear-gradient(135deg, rgba(8, 17, 31, 0.92), rgba(16, 33, 55, 0.96));
+}
+
+.visitor-map-offline::before {
+    content: "";
+    position: absolute;
+    inset: -8%;
+    background:
+        linear-gradient(rgba(117, 158, 216, 0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(117, 158, 216, 0.08) 1px, transparent 1px);
+    background-size: 38px 38px;
+    transform: rotate(-8deg);
+}
+
+.visitor-map-offline__route {
+    position: absolute;
+    inset: 18% 10% 14%;
+    border: 2px dashed rgba(143, 202, 255, 0.22);
+    border-left-color: transparent;
+    border-radius: 44% 56% 45% 55%;
+    transform: rotate(-12deg);
+}
+
+.visitor-map-offline__badge {
+    position: absolute;
+    left: 18px;
+    right: 18px;
+    bottom: calc(var(--mobile-bottom-safe-offset) + env(safe-area-inset-bottom) + 18px);
+    display: grid;
+    gap: 4px;
+    max-width: 360px;
+    padding: 12px 14px;
+    border-radius: 18px;
+    color: #f8fbff;
+    background: rgba(5, 13, 25, 0.82);
+    border: 1px solid rgba(93, 142, 205, 0.36);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+    backdrop-filter: blur(16px);
+}
+
+.visitor-map-offline__badge span {
+    color: #b8c7df;
+    font-size: 0.82rem;
+    line-height: 1.35;
+}
+
+.visitor-map-offline__marker,
+.visitor-map-offline__user {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+}
+
+.visitor-map-offline__marker {
+    min-width: 18px;
+    min-height: 18px;
+    padding: 0;
+    border: 2px solid rgba(255, 255, 255, 0.92);
+    border-radius: 999px;
+    color: #eff6ff;
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.34);
+}
+
+.visitor-map-offline__marker span {
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 8px);
+    transform: translateX(-50%);
+    max-width: 136px;
+    padding: 5px 8px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(5, 13, 25, 0.76);
+    color: #f8fbff;
+    font-size: 0.72rem;
+    font-weight: 800;
+    line-height: 1.1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.visitor-map-offline__marker.is-selected {
+    min-width: 24px;
+    min-height: 24px;
+    box-shadow: 0 0 0 10px rgba(30, 214, 175, 0.18), 0 16px 30px rgba(0, 0, 0, 0.38);
+}
+
+.visitor-map-offline__marker.is-nearest {
+    box-shadow: 0 0 0 8px rgba(89, 184, 255, 0.16), 0 16px 30px rgba(0, 0, 0, 0.36);
+}
+
+.visitor-map-offline__user {
+    width: 24px;
+    height: 24px;
+    border: 3px solid rgba(255, 255, 255, 0.96);
+    border-radius: 999px;
+    background: radial-gradient(circle at center, #092033 0 30%, #1ed6af 32% 100%);
+    box-shadow: 0 0 0 8px rgba(30, 214, 175, 0.18), 0 12px 26px rgba(0, 0, 0, 0.3);
+}
+
 .map-canvas::before,
 .map-canvas::after {
     content: "";

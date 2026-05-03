@@ -257,6 +257,26 @@ public sealed class VisitorShellStateTests
     }
 
     [Fact]
+    public void SetCachedAudioItems_ReplacesDemoItemsWithOfflineStoreResults()
+    {
+        var state = VisitorShellState.CreateDefault();
+        var cachedItem = new VisitorCachedAudioItem(
+            "cache-poi-7-en",
+            "poi-7",
+            "Bến Nhà Rồng",
+            "en",
+            "Google TTS",
+            1.5,
+            "Cập nhật hôm nay");
+
+        state.SetCachedAudioItems([cachedItem]);
+
+        var item = Assert.Single(state.CachedAudioItems);
+        Assert.Equal("cache-poi-7-en", item.Id);
+        Assert.Equal("Bến Nhà Rồng", item.PoiName);
+    }
+
+    [Fact]
     public void ApplyContent_ReplacesPoisAndToursAndKeepsStateReady()
     {
         var state = VisitorShellState.CreateDefault();

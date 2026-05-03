@@ -2,13 +2,27 @@ namespace NarrationApp.Mobile.Components.Pages;
 
 public partial class Home
 {
-    private Task DeleteCachedAudioItemAsync(string itemId)
+    private async Task DeleteCachedAudioItemAsync(string itemId)
     {
-        return ApplySettingsStateChangeAsync(() => _state.RemoveCachedAudioItem(itemId));
+        await ApplySettingsStateChangeAsync(async () =>
+        {
+            await OfflineCacheStore.DeleteCachedAudioAsync(itemId);
+            await RefreshCachedAudioItemsAsync();
+        });
     }
 
-    private Task ClearCachedAudioItemsAsync()
+    private async Task ClearCachedAudioItemsAsync()
     {
-        return ApplySettingsStateChangeAsync(_state.ClearCachedAudioItems);
+        await ApplySettingsStateChangeAsync(async () =>
+        {
+            await OfflineCacheStore.ClearCachedAudioAsync();
+            _state.ClearCachedAudioItems();
+        });
+    }
+
+    private async Task RefreshCachedAudioItemsAsync()
+    {
+        var cachedAudioItems = await OfflineCacheStore.ListCachedAudioAsync();
+        _state.SetCachedAudioItems(cachedAudioItems);
     }
 }

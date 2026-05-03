@@ -516,6 +516,12 @@ public sealed class VisitorShellState
         _cachedAudioItems.Clear();
     }
 
+    public void SetCachedAudioItems(IReadOnlyList<VisitorCachedAudioItem> items)
+    {
+        _cachedAudioItems.Clear();
+        _cachedAudioItems.AddRange(items);
+    }
+
     public void OpenPoi(string poiId)
     {
         if (!_pois.Any(poi => poi.Id == poiId))

@@ -18,7 +18,10 @@ public partial class Home
         var previousPlaybackState = _state.AudioPlaybackState;
 
         _state.SetAudioPlaybackState(VisitorAudioPlaybackState.Loading, "Đang kiểm tra audio...");
-        var cue = await AudioCatalogService.LoadBestForPoiAsync(_state.SelectedPoi.Id, _state.SelectedLanguageCode);
+        var cue = await AudioCatalogService.LoadBestForPoiAsync(
+            _state.SelectedPoi.Id,
+            _state.SelectedLanguageCode,
+            _state.SelectedPoi.Name);
         var isSameCue =
             previousCue is not null
             && cue.IsAvailable
@@ -28,6 +31,11 @@ public partial class Home
 
         _state.SetAudioCue(cue);
         RestorePreparedAudioState(cue, isSameCue, previousElapsedSeconds, previousDurationSeconds, previousPlaybackState);
+        if (cue.IsAvailable)
+        {
+            await RefreshCachedAudioItemsAsync();
+        }
+
         await FinalizePreparedAudioCueAsync(cue, autoPlay, forceAutoPlay);
     }
 }

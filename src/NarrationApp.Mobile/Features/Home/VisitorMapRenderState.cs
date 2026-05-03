@@ -27,9 +27,9 @@ public sealed class VisitorMapRenderState
     internal static string CreateFingerprint(VisitorMapSnapshot snapshot)
     {
         var builder = new StringBuilder()
-            .Append(snapshot.CenterLat.ToString("F6", CultureInfo.InvariantCulture))
+            .Append(ToRenderCoordinate(snapshot.CenterLat))
             .Append('|')
-            .Append(snapshot.CenterLng.ToString("F6", CultureInfo.InvariantCulture))
+            .Append(ToRenderCoordinate(snapshot.CenterLng))
             .Append('|')
             .Append(snapshot.Zoom.ToString("F2", CultureInfo.InvariantCulture));
 
@@ -54,13 +54,16 @@ public sealed class VisitorMapRenderState
         {
             builder
                 .Append("|user:")
-                .Append(snapshot.UserLocation.Latitude.ToString("F6", CultureInfo.InvariantCulture))
+                .Append(ToRenderCoordinate(snapshot.UserLocation.Latitude))
                 .Append(':')
-                .Append(snapshot.UserLocation.Longitude.ToString("F6", CultureInfo.InvariantCulture))
+                .Append(ToRenderCoordinate(snapshot.UserLocation.Longitude))
                 .Append(':')
                 .Append(snapshot.UserLocation.Label);
         }
 
         return builder.ToString();
     }
+
+    private static string ToRenderCoordinate(double coordinate) =>
+        coordinate.ToString("F5", CultureInfo.InvariantCulture);
 }

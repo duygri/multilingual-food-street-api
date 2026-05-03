@@ -106,14 +106,95 @@ public sealed class VisitorAudioCatalogServiceTests
         Assert.Contains("demo", cue.StatusLabel, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static VisitorAudioCatalogService CreateService(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> handler)
+    [Fact]
+    public async Task LoadBestForPoiAsync_UsesCachedAudioBeforeCallingApi()
+    {
+        var cacheStore = new FakeVisitorOfflineCacheStore();
+        cacheStore.AudioEntries.Add(new VisitorAudioCacheEntry(
+            Id: "cache-poi-7-en",
+            PoiId: "poi-7",
+            PoiName: "Bến Nhà Rồng",
+            LanguageCode: "en",
+            LocalFilePath: @"D:\cache\poi-7-en.mp3",
+            SourceUrl: "https://10.0.2.2:5001/api/audio/12/stream",
+            SourceLabel: "Google TTS",
+            StatusLabel: "Sẵn sàng phát offline • EN",
+            DurationSeconds: 88,
+            SizeBytes: 2048,
+            CachedAtUtc: DateTimeOffset.UtcNow));
+        var service = CreateService(
+            (request, cancellationToken) => throw new InvalidOperationException("Cache hit should not call API."),
+            cacheStore);
+
+        var cue = await service.LoadBestForPoiAsync("poi-7", "en");
+
+        Assert.True(cue.IsAvailable);
+        Assert.Equal("en", cue.LanguageCode);
+        Assert.StartsWith("file:///", cue.StreamUrl, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("offline", cue.StatusLabel, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task LoadBestForPoiAsync_CachesDownloadedAudioWhenApiSucceeds()
+    {
+        var response = new ApiResponse<IReadOnlyList<AudioDto>>
+        {
+            Succeeded = true,
+            Data =
+            [
+                new AudioDto
+                {
+                    Id = 12,
+                    PoiId = 7,
+                    LanguageCode = "en",
+                    SourceType = AudioSourceType.Tts,
+                    Url = "/api/audio/12/stream",
+                    Status = AudioStatus.Ready,
+                    DurationSeconds = 88
+                }
+            ]
+        };
+        var cacheStore = new FakeVisitorOfflineCacheStore();
+        var service = CreateService((request, cancellationToken) =>
+        {
+            if (request.RequestUri!.AbsolutePath == "/api/audio")
+            {
+                return Task.FromResult(CreateJsonResponse(response));
+            }
+
+            if (request.RequestUri!.AbsolutePath == "/api/audio/12/stream")
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new ByteArrayContent([1, 2, 3, 4])
+                });
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        }, cacheStore);
+
+        var cue = await service.LoadBestForPoiAsync("poi-7", "en", "Bến Nhà Rồng");
+
+        Assert.True(cue.IsAvailable);
+        Assert.StartsWith("file:///", cue.StreamUrl, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal([1, 2, 3, 4], cacheStore.LastCachedAudioBytes);
+        Assert.Equal("poi-7", Assert.Single(cacheStore.CacheRequests).PoiId);
+        Assert.Equal("Bến Nhà Rồng", Assert.Single(cacheStore.CacheRequests).PoiName);
+        Assert.Equal("en", Assert.Single(cacheStore.CacheRequests).LanguageCode);
+    }
+
+    private static VisitorAudioCatalogService CreateService(
+        Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> handler,
+        IVisitorOfflineCacheStore? offlineCacheStore = null)
     {
         var httpClient = new HttpClient(new FakeHttpMessageHandler(handler))
         {
             BaseAddress = new Uri("https://10.0.2.2:5001/")
         };
 
-        return new VisitorAudioCatalogService(httpClient);
+        return new VisitorAudioCatalogService(
+            httpClient,
+            offlineCacheStore ?? new FakeVisitorOfflineCacheStore());
     }
 
     private static HttpResponseMessage CreateJsonResponse<T>(T payload)

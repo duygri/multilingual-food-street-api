@@ -13,7 +13,10 @@ public interface IVisitorContentService
     Task<VisitorContentResult> LoadAsync(VisitorContentLoadRequest? request = null, CancellationToken cancellationToken = default);
 }
 
-public sealed class VisitorContentService(HttpClient httpClient, IVisitorLocationService locationService) : IVisitorContentService
+public sealed class VisitorContentService(
+    HttpClient httpClient,
+    IVisitorLocationService locationService,
+    IVisitorOfflineCacheStore offlineCacheStore) : IVisitorContentService
 {
     public async Task<VisitorContentResult> LoadAsync(VisitorContentLoadRequest? request = null, CancellationToken cancellationToken = default)
     {
@@ -45,6 +48,7 @@ public sealed class VisitorContentService(HttpClient httpClient, IVisitorLocatio
                 location,
                 httpClient.BaseAddress,
                 readyAudioLanguageCodesByPoiId);
+            await SaveContentSnapshotAsync(snapshot, cancellationToken);
             return new VisitorContentResult(
                 snapshot,
                 IsFallback: false,
@@ -54,12 +58,47 @@ public sealed class VisitorContentService(HttpClient httpClient, IVisitorLocatio
         }
         catch (Exception ex)
         {
+            var cachedSnapshot = await LoadContentSnapshotAsync(cancellationToken);
+            if (cachedSnapshot is not null)
+            {
+                return new VisitorContentResult(
+                    cachedSnapshot,
+                    IsFallback: true,
+                    SourceLabel: "Offline cache",
+                    Message: $"Đang dùng dữ liệu offline đã lưu trên máy. Không chạm được API thật. {ex.Message}",
+                    Location: location);
+            }
+
             return new VisitorContentResult(
                 new VisitorContentSnapshot([], []),
                 IsFallback: true,
                 SourceLabel: "API unavailable",
                 Message: $"Không chạm được API thật. {ex.Message}",
                 Location: location);
+        }
+    }
+
+    private async Task SaveContentSnapshotAsync(VisitorContentSnapshot snapshot, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await offlineCacheStore.SaveContentSnapshotAsync(snapshot, cancellationToken);
+        }
+        catch
+        {
+            // Cache failures should never block live content.
+        }
+    }
+
+    private async Task<VisitorContentSnapshot?> LoadContentSnapshotAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await offlineCacheStore.LoadContentSnapshotAsync(cancellationToken);
+        }
+        catch
+        {
+            return null;
         }
     }
 

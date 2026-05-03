@@ -7,7 +7,11 @@ namespace NarrationApp.Mobile.Features.Home;
 
 public interface IVisitorAudioCatalogService
 {
-    Task<VisitorAudioCue> LoadBestForPoiAsync(string poiId, string preferredLanguageCode, CancellationToken cancellationToken = default);
+    Task<VisitorAudioCue> LoadBestForPoiAsync(
+        string poiId,
+        string preferredLanguageCode,
+        string? poiName = null,
+        CancellationToken cancellationToken = default);
 }
 
 public enum VisitorAudioPlaybackState
@@ -20,13 +24,25 @@ public enum VisitorAudioPlaybackState
     Error
 }
 
-public sealed class VisitorAudioCatalogService(HttpClient httpClient) : IVisitorAudioCatalogService
+public sealed class VisitorAudioCatalogService(
+    HttpClient httpClient,
+    IVisitorOfflineCacheStore offlineCacheStore) : IVisitorAudioCatalogService
 {
-    public async Task<VisitorAudioCue> LoadBestForPoiAsync(string poiId, string preferredLanguageCode, CancellationToken cancellationToken = default)
+    public async Task<VisitorAudioCue> LoadBestForPoiAsync(
+        string poiId,
+        string preferredLanguageCode,
+        string? poiName = null,
+        CancellationToken cancellationToken = default)
     {
         if (!TryParseServerPoiId(poiId, out var serverPoiId))
         {
             return VisitorAudioCue.Unavailable(poiId, "Audio demo chưa gắn asset thật.");
+        }
+
+        var cachedAudio = await FindCachedAudioAsync(poiId, preferredLanguageCode, cancellationToken);
+        if (cachedAudio is not null)
+        {
+            return ToAudioCue(cachedAudio, preferredLanguageCode);
         }
 
         try
@@ -49,10 +65,17 @@ public sealed class VisitorAudioCatalogService(HttpClient httpClient) : IVisitor
                 return VisitorAudioCue.Unavailable(poiId, "Chưa có audio sẵn sàng cho POI này.");
             }
 
+            var streamUrl = ToAbsoluteUrl(selected.Url);
+            var cachedEntry = await CacheSelectedAudioAsync(poiId, poiName, selected, streamUrl, preferredLanguageCode, cancellationToken);
+            if (cachedEntry is not null)
+            {
+                return ToAudioCue(cachedEntry, preferredLanguageCode);
+            }
+
             return new VisitorAudioCue(
                 PoiId: poiId,
                 LanguageCode: selected.LanguageCode,
-                StreamUrl: ToAbsoluteUrl(selected.Url),
+                StreamUrl: streamUrl,
                 DurationSeconds: selected.DurationSeconds,
                 IsAvailable: true,
                 StatusLabel: BuildStatusLabel(selected, preferredLanguageCode),
@@ -64,6 +87,62 @@ public sealed class VisitorAudioCatalogService(HttpClient httpClient) : IVisitor
         }
     }
 
+    private async Task<VisitorAudioCacheEntry?> FindCachedAudioAsync(
+        string poiId,
+        string preferredLanguageCode,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await offlineCacheStore.FindBestAudioAsync(poiId, preferredLanguageCode, cancellationToken);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private async Task<VisitorAudioCacheEntry?> CacheSelectedAudioAsync(
+        string poiId,
+        string? poiName,
+        AudioDto selected,
+        string streamUrl,
+        string preferredLanguageCode,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using var audioStream = await httpClient.GetStreamAsync(streamUrl, cancellationToken);
+            return await offlineCacheStore.CacheAudioAsync(
+                new VisitorAudioCacheRequest(
+                    PoiId: poiId,
+                    PoiName: string.IsNullOrWhiteSpace(poiName) ? poiId : poiName,
+                    LanguageCode: selected.LanguageCode,
+                    SourceUrl: streamUrl,
+                    SourceLabel: selected.SourceType == AudioSourceType.Recorded ? "Recorded" : "Google TTS",
+                    StatusLabel: BuildOfflineStatusLabel(selected, preferredLanguageCode),
+                    DurationSeconds: selected.DurationSeconds),
+                audioStream,
+                cancellationToken);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static VisitorAudioCue ToAudioCue(VisitorAudioCacheEntry entry, string preferredLanguageCode)
+    {
+        return new VisitorAudioCue(
+            PoiId: entry.PoiId,
+            LanguageCode: entry.LanguageCode,
+            StreamUrl: ToLocalPlaybackUrl(entry.LocalFilePath),
+            DurationSeconds: entry.DurationSeconds,
+            IsAvailable: true,
+            StatusLabel: entry.StatusLabel,
+            IsPreferredLanguage: entry.LanguageCode.Equals(preferredLanguageCode, StringComparison.OrdinalIgnoreCase));
+    }
+
     private string ToAbsoluteUrl(string url)
     {
         if (Uri.TryCreate(url, UriKind.Absolute, out var absoluteUri))
@@ -72,6 +151,13 @@ public sealed class VisitorAudioCatalogService(HttpClient httpClient) : IVisitor
         }
 
         return new Uri(httpClient.BaseAddress!, url.TrimStart('/')).ToString();
+    }
+
+    private static string ToLocalPlaybackUrl(string localFilePath)
+    {
+        return Uri.TryCreate(localFilePath, UriKind.Absolute, out var uri)
+            ? uri.AbsoluteUri
+            : new Uri(Path.GetFullPath(localFilePath)).AbsoluteUri;
     }
 
     private static string BuildStatusLabel(AudioDto asset, string preferredLanguageCode)
@@ -87,6 +173,12 @@ public sealed class VisitorAudioCatalogService(HttpClient httpClient) : IVisitor
             AudioSourceType.Recorded => $"Sẵn sàng phát • {languageLabel} • ghi âm",
             _ => $"Sẵn sàng phát • {languageLabel} • TTS"
         };
+    }
+
+    private static string BuildOfflineStatusLabel(AudioDto asset, string preferredLanguageCode)
+    {
+        var liveStatus = BuildStatusLabel(asset, preferredLanguageCode);
+        return liveStatus.Replace("Sẵn sàng phát", "Sẵn sàng phát offline", StringComparison.Ordinal);
     }
 
     private static bool TryParseServerPoiId(string poiId, out int serverPoiId)

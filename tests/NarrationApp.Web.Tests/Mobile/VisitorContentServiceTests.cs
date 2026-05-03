@@ -155,6 +155,49 @@ public sealed class VisitorContentServiceTests
     }
 
     [Fact]
+    public async Task LoadAsync_ReturnsCachedContentWhenApiFailsAndOfflineSnapshotExists()
+    {
+        var cachedSnapshot = new VisitorContentSnapshot(
+            [
+                new VisitorPoi(
+                    "poi-7",
+                    "Bến Nhà Rồng offline",
+                    "di-tich",
+                    "Di tích",
+                    "Quận 4",
+                    "Offline cache",
+                    "Nội dung POI đã lưu trên máy.",
+                    "Đã cache",
+                    50,
+                    50,
+                    0,
+                    "01:30",
+                    "Có audio cache",
+                    10.7609,
+                    106.7054,
+                    ReadyAudioLanguageCodesRaw: ["vi"])
+            ],
+            [],
+            [
+                new VisitorCategory("di-tich", "Di tích", "🏛️")
+            ]);
+        var cacheStore = new FakeVisitorOfflineCacheStore { ContentSnapshot = cachedSnapshot };
+        var locationService = new FakeVisitorLocationService(VisitorLocationSnapshot.Disabled());
+        var service = CreateService(
+            locationService,
+            (_, _) => throw new HttpRequestException("backend down"),
+            cacheStore);
+
+        var result = await service.LoadAsync();
+
+        Assert.True(result.IsFallback);
+        Assert.Equal("Offline cache", result.SourceLabel);
+        Assert.Contains("offline", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("Bến Nhà Rồng offline", Assert.Single(result.Content.Pois).Name);
+        Assert.Equal("Di tích", Assert.Single(result.Content.Categories!).Label);
+    }
+
+    [Fact]
     public async Task LoadAsync_UsesNearbyEndpointWhenLocationIsAvailable()
     {
         var requestedPaths = new List<string>();
@@ -535,14 +578,18 @@ public sealed class VisitorContentServiceTests
 
     private static VisitorContentService CreateService(
         IVisitorLocationService locationService,
-        Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> handler)
+        Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> handler,
+        IVisitorOfflineCacheStore? offlineCacheStore = null)
     {
         var httpClient = new HttpClient(new FakeHttpMessageHandler(handler))
         {
             BaseAddress = new Uri("https://10.0.2.2:5001/")
         };
 
-        return new VisitorContentService(httpClient, locationService);
+        return new VisitorContentService(
+            httpClient,
+            locationService,
+            offlineCacheStore ?? new FakeVisitorOfflineCacheStore());
     }
 
     private static HttpResponseMessage CreateJsonResponse<T>(T payload)

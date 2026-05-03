@@ -60,6 +60,7 @@ public partial class Home
                 ? $"Đang phát từ QR • {cue.LanguageCode.ToUpperInvariant()}"
                 : $"Đang phát tự động • {cue.LanguageCode.ToUpperInvariant()}";
             _state.SetAudioPlaybackState(VisitorAudioPlaybackState.Playing, playbackLabel);
+            await TrackAudioPlayAsync(cue);
         }
         catch (JSException ex)
         {

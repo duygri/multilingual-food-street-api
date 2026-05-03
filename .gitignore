@@ -20,5 +20,8 @@ publish-apk/
 # Logs
 *.log
 
+# Local runtime secrets
+src/NarrationApp.Web/wwwroot/appsettings.Local.json
+
 # NuGet
 NuGet/

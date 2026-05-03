@@ -26,6 +26,7 @@ public partial class Home
         await JS.InvokeVoidAsync("visitorAudio.play", _state.CurrentAudioCue.StreamUrl, _audioBridge);
         await JS.InvokeVoidAsync("visitorAudio.setRate", AudioSpeedOptions[_audioSpeedIndex]);
         _state.SetAudioPlaybackState(VisitorAudioPlaybackState.Playing, $"Đang phát • {_state.CurrentAudioCue.LanguageCode.ToUpperInvariant()}");
+        await TrackAudioPlayAsync(_state.CurrentAudioCue);
     }
 
     private async Task TogglePlaybackAsync()
@@ -41,4 +42,9 @@ public partial class Home
     }
 
     private string GetMiniPlayIcon() => _state.IsAudioPlaying ? "❚❚" : "▶";
+
+    private Task TrackAudioPlayAsync(VisitorAudioCue cue)
+    {
+        return AudioPlayReporter.TrackAsync(cue, _state.CurrentLocation);
+    }
 }

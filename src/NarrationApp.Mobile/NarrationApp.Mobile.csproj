@@ -85,6 +85,21 @@
         <Error Text="Configuration '$(Configuration)' requires VisitorApiConfigFile so the packaged APK/AAB targets a real backend instead of the sample Resources\Raw\visitor-api.json endpoints." />
     </Target>
 
+    <Target Name="GenerateVisitorMapboxLocalOptions"
+            BeforeTargets="CoreCompile"
+            Condition="'$(MAPBOX_ACCESS_TOKEN)' != ''">
+        <PropertyGroup>
+            <VisitorMapboxLocalOptionsFile>$(IntermediateOutputPath)VisitorMapboxLocalOptions.g.cs</VisitorMapboxLocalOptionsFile>
+        </PropertyGroup>
+        <WriteLinesToFile
+            File="$(VisitorMapboxLocalOptionsFile)"
+            Lines="namespace NarrationApp.Mobile.Features.Home%3B internal static class VisitorMapboxLocalTokenProvider { internal static string AccessToken => &quot;$(MAPBOX_ACCESS_TOKEN)&quot;%3B }"
+            Overwrite="true" />
+        <ItemGroup>
+            <Compile Include="$(VisitorMapboxLocalOptionsFile)" />
+        </ItemGroup>
+    </Target>
+
     <ItemGroup>
         <!-- App Icon -->
         <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#1ED6AF" />
@@ -110,6 +125,7 @@
         <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
         <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="$(MauiVersion)" />
         <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.0" />
+        <PackageReference Include="sqlite-net-pcl" Version="1.9.172" />
     </ItemGroup>
 
     <ItemGroup>

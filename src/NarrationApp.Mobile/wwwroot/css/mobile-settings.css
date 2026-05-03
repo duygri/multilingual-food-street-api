@@ -294,6 +294,26 @@
     gap: 12px;
 }
 
+.cache-preload-status {
+    display: grid;
+    gap: 8px;
+    padding: 12px 14px;
+    border-radius: 18px;
+    background: rgba(8, 17, 31, 0.54);
+    border: 1px solid rgba(84, 121, 178, 0.2);
+}
+
+.cache-preload-status span {
+    color: var(--muted);
+    font-size: 0.88rem;
+    line-height: 1.4;
+}
+
+.cache-preload-status.is-running {
+    border-color: rgba(30, 214, 175, 0.32);
+    background: linear-gradient(180deg, rgba(30, 214, 175, 0.12), rgba(8, 17, 31, 0.58));
+}
+
 .cache-item {
     display: flex;
     align-items: center;
