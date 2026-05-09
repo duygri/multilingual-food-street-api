@@ -32,7 +32,7 @@ else
             <MetricCard Label="Lượt trigger / tháng" Value="@_analyticsSnapshot.CurrentMonthGeofenceTriggers.ToString("N0")" Hint="@CurrentMonthTriggerHint" />
             <MetricCard Label="Tour đã xuất bản" Value="@PublishedToursCount.ToString("N0")" Hint="@($"{_overview.TotalTours:N0} tour tổng")" />
             <MetricCard Label="QR Codes hoạt động" Value="@_qrItems.Count.ToString("N0")" Hint="POI và mở app" />
-            <MetricCard Label="Thiết bị visitor" Value="@_visitorDevices.Count.ToString("N0")" Hint="@($"{OnlineVisitorCount:N0} đang online")" />
+            <MetricCard Label="Thiết bị visitor" Value="@VisitorDeviceCount.ToString("N0")" Hint="@($"{OnlineVisitorCount:N0} đang online")" />
             <MetricCard Label="Chờ duyệt" Value="@_pendingModeration.Count.ToString("N0")" Hint="@($"{_overview.UnreadNotifications:N0} thông báo chưa đọc")" />
         </section>
 

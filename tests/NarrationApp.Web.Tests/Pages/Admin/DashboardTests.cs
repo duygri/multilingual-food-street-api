@@ -57,6 +57,10 @@ public sealed class DashboardTests : TestContext
             Assert.Contains("QR Codes hoạt động", cut.Markup);
             Assert.Contains("Thiết bị visitor", cut.Markup);
             Assert.Contains("1 đang online", cut.Markup);
+            var visitorMetric = cut.FindAll(".stat-tile")
+                .Single(tile => tile.TextContent.Contains("Thiết bị visitor", StringComparison.OrdinalIgnoreCase));
+            var visitorMetricValue = visitorMetric.Children.Single(child => child.ClassList.Contains("stat-tile__value"));
+            Assert.Equal("2", visitorMetricValue.TextContent);
             Assert.Contains("Top POI được nghe nhiều nhất", cut.Markup);
             Assert.Contains("Moderation Queue gần đây", cut.Markup);
             Assert.Contains("Bún mắm Vĩnh Khánh", cut.Markup);
@@ -134,8 +138,8 @@ public sealed class DashboardTests : TestContext
                 new VisitorDeviceSummaryDto
                 {
                     Id = Guid.NewGuid(),
-                    DisplayName = "Pixel 7",
-                    DeviceId = "pixel7-guest-001",
+                    DisplayName = "Samsung visitor",
+                    DeviceId = "android-device-samsung-sm-a155f-0caf0b",
                     PreferredLanguage = "vi-VN",
                     RoleName = "guest",
                     IsOnline = true,
@@ -150,6 +154,16 @@ public sealed class DashboardTests : TestContext
                     RoleName = "guest",
                     IsOnline = false,
                     LastSeenAtUtc = DateTime.UtcNow.AddHours(-1)
+                },
+                new VisitorDeviceSummaryDto
+                {
+                    Id = Guid.NewGuid(),
+                    DisplayName = "Samsung visitor repeat install",
+                    DeviceId = "android-device-samsung-sm-a155f-bb2211",
+                    PreferredLanguage = "vi-VN",
+                    RoleName = "guest",
+                    IsOnline = false,
+                    LastSeenAtUtc = DateTime.UtcNow.AddHours(-2)
                 }
             ]);
         }

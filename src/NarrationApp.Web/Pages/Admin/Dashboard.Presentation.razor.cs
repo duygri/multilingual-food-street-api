@@ -9,10 +9,36 @@ public partial class Dashboard
 {
     private IReadOnlyList<(int Rank, TopPoiDto Item)> RankedTopPois => _overview.TopPois.Select((item, index) => (index + 1, item)).ToArray();
     private IReadOnlyList<(ModerationRequestDto Item, int Index)> RankedModeration => _pendingModeration.Take(5).Select((item, index) => (item, index)).ToArray();
-    private int OnlineVisitorCount => _visitorDevices.Count(item => item.IsOnline);
+    private int VisitorDeviceCount => _visitorDevices.Select(GetVisitorDeviceKey).Distinct(StringComparer.OrdinalIgnoreCase).Count();
+    private int OnlineVisitorCount => _visitorDevices
+        .GroupBy(GetVisitorDeviceKey, StringComparer.OrdinalIgnoreCase)
+        .Count(group => group.Any(item => item.IsOnline));
     private int DistinctLanguageCount => _managedLanguages.Count(item => item.IsActive && !string.IsNullOrWhiteSpace(item.Code));
     private int PublishedToursCount => _overview.TotalTours;
     private string CurrentMonthTriggerHint => $"Geofence enter từ {GetCurrentMonthStartUtc():dd/MM}";
+
+    private static string GetVisitorDeviceKey(VisitorDeviceSummaryDto visitor)
+    {
+        if (string.IsNullOrWhiteSpace(visitor.DeviceId))
+        {
+            return visitor.Id.ToString("N");
+        }
+
+        var normalizedDeviceId = visitor.DeviceId.Trim().ToLowerInvariant();
+        var tokens = normalizedDeviceId.Split('-', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (tokens.Length >= 5
+            && tokens[0] is "android" or "ios"
+            && tokens[1] is "device" or "emulator"
+            && LooksLikeInstallSuffix(tokens[^1]))
+        {
+            return string.Join("-", tokens[..^1]);
+        }
+
+        return normalizedDeviceId;
+    }
+
+    private static bool LooksLikeInstallSuffix(string token) =>
+        token.Length == 6 && token.All(Uri.IsHexDigit);
 
     private string GetLanguageHint()
     {
