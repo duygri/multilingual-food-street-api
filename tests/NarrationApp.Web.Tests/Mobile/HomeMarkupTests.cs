@@ -272,6 +272,17 @@ public sealed class HomeMarkupTests
     }
 
     [Fact]
+    public void LoadContentAsync_UsesSharedProximityCoordinator()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var contentPath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Home.Content.razor.cs");
+        var code = File.ReadAllText(contentPath);
+
+        Assert.Contains("ResolveNextProximity(result.Location)", code, StringComparison.Ordinal);
+        Assert.DoesNotContain("VisitorProximityEngine.Evaluate(result.Location", code, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Mobile_diagnostics_do_not_write_to_console_in_runtime_builds()
     {
         var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));

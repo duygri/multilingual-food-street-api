@@ -20,7 +20,7 @@ public partial class Home
             _state.UpdateLocation(result.Location);
             _state.ApplyContent(result.Content, result.IsFallback, result.SourceLabel, result.Message);
             await ApplyPendingDeepLinkAudioAfterContentAsync();
-            var nextProximity = VisitorProximityEngine.Evaluate(result.Location, _state.Pois);
+            var nextProximity = ResolveNextProximity(result.Location);
             await ApplyProximityNarrationAsync(previousProximity, nextProximity);
         }
         finally
