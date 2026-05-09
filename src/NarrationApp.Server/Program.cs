@@ -189,6 +189,7 @@ builder.Services.AddScoped<DataSeeder>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IPoiService, PoiService>();
+builder.Services.AddScoped<IPoiReviewService, PoiReviewService>();
 builder.Services.AddScoped<ITranslationService, TranslationService>();
 builder.Services.AddScoped<IGeofenceService, GeofenceService>();
 builder.Services.AddScoped<IAudioService, AudioService>();
@@ -201,6 +202,7 @@ builder.Services.AddSingleton<IVisitorMobilePresenceTracker, InMemoryVisitorMobi
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IModerationService, ModerationService>();
 builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
+builder.Services.AddScoped<IVisitorDeviceDashboardService, VisitorDeviceDashboardService>();
 builder.Services.AddScoped<IVisitEventService, VisitEventService>();
 builder.Services.AddScoped<IVisitEventRetentionService, VisitEventRetentionService>();
 builder.Services.AddScoped<ITourService, TourService>();

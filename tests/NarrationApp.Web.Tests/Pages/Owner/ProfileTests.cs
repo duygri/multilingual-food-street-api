@@ -79,9 +79,9 @@ public sealed class ProfileTests : TestContext
         var cut = RenderComponent<Profile>();
 
         cut.WaitForAssertion(() => Assert.Contains("Thông tin hồ sơ", cut.Markup));
-        cut.Find("input[data-field='owner-full-name']").Change("Cô Tám Vĩnh Khánh");
-        cut.Find("input[data-field='owner-phone']").Change("+84 90 999 8888");
-        cut.Find("input[data-field='owner-managed-area']").Change("Quận 4 mở rộng");
+        cut.Find("input[data-field='owner-full-name']").Input("Cô Tám Vĩnh Khánh");
+        cut.Find("input[data-field='owner-phone']").Input("+84 90 999 8888");
+        cut.Find("input[data-field='owner-managed-area']").Input("Quận 4 mở rộng");
         cut.Find("select[data-field='owner-preferred-language']").Change("en");
         cut.Find("button[data-action='save-profile']").Click();
 
@@ -95,6 +95,43 @@ public sealed class ProfileTests : TestContext
         Assert.Equal("+84 90 999 8888", service.UpdateRequests[0].Phone);
         Assert.Equal("Quận 4 mở rộng", service.UpdateRequests[0].ManagedArea);
         Assert.Equal("en", service.UpdateRequests[0].PreferredLanguage);
+    }
+
+    [Fact]
+    public void Profile_page_enables_save_button_only_after_profile_editor_changes()
+    {
+        var service = new TestOwnerProfileService();
+        ConfigureProfile(service);
+
+        var cut = RenderComponent<Profile>();
+
+        cut.WaitForAssertion(() =>
+        {
+            var saveButton = cut.Find("button[data-action='save-profile']");
+            Assert.NotNull(saveButton.GetAttribute("disabled"));
+            Assert.Contains("app-button--save-disabled", saveButton.GetAttribute("class"));
+            Assert.DoesNotContain("app-button--primary", saveButton.GetAttribute("class"));
+        });
+
+        cut.Find("input[data-field='owner-full-name']").Input("Cô Tám Vĩnh Khánh");
+
+        cut.WaitForAssertion(() =>
+        {
+            var saveButton = cut.Find("button[data-action='save-profile']");
+            Assert.Null(saveButton.GetAttribute("disabled"));
+            Assert.Contains("app-button--primary", saveButton.GetAttribute("class"));
+            Assert.DoesNotContain("app-button--save-disabled", saveButton.GetAttribute("class"));
+        });
+
+        cut.Find("button[data-action='save-profile']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Single(service.UpdateRequests);
+            var saveButton = cut.Find("button[data-action='save-profile']");
+            Assert.NotNull(saveButton.GetAttribute("disabled"));
+            Assert.Contains("app-button--save-disabled", saveButton.GetAttribute("class"));
+        });
     }
 
     [Fact]
@@ -149,7 +186,7 @@ public sealed class ProfileTests : TestContext
         var cut = RenderComponent<Profile>();
 
         cut.WaitForAssertion(() => Assert.Contains("Thông tin hồ sơ", cut.Markup));
-        cut.Find("input[data-field='owner-full-name']").Change("Cô Tám Vĩnh Khánh");
+        cut.Find("input[data-field='owner-full-name']").Input("Cô Tám Vĩnh Khánh");
         cut.Find("select[data-field='owner-preferred-language']").Change("en");
         cut.Find("button[data-action='save-profile']").Click();
 
@@ -177,6 +214,7 @@ public sealed class ProfileTests : TestContext
         var cut = RenderComponent<Profile>();
 
         cut.WaitForAssertion(() => Assert.Contains("Thông tin hồ sơ", cut.Markup));
+        cut.Find("input[data-field='owner-phone']").Input("+84 90 000 1111");
         cut.Find("button[data-action='save-profile']").Click();
 
         cut.WaitForAssertion(() =>

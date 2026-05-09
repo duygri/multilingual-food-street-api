@@ -56,7 +56,7 @@ public sealed class PoiService(AppDbContext dbContext, IStorageService? storageS
             OwnerId = ownerId,
             Lat = request.Lat,
             Lng = request.Lng,
-            Priority = request.Priority,
+            Priority = AppConstants.DefaultPoiPriority,
             CategoryId = request.CategoryId,
             NarrationMode = request.NarrationMode,
             Description = request.Description.Trim(),
@@ -90,7 +90,11 @@ public sealed class PoiService(AppDbContext dbContext, IStorageService? storageS
         poi.Slug = request.Slug.Trim().ToLowerInvariant();
         poi.Lat = request.Lat;
         poi.Lng = request.Lng;
-        poi.Priority = request.Priority;
+        if (actorRole == UserRole.Admin)
+        {
+            poi.Priority = request.Priority;
+        }
+
         poi.CategoryId = request.CategoryId;
         poi.NarrationMode = request.NarrationMode;
         poi.Description = request.Description.Trim();

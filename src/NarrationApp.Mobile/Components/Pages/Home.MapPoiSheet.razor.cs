@@ -1,4 +1,3 @@
-using Microsoft.Maui.ApplicationModel;
 using NarrationApp.Mobile.Features.Home;
 
 namespace NarrationApp.Mobile.Components.Pages;
@@ -20,15 +19,4 @@ public partial class Home
             _state.SelectedPoi?.Id,
             _state.ActiveProximity,
             _proximityQueueState.QueuedMatch);
-
-    private async Task OpenSelectedPoiDirectionsAsync()
-    {
-        if (_state.SelectedPoi is null)
-        {
-            return;
-        }
-
-        var url = VisitorMapDirectionsLinkBuilder.BuildDirectionsUrl(_state.SelectedPoi);
-        await Launcher.Default.OpenAsync(new Uri(url));
-    }
 }

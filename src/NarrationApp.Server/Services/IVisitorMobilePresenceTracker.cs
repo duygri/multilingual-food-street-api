@@ -6,6 +6,8 @@ public interface IVisitorMobilePresenceTracker
 
     IReadOnlyCollection<VisitorMobilePresenceSnapshot> GetAll();
 
+    void MarkOffline(string deviceId);
+
     void Track(string deviceId, string source, string? preferredLanguage, DateTime? seenAtUtc = null);
 }
 

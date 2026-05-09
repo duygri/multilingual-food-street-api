@@ -1,3 +1,4 @@
+using NarrationApp.Shared.Constants;
 using NarrationApp.Shared.DTOs.Poi;
 using NarrationApp.Shared.Enums;
 
@@ -11,7 +12,7 @@ public partial class PoiCreate
         public string Slug { get; set; } = string.Empty;
         public double Lat { get; set; }
         public double Lng { get; set; }
-        public int Priority { get; set; } = 10;
+        public int Priority { get; set; } = AppConstants.DefaultPoiPriority;
         public NarrationMode NarrationMode { get; set; } = NarrationMode.TtsOnly;
         public string Description { get; set; } = string.Empty;
         public string TtsScript { get; set; } = string.Empty;

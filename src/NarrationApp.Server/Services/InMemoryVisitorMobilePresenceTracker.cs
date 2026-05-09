@@ -21,6 +21,16 @@ public sealed class InMemoryVisitorMobilePresenceTracker : IVisitorMobilePresenc
         return _presenceByDeviceId.Values.ToArray();
     }
 
+    public void MarkOffline(string deviceId)
+    {
+        if (string.IsNullOrWhiteSpace(deviceId))
+        {
+            return;
+        }
+
+        _presenceByDeviceId.TryRemove(deviceId.Trim(), out _);
+    }
+
     public void Track(string deviceId, string source, string? preferredLanguage, DateTime? seenAtUtc = null)
     {
         if (string.IsNullOrWhiteSpace(deviceId))

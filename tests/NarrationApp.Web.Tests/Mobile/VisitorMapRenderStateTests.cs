@@ -94,6 +94,34 @@ public sealed class VisitorMapRenderStateTests
     }
 
     [Fact]
+    public void ShouldRender_ReturnsTrueWhenWalkingRouteChanges()
+    {
+        var state = new VisitorMapRenderState();
+        var initialSnapshot = new VisitorMapSnapshot(
+            10.760900,
+            106.705400,
+            14.8,
+            [
+                new VisitorMapMarker("poi-1", "Cầu Khánh Hội", 10.760900, 106.705400, false, true, "#59b8ff")
+            ],
+            new VisitorMapUserLocation(10.760900, 106.705400, "Vị trí của bạn"));
+        var routedSnapshot = initialSnapshot with
+        {
+            Route = new VisitorMapRoute(
+                [
+                    new VisitorMapRoutePoint(10.760900, 106.705400),
+                    new VisitorMapRoutePoint(10.761400, 106.706100),
+                    new VisitorMapRoutePoint(10.762200, 106.707700)
+                ],
+                "Đi bộ 184 m • khoảng 3 phút")
+        };
+
+        Assert.True(state.ShouldRender(initialSnapshot));
+        Assert.True(state.ShouldRender(routedSnapshot));
+        Assert.False(state.ShouldRender(routedSnapshot));
+    }
+
+    [Fact]
     public void ShouldRender_ReturnsFalseForMinorUserLocationJitter()
     {
         var state = new VisitorMapRenderState();

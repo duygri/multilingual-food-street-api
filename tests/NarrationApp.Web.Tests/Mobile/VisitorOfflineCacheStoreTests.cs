@@ -79,6 +79,28 @@ public sealed class VisitorOfflineCacheStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task FindBestAudioAsync_DoesNotFallBackToVietnameseForAnotherLanguage()
+    {
+        var store = CreateStore();
+        await using var audioBytes = new MemoryStream([1, 2, 3, 4, 5]);
+
+        await store.CacheAudioAsync(
+            new VisitorAudioCacheRequest(
+                PoiId: "poi-7",
+                PoiName: "Bến Nhà Rồng",
+                LanguageCode: "vi",
+                SourceUrl: "https://example.test/audio-vi.mp3",
+                SourceLabel: "Recorded",
+                StatusLabel: "Sẵn sàng phát offline • VI",
+                DurationSeconds: 88),
+            audioBytes);
+
+        var best = await store.FindBestAudioAsync("poi-7", "en");
+
+        Assert.Null(best);
+    }
+
+    [Fact]
     public async Task ClearCachedAudioAsync_RemovesDatabaseRowsAndFiles()
     {
         var store = CreateStore();

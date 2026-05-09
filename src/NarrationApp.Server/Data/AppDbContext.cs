@@ -35,6 +35,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
 
     public DbSet<ManagedLanguage> ManagedLanguages => Set<ManagedLanguage>();
 
+    public DbSet<PoiReview> PoiReviews => Set<PoiReview>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -49,6 +51,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
         ConfigureNotifications(modelBuilder);
         ConfigureModerationRequests(modelBuilder);
         ConfigureManagedLanguages(modelBuilder);
+        ConfigurePoiReviews(modelBuilder);
     }
 
     private static void ConfigureRoles(ModelBuilder modelBuilder)
@@ -296,6 +299,24 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(language => language.NativeName).HasMaxLength(120).IsRequired();
             entity.Property(language => language.FlagCode).HasMaxLength(10).IsRequired();
             entity.HasIndex(language => language.IsActive);
+        });
+    }
+
+    private static void ConfigurePoiReviews(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<PoiReview>(entity =>
+        {
+            entity.ToTable("poi_reviews");
+            entity.HasKey(review => review.Id);
+            entity.Property(review => review.DeviceId).HasMaxLength(120).IsRequired();
+            entity.Property(review => review.Comment).HasMaxLength(600);
+            entity.Property(review => review.ReviewNote).HasMaxLength(600);
+            entity.HasIndex(review => new { review.PoiId, review.Status, review.CreatedAtUtc });
+            entity.HasIndex(review => new { review.DeviceId, review.PoiId, review.CreatedAtUtc });
+            entity.HasOne(review => review.Poi)
+                .WithMany(poi => poi.Reviews)
+                .HasForeignKey(review => review.PoiId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

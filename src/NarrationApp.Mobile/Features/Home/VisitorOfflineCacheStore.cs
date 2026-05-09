@@ -132,10 +132,11 @@ public sealed class VisitorOfflineCacheStore : IVisitorOfflineCacheStore, IDispo
         var entities = await _connection.Table<CachedAudioEntity>()
             .Where(entity => entity.PoiId == poiId)
             .ToListAsync();
+        var normalizedPreferredLanguageCode = NormalizeLanguageCode(preferredLanguageCode);
         var entity = entities
             .Where(item => File.Exists(item.LocalFilePath))
-            .OrderBy(item => string.Equals(item.LanguageCode, preferredLanguageCode, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
-            .ThenBy(item => string.Equals(item.LanguageCode, "vi", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+            .Where(item => string.Equals(item.LanguageCode, normalizedPreferredLanguageCode, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(item => string.Equals(item.LanguageCode, normalizedPreferredLanguageCode, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
             .ThenByDescending(item => ParseTimestamp(item.CachedAtUtc))
             .FirstOrDefault();
 
@@ -271,6 +272,13 @@ public sealed class VisitorOfflineCacheStore : IVisitorOfflineCacheStore, IDispo
         {
             File.Delete(path);
         }
+    }
+
+    private static string NormalizeLanguageCode(string languageCode)
+    {
+        return string.IsNullOrWhiteSpace(languageCode)
+            ? "vi"
+            : languageCode.Trim().ToLowerInvariant();
     }
 
     private sealed class OfflineContentSnapshotEntity

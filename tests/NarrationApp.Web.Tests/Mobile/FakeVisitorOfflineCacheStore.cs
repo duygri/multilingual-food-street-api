@@ -28,10 +28,11 @@ internal sealed class FakeVisitorOfflineCacheStore : IVisitorOfflineCacheStore
         string preferredLanguageCode,
         CancellationToken cancellationToken = default)
     {
+        var normalizedPreferredLanguageCode = NormalizeLanguageCode(preferredLanguageCode);
         var entry = AudioEntries
             .Where(item => string.Equals(item.PoiId, poiId, StringComparison.OrdinalIgnoreCase))
-            .OrderBy(item => string.Equals(item.LanguageCode, preferredLanguageCode, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
-            .ThenBy(item => string.Equals(item.LanguageCode, "vi", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+            .Where(item => string.Equals(item.LanguageCode, normalizedPreferredLanguageCode, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(item => string.Equals(item.LanguageCode, normalizedPreferredLanguageCode, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
             .FirstOrDefault();
 
         return Task.FromResult(entry);
@@ -83,5 +84,12 @@ internal sealed class FakeVisitorOfflineCacheStore : IVisitorOfflineCacheStore
     {
         AudioEntries.Clear();
         return Task.CompletedTask;
+    }
+
+    private static string NormalizeLanguageCode(string languageCode)
+    {
+        return string.IsNullOrWhiteSpace(languageCode)
+            ? "vi"
+            : languageCode.Trim().ToLowerInvariant();
     }
 }

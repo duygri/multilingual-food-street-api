@@ -1,25 +1,27 @@
+using NarrationApp.Mobile.Features.Home;
+
 namespace NarrationApp.Mobile.Components.Pages;
 
 public partial class Home
 {
-    private async Task CycleFullPlayerLanguageAsync()
+    private async Task SelectFullPlayerLanguageAsync(string languageCode)
     {
-        if (_state.SelectedPoi is null || _state.Languages.Count == 0)
+        if (_state.SelectedPoi is null)
         {
             return;
         }
 
-        var currentIndex = _state.Languages
-            .Select((language, index) => new { language.Code, index })
-            .First(item => item.Code == _state.SelectedLanguageCode)
-            .index;
-
-        var nextIndex = (currentIndex + 1) % _state.Languages.Count;
-        await SelectAudioLanguageAsync(_state.Languages[nextIndex].Code, keepPlayback: true);
+        _showFullPlayerLanguagePicker = false;
+        await SelectAudioLanguageAsync(languageCode, keepPlayback: true);
     }
 
     private async Task SelectAudioLanguageAsync(string languageCode, bool keepPlayback)
     {
+        if (!VisitorAudioLanguageSelector.CanUseForPoi(_state.SelectedPoi, languageCode))
+        {
+            return;
+        }
+
         var shouldResume = keepPlayback && _state.IsAudioPlaying;
         _state.ChangeLanguage(languageCode);
 
@@ -28,4 +30,7 @@ public partial class Home
             await PrepareSelectedPoiAudioAsync(autoPlay: shouldResume, forceAutoPlay: shouldResume);
         }
     }
+
+    private IReadOnlyList<VisitorLanguageOption> GetSelectedPoiAudioLanguages() =>
+        VisitorAudioLanguageSelector.BuildForPoi(_state.SelectedPoi, _state.Languages);
 }

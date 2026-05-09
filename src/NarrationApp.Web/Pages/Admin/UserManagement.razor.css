@@ -38,6 +38,11 @@
 }
 
 .visitor-page__refresh {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 100%;
     min-height: 2.9rem;
     padding: 0.65rem 1.05rem;
     border-radius: 1rem;
@@ -46,12 +51,24 @@
     color: #334155;
     cursor: pointer;
     font-weight: 600;
+    line-height: 1.1;
+    white-space: nowrap;
     box-shadow: 0 12px 24px rgba(148, 163, 184, 0.16);
+    transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.visitor-page__refresh:hover,
+.visitor-page__refresh:focus-visible {
+    border-color: #94a3b8;
+    box-shadow: 0 16px 30px rgba(148, 163, 184, 0.2);
+    transform: translateY(-1px);
+    outline: none;
 }
 
 .visitor-page__refresh:disabled {
     opacity: 0.72;
     cursor: wait;
+    transform: none;
 }
 
 .visitor-page__error {

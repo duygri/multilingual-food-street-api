@@ -62,7 +62,7 @@ else if (_profile is not null && _editor is not null)
                     <div class="owner-workspace-form-grid">
                         <label class="owner-workspace-field">
                             <span>Họ tên</span>
-                            <input data-field="owner-full-name" @bind="_editor.FullName" />
+                            <input data-field="owner-full-name" @bind="_editor.FullName" @bind:event="oninput" />
                         </label>
 
                         <label class="owner-workspace-field">
@@ -77,12 +77,12 @@ else if (_profile is not null && _editor is not null)
 
                         <label class="owner-workspace-field">
                             <span>Điện thoại</span>
-                            <input data-field="owner-phone" @bind="_editor.Phone" />
+                            <input data-field="owner-phone" @bind="_editor.Phone" @bind:event="oninput" />
                         </label>
 
                         <label class="owner-workspace-field">
                             <span>Khu vực phụ trách</span>
-                            <input data-field="owner-managed-area" @bind="_editor.ManagedArea" />
+                            <input data-field="owner-managed-area" @bind="_editor.ManagedArea" @bind:event="oninput" />
                         </label>
 
                         <label class="owner-workspace-field">
@@ -97,10 +97,10 @@ else if (_profile is not null && _editor is not null)
                     </div>
 
                     <div class="owner-workspace-actions">
-                        <button class="app-button app-button--primary"
+                        <button class="@ProfileSaveButtonClass"
                                 data-action="save-profile"
                                 type="button"
-                                disabled="@_isSavingProfile"
+                                disabled="@IsProfileSaveDisabled"
                                 @onclick="SaveProfileAsync">
                             @(_isSavingProfile ? "Đang lưu..." : "Lưu hồ sơ")
                         </button>

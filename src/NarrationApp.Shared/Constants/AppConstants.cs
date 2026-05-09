@@ -8,6 +8,7 @@ public static class AppConstants
     public const string DefaultOwnerEmail = "owner@narration.app";
     public const string DefaultOwnerPassword = "Owner@123";
     public const int DefaultGeofenceRadiusMeters = 30;
+    public const int DefaultPoiPriority = 10;
     public const int DefaultDebounceSeconds = 10;
     public const int DefaultCooldownSeconds = 1800;
     public const int DefaultTourStopRadiusMeters = 30;

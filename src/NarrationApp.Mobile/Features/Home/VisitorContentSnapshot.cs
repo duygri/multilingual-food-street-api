@@ -1,10 +1,27 @@
 namespace NarrationApp.Mobile.Features.Home;
 
-public sealed record VisitorContentSnapshot(
-    IReadOnlyList<VisitorPoi> Pois,
-    IReadOnlyList<VisitorTourCard> Tours,
-    IReadOnlyList<VisitorCategory>? Categories = null)
+public sealed record VisitorContentSnapshot
 {
+    public VisitorContentSnapshot(
+        IReadOnlyList<VisitorPoi> Pois,
+        IReadOnlyList<VisitorTourCard> Tours,
+        IReadOnlyList<VisitorCategory>? Categories = null,
+        IReadOnlyList<VisitorLanguageOption>? Languages = null)
+    {
+        this.Pois = Pois;
+        this.Tours = Tours;
+        this.Categories = Categories;
+        this.Languages = Languages ?? [];
+    }
+
+    public IReadOnlyList<VisitorPoi> Pois { get; init; }
+
+    public IReadOnlyList<VisitorTourCard> Tours { get; init; }
+
+    public IReadOnlyList<VisitorCategory>? Categories { get; init; }
+
+    public IReadOnlyList<VisitorLanguageOption> Languages { get; init; }
+
     public static VisitorContentSnapshot CreateDemo()
     {
         return new VisitorContentSnapshot(
@@ -136,7 +153,8 @@ public sealed record VisitorContentSnapshot(
                 new VisitorCategory("history", "Lịch sử", "🏛️", "is-history"),
                 new VisitorCategory("river", "Ven sông", "🌉", "is-river"),
                 new VisitorCategory("night", "Đêm", "🍢", "is-night")
-            ]);
+            ],
+            VisitorLanguageCatalog.Defaults);
     }
 }
 

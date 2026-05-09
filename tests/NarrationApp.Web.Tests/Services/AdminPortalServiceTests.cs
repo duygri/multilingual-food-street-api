@@ -1,5 +1,7 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using NarrationApp.Shared.DTOs.Analytics;
 using NarrationApp.Shared.DTOs.Common;
@@ -30,6 +32,24 @@ public sealed class AdminPortalServiceTests
 
         Assert.Single(result);
         Assert.Equal("api/analytics/movement-flows?timeRange=Last24Hours&eventTypeFilter=AudioPlay&minimumUniqueSessions=5", handler.RequestUris[0]);
+    }
+
+    [Fact]
+    public async Task ExportEventLogCsvAsync_downloads_admin_event_log_file()
+    {
+        var handler = new InspectingFileDownloadHandler();
+        var apiClient = new ApiClient(new HttpClient(handler)
+        {
+            BaseAddress = new Uri("https://localhost:5001/")
+        }, new TestAuthSessionStore());
+        var sut = new AdminPortalService(apiClient);
+
+        var result = await sut.ExportEventLogCsvAsync();
+
+        Assert.Equal("api/admin/analytics/event-log.csv", handler.RequestUris[0]);
+        Assert.Equal("visit-event-log-demo.csv", result.FileName);
+        Assert.Equal("text/csv; charset=utf-8", result.ContentType);
+        Assert.Equal("event_id,device_id\r\n1,demo-device-001\r\n", Encoding.UTF8.GetString(result.Content));
     }
 
     private sealed class TestAuthSessionStore : IAuthSessionStore
@@ -82,6 +102,27 @@ public sealed class AdminPortalServiceTests
                     ]
                 }, options: new JsonSerializerOptions(JsonSerializerDefaults.Web))
             });
+        }
+    }
+
+    private sealed class InspectingFileDownloadHandler : HttpMessageHandler
+    {
+        public List<string> RequestUris { get; } = [];
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            RequestUris.Add(request.RequestUri?.PathAndQuery.TrimStart('/') ?? string.Empty);
+            var response = new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new ByteArrayContent(Encoding.UTF8.GetBytes("event_id,device_id\r\n1,demo-device-001\r\n"))
+            };
+            response.Content.Headers.ContentType = MediaTypeHeaderValue.Parse("text/csv; charset=utf-8");
+            response.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
+            {
+                FileNameStar = "visit-event-log-demo.csv"
+            };
+
+            return Task.FromResult(response);
         }
     }
 }

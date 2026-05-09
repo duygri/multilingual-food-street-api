@@ -73,7 +73,8 @@ public sealed class MobileSectionMarkupTests
         Assert.Contains("map-screen", markup, StringComparison.Ordinal);
         Assert.Contains("map-top-overlay", markup, StringComparison.Ordinal);
         Assert.Contains("map-top-controls", markup, StringComparison.Ordinal);
-        Assert.Contains("map-top-search", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("map-top-search", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("search-field__hint", markup, StringComparison.Ordinal);
         Assert.Contains("map-category-rail", markup, StringComparison.Ordinal);
         Assert.Contains("notification-panel__surface", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("qr-fab", markup, StringComparison.Ordinal);
@@ -82,12 +83,79 @@ public sealed class MobileSectionMarkupTests
         Assert.Contains("poi-sheet__audio-status", markup, StringComparison.Ordinal);
         Assert.Contains("poi-sheet__queue", markup, StringComparison.Ordinal);
         Assert.Contains("QueuedPoiStatus", markup, StringComparison.Ordinal);
+        Assert.Contains("poi-sheet__directions", markup, StringComparison.Ordinal);
+        Assert.Contains("DirectionsStatus", markup, StringComparison.Ordinal);
         Assert.Contains("Dẫn tới đây", markup, StringComparison.Ordinal);
         Assert.Contains("OnOpenDirections", markup, StringComparison.Ordinal);
         Assert.Contains("Xem chi tiết", markup, StringComparison.Ordinal);
         Assert.Contains("OnOpenPoiDetail", markup, StringComparison.Ordinal);
-        Assert.Contains("geofence-toast", markup, StringComparison.Ordinal);
+        Assert.Contains("geofence-toast geofence-toast--notice", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-live=\"polite\"", markup, StringComparison.Ordinal);
         Assert.Contains("geofence-toast__queue", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mobile_map_directions_draw_route_in_app_without_auto_launching_external_maps()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var directionsPath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Home.MapDirections.razor.cs");
+        var homePath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Home.razor");
+        var mapPath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Sections", "VisitorMapScreen.razor");
+
+        var source = File.ReadAllText(directionsPath);
+        var homeMarkup = File.ReadAllText(homePath);
+        var mapMarkup = File.ReadAllText(mapPath);
+
+        Assert.Contains("WalkingDirectionsService.LoadWalkingRouteAsync", source, StringComparison.Ordinal);
+        Assert.Contains("_state.OpenPoi(selectedPoi.Id)", source, StringComparison.Ordinal);
+        Assert.Contains("GetWalkingDirectionsNotice()", source, StringComparison.Ordinal);
+        Assert.Contains("_walkingRoute = result.Route", source, StringComparison.Ordinal);
+        Assert.Contains("await RenderMapIfNeededAsync()", source, StringComparison.Ordinal);
+        Assert.Contains("DirectionsNotice=\"@GetWalkingDirectionsNotice()\"", homeMarkup, StringComparison.Ordinal);
+        Assert.Contains("walking-route-banner", mapMarkup, StringComparison.Ordinal);
+        Assert.Contains("DirectionsNotice.DistanceLabel", mapMarkup, StringComparison.Ordinal);
+        Assert.Contains("DirectionsNotice.DurationLabel", mapMarkup, StringComparison.Ordinal);
+        Assert.Contains("OnClearDirections", mapMarkup, StringComparison.Ordinal);
+        Assert.Contains("Tắt dẫn đường", mapMarkup, StringComparison.Ordinal);
+        Assert.Contains("OnClearDirections=\"ClearWalkingDirectionsAsync\"", homeMarkup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Launcher.Default.OpenAsync", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("VisitorMapDirectionsLinkBuilder", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mobile_map_keeps_recenter_control_without_zoom_buttons()
+    {
+        var homeMarkup = File.ReadAllText(Path.Combine(ProjectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Home.razor"));
+        var mapMarkup = ReadSectionMarkup("VisitorMapScreen.razor");
+        var controlsSource = File.ReadAllText(Path.Combine(ProjectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Home.MapControls.razor.cs"));
+
+        Assert.Contains("OnCenterOnUser=\"CenterMapOnUserAsync\"", homeMarkup, StringComparison.Ordinal);
+        Assert.Contains("OnCenterOnUser", mapMarkup, StringComparison.Ordinal);
+        Assert.Contains("Về vị trí của tôi", mapMarkup, StringComparison.Ordinal);
+        Assert.Contains("visitorMap.centerOnUser", controlsSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("OnZoomIn", homeMarkup, StringComparison.Ordinal);
+        Assert.DoesNotContain("OnZoomOut", homeMarkup, StringComparison.Ordinal);
+        Assert.DoesNotContain("@onclick=\"OnZoomIn\"", mapMarkup, StringComparison.Ordinal);
+        Assert.DoesNotContain("@onclick=\"OnZoomOut\"", mapMarkup, StringComparison.Ordinal);
+        Assert.DoesNotContain(">+</button>", mapMarkup, StringComparison.Ordinal);
+        Assert.DoesNotContain(">−</button>", mapMarkup, StringComparison.Ordinal);
+        Assert.DoesNotContain("visitorMap.zoomIn", controlsSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("visitorMap.zoomOut", controlsSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mobile_poi_detail_exposes_in_app_directions_action()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var homePath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Home.razor");
+        var detailPath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Sections", "VisitorPoiDetailScreen.razor");
+
+        var homeMarkup = File.ReadAllText(homePath);
+        var detailMarkup = File.ReadAllText(detailPath);
+
+        Assert.Contains("OnOpenDirections", detailMarkup, StringComparison.Ordinal);
+        Assert.Contains("Dẫn tới đây", detailMarkup, StringComparison.Ordinal);
+        Assert.Contains("OnOpenDirections=\"OpenSelectedPoiDirectionsAsync\"", homeMarkup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -121,6 +189,7 @@ public sealed class MobileSectionMarkupTests
         Assert.Contains("OnRefresh", markup, StringComparison.Ordinal);
         Assert.Contains("discover-search", markup, StringComparison.Ordinal);
         Assert.Contains("discover-search--strict", markup, StringComparison.Ordinal);
+        Assert.Contains("search-field__hint", markup, StringComparison.Ordinal);
         Assert.Contains("OnOpenSearch", markup, StringComparison.Ordinal);
         Assert.Contains("readonly", markup, StringComparison.Ordinal);
         Assert.Contains("discover-chip-row", markup, StringComparison.Ordinal);
@@ -262,6 +331,7 @@ public sealed class MobileSectionMarkupTests
         Assert.Contains("search-screen", markup, StringComparison.Ordinal);
         Assert.Contains("search-top", markup, StringComparison.Ordinal);
         Assert.Contains("search-top__field--strict", markup, StringComparison.Ordinal);
+        Assert.Contains("search-field__hint", markup, StringComparison.Ordinal);
         Assert.Contains("search-screen__summary", markup, StringComparison.Ordinal);
         Assert.Contains("search-result-count", markup, StringComparison.Ordinal);
         Assert.Contains("search-section", markup, StringComparison.Ordinal);
@@ -284,6 +354,11 @@ public sealed class MobileSectionMarkupTests
         Assert.Contains("full-player-wave", markup, StringComparison.Ordinal);
         Assert.Contains("full-player-controls", markup, StringComparison.Ordinal);
         Assert.Contains("full-player-control--primary", markup, StringComparison.Ordinal);
+        Assert.Contains("full-player-language-picker", markup, StringComparison.Ordinal);
+        Assert.Contains("full-player-language-option", markup, StringComparison.Ordinal);
+        Assert.Contains("OnToggleLanguagePicker", markup, StringComparison.Ordinal);
+        Assert.Contains("OnSelectLanguage.InvokeAsync(language.Code)", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("@onclick=\"OnCycleLanguage\"", markup, StringComparison.Ordinal);
         Assert.Contains("full-player-transcript", markup, StringComparison.Ordinal);
         Assert.Contains("full-player-transcript__surface", markup, StringComparison.Ordinal);
     }
@@ -306,10 +381,27 @@ public sealed class MobileSectionMarkupTests
         var markup = ReadSectionMarkup("VisitorMapScreen.razor");
 
         Assert.Contains("map-top-controls", markup, StringComparison.Ordinal);
-        Assert.Contains("map-top-search", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("map-top-search", markup, StringComparison.Ordinal);
         Assert.Contains("map-category-rail", markup, StringComparison.Ordinal);
         Assert.Contains("map-top-overlay--sheet-open", markup, StringComparison.Ordinal);
-        Assert.Contains("placeholder=\"Tìm theo tên, danh mục", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("placeholder=\"Tìm theo tên, danh mục", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("OnOpenSearch", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("map-overlay-meta", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("LocationStatusLabel", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("DataSourceLabel", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("AutoAudioStatusProvider", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mobile_map_screen_removes_refresh_and_audio_floating_icons()
+    {
+        var markup = ReadSectionMarkup("VisitorMapScreen.razor");
+
+        Assert.DoesNotContain("map-fab-rail", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("map-fab-button--accent", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("OnSwitchToTours", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain(">↻<", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain(">🎧<", markup, StringComparison.Ordinal);
     }
 
     private static string ReadSectionMarkup(string fileName)
@@ -317,9 +409,10 @@ public sealed class MobileSectionMarkupTests
         return File.ReadAllText(GetSectionPath(fileName));
     }
 
+    private static string ProjectRoot => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+
     private static string GetSectionPath(string fileName)
     {
-        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
-        return Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Sections", fileName);
+        return Path.Combine(ProjectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Sections", fileName);
     }
 }

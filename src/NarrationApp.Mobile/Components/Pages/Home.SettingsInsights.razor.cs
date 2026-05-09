@@ -11,7 +11,9 @@ public partial class Home
             _state.CachedAudioItems.Count);
 
     private string GetAudioCacheSummary() =>
-        VisitorSettingsPresentationFormatter.FormatAudioCacheSummary(
+        VisitorSettingsPresentationFormatter.FormatOfflinePackSummary(
+            _state.Pois.Count,
+            _state.Tours.Count,
             _state.CachedAudioItems.Count,
             _state.CachedAudioItems.Sum(item => item.SizeMb));
 

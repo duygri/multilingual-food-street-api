@@ -5,16 +5,22 @@
     <header class="settings-detail-header">
         <button type="button" class="icon-button" @onclick="OnBack">←</button>
         <div>
-            <span class="eyebrow">Cache manager</span>
-            <h2>Audio đã cache</h2>
-            <p>Quản lý các file audio đã lưu cục bộ để nghe offline và giải phóng bộ nhớ khi cần.</p>
+            <span class="eyebrow">Offline pack</span>
+            <h2>Gói offline</h2>
+            <p>Lưu snapshot POI, tour và audio theo ngôn ngữ hiện tại để app vẫn dùng được khi mạng yếu.</p>
         </div>
     </header>
 
     <article class="setting-card cache-summary-card">
-        <span class="sheet-label">Dung lượng đang dùng</span>
-        <strong>@GetUsedStorageLabel()</strong>
+        <span class="sheet-label">Dữ liệu đang giữ trên máy</span>
+        <strong>@PoiCount POI • @TourCount tour</strong>
         <p>@Items.Count file audio thuộc @GetDistinctPoiCount() POI khác nhau.</p>
+    </article>
+
+    <article class="setting-card cache-summary-card">
+        <span class="sheet-label">Dung lượng audio offline</span>
+        <strong>@GetUsedStorageLabel()</strong>
+        <p>Tải trước audio cho ngôn ngữ đang chọn để quét QR hoặc vào geofence vẫn nghe được.</p>
         <div class="settings-progress">
             <span class="settings-progress__fill" style="@GetProgressStyle()"></span>
         </div>
@@ -59,6 +65,8 @@
 @code {
     [Parameter] public IReadOnlyList<VisitorCachedAudioItem> Items { get; set; } = [];
     [Parameter] public double CapacityMb { get; set; } = 64d;
+    [Parameter] public int PoiCount { get; set; }
+    [Parameter] public int TourCount { get; set; }
     [Parameter] public string PreloadActionLabel { get; set; } = "Tải trước audio";
     [Parameter] public string PreloadStatusLabel { get; set; } = "Sẵn sàng tải trước audio.";
     [Parameter] public double PreloadProgressPercent { get; set; }

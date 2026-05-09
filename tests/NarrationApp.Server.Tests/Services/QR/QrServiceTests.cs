@@ -47,6 +47,24 @@ public sealed class QrServiceTests
     }
 
     [Fact]
+    public async Task ResolveAsync_accepts_qr_code_case_insensitively()
+    {
+        await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
+        var poi = await dbContext.Pois.FirstAsync();
+        var sut = new QrService(dbContext);
+        var qr = await sut.CreateAsync(new CreateQrRequest
+        {
+            TargetType = "poi",
+            TargetId = poi.Id,
+            LocationHint = "Bus stop"
+        });
+
+        var resolved = await sut.ResolveAsync(qr.Code.ToLowerInvariant());
+
+        Assert.Equal(qr.Code, resolved.Code);
+    }
+
+    [Fact]
     public async Task ScanAsync_does_not_record_duplicate_qr_visit_for_same_device_and_poi_within_cooldown()
     {
         await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
@@ -151,15 +169,35 @@ public sealed class QrServiceTests
     }
 
     [Fact]
-    public async Task CreateAsync_rejects_tour_target_type()
+    public async Task CreateAsync_accepts_tour_target_type()
+    {
+        await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
+        var tour = await dbContext.Tours.FirstAsync();
+        var sut = new QrService(dbContext);
+
+        var result = await sut.CreateAsync(new CreateQrRequest
+        {
+            TargetType = "tour",
+            TargetId = tour.Id,
+            LocationHint = "Điểm dừng xe buýt"
+        });
+
+        Assert.False(string.IsNullOrWhiteSpace(result.Code));
+        Assert.Equal("tour", result.TargetType);
+        Assert.Equal(tour.Id, result.TargetId);
+        Assert.Null(result.ScanCount);
+    }
+
+    [Fact]
+    public async Task CreateAsync_rejects_missing_tour_target()
     {
         await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
         var sut = new QrService(dbContext);
 
-        await Assert.ThrowsAsync<ArgumentException>(() => sut.CreateAsync(new CreateQrRequest
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => sut.CreateAsync(new CreateQrRequest
         {
             TargetType = "tour",
-            TargetId = 7
+            TargetId = -7
         }));
     }
 }

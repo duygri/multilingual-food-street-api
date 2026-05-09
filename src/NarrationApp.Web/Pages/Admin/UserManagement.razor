@@ -64,7 +64,6 @@ else
                             <tr>
                                 <th>Thiết bị</th>
                                 <th>Trạng thái</th>
-                                <th>Ngôn ngữ</th>
                                 <th>Lần cuối</th>
                                 <th>Tracking</th>
                                 <th>Visit</th>
@@ -88,9 +87,6 @@ else
                                         <span class="visitor-page__status @(visitor.IsOnline ? "is-online" : "is-offline")">
                                             @(visitor.IsOnline ? "Online" : "Offline")
                                         </span>
-                                    </td>
-                                    <td>
-                                        <span class="visitor-page__language">@GetLanguageLabel(visitor.PreferredLanguage)</span>
                                     </td>
                                     <td>
                                         <div class="visitor-page__last-seen">

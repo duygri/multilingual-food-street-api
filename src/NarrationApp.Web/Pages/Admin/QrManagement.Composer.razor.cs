@@ -22,6 +22,11 @@ public partial class QrManagement
         {
             _qrEditor.PoiId = _poiOptions[0].Id;
         }
+
+        if (_tourOptions.Count > 0 && _qrEditor.TourId <= 0)
+        {
+            _qrEditor.TourId = _tourOptions[0].Id;
+        }
     }
 
     private void UpdateQrTargetType(string? value)
@@ -35,6 +40,14 @@ public partial class QrManagement
         if (int.TryParse(value, out var poiId))
         {
             _qrEditor.PoiId = poiId;
+        }
+    }
+
+    private void UpdateQrTour(string? value)
+    {
+        if (int.TryParse(value, out var tourId))
+        {
+            _qrEditor.TourId = tourId;
         }
     }
 }

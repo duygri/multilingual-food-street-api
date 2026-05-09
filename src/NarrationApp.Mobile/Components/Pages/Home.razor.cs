@@ -17,6 +17,7 @@ public partial class Home : IAsyncDisposable
     private bool _isAutoPlayingFromProximity;
     private bool _isContentLoading;
     private bool _isHandlingPendingDeepLink;
+    private bool _pendingDeepLinkAudioAfterContent;
     private bool _pendingSelectedPoiAudioPreparationRequested;
     private bool _pendingSelectedPoiAutoPlay;
     private string? _discoverPoiDetailId;
@@ -24,10 +25,16 @@ public partial class Home : IAsyncDisposable
     private bool _isSearchOverlayOpen;
     private bool _isFullPlayerOpen;
     private bool _showFullPlayerTranscript;
+    private bool _showFullPlayerLanguagePicker;
     private bool _startupWorkQueued;
+    private bool _isMapSurfaceMounted;
     private bool _isCachePreloadRunning;
     private double _cachePreloadProgressPercent;
     private string _cachePreloadStatusLabel = "Sẵn sàng tải trước audio cho ngôn ngữ hiện tại.";
+    private VisitorMapRoute? _walkingRoute;
+    private string? _walkingRoutePoiId;
+    private string? _walkingDirectionsStatus;
+    private bool _isWalkingRouteLoading;
     private CancellationTokenSource? _foregroundLocationLoopCts;
     private Task? _foregroundLocationLoopTask;
     private int _audioSpeedIndex = 1;

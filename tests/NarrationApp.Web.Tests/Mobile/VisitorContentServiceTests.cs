@@ -5,6 +5,7 @@ using NarrationApp.Shared.DTOs.Audio;
 using NarrationApp.Shared.DTOs.Category;
 using NarrationApp.Shared.DTOs.Common;
 using NarrationApp.Shared.DTOs.Geofence;
+using NarrationApp.Shared.DTOs.Languages;
 using NarrationApp.Shared.DTOs.Poi;
 using NarrationApp.Shared.DTOs.Tour;
 using NarrationApp.Shared.DTOs.Translation;
@@ -433,6 +434,135 @@ public sealed class VisitorContentServiceTests
     }
 
     [Fact]
+    public void Map_UsesReadyAudioLanguagesForStoryTagAndLanguageCount()
+    {
+        IReadOnlyList<PoiDto> pois =
+        [
+            new PoiDto
+            {
+                Id = 41,
+                Name = "Vũ Ốc",
+                Slug = "vu-oc",
+                Lat = 10.7607,
+                Lng = 106.7033,
+                CategoryName = "Hải sản",
+                Description = "POI có nhiều bản dịch nhưng chỉ có một số audio sẵn sàng.",
+                TtsScript = "Audio demo",
+                Status = PoiStatus.Published,
+                Translations =
+                [
+                    new TranslationDto { LanguageCode = "en" },
+                    new TranslationDto { LanguageCode = "ja" },
+                    new TranslationDto { LanguageCode = "ko" },
+                    new TranslationDto { LanguageCode = "zh" },
+                    new TranslationDto { LanguageCode = "fr" },
+                    new TranslationDto { LanguageCode = "th" }
+                ]
+            }
+        ];
+
+        var snapshot = VisitorContentMapper.Map(
+            pois,
+            [],
+            [],
+            VisitorLocationSnapshot.Disabled(),
+            readyAudioLanguageCodesByPoiId: new Dictionary<int, IReadOnlyList<string>>
+            {
+                [41] = ["vi", "en", "fr"]
+            });
+
+        var poi = Assert.Single(snapshot.Pois);
+        Assert.Equal(3, poi.AvailableLanguageCount);
+        Assert.Equal("Live API • 3 ngôn ngữ thuyết minh", poi.StoryTag);
+    }
+
+    [Fact]
+    public void Map_PreservesTranslationScriptsForSelectedMobileLanguage()
+    {
+        IReadOnlyList<PoiDto> pois =
+        [
+            new PoiDto
+            {
+                Id = 42,
+                Name = "Ốc Oanh",
+                Slug = "oc-oanh",
+                Lat = 10.7607,
+                Lng = 106.7033,
+                CategoryName = "Hải sản",
+                Description = "Mô tả tiếng Việt.",
+                TtsScript = "Kịch bản tiếng Việt.",
+                Status = PoiStatus.Published,
+                Translations =
+                [
+                    new TranslationDto
+                    {
+                        LanguageCode = "en",
+                        Description = "English description.",
+                        Story = "English narration script.",
+                        Highlight = "English highlight."
+                    },
+                    new TranslationDto
+                    {
+                        LanguageCode = "ja",
+                        Description = "Japanese description.",
+                        Story = "Japanese narration script.",
+                        Highlight = "Japanese highlight."
+                    }
+                ]
+            }
+        ];
+
+        var snapshot = VisitorContentMapper.Map(pois, [], [], VisitorLocationSnapshot.Disabled());
+        var poi = Assert.Single(snapshot.Pois);
+
+        Assert.Equal("English description.", poi.GetDescriptionForLanguage("en"));
+        Assert.Equal("English highlight.", poi.GetHighlightForLanguage("en"));
+        Assert.Equal("English narration script.", poi.GetStoryForLanguage("en"));
+        Assert.Equal("Mô tả tiếng Việt.", poi.GetDescriptionForLanguage("fr"));
+    }
+
+    [Fact]
+    public async Task LoadAsync_IncludesManagedLanguagesFromLiveApi()
+    {
+        var poiResponse = new ApiResponse<IReadOnlyList<PoiDto>>
+        {
+            Succeeded = true,
+            Data = []
+        };
+        var languageResponse = new ApiResponse<IReadOnlyList<ManagedLanguageDto>>
+        {
+            Succeeded = true,
+            Data =
+            [
+                new ManagedLanguageDto { Code = "vi", DisplayName = "Tiếng Việt", NativeName = "Tiếng Việt", FlagCode = "VN", IsActive = true },
+                new ManagedLanguageDto { Code = "th", DisplayName = "Thai", NativeName = "ไทย", FlagCode = "TH", IsActive = true },
+                new ManagedLanguageDto { Code = "de", DisplayName = "German", NativeName = "Deutsch", FlagCode = "DE", IsActive = false }
+            ]
+        };
+
+        var requestedPaths = new List<string>();
+        var locationService = new FakeVisitorLocationService(VisitorLocationSnapshot.Disabled());
+        var service = CreateService(locationService, request =>
+        {
+            requestedPaths.Add(request.RequestUri!.AbsolutePath);
+            return Task.FromResult(request.RequestUri!.AbsolutePath switch
+            {
+                "/api/pois" => CreateJsonResponse(poiResponse),
+                "/api/tours" => CreateJsonResponse(new ApiResponse<IReadOnlyList<TourDto>> { Succeeded = true, Data = [] }),
+                "/api/categories" => CreateJsonResponse(new ApiResponse<IReadOnlyList<CategoryDto>> { Succeeded = true, Data = [] }),
+                "/api/languages" => CreateJsonResponse(languageResponse),
+                _ => new HttpResponseMessage(HttpStatusCode.NotFound)
+            });
+        });
+
+        var result = await service.LoadAsync();
+
+        Assert.Contains("/api/languages", requestedPaths);
+        Assert.Equal(["vi", "th"], result.Content.Languages.Select(language => language.Code));
+        Assert.Contains(result.Content.Languages, language => language.Code == "th" && language.Label == "ไทย" && language.SubLabel == "Tiếng Thái" && language.ChipLabel == "TH");
+    }
+
+    [Fact]
     public async Task LoadAsync_FallsBackToAllPoisWhenNearbyEndpointReturnsEmpty()
     {
         var requestedPaths = new List<string>();
@@ -558,6 +688,11 @@ public sealed class VisitorContentServiceTests
                     Succeeded = true,
                     Data = []
                 }),
+                "/api/languages" => CreateJsonResponse(new ApiResponse<IReadOnlyList<ManagedLanguageDto>>
+                {
+                    Succeeded = true,
+                    Data = []
+                }),
                 _ => new HttpResponseMessage(HttpStatusCode.NotFound)
             };
         });
@@ -570,6 +705,7 @@ public sealed class VisitorContentServiceTests
             Assert.Contains("/api/pois", startedPaths);
             Assert.Contains("/api/tours", startedPaths);
             Assert.Contains("/api/categories", startedPaths);
+            Assert.Contains("/api/languages", startedPaths);
         }
 
         var result = await loadTask;
@@ -590,6 +726,14 @@ public sealed class VisitorContentServiceTests
             httpClient,
             locationService,
             offlineCacheStore ?? new FakeVisitorOfflineCacheStore());
+    }
+
+    private static VisitorContentService CreateService(
+        IVisitorLocationService locationService,
+        Func<HttpRequestMessage, Task<HttpResponseMessage>> handler,
+        IVisitorOfflineCacheStore? offlineCacheStore = null)
+    {
+        return CreateService(locationService, (request, _) => handler(request), offlineCacheStore);
     }
 
     private static HttpResponseMessage CreateJsonResponse<T>(T payload)

@@ -30,11 +30,16 @@ public partial class Home
             return [];
         }
 
+        var selectedLanguageCode = _state.SelectedLanguageCode;
+        var description = _state.SelectedPoi.GetDescriptionForLanguage(selectedLanguageCode);
+        var highlight = _state.SelectedPoi.GetHighlightForLanguage(selectedLanguageCode);
+        var story = _state.SelectedPoi.GetStoryForLanguage(selectedLanguageCode);
+
         return
         [
-            _state.SelectedPoi.Description,
-            _state.SelectedPoi.Highlight,
-            $"{_state.SelectedPoi.Name} • {_state.SelectedPoi.StoryTag} • ưu tiên {_state.CurrentLanguage.Label}."
+            description,
+            highlight,
+            story
         ];
     }
 

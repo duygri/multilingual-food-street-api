@@ -5,7 +5,7 @@ namespace NarrationApp.Mobile.Components.Pages;
 public partial class Home
 {
     private string GetCachePreloadActionLabel() =>
-        $"Tải trước {_state.CurrentLanguage.Label}";
+        $"Tải gói {_state.CurrentLanguage.Label}";
 
     private async Task PreloadSelectedLanguageAudioAsync()
     {
@@ -16,7 +16,7 @@ public partial class Home
 
         _isCachePreloadRunning = true;
         _cachePreloadProgressPercent = 0;
-        _cachePreloadStatusLabel = $"Đang chuẩn bị tải audio {_state.CurrentLanguage.Label}...";
+        _cachePreloadStatusLabel = $"Đang chuẩn bị gói offline {_state.CurrentLanguage.Label}...";
 
         try
         {
@@ -50,11 +50,11 @@ public partial class Home
     {
         if (result.Total == 0)
         {
-            return "Không có POI nào có audio sẵn cho ngôn ngữ hiện tại.";
+            return "Không có POI nào có audio sẵn cho gói offline ngôn ngữ hiện tại.";
         }
 
         return result.Failed > 0
             ? $"Đã tải {result.Downloaded}, bỏ qua {result.Skipped}, lỗi {result.Failed}."
-            : $"Đã sẵn sàng offline: tải mới {result.Downloaded}, đã có {result.Skipped}.";
+            : $"Gói offline đã sẵn sàng: tải mới {result.Downloaded}, đã có {result.Skipped}.";
     }
 }

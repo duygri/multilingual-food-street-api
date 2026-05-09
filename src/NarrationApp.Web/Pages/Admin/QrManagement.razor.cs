@@ -1,5 +1,6 @@
 using NarrationApp.Shared.DTOs.Poi;
 using NarrationApp.Shared.DTOs.QR;
+using NarrationApp.Shared.DTOs.Tour;
 using NarrationApp.Web.Services;
 
 namespace NarrationApp.Web.Pages.Admin;
@@ -11,6 +12,7 @@ public partial class QrManagement
     private string? _errorMessage;
     private string? _statusMessage;
     private IReadOnlyList<PoiDto> _poiOptions = Array.Empty<PoiDto>();
+    private IReadOnlyList<TourDto> _tourOptions = Array.Empty<TourDto>();
     private IReadOnlyList<QrCodeDto> _qrItems = Array.Empty<QrCodeDto>();
     private QrEditorModel _qrEditor = QrEditorModel.CreateDefault();
     private QrCodeDto? _previewQr;
@@ -21,6 +23,7 @@ public partial class QrManagement
         try
         {
             _poiOptions = await TourPortalService.GetPoiOptionsAsync();
+            _tourOptions = await TourPortalService.GetToursAsync();
             await LoadQrItemsAsync();
         }
         catch (ApiException exception)

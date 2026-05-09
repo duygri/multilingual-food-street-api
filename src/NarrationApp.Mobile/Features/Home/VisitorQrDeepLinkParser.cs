@@ -5,7 +5,8 @@ namespace NarrationApp.Mobile.Features.Home;
 public enum VisitorQrTargetKind
 {
     OpenApp,
-    Poi
+    Poi,
+    Tour
 }
 
 public sealed record VisitorQrDeepLinkRequest(string Code, string SourceUri);
@@ -19,6 +20,7 @@ public sealed record VisitorQrNavigationTarget(string Code, VisitorQrTargetKind 
         return targetType switch
         {
             "poi" when qrCode.TargetId > 0 => new VisitorQrNavigationTarget(qrCode.Code, VisitorQrTargetKind.Poi, $"poi-{qrCode.TargetId}"),
+            "tour" when qrCode.TargetId > 0 => new VisitorQrNavigationTarget(qrCode.Code, VisitorQrTargetKind.Tour, $"tour-{qrCode.TargetId}"),
             "open_app" => new VisitorQrNavigationTarget(qrCode.Code, VisitorQrTargetKind.OpenApp, null),
             _ => new VisitorQrNavigationTarget(qrCode.Code, VisitorQrTargetKind.OpenApp, null)
         };
@@ -65,8 +67,7 @@ public static class VisitorQrDeepLinkParser
             return ExtractHostedCode(uri);
         }
 
-        if (uri.Scheme.Equals("foodstreet", StringComparison.OrdinalIgnoreCase)
-            && uri.Host.Equals("qr", StringComparison.OrdinalIgnoreCase))
+        if (uri.Scheme.Equals("foodstreet", StringComparison.OrdinalIgnoreCase))
         {
             return ExtractCustomSchemeCode(uri);
         }
@@ -77,12 +78,51 @@ public static class VisitorQrDeepLinkParser
     private static string? ExtractHostedCode(Uri uri)
     {
         var segments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
-        return segments is ["qr", { Length: > 0 } code] ? code : null;
+        if (segments is ["qr", { Length: > 0 } code])
+        {
+            return code;
+        }
+
+        return segments is ["qr"] ? ExtractQueryCode(uri) : null;
     }
 
     private static string? ExtractCustomSchemeCode(Uri uri)
     {
         var segments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
-        return segments is [{ Length: > 0 } code] ? code : null;
+        if (uri.Host.Equals("qr", StringComparison.OrdinalIgnoreCase))
+        {
+            return segments is [{ Length: > 0 } code] ? code : ExtractQueryCode(uri);
+        }
+
+        if (segments is ["qr", { Length: > 0 } hostedPathCode])
+        {
+            return hostedPathCode;
+        }
+
+        return segments is ["qr"] ? ExtractQueryCode(uri) : null;
+    }
+
+    private static string? ExtractQueryCode(Uri uri)
+    {
+        if (string.IsNullOrWhiteSpace(uri.Query))
+        {
+            return null;
+        }
+
+        var query = uri.Query.TrimStart('?');
+        foreach (var pair in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var parts = pair.Split('=', 2);
+            var name = Uri.UnescapeDataString(parts[0]).Replace("+", " ", StringComparison.Ordinal);
+            if (!name.Equals("code", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var value = parts.Length == 2 ? parts[1] : string.Empty;
+            return Uri.UnescapeDataString(value).Replace("+", " ", StringComparison.Ordinal);
+        }
+
+        return null;
     }
 }

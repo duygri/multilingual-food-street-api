@@ -513,6 +513,63 @@ namespace NarrationApp.Server.Data.Migrations
                     b.ToTable("pois", (string)null);
                 });
 
+            modelBuilder.Entity("NarrationApp.Server.Data.Entities.PoiReview", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(600)
+                        .HasColumnType("character varying(600)")
+                        .HasColumnName("comment");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("DeviceId")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("device_id");
+
+                    b.Property<int>("PoiId")
+                        .HasColumnType("integer")
+                        .HasColumnName("poi_id");
+
+                    b.Property<int>("Rating")
+                        .HasColumnType("integer")
+                        .HasColumnName("rating");
+
+                    b.Property<string>("ReviewNote")
+                        .HasMaxLength(600)
+                        .HasColumnType("character varying(600)")
+                        .HasColumnName("review_note");
+
+                    b.Property<DateTime?>("ReviewedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("reviewed_at_utc");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer")
+                        .HasColumnName("status");
+
+                    b.HasKey("Id")
+                        .HasName("pk_poi_reviews");
+
+                    b.HasIndex("DeviceId", "PoiId", "CreatedAtUtc")
+                        .HasDatabaseName("ix_poi_reviews_device_id_poi_id_created_at_utc");
+
+                    b.HasIndex("PoiId", "Status", "CreatedAtUtc")
+                        .HasDatabaseName("ix_poi_reviews_poi_id_status_created_at_utc");
+
+                    b.ToTable("poi_reviews", (string)null);
+                });
+
             modelBuilder.Entity("NarrationApp.Server.Data.Entities.PoiTranslation", b =>
                 {
                     b.Property<int>("Id")
@@ -934,6 +991,18 @@ namespace NarrationApp.Server.Data.Migrations
                     b.Navigation("Owner");
                 });
 
+            modelBuilder.Entity("NarrationApp.Server.Data.Entities.PoiReview", b =>
+                {
+                    b.HasOne("NarrationApp.Server.Data.Entities.Poi", "Poi")
+                        .WithMany("Reviews")
+                        .HasForeignKey("PoiId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_poi_reviews_pois_poi_id");
+
+                    b.Navigation("Poi");
+                });
+
             modelBuilder.Entity("NarrationApp.Server.Data.Entities.PoiTranslation", b =>
                 {
                     b.HasOne("NarrationApp.Server.Data.Entities.Poi", "Poi")
@@ -1031,6 +1100,8 @@ namespace NarrationApp.Server.Data.Migrations
                     b.Navigation("AudioAssets");
 
                     b.Navigation("Geofences");
+
+                    b.Navigation("Reviews");
 
                     b.Navigation("TourStops");
 

@@ -262,6 +262,20 @@ else
                         <article class="admin-poi-detail__card">
                             <span>Tọa độ</span>
                             <strong>@FormatCoordinates(_selectedPoi)</strong>
+                            <label class="admin-poi-priority">
+                                <span>Priority admin</span>
+                                <input data-field="admin-poi-priority"
+                                       type="number"
+                                       min="1"
+                                       @bind="_priorityDraft" />
+                            </label>
+                            <button class="admin-poi-action"
+                                    data-action="save-poi-priority"
+                                    type="button"
+                                    disabled="@IsPrioritySaveDisabled"
+                                    @onclick="SavePriorityAsync">
+                                @(_isSavingPriority ? "Đang lưu..." : "Lưu priority")
+                            </button>
                             <p>Priority @_selectedPoi.Priority</p>
                         </article>
 

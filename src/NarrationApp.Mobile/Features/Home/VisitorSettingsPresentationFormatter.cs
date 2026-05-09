@@ -56,6 +56,13 @@ public static class VisitorSettingsPresentationFormatter
     public static string FormatAudioCacheSummary(int fileCount, double estimatedSizeMb) =>
         $"{fileCount} file audio • {estimatedSizeMb.ToString("0.0", CultureInfo.InvariantCulture)} MB cache nội bộ";
 
+    public static string FormatOfflinePackSummary(
+        int poiCount,
+        int tourCount,
+        int cachedAudioFileCount,
+        double estimatedSizeMb) =>
+        $"{poiCount} POI • {tourCount} tour • {cachedAudioFileCount} audio • {estimatedSizeMb.ToString("0.0", CultureInfo.InvariantCulture)} MB offline";
+
     public static string FormatAudioPackProgressStyle(int totalPoiCount, int readyPoiCount)
     {
         var total = Math.Max(1, totalPoiCount);

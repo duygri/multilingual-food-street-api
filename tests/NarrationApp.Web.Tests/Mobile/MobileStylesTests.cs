@@ -98,21 +98,88 @@ public sealed class MobileStylesTests
         Assert.Contains(".map-screen", css, StringComparison.Ordinal);
         Assert.Contains(".map-top-overlay", css, StringComparison.Ordinal);
         Assert.Contains(".map-top-controls", css, StringComparison.Ordinal);
-        Assert.Contains(".map-top-search", css, StringComparison.Ordinal);
+        Assert.DoesNotContain(".map-top-search", css, StringComparison.Ordinal);
         Assert.Contains(".map-category-rail", css, StringComparison.Ordinal);
         Assert.Contains(".map-shell::before", css, StringComparison.Ordinal);
         Assert.Contains(".category-strip--map .category-chip", css, StringComparison.Ordinal);
         Assert.Contains(".map-icon-button,", css, StringComparison.Ordinal);
         Assert.Contains(".map-top-overlay--sheet-open .map-category-rail", css, StringComparison.Ordinal);
-        Assert.Contains(".map-zoom-controls", css, StringComparison.Ordinal);
-        Assert.Contains(".map-pill", css, StringComparison.Ordinal);
+        Assert.DoesNotContain(".map-zoom-controls", css, StringComparison.Ordinal);
+        Assert.DoesNotContain(".map-fab-rail", css, StringComparison.Ordinal);
+        Assert.DoesNotContain(".map-fab-button--accent", css, StringComparison.Ordinal);
+        Assert.DoesNotContain(".map-overlay-meta", css, StringComparison.Ordinal);
+        Assert.DoesNotContain(".map-pill", css, StringComparison.Ordinal);
         Assert.Contains(".map-shell", css, StringComparison.Ordinal);
         Assert.Contains(".poi-sheet--floating", css, StringComparison.Ordinal);
-        Assert.Contains("max-height: calc(100% - 168px);", css, StringComparison.Ordinal);
+        Assert.Contains("width: min(calc(100% - 28px), 430px);", css, StringComparison.Ordinal);
+        Assert.Contains("max-height: min(62vh, calc(100% - 154px));", css, StringComparison.Ordinal);
+        Assert.Contains("transform: translateX(-50%);", css, StringComparison.Ordinal);
         Assert.Contains("bottom: calc(var(--mobile-bottom-nav-height) + env(safe-area-inset-bottom) + 12px);", css, StringComparison.Ordinal);
+        Assert.Contains(".poi-sheet--floating .sheet-actions--poi", css, StringComparison.Ordinal);
+        Assert.Contains("grid-template-columns: repeat(3, minmax(0, 1fr));", css, StringComparison.Ordinal);
+        Assert.Contains(".poi-sheet--floating .sheet-actions--poi .primary-pill", css, StringComparison.Ordinal);
+        Assert.Contains("grid-column: 1 / -1;", css, StringComparison.Ordinal);
+        Assert.Contains(".poi-sheet--floating .poi-sheet__description p", css, StringComparison.Ordinal);
+        Assert.Contains("-webkit-line-clamp: 2;", css, StringComparison.Ordinal);
+        Assert.Contains("@media (max-width: 380px), (max-height: 720px)", css, StringComparison.Ordinal);
         Assert.DoesNotContain(".qr-fab", css, StringComparison.Ordinal);
         Assert.DoesNotContain(".qr-modal", css, StringComparison.Ordinal);
         Assert.DoesNotContain(".qr-target-btn", css, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mobile_styles_remove_map_zoom_controls_but_keep_locate_button()
+    {
+        var css = ReadMobileCss().ReplaceLineEndings("\n");
+
+        Assert.DoesNotContain(".map-zoom-controls", css, StringComparison.Ordinal);
+        Assert.DoesNotContain(".map-zoom-controls--sheet-open", css, StringComparison.Ordinal);
+        Assert.Contains(".map-locate-control {\n    position: absolute;\n    right: 14px;", css, StringComparison.Ordinal);
+        Assert.Contains(".map-fab-button--locate", css, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mobile_styles_render_offline_poi_radius_under_markers()
+    {
+        var css = ReadMobileCss();
+
+        Assert.Contains(".visitor-map-offline__radius", css, StringComparison.Ordinal);
+        Assert.Contains("pointer-events: none;", css, StringComparison.Ordinal);
+        Assert.Contains("z-index: 1;", css, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mobile_styles_keep_full_player_vertically_scrollable()
+    {
+        var css = ReadMobileCss();
+
+        Assert.Contains("overflow-y: auto;", css, StringComparison.Ordinal);
+        Assert.Contains("-webkit-overflow-scrolling: touch;", css, StringComparison.Ordinal);
+        Assert.Contains("touch-action: pan-y;", css, StringComparison.Ordinal);
+        Assert.Contains("min-height: 100%;", css, StringComparison.Ordinal);
+        Assert.Contains("padding: max(16px, env(safe-area-inset-top)) 16px calc(var(--mobile-bottom-safe-offset) + env(safe-area-inset-bottom) + 32px);", css, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mobile_styles_use_compact_clean_search_surfaces()
+    {
+        var css = ReadMobileCss();
+
+        Assert.Contains(".search-field__hint", css, StringComparison.Ordinal);
+        Assert.Contains("min-height: 50px;", css, StringComparison.Ordinal);
+        Assert.Contains("border-radius: 19px;", css, StringComparison.Ordinal);
+        Assert.Contains("box-shadow: 0 10px 28px rgba(5, 12, 24, 0.18);", css, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mobile_search_results_scroll_inside_the_search_overlay()
+    {
+        var css = ReadMobileCss().ReplaceLineEndings("\n");
+
+        Assert.Contains("grid-template-rows: auto auto auto minmax(0, 1fr);", css, StringComparison.Ordinal);
+        Assert.Contains("max-height: 100dvh;", css, StringComparison.Ordinal);
+        Assert.Contains(".search-results {\n    display: grid;\n    min-height: 0;\n    overflow-y: auto;", css, StringComparison.Ordinal);
+        Assert.Contains("-webkit-overflow-scrolling: touch;", css, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -220,6 +287,9 @@ public sealed class MobileStylesTests
         Assert.Contains(".full-player-wave", css, StringComparison.Ordinal);
         Assert.Contains(".full-player-controls", css, StringComparison.Ordinal);
         Assert.Contains(".full-player-control--primary", css, StringComparison.Ordinal);
+        Assert.Contains(".full-player-language-picker", css, StringComparison.Ordinal);
+        Assert.Contains(".full-player-language-option", css, StringComparison.Ordinal);
+        Assert.Contains(".full-player-language-option.is-active", css, StringComparison.Ordinal);
         Assert.Contains(".full-player-transcript", css, StringComparison.Ordinal);
         Assert.Contains(".full-player-transcript__surface", css, StringComparison.Ordinal);
         Assert.Contains(".notification-panel__surface", css, StringComparison.Ordinal);
@@ -231,6 +301,10 @@ public sealed class MobileStylesTests
         Assert.DoesNotContain(".auth-overlay__card", css, StringComparison.Ordinal);
         Assert.Contains(".offline-banner", css, StringComparison.Ordinal);
         Assert.Contains(".geofence-toast", css, StringComparison.Ordinal);
+        Assert.Contains(".geofence-toast--notice", css, StringComparison.Ordinal);
+        Assert.Contains("pointer-events: none;", css, StringComparison.Ordinal);
+        Assert.Contains("animation: geofence-toast-enter 180ms ease-out, geofence-toast-fade 420ms ease-in 5.2s forwards;", css, StringComparison.Ordinal);
+        Assert.Contains("@keyframes geofence-toast-fade", css, StringComparison.Ordinal);
         Assert.Contains("@keyframes mobile-screen-enter", css, StringComparison.Ordinal);
         Assert.Contains("@keyframes mobile-spring-pop", css, StringComparison.Ordinal);
         Assert.Contains("@keyframes mobile-shimmer-sweep", css, StringComparison.Ordinal);

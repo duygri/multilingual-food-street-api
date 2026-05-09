@@ -13,15 +13,34 @@ public partial class Home
 
         _lastAutoPlayedPoiId = null;
         _isAutoPlayingFromProximity = false;
+        _pendingDeepLinkAudioAfterContent = false;
         _state.ApplyQrNavigationTarget(resolution.NavigationTarget);
         VisitorMobileDiagnostics.Log(
             "Home",
             $"State after apply currentStep={_state.CurrentStep} currentTab={_state.CurrentTab} selectedPoi={_state.SelectedPoi?.Id ?? "<null>"} selectedTour={_state.SelectedTour?.Id ?? "<null>"}");
 
-        if (resolution.NavigationTarget.Kind == VisitorQrTargetKind.Poi && _state.SelectedPoi is not null)
+        if (resolution.NavigationTarget.Kind == VisitorQrTargetKind.Poi)
         {
-            OpenDiscoverPoiDetailForQr(_state.SelectedPoi.Id);
-            await HandlePoiDeepLinkAudioAsync();
+            if (_state.SelectedPoi is not null)
+            {
+                OpenDiscoverPoiDetailForQr(_state.SelectedPoi.Id);
+                await HandlePoiDeepLinkAudioAsync();
+                return;
+            }
+
+            QueueDeepLinkAudioAfterContent("POI");
+            return;
+        }
+
+        if (resolution.NavigationTarget.Kind == VisitorQrTargetKind.Tour)
+        {
+            if (_state.SelectedPoi is not null)
+            {
+                await HandlePoiDeepLinkAudioAsync();
+                return;
+            }
+
+            QueueDeepLinkAudioAfterContent("tour");
         }
     }
 
@@ -42,5 +61,11 @@ public partial class Home
 
         VisitorMobileDiagnostics.Log("Home", $"Preparing audio immediately for poi={_state.SelectedPoi!.Id} autoPlay=true");
         await PrepareSelectedPoiAudioAsync(autoPlay: true, forceAutoPlay: true);
+    }
+
+    private void QueueDeepLinkAudioAfterContent(string targetKind)
+    {
+        _pendingDeepLinkAudioAfterContent = true;
+        VisitorMobileDiagnostics.Log("Home", $"Queued {targetKind} deep link audio until live content is ready");
     }
 }

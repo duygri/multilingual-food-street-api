@@ -31,6 +31,30 @@ public sealed class VisitorQrDeepLinkParserTests
     }
 
     [Fact]
+    public void TryParse_AcceptsCustomSchemeQrPathWithoutHost()
+    {
+        var success = VisitorQrDeepLinkParser.TryParse(
+            "foodstreet:///qr/QR-TOUR-7",
+            out var request);
+
+        Assert.True(success);
+        Assert.NotNull(request);
+        Assert.Equal("QR-TOUR-7", request!.Code);
+    }
+
+    [Fact]
+    public void TryParse_AcceptsQrCodeQueryParameter()
+    {
+        var success = VisitorQrDeepLinkParser.TryParse(
+            "https://public.foodstreet.test/qr?code=QR-001",
+            out var request);
+
+        Assert.True(success);
+        Assert.NotNull(request);
+        Assert.Equal("QR-001", request!.Code);
+    }
+
+    [Fact]
     public void TryParse_RejectsNonQrLinks()
     {
         var success = VisitorQrDeepLinkParser.TryParse(
@@ -57,7 +81,7 @@ public sealed class VisitorQrDeepLinkParserTests
     }
 
     [Fact]
-    public void FromQrCodeDto_FallsBackToOpenAppForUnsupportedTourTarget()
+    public void FromQrCodeDto_MapsTourTargetToMobileId()
     {
         var target = VisitorQrNavigationTarget.FromQrCode(new QrCodeDto
         {
@@ -66,8 +90,8 @@ public sealed class VisitorQrDeepLinkParserTests
             TargetId = 2
         });
 
-        Assert.Equal(VisitorQrTargetKind.OpenApp, target.Kind);
-        Assert.Null(target.TargetId);
+        Assert.Equal(VisitorQrTargetKind.Tour, target.Kind);
+        Assert.Equal("tour-2", target.TargetId);
     }
 
     [Fact]

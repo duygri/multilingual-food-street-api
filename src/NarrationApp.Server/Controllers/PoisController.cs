@@ -12,7 +12,7 @@ namespace NarrationApp.Server.Controllers;
 
 [ApiController]
 [Route("api/pois")]
-public sealed class PoisController(IPoiService poiService) : ControllerBase
+public sealed class PoisController(IPoiService poiService, IPoiReviewService poiReviewService) : ControllerBase
 {
     private const long MaxRepresentativeImageBytes = 5_000_000;
 
@@ -48,6 +48,50 @@ public sealed class PoisController(IPoiService poiService) : ControllerBase
     {
         var response = await poiService.GetNearbyAsync(request, cancellationToken);
         return Ok(new ApiResponse<IReadOnlyList<PoiDto>> { Succeeded = true, Message = "Nearby POIs loaded.", Data = response });
+    }
+
+    [AllowAnonymous]
+    [HttpGet("{id:int}/reviews/summary")]
+    public async Task<ActionResult<ApiResponse<PoiReviewSummaryDto>>> GetReviewSummaryAsync(int id, CancellationToken cancellationToken)
+    {
+        var response = await poiReviewService.GetSummaryAsync(id, cancellationToken);
+        return Ok(new ApiResponse<PoiReviewSummaryDto> { Succeeded = true, Message = "POI review summary loaded.", Data = response });
+    }
+
+    [AllowAnonymous]
+    [EnableRateLimiting(AppConstants.ContentMutationRateLimitPolicyName)]
+    [HttpPost("{id:int}/reviews")]
+    public async Task<ActionResult<ApiResponse<PoiReviewDto>>> CreateReviewAsync(
+        int id,
+        CreatePoiReviewRequest request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var response = await poiReviewService.CreateAsync(id, request, cancellationToken);
+            return CreatedAtAction(
+                nameof(GetReviewSummaryAsync),
+                new { id },
+                new ApiResponse<PoiReviewDto> { Succeeded = true, Message = "POI review submitted for moderation.", Data = response });
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound(new ApiResponse<PoiReviewDto>
+            {
+                Succeeded = false,
+                Message = "POI not found.",
+                Error = new ErrorResponse { Code = "poi_not_found", Message = "POI not found." }
+            });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new ApiResponse<PoiReviewDto>
+            {
+                Succeeded = false,
+                Message = "POI review is invalid.",
+                Error = new ErrorResponse { Code = "invalid_poi_review", Message = ex.Message }
+            });
+        }
     }
 
     [Authorize(Roles = "poi_owner")]

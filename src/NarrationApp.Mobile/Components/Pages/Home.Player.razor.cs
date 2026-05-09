@@ -20,6 +20,13 @@ public partial class Home
 
     private void ToggleFullPlayerTranscript()
     {
+        _showFullPlayerLanguagePicker = false;
         _showFullPlayerTranscript = !_showFullPlayerTranscript;
+    }
+
+    private void ToggleFullPlayerLanguagePicker()
+    {
+        _showFullPlayerTranscript = false;
+        _showFullPlayerLanguagePicker = !_showFullPlayerLanguagePicker;
     }
 }

@@ -81,20 +81,29 @@
 }
 
 .page-header-panel__action {
+    box-sizing: border-box;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    max-width: 100%;
     min-height: 2.85rem;
     padding: 0.7rem 1rem;
     border-radius: 0.9rem;
     text-decoration: none;
     font-weight: 700;
+    line-height: 1.1;
+    white-space: nowrap;
     border: 1px solid transparent;
     transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
 }
 
 .page-header-panel__action:hover {
     transform: translateY(-1px);
+}
+
+.page-header-panel__action:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.16);
 }
 
 .page-header-panel__action.is-primary {

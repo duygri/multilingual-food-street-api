@@ -28,6 +28,7 @@
         <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
         <ApplicationVersion>1</ApplicationVersion>
         <AndroidPackageFormats>apk</AndroidPackageFormats>
+        <RuntimeIdentifiers>android-arm;android-arm64;android-x86;android-x64</RuntimeIdentifiers>
         <VisitorApiConfigFile></VisitorApiConfigFile>
 
         <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">24.0</SupportedOSPlatformVersion>
@@ -117,6 +118,8 @@
         <!-- Raw Assets (also remove the "Resources\Raw" prefix) -->
         <MauiAsset Include="Resources\Raw\**" Exclude="Resources\Raw\AboutAssets.txt;Resources\Raw\visitor-api.json" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
         <MauiAsset Include="Resources\Raw\AboutAssets.txt" LogicalName="AboutAssets.txt" />
+        <Content Remove="Resources\Raw\visitor-api.json" Condition="'$(VisitorApiConfigFile)' != ''" />
+        <MauiAsset Remove="Resources\Raw\visitor-api.json" Condition="'$(VisitorApiConfigFile)' != ''" />
         <MauiAsset Include="Resources\Raw\visitor-api.json" Condition="'$(VisitorApiConfigFile)' == ''" LogicalName="visitor-api.json" />
         <MauiAsset Include="$(VisitorApiConfigFile)" Condition="'$(VisitorApiConfigFile)' != '' and Exists('$(VisitorApiConfigFile)')" LogicalName="visitor-api.json" />
     </ItemGroup>
@@ -126,6 +129,8 @@
         <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="$(MauiVersion)" />
         <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.0" />
         <PackageReference Include="sqlite-net-pcl" Version="1.9.172" />
+        <PackageReference Include="SQLitePCLRaw.bundle_green" Version="2.1.11" />
+        <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3.android" Version="2.1.11" />
     </ItemGroup>
 
     <ItemGroup>

@@ -49,6 +49,7 @@ public partial class PoiManagement
     private void SelectPoi(AdminPoiDto poi)
     {
         _selectedPoi = poi;
+        SyncPriorityDraft();
         _statusMessage = null;
     }
 
@@ -61,5 +62,6 @@ public partial class PoiManagement
         CurrentPage = Math.Clamp(CurrentPage, 1, PageCount);
         var candidateId = preferredPoiId ?? _selectedPoi?.Id;
         _selectedPoi = candidateId is int poiId ? VisiblePois.FirstOrDefault(item => item.Id == poiId) : null;
+        SyncPriorityDraft();
     }
 }

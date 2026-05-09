@@ -40,5 +40,8 @@ public interface IAdminPortalService
 
     Task<AudioPlayAnalyticsDto> GetAudioPlayAnalyticsAsync(CancellationToken cancellationToken = default);
 
+    Task<ApiFileDownload> ExportEventLogCsvAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult(new ApiFileDownload("visit-event-log-empty.csv", "text/csv; charset=utf-8", Array.Empty<byte>()));
+
     Task UpdateUserRoleAsync(Guid userId, UpdateUserRoleRequest request, CancellationToken cancellationToken = default);
 }

@@ -12,14 +12,24 @@ public sealed class DataSeeder(AppDbContext dbContext, ILogger<DataSeeder> logge
     private static readonly Guid TouristRoleId = Guid.Parse("0D84C6F8-7282-4D89-92A9-60B89B7B3A82");
     private static readonly Guid AdminUserId = Guid.Parse("2BC73450-C84F-4D15-BD6C-2C4AF31D8D61");
     private static readonly Guid OwnerUserId = Guid.Parse("E8266528-C71F-4CE5-BF1C-B6AE6B9844F6");
+    private const string SeedAnalyticsDevicePrefix = "seed-admin-map-";
 
-    public async Task SeedAsync(CancellationToken cancellationToken = default)
+    public Task SeedAsync(CancellationToken cancellationToken = default) =>
+        SeedAsync(includeAnalyticsSamples: true, cancellationToken);
+
+    public async Task SeedAsync(bool includeAnalyticsSamples, CancellationToken cancellationToken = default)
     {
         var roles = await SeedRolesAsync(cancellationToken);
         var users = await SeedUsersAsync(roles, cancellationToken);
         await SeedManagedLanguagesAsync(cancellationToken);
         await SeedCategoriesAsync(cancellationToken);
         await SeedPoisAsync(users, cancellationToken);
+        await SeedToursAndQrCodesAsync(cancellationToken);
+
+        if (includeAnalyticsSamples)
+        {
+            await SeedAnalyticsVisitEventsAsync(cancellationToken);
+        }
     }
 
     private async Task<Dictionary<string, Role>> SeedRolesAsync(CancellationToken cancellationToken)
@@ -266,12 +276,246 @@ public sealed class DataSeeder(AppDbContext dbContext, ILogger<DataSeeder> logge
         }
     }
 
+    private async Task SeedToursAndQrCodesAsync(CancellationToken cancellationToken)
+    {
+        var tourStopSlugs = SeedBusStopTour.StopSlugs;
+        var poiIdsBySlug = await dbContext.Pois
+            .Where(poi => tourStopSlugs.Contains(poi.Slug))
+            .ToDictionaryAsync(poi => poi.Slug, poi => poi.Id, cancellationToken);
+
+        if (tourStopSlugs.Any(slug => !poiIdsBySlug.ContainsKey(slug)))
+        {
+            logger.LogWarning("Skipped bus-stop tour seed because one or more tour POIs are missing.");
+            return;
+        }
+
+        var tour = await dbContext.Tours
+            .Include(item => item.Stops)
+            .OrderBy(item => item.Id)
+            .FirstOrDefaultAsync(item => item.Title == SeedBusStopTour.Title, cancellationToken);
+
+        if (tour is null)
+        {
+            tour = new Tour
+            {
+                Title = SeedBusStopTour.Title,
+                Description = SeedBusStopTour.Description,
+                EstimatedMinutes = SeedBusStopTour.EstimatedMinutes,
+                CoverImage = SeedBusStopTour.CoverImage,
+                Status = TourStatus.Published
+            };
+
+            dbContext.Tours.Add(tour);
+            await dbContext.SaveChangesAsync(cancellationToken);
+            logger.LogInformation("Seeded sample bus-stop tour.");
+        }
+
+        var existingSequences = tour.Stops
+            .Select(stop => stop.Sequence)
+            .ToHashSet();
+
+        for (var index = 0; index < tourStopSlugs.Count; index++)
+        {
+            var sequence = index + 1;
+            if (existingSequences.Contains(sequence))
+            {
+                continue;
+            }
+
+            dbContext.TourStops.Add(new TourStop
+            {
+                TourId = tour.Id,
+                PoiId = poiIdsBySlug[tourStopSlugs[index]],
+                Sequence = sequence,
+                RadiusMeters = AppConstants.DefaultTourStopRadiusMeters
+            });
+        }
+
+        if (dbContext.ChangeTracker.HasChanges())
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+            logger.LogInformation("Seeded sample bus-stop tour stops.");
+        }
+
+        var seededQrCodes = SeedBusStopTour.QrCodes.Select(item => item.Code).ToArray();
+        var qrCodesByCode = await dbContext.QrCodes
+            .Where(qr => seededQrCodes.Contains(qr.Code))
+            .ToDictionaryAsync(qr => qr.Code, cancellationToken);
+
+        foreach (var qrDefinition in SeedBusStopTour.QrCodes)
+        {
+            if (!qrCodesByCode.TryGetValue(qrDefinition.Code, out var qrCode))
+            {
+                dbContext.QrCodes.Add(new QrCode
+                {
+                    Code = qrDefinition.Code,
+                    TargetType = "tour",
+                    TargetId = tour.Id,
+                    LocationHint = qrDefinition.LocationHint
+                });
+                continue;
+            }
+
+            qrCode.TargetType = "tour";
+            qrCode.TargetId = tour.Id;
+            qrCode.LocationHint = qrDefinition.LocationHint;
+        }
+
+        if (dbContext.ChangeTracker.HasChanges())
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+            logger.LogInformation("Seeded sample bus-stop QR codes.");
+        }
+    }
+
+    private async Task SeedAnalyticsVisitEventsAsync(CancellationToken cancellationToken)
+    {
+        var hasSeedAnalyticsEvents = await dbContext.VisitEvents
+            .AnyAsync(item => item.DeviceId.StartsWith(SeedAnalyticsDevicePrefix), cancellationToken);
+
+        if (hasSeedAnalyticsEvents)
+        {
+            return;
+        }
+
+        var requiredSlugs = SeedAnalyticsRoutes
+            .SelectMany(route => route.StopSlugs)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        var poisBySlug = await dbContext.Pois
+            .Where(poi => requiredSlugs.Contains(poi.Slug))
+            .ToDictionaryAsync(poi => poi.Slug, cancellationToken);
+
+        if (requiredSlugs.Any(slug => !poisBySlug.ContainsKey(slug)))
+        {
+            logger.LogWarning("Skipped analytics sample seed because one or more POIs are missing.");
+            return;
+        }
+
+        var now = DateTime.UtcNow;
+        var events = new List<VisitEvent>();
+
+        for (var routeIndex = 0; routeIndex < SeedAnalyticsRoutes.Count; routeIndex++)
+        {
+            var route = SeedAnalyticsRoutes[routeIndex];
+
+            for (var sessionIndex = 0; sessionIndex < route.SessionCount; sessionIndex++)
+            {
+                var deviceId = $"{SeedAnalyticsDevicePrefix}{route.Key}-{sessionIndex + 1:00}";
+                var sessionStartUtc = now
+                    .AddDays(-((sessionIndex + routeIndex) % 6))
+                    .AddHours(-2 - routeIndex)
+                    .AddMinutes(sessionIndex * 9);
+
+                for (var stopIndex = 0; stopIndex < route.StopSlugs.Count; stopIndex++)
+                {
+                    var poi = poisBySlug[route.StopSlugs[stopIndex]];
+                    var stopSeenAtUtc = sessionStartUtc.AddMinutes(stopIndex * 7);
+                    var jitter = (sessionIndex - (route.SessionCount / 2d)) * 0.000035d;
+                    var lat = poi.Lat + jitter + (stopIndex * 0.000012d);
+                    var lng = poi.Lng - jitter + (stopIndex * 0.00001d);
+
+                    if (stopIndex == 0)
+                    {
+                        events.Add(BuildSeedVisitEvent(deviceId, poi.Id, EventType.QrScan, stopSeenAtUtc.AddSeconds(-35), lat, lng));
+                    }
+
+                    events.Add(BuildSeedVisitEvent(deviceId, poi.Id, EventType.GeofenceEnter, stopSeenAtUtc, lat, lng));
+                    events.Add(BuildSeedVisitEvent(deviceId, poi.Id, EventType.AudioPlay, stopSeenAtUtc.AddSeconds(70), lat, lng, 55 + (stopIndex * 18) + (sessionIndex * 4)));
+                    events.Add(BuildSeedVisitEvent(deviceId, poi.Id, EventType.TourProgress, stopSeenAtUtc.AddSeconds(120), lat, lng));
+                }
+            }
+        }
+
+        dbContext.VisitEvents.AddRange(events);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        logger.LogInformation("Seeded {Count} analytics sample visit events for admin heatmap and anonymous movement flows.", events.Count);
+    }
+
+    private static VisitEvent BuildSeedVisitEvent(
+        string deviceId,
+        int poiId,
+        EventType eventType,
+        DateTime createdAtUtc,
+        double lat,
+        double lng,
+        int listenDurationSeconds = 0)
+    {
+        return new VisitEvent
+        {
+            DeviceId = deviceId,
+            PoiId = poiId,
+            EventType = eventType,
+            Source = eventType switch
+            {
+                EventType.AudioPlay => "audio",
+                EventType.GeofenceEnter => "geofence",
+                EventType.QrScan => "qr",
+                EventType.TourProgress => "tour",
+                _ => "analytics"
+            },
+            ListenDurationSeconds = listenDurationSeconds,
+            Lat = lat,
+            Lng = lng,
+            CreatedAt = DateTime.SpecifyKind(createdAtUtc, DateTimeKind.Utc)
+        };
+    }
+
     private static IReadOnlyList<SeedCategoryDefinition> SeedCategories { get; } =
     [
         new("Hải sản", "hai-san", "Các món hải sản đặc trưng của khu vực Vĩnh Khánh.", "🦐", 10),
         new("Bún/Phở", "bun-pho", "Nhóm món nước và món ăn sáng quen thuộc.", "🍜", 20),
         new("Ăn vặt", "an-vat", "Các món ăn nhanh, món vặt và món ăn đường phố.", "🍢", 30),
         new("Đồ uống", "do-uong", "Các điểm nổi bật về cà phê, trà, nước mát và thức uống địa phương.", "🥤", 40)
+    ];
+
+    private static SeedTourDefinition SeedBusStopTour { get; } = new(
+        "Tuyến xe buýt Khánh Hội - Vĩnh Hội - Xóm Chiếu",
+        "Tour mẫu dành cho khách bắt đầu từ các điểm dừng xe buýt ở phường Khánh Hội, Vĩnh Hội và Xóm Chiếu. Quét QR tại trạm là có thể nghe ngay điểm đầu tiên, sau đó tiếp tục khám phá các quán ăn nổi bật quanh phố Vĩnh Khánh.",
+        45,
+        "https://down-vn.img.susercontent.com/vn-11134513-7r98o-lstpv5wpypxgb0",
+        [
+            "bun-thit-nuong-co-nga",
+            "bun-ca-chau-doc-di-tu",
+            "oc-oanh-vinh-khanh",
+            "chili-lau-nuong-tu-chon",
+            "lang-quan-vinh-khanh",
+            "ot-xiem-quan-vinh-khanh"
+        ],
+        [
+            new("BUS-KHANH-HOI-TOUR", "Điểm dừng xe buýt phường Khánh Hội"),
+            new("BUS-VINH-HOI-TOUR", "Điểm dừng xe buýt phường Vĩnh Hội"),
+            new("BUS-XOM-CHIEU-TOUR", "Điểm dừng xe buýt phường Xóm Chiếu")
+        ]);
+
+    private static IReadOnlyList<SeedAnalyticsRouteDefinition> SeedAnalyticsRoutes { get; } =
+    [
+        new(
+            "seafood",
+            4,
+            [
+                "oc-oanh-vinh-khanh",
+                "oc-sau-no-vinh-khanh",
+                "oc-thao-vinh-khanh",
+                "oc-dao-vinh-khanh"
+            ]),
+        new(
+            "bus-food",
+            3,
+            [
+                "bun-thit-nuong-co-nga",
+                "bun-ca-chau-doc-di-tu",
+                "lang-quan-vinh-khanh",
+                "ot-xiem-quan-vinh-khanh"
+            ]),
+        new(
+            "grill",
+            3,
+            [
+                "chili-lau-nuong-tu-chon",
+                "quan-hoa-vinh-khanh",
+                "an-an-quan-vinh-khanh"
+            ])
     ];
 
     private static IReadOnlyList<SeedPoiDefinition> SeedPois { get; } =
@@ -488,6 +732,21 @@ public sealed class DataSeeder(AppDbContext dbContext, ILogger<DataSeeder> logge
         string Description,
         string Icon,
         int DisplayOrder);
+
+    private sealed record SeedTourDefinition(
+        string Title,
+        string Description,
+        int EstimatedMinutes,
+        string CoverImage,
+        IReadOnlyList<string> StopSlugs,
+        IReadOnlyList<SeedTourQrDefinition> QrCodes);
+
+    private sealed record SeedTourQrDefinition(string Code, string LocationHint);
+
+    private sealed record SeedAnalyticsRouteDefinition(
+        string Key,
+        int SessionCount,
+        IReadOnlyList<string> StopSlugs);
 
     private static IReadOnlyList<SeedLanguageDefinition> SeedLanguages { get; } =
     [

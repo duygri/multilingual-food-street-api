@@ -19,6 +19,60 @@
     gap: 0.9rem;
 }
 
+.analytics-export-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem;
+    border: 1px solid rgba(80, 137, 168, 0.18);
+    border-radius: 1.1rem;
+    background:
+        radial-gradient(circle at top left, rgba(45, 212, 191, 0.14), transparent 46%),
+        linear-gradient(180deg, rgba(16, 31, 53, 0.92), rgba(8, 17, 31, 0.96));
+}
+
+.analytics-export-card h3,
+.analytics-export-card p,
+.analytics-export-card__eyebrow {
+    margin: 0;
+}
+
+.analytics-export-card h3 {
+    margin-top: 0.25rem;
+    color: var(--vk-text-strong);
+}
+
+.analytics-export-card p {
+    margin-top: 0.35rem;
+    color: var(--vk-muted);
+    line-height: 1.55;
+}
+
+.analytics-export-card__eyebrow,
+.analytics-export-card__status {
+    font-family: var(--vk-font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.analytics-export-card__eyebrow {
+    color: #67e8f9;
+}
+
+.analytics-export-card__status {
+    display: inline-block;
+    margin-top: 0.55rem;
+    color: #a7f3d0;
+    text-transform: none;
+    letter-spacing: 0.02em;
+}
+
+.analytics-export-card__status--error {
+    color: #fecaca;
+}
+
 .analytics-filter-toolbar {
     display: flex;
     flex-wrap: wrap;
@@ -27,6 +81,12 @@
 }
 
 .analytics-filter-chip {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 100%;
+    min-height: 2.35rem;
     border: 1px solid rgba(80, 137, 168, 0.2);
     border-radius: 999px;
     padding: 0.42rem 0.78rem;
@@ -34,7 +94,9 @@
     color: var(--vk-muted);
     font-family: var(--vk-font-mono);
     font-size: 0.74rem;
+    line-height: 1.1;
     letter-spacing: 0.04em;
+    white-space: nowrap;
     transition: border-color 120ms ease, color 120ms ease, background 120ms ease, transform 120ms ease;
 }
 
@@ -70,8 +132,12 @@
     overflow: hidden;
     border: 1px solid rgba(80, 137, 168, 0.18);
     background:
-        radial-gradient(circle at top, rgba(45, 212, 191, 0.12), transparent 48%),
-        linear-gradient(180deg, rgba(7, 15, 27, 0.96), rgba(8, 17, 31, 0.98));
+        radial-gradient(circle at top, rgba(45, 212, 191, 0.16), transparent 50%),
+        linear-gradient(180deg, #eef7f9, #d7e8ee);
+}
+
+.analytics-map-canvas .mapboxgl-canvas {
+    background: #eef7f9;
 }
 
 .analytics-map-placeholder {
@@ -190,6 +256,11 @@
 @media (max-width: 720px) {
     .metric-grid {
         grid-template-columns: 1fr;
+    }
+
+    .analytics-export-card {
+        align-items: stretch;
+        flex-direction: column;
     }
 
     .analytics-filter-toolbar,

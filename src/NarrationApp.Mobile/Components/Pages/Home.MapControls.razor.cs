@@ -4,13 +4,8 @@ namespace NarrationApp.Mobile.Components.Pages;
 
 public partial class Home
 {
-    private async Task ZoomMapInAsync()
+    private async Task CenterMapOnUserAsync()
     {
-        await JS.InvokeVoidAsync("visitorMap.zoomIn", "discover-map");
-    }
-
-    private async Task ZoomMapOutAsync()
-    {
-        await JS.InvokeVoidAsync("visitorMap.zoomOut", "discover-map");
+        await JS.InvokeVoidAsync("visitorMap.centerOnUser", "discover-map");
     }
 }

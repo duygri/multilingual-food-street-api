@@ -8,7 +8,7 @@ public partial class Profile
 {
     private async Task SaveProfileAsync()
     {
-        if (_editor is null) return;
+        if (_editor is null || !HasProfileEditorChanges) return;
         _isSavingProfile = true;
 
         try

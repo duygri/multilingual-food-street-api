@@ -13,6 +13,7 @@
 @inject IVisitorOfflineCacheStore OfflineCacheStore
 @inject IVisitorQrDeepLinkService DeepLinkService
 @inject IVisitorPresenceReporter PresenceReporter
+@inject IVisitorWalkingDirectionsService WalkingDirectionsService
 @inject IJSRuntime JS
 @inject VisitorMapOptions MapOptions
 
@@ -52,21 +53,19 @@ else
                     State="_state"
                     CategoryChipClassSelector="GetCategoryChipClass"
                     CategoryIconSelector="GetCategoryIcon"
-                    AutoAudioStatusProvider="GetAutoAudioStatus"
                     GeofenceToastMessageProvider="GetGeofenceToastMessage"
                     GeofenceQueueBadgeProvider="GetGeofenceQueueBadge"
                     PoiCategoryLabelSelector="GetPoiCategoryLabel"
                     OnToggleNotifications="ToggleNotificationsPanel"
                     OnCycleLanguage="CycleLanguage"
                     OnSelectCategory="SelectDiscoverCategory"
-                    OnZoomIn="ZoomMapInAsync"
-                    OnZoomOut="ZoomMapOutAsync"
-                    OnRefresh="RefreshDiscoverAsync"
-                    OnSwitchToTours="@(() => SwitchTabFromShell(VisitorTab.Tours))"
-                    OnOpenSearch="OpenSearchOverlay"
+                    OnCenterOnUser="CenterMapOnUserAsync"
                     OnClosePoiSheet="@(() => _state.ClosePoiSheet())"
                     MapPoiAudioStatus="@GetMapPoiAudioStatus()"
                     QueuedPoiStatus="@GetQueuedPoiStatus()"
+                    DirectionsStatus="@GetWalkingDirectionsStatus()"
+                    DirectionsNotice="@GetWalkingDirectionsNotice()"
+                    OnClearDirections="ClearWalkingDirectionsAsync"
                     OnOpenDirections="OpenSelectedPoiDirectionsAsync"
                     OnOpenPoiDetail="OpenSelectedPoiDetailFromMapAsync"
                     OnPlaySelectedPoi="PlaySelectedPoiAsync" />
@@ -78,7 +77,7 @@ else
                     <VisitorPoiDetailScreen
                         Poi="_state.SelectedPoi"
                         Categories="_state.Categories"
-                        Languages="_state.Languages"
+                        Languages="@GetSelectedPoiAudioLanguages()"
                         RelatedPois="@GetRelatedPois()"
                         TranscriptParagraphs="@GetPoiTranscriptParagraphs()"
                         SelectedLanguageCode="@_state.SelectedLanguageCode"
@@ -87,6 +86,7 @@ else
                         AudioSubtitle="@GetPoiDetailAudioSubtitle()"
                         OnBack="ClosePoiDetail"
                         OnOpenMap="OpenSelectedPoiOnMapAsync"
+                        OnOpenDirections="OpenSelectedPoiDirectionsAsync"
                         OnOpenFullPlayer="OpenFullPlayer"
                         OnPlayToggle="TogglePlaybackAsync"
                         OnPrimaryAction="TogglePlaybackAsync"
@@ -104,8 +104,10 @@ else
                         IsUsingFallbackData="@_state.IsUsingFallbackData"
                         DataSourceLabel="@_state.DataSourceLabel"
                         SyncMessage="@_state.SyncMessage"
+                        CurrentLanguageChipLabel="@_state.CurrentLanguage.ChipLabel"
                         OnOpenSearch="OpenSearchOverlay"
                         OnRefresh="RefreshDiscoverAsync"
+                        OnCycleLanguage="CycleLanguage"
                         OnSelectCategory="SelectDiscoverCategory"
                         OnSelectPoi="OpenPoiDetailAsync" />
                 }
@@ -164,6 +166,8 @@ else
                 {
                     <VisitorCacheManagerScreen
                         Items="_state.CachedAudioItems"
+                        PoiCount="_state.Pois.Count"
+                        TourCount="_state.Tours.Count"
                         PreloadActionLabel="@GetCachePreloadActionLabel()"
                         PreloadStatusLabel="@_cachePreloadStatusLabel"
                         PreloadProgressPercent="@_cachePreloadProgressPercent"
@@ -237,11 +241,16 @@ else
                     ProgressPercent="@_state.AudioProgressPercent"
                     SpeedLabel="@GetAudioSpeedLabel()"
                     ShowTranscript="@_showFullPlayerTranscript"
+                    ShowLanguagePicker="@_showFullPlayerLanguagePicker"
+                    AudioLanguages="@GetSelectedPoiAudioLanguages()"
+                    SelectedLanguageCode="@_state.SelectedLanguageCode"
+                    TranscriptParagraphs="@GetPoiTranscriptParagraphs()"
                     OnClose="CloseFullPlayer"
                     OnPlayToggle="TogglePlaybackAsync"
                     OnSeekBackward="SeekAudioBackwardAsync"
                     OnRestart="RestartAudioAsync"
-                    OnCycleLanguage="CycleFullPlayerLanguageAsync"
+                    OnToggleLanguagePicker="ToggleFullPlayerLanguagePicker"
+                    OnSelectLanguage="SelectFullPlayerLanguageAsync"
                     OnSeekForward="SeekAudioForwardAsync"
                     OnToggleSpeed="ToggleAudioSpeedAsync"
                     OnToggleTranscript="ToggleFullPlayerTranscript" />

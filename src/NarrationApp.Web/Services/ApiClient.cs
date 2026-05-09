@@ -22,6 +22,27 @@ public sealed class ApiClient(HttpClient httpClient, IAuthSessionStore sessionSt
         return SendForDataAsync<T>(new HttpRequestMessage(HttpMethod.Get, uri), cancellationToken);
     }
 
+    public async Task<ApiFileDownload> DownloadAsync(string uri, CancellationToken cancellationToken = default)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+        await AttachAuthorizationAsync(request, cancellationToken);
+
+        using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            await InvalidateExpiredSessionAsync(response.StatusCode, null, cancellationToken);
+            throw new ApiException(response.ReasonPhrase ?? "Unable to download file.", response.StatusCode, null);
+        }
+
+        var content = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+        var contentType = response.Content.Headers.ContentType?.ToString() ?? "application/octet-stream";
+        var fileName = response.Content.Headers.ContentDisposition?.FileNameStar
+            ?? response.Content.Headers.ContentDisposition?.FileName?.Trim('"')
+            ?? "download.bin";
+
+        return new ApiFileDownload(fileName, contentType, content);
+    }
+
     public Task<TResponse> PostAsync<TRequest, TResponse>(string uri, TRequest request, CancellationToken cancellationToken = default)
     {
         return SendWithBodyAsync<TRequest, TResponse>(HttpMethod.Post, uri, request, cancellationToken);

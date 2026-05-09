@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NarrationApp.Server.Data;
 using NarrationApp.Server.Data.Entities;
@@ -67,6 +68,7 @@ public sealed class QrPublicLinkIntegrationTests
         Assert.Contains($"foodstreet://qr/{qr.Code}", html, StringComparison.Ordinal);
         Assert.Contains(qr.Code, html, StringComparison.Ordinal);
         Assert.Contains("Mở ứng dụng", html, StringComparison.Ordinal);
+        Assert.Contains($"window.location.href = \"foodstreet://qr/{qr.Code}\"", html, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -96,6 +98,31 @@ public sealed class QrPublicLinkIntegrationTests
     }
 
     [Fact]
+    public async Task Public_qr_route_returns_tour_launcher_with_appless_web_fallback()
+    {
+        await using var factory = new TestWebApplicationFactory();
+        await factory.SeedAsync();
+
+        var qr = await CreateTourQrAsync(factory);
+
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("http://localhost"),
+            AllowAutoRedirect = false
+        });
+
+        var response = await client.GetAsync($"/qr/{qr.Code}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var html = await response.Content.ReadAsStringAsync();
+        Assert.Contains("QR mở tour", html, StringComparison.Ordinal);
+        Assert.Contains("Nếu chưa cài app", html, StringComparison.Ordinal);
+        Assert.Contains($"foodstreet://qr/{qr.Code}", html, StringComparison.Ordinal);
+        Assert.Contains($"window.location.href = \"foodstreet://qr/{qr.Code}\"", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Public_qr_route_embeds_scan_tracking_for_visitor_devices()
     {
         await using var factory = new TestWebApplicationFactory();
@@ -122,6 +149,34 @@ public sealed class QrPublicLinkIntegrationTests
         Assert.Contains("qr-web-", html, StringComparison.Ordinal);
         Assert.Contains("trackPublicQrPresence", html, StringComparison.Ordinal);
         Assert.Contains("15000", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Public_share_poi_route_returns_social_preview_without_qr_code()
+    {
+        await using var factory = new TestWebApplicationFactory();
+        await factory.SeedAsync();
+
+        var poiId = await GetFirstPublishedPoiIdAsync(factory);
+        await AddQrPreviewAudioAsync(factory, poiId);
+
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("https://public.foodstreet.test"),
+            AllowAutoRedirect = false
+        });
+
+        var response = await client.GetAsync($"/share/poi/{poiId}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var html = await response.Content.ReadAsStringAsync();
+        Assert.Contains("og:title", html, StringComparison.Ordinal);
+        Assert.Contains("Public share", html, StringComparison.Ordinal);
+        Assert.Contains("Ốc Oanh", html, StringComparison.Ordinal);
+        Assert.Contains("/api/audio/501/stream", html, StringComparison.Ordinal);
+        Assert.Contains("https://public.foodstreet.test/share/poi/", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("foodstreet://qr/", html, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -197,6 +252,32 @@ public sealed class QrPublicLinkIntegrationTests
             TargetId = 0,
             LocationHint = "Integration launcher"
         });
+    }
+
+    private static async Task<QrCodeDto> CreateTourQrAsync(TestWebApplicationFactory factory)
+    {
+        await using var scope = factory.Services.CreateAsyncScope();
+        var qrService = scope.ServiceProvider.GetRequiredService<IQrService>();
+        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var tour = dbContext.Tours.OrderBy(item => item.Id).First();
+
+        return await qrService.CreateAsync(new CreateQrRequest
+        {
+            TargetType = "tour",
+            TargetId = tour.Id,
+            LocationHint = "Integration tour gate"
+        });
+    }
+
+    private static async Task<int> GetFirstPublishedPoiIdAsync(TestWebApplicationFactory factory)
+    {
+        await using var scope = factory.Services.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        return await dbContext.Pois
+            .Where(item => item.Status == PoiStatus.Published)
+            .OrderBy(item => item.Id)
+            .Select(item => item.Id)
+            .FirstAsync();
     }
 
     private static async Task AddQrPreviewAudioAsync(TestWebApplicationFactory factory, int poiId)

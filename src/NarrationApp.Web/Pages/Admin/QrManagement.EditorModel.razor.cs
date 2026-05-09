@@ -8,6 +8,7 @@ public partial class QrManagement
     {
         public string TargetType { get; set; } = "poi";
         public int PoiId { get; set; }
+        public int TourId { get; set; }
         public string? LocationHint { get; set; }
         public string ExpiresAtLocal { get; set; } = string.Empty;
 
@@ -16,7 +17,12 @@ public partial class QrManagement
         public CreateQrRequest ToRequest() => new()
         {
             TargetType = TargetType,
-            TargetId = TargetType == "open_app" ? 0 : PoiId,
+            TargetId = TargetType switch
+            {
+                "open_app" => 0,
+                "tour" => TourId,
+                _ => PoiId
+            },
             LocationHint = string.IsNullOrWhiteSpace(LocationHint) ? null : LocationHint.Trim(),
             ExpiresAtUtc = DateTime.TryParse(ExpiresAtLocal, out var localDateTime)
                 ? DateTime.SpecifyKind(localDateTime, DateTimeKind.Local).ToUniversalTime()

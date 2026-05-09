@@ -89,6 +89,8 @@ public sealed class PoiDetailTests : TestContext
             Assert.Contains("Ready", cut.Markup);
             Assert.Contains("Generating", cut.Markup);
             Assert.DoesNotContain("URL hình ảnh", cut.Markup);
+            Assert.Empty(cut.FindAll("input[data-field='poi-priority']"));
+            Assert.Empty(cut.FindAll("input[data-field='geofence-priority']"));
         });
 
         Assert.Equal("Sửa & gửi lại", cut.Find("button[data-action='request-review-rejected']").TextContent.Trim());
@@ -104,16 +106,15 @@ public sealed class PoiDetailTests : TestContext
 
         cut.WaitForAssertion(() => Assert.Contains("Thông tin chỉnh sửa", cut.Markup));
 
-        cut.Find("input[data-field='poi-name']").Change("Bún mắm đã chỉnh");
-        cut.Find("input[data-field='poi-slug']").Change("bun-mam-da-chinh");
+        cut.Find("input[data-field='poi-name']").Input("Bún mắm đã chỉnh");
+        cut.Find("input[data-field='poi-slug']").Input("bun-mam-da-chinh");
         cut.Find("input[data-field='poi-lat']").Change("10.759");
         cut.Find("input[data-field='poi-lng']").Change("106.702");
-        cut.Find("input[data-field='poi-priority']").Change("12");
         cut.Find("select[data-field='poi-category']").Change("3");
         cut.Find("select[data-field='poi-mode']").Change(NarrationMode.RecordedOnly.ToString());
-        cut.Find("input[data-field='poi-map-link']").Change("https://maps.test/poi-1");
-        cut.Find("textarea[data-field='poi-description']").Change("Mô tả đã bổ sung cho admin.");
-        cut.Find("textarea[data-field='poi-tts-script']").Change("Kịch bản TTS đã chỉnh.");
+        cut.Find("input[data-field='poi-map-link']").Input("https://maps.test/poi-1");
+        cut.Find("textarea[data-field='poi-description']").Input("Mô tả đã bổ sung cho admin.");
+        cut.Find("textarea[data-field='poi-tts-script']").Input("Kịch bản TTS đã chỉnh.");
         cut.Find("button[data-action='save-poi']").Click();
 
         cut.WaitForAssertion(() =>
@@ -127,7 +128,7 @@ public sealed class PoiDetailTests : TestContext
         Assert.Equal("bun-mam-da-chinh", updateRequest.Slug);
         Assert.Equal(10.759, updateRequest.Lat);
         Assert.Equal(106.702, updateRequest.Lng);
-        Assert.Equal(12, updateRequest.Priority);
+        Assert.Equal(10, updateRequest.Priority);
         Assert.Equal(3, updateRequest.CategoryId);
         Assert.Equal(NarrationMode.RecordedOnly, updateRequest.NarrationMode);
         Assert.Equal("https://maps.test/poi-1", updateRequest.MapLink);
@@ -137,7 +138,6 @@ public sealed class PoiDetailTests : TestContext
 
         cut.Find("input[data-field='geofence-name']").Change("Vùng kích hoạt đã chỉnh");
         cut.Find("input[data-field='geofence-radius']").Change("55");
-        cut.Find("input[data-field='geofence-priority']").Change("4");
         cut.Find("input[data-field='geofence-debounce']").Change("6");
         cut.Find("input[data-field='geofence-cooldown']").Change("240");
         cut.Find("input[data-field='geofence-trigger']").Change("manual_preview");
@@ -154,7 +154,7 @@ public sealed class PoiDetailTests : TestContext
         var geofenceRequest = geofenceService.UpdateRequests[0];
         Assert.Equal("Vùng kích hoạt đã chỉnh", geofenceRequest.Name);
         Assert.Equal(55, geofenceRequest.RadiusMeters);
-        Assert.Equal(4, geofenceRequest.Priority);
+        Assert.Equal(8, geofenceRequest.Priority);
         Assert.Equal(6, geofenceRequest.DebounceSeconds);
         Assert.Equal(240, geofenceRequest.CooldownSeconds);
         Assert.Equal("manual_preview", geofenceRequest.TriggerAction);
@@ -205,6 +205,42 @@ public sealed class PoiDetailTests : TestContext
         {
             Assert.Equal([1], ownerService.DeleteRequests);
             Assert.Equal("http://localhost/owner/pois", navigation.Uri);
+        });
+    }
+
+    [Fact]
+    public void Detail_page_enables_save_button_only_after_poi_editor_changes()
+    {
+        var (ownerService, _, _, _, _) = ConfigureDetail();
+
+        var cut = RenderComponent<PoiDetail>(parameters => parameters.Add(page => page.Id, 1));
+
+        cut.WaitForAssertion(() =>
+        {
+            var saveButton = cut.Find("button[data-action='save-poi']");
+            Assert.NotNull(saveButton.GetAttribute("disabled"));
+            Assert.Contains("app-button--save-disabled", saveButton.GetAttribute("class"));
+            Assert.DoesNotContain("app-button--primary", saveButton.GetAttribute("class"));
+        });
+
+        cut.Find("input[data-field='poi-name']").Input("Bún mắm đã chỉnh");
+
+        cut.WaitForAssertion(() =>
+        {
+            var saveButton = cut.Find("button[data-action='save-poi']");
+            Assert.Null(saveButton.GetAttribute("disabled"));
+            Assert.Contains("app-button--primary", saveButton.GetAttribute("class"));
+            Assert.DoesNotContain("app-button--save-disabled", saveButton.GetAttribute("class"));
+        });
+
+        cut.Find("button[data-action='save-poi']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Single(ownerService.UpdateRequests);
+            var saveButton = cut.Find("button[data-action='save-poi']");
+            Assert.NotNull(saveButton.GetAttribute("disabled"));
+            Assert.Contains("app-button--save-disabled", saveButton.GetAttribute("class"));
         });
     }
 

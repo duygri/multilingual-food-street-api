@@ -13,7 +13,14 @@
         </header>
 
         <div class="full-player-hero @GetHeroTone(Poi.CategoryId)">
-            <div class="full-player-hero__icon">@GetPoiIcon()</div>
+            @if (!string.IsNullOrWhiteSpace(Poi.ImageUrl))
+            {
+                <img class="full-player-hero__image" src="@Poi.ImageUrl" alt="@Poi.Name" loading="lazy" />
+            }
+            else
+            {
+                <div class="full-player-hero__icon">@GetPoiIcon()</div>
+            }
         </div>
 
         <section class="full-player-summary">
@@ -45,9 +52,49 @@
             <button type="button" class="full-player-control full-player-control--play full-player-control--primary" @onclick="OnPlayToggle">
                 @(IsPlaying ? "❚❚" : "▶")
             </button>
-            <button type="button" class="full-player-control" @onclick="OnCycleLanguage">🌐</button>
+            <button type="button"
+                    class="full-player-control full-player-control--language @(ShowLanguagePicker ? "is-active" : string.Empty)"
+                    aria-controls="full-player-language-picker"
+                    aria-expanded="@ShowLanguagePicker"
+                    @onclick="OnToggleLanguagePicker">
+                🌐
+            </button>
             <button type="button" class="full-player-control" @onclick="OnSeekForward">⏩</button>
         </div>
+
+        @if (ShowLanguagePicker)
+        {
+            <section id="full-player-language-picker" class="full-player-language-picker" aria-label="Chọn ngôn ngữ thuyết minh">
+                <div class="full-player-language-picker__header">
+                    <strong>Chọn ngôn ngữ</strong>
+                    <span>Chỉ hiển thị ngôn ngữ đã có audio cho POI này</span>
+                </div>
+
+                @if (AudioLanguages.Count == 0)
+                {
+                    <p class="full-player-language-empty">Chưa có ngôn ngữ audio khả dụng.</p>
+                }
+                else
+                {
+                    <div class="full-player-language-list">
+                        @foreach (var language in AudioLanguages)
+                        {
+                            var isSelected = IsLanguageSelected(language.Code);
+                            <button type="button"
+                                    class="full-player-language-option @(isSelected ? "is-active" : string.Empty)"
+                                    @onclick="() => OnSelectLanguage.InvokeAsync(language.Code)">
+                                <span class="full-player-language-option__code">@language.ChipLabel</span>
+                                <span class="full-player-language-option__copy">
+                                    <strong>@language.Label</strong>
+                                    <span>@language.SubLabel</span>
+                                </span>
+                                <span class="full-player-language-option__check" aria-hidden="true">@(isSelected ? "✓" : string.Empty)</span>
+                            </button>
+                        }
+                    </div>
+                }
+            </section>
+        }
 
         <section class="full-player-transcript @(ShowTranscript ? "is-open" : string.Empty)">
             <div class="full-player-transcript__surface">
@@ -59,8 +106,10 @@
                 @if (ShowTranscript)
                 {
                     <div class="full-player-transcript__body">
-                        <p>@Poi.Description</p>
-                        <p>@Poi.Highlight</p>
+                        @foreach (var paragraph in GetTranscriptParagraphs())
+                        {
+                            <p>@paragraph</p>
+                        }
                     </div>
                 }
             </div>
@@ -79,11 +128,16 @@
     [Parameter] public double ProgressPercent { get; set; }
     [Parameter] public string SpeedLabel { get; set; } = "1x";
     [Parameter] public bool ShowTranscript { get; set; }
+    [Parameter] public bool ShowLanguagePicker { get; set; }
+    [Parameter] public string SelectedLanguageCode { get; set; } = string.Empty;
+    [Parameter] public IReadOnlyList<VisitorLanguageOption> AudioLanguages { get; set; } = [];
+    [Parameter] public IReadOnlyList<string> TranscriptParagraphs { get; set; } = [];
     [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public EventCallback OnPlayToggle { get; set; }
     [Parameter] public EventCallback OnSeekBackward { get; set; }
     [Parameter] public EventCallback OnRestart { get; set; }
-    [Parameter] public EventCallback OnCycleLanguage { get; set; }
+    [Parameter] public EventCallback OnToggleLanguagePicker { get; set; }
+    [Parameter] public EventCallback<string> OnSelectLanguage { get; set; }
     [Parameter] public EventCallback OnSeekForward { get; set; }
     [Parameter] public EventCallback OnToggleSpeed { get; set; }
     [Parameter] public EventCallback OnToggleTranscript { get; set; }
@@ -104,6 +158,16 @@
 
     private int GetActiveBarCount() =>
         Math.Clamp((int)Math.Round(ProgressPercent / 100d * 60d, MidpointRounding.AwayFromZero), 0, 60);
+
+    private IReadOnlyList<string> GetTranscriptParagraphs()
+    {
+        return TranscriptParagraphs.Count > 0
+            ? TranscriptParagraphs
+            : [Poi.Description, Poi.Highlight];
+    }
+
+    private bool IsLanguageSelected(string languageCode) =>
+        string.Equals(languageCode, SelectedLanguageCode, StringComparison.OrdinalIgnoreCase);
 
     private static string GetWaveHeight(int index)
     {

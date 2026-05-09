@@ -1,6 +1,4 @@
-using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.AspNetCore.Components.Routing;
 using NarrationApp.Shared.DTOs.Owner;
 using NarrationApp.SharedUI.Models;
 using NarrationApp.SharedUI.Services;
@@ -25,17 +23,6 @@ public partial class MainLayout : IDisposable
     private IReadOnlyList<ShellNavItem> _navigationItems = Array.Empty<ShellNavItem>();
     private INotificationCenterService? _notificationCenterService;
     private OwnerPortalRefreshService? _ownerPortalRefreshService;
-
-    private RenderFragment OwnerSidebarProfileContent => builder =>
-    {
-        builder.OpenComponent<OwnerSidebarProfileCard>(0);
-        builder.AddAttribute(1, nameof(OwnerSidebarProfileCard.Initials), GetOwnerInitials(_displayName));
-        builder.AddAttribute(2, nameof(OwnerSidebarProfileCard.DisplayName), _displayName);
-        builder.AddAttribute(3, nameof(OwnerSidebarProfileCard.TotalPoisText), FormatCount(_ownerSummary?.TotalPois));
-        builder.AddAttribute(4, nameof(OwnerSidebarProfileCard.PublishedPoisText), FormatCount(_ownerSummary?.PublishedPois));
-        builder.AddAttribute(5, nameof(OwnerSidebarProfileCard.PendingModerationText), FormatCount(_ownerSummary?.PendingModerationRequests));
-        builder.CloseComponent();
-    };
 
     protected override async Task OnInitializedAsync()
     {

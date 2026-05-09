@@ -43,6 +43,7 @@ else
         <section class="metric-grid qr-surface__metrics">
             <MetricCard Label="QR hoạt động" Value="@_qrItems.Count.ToString("N0")" Hint="Tổng mã đang dùng" />
             <MetricCard Label="Link đến POI" Value="@CountByTarget("poi").ToString("N0")" Hint="Mở chi tiết điểm đến" />
+            <MetricCard Label="Link đến Tour" Value="@CountByTarget("tour").ToString("N0")" Hint="Quét là nghe tour ngay" />
             <MetricCard Label="Mở App" Value="@CountByTarget("open_app").ToString("N0")" Hint="Deep link vào ứng dụng" />
         </section>
 
@@ -60,6 +61,7 @@ else
                             @onchange="args => ChangeQrFilterAsync(args.Value?.ToString())">
                         <option value="">Tất cả target</option>
                         <option value="poi">POI</option>
+                        <option value="tour">Tour</option>
                         <option value="open_app">Open App</option>
                     </select>
                     <button class="app-button app-button--primary" data-action="new-qr" type="button" @onclick="ShowComposer">
@@ -148,6 +150,7 @@ else
                                     value="@_qrEditor.TargetType"
                                     @onchange="args => UpdateQrTargetType(args.Value?.ToString())">
                                 <option value="poi">POI</option>
+                                <option value="tour">Tour</option>
                                 <option value="open_app">Open App</option>
                             </select>
                         </div>
@@ -164,6 +167,22 @@ else
                                     @foreach (var poi in _poiOptions)
                                     {
                                         <option value="@poi.Id">@poi.Name</option>
+                                    }
+                                </select>
+                            </div>
+                        }
+                        else if (string.Equals(_qrEditor.TargetType, "tour", StringComparison.OrdinalIgnoreCase))
+                        {
+                            <div class="editor-field">
+                                <label for="qr-tour-id">Tour đích</label>
+                                <select id="qr-tour-id"
+                                        class="editor-select"
+                                        data-field="qr-tour-id"
+                                        value="@_qrEditor.TourId.ToString()"
+                                        @onchange="args => UpdateQrTour(args.Value?.ToString())">
+                                    @foreach (var tour in _tourOptions)
+                                    {
+                                        <option value="@tour.Id">@tour.Title</option>
                                     }
                                 </select>
                             </div>
@@ -204,6 +223,7 @@ else
         @if (_previewQr is not null)
         {
             var previewPublicUrl = BuildPreviewPublicUrl(_previewQr);
+            var previewQrPayload = BuildPreviewQrPayload(_previewQr);
             var previewQrImageSource = BuildPreviewQrImageSource(_previewQr);
             <div class="qr-preview-backdrop" @onclick="ClosePreview">
                 <section class="panel-shell qr-preview-shell" data-panel="qr-preview" @onclick:stopPropagation="true">
@@ -220,6 +240,7 @@ else
                     <div class="qr-preview-shell__content">
                         <div class="qr-preview-shell__code" aria-label="qr-code">
                             <img data-role="qr-image"
+                                 data-qr-payload="@previewQrPayload"
                                  src="@previewQrImageSource"
                                  alt="QR code @_previewQr.Code" />
                         </div>
@@ -228,6 +249,7 @@ else
                             <strong>@GetQrTargetLabel(_previewQr)</strong>
                             <p class="qr-preview-shell__label">@_previewQr.Code</p>
                             <p>@GetQrTypeLabel(_previewQr.TargetType)</p>
+                            <p>@GetPreviewQrPayloadLabel(_previewQr)</p>
                             <p>@(_previewQr.LocationHint ?? "Chưa có vị trí gợi ý")</p>
                             <a class="qr-preview-shell__link"
                                href="@previewPublicUrl"

@@ -32,46 +32,14 @@ public partial class MainLayout
                 new ShellNavItem { Group = "Nội dung", Label = "POI", Description = "Danh sách và chi tiết", Href = "/owner/pois", IconGlyph = "◎", Match = ShellNavItemMatch.Prefix },
                 new ShellNavItem { Group = "Nội dung", Label = "Tạo POI mới", Description = "Tạo bản nháp mới", Href = "/owner/pois/new", IconGlyph = "+", Match = ShellNavItemMatch.Exact },
                 new ShellNavItem { Group = "Vận hành", Label = "Moderation", Description = "Theo dõi kiểm duyệt", Href = "/owner/moderation", IconGlyph = "▣", BadgeText = FormatBadge(ownerSummary?.PendingModerationRequests), Match = ShellNavItemMatch.Exact },
-                new ShellNavItem { Group = "Vận hành", Label = "Notifications", Description = "Lịch sử thông báo", Href = "/owner/notifications", IconGlyph = "◌", BadgeText = FormatBadge(ownerSummary?.UnreadNotifications), Match = ShellNavItemMatch.Exact },
                 new ShellNavItem { Group = "Tài khoản", Label = "Profile", Description = "Hồ sơ owner", Href = "/owner/profile", IconGlyph = "⊙", Match = ShellNavItemMatch.Exact }
             ],
             _ => Array.Empty<ShellNavItem>()
         };
     }
 
-    private static string FormatCount(int? count) => count.HasValue ? count.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) : "—";
-
     private static string? FormatBadge(int? count) =>
         count.GetValueOrDefault() > 0
             ? count.GetValueOrDefault().ToString(System.Globalization.CultureInfo.InvariantCulture)
             : null;
-
-    private static string GetOwnerInitials(string displayName)
-    {
-        if (string.IsNullOrWhiteSpace(displayName))
-        {
-            return "OW";
-        }
-
-        var parts = displayName.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (parts.Length == 0)
-        {
-            return "OW";
-        }
-
-        if (parts.Length == 1)
-        {
-            var singleWordInitials = new string(parts[0].Where(char.IsLetterOrDigit).Take(2).Select(char.ToUpperInvariant).ToArray());
-            return string.IsNullOrWhiteSpace(singleWordInitials) ? "OW" : singleWordInitials;
-        }
-
-        var combined = string.Concat(GetInitial(parts[0]), GetInitial(parts[^1]));
-        return string.IsNullOrWhiteSpace(combined) ? "OW" : combined;
-    }
-
-    private static string GetInitial(string value)
-    {
-        var initial = value.FirstOrDefault(char.IsLetterOrDigit);
-        return initial == default ? string.Empty : char.ToUpperInvariant(initial).ToString();
-    }
 }

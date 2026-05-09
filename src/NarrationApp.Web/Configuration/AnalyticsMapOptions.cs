@@ -4,7 +4,7 @@ public sealed class AnalyticsMapOptions
 {
     public string AccessToken { get; init; } = string.Empty;
 
-    public string StyleUrl { get; init; } = "mapbox://styles/mapbox/dark-v11";
+    public string StyleUrl { get; init; } = "mapbox://styles/mapbox/streets-v12";
 
     public bool HasAccessToken =>
         !string.IsNullOrWhiteSpace(AccessToken)

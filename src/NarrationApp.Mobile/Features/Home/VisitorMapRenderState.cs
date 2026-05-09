@@ -61,6 +61,24 @@ public sealed class VisitorMapRenderState
                 .Append(snapshot.UserLocation.Label);
         }
 
+        if (snapshot.Route is not null)
+        {
+            builder
+                .Append("|route:")
+                .Append(snapshot.Route.Accent)
+                .Append(':')
+                .Append(snapshot.Route.StatusLabel);
+
+            foreach (var point in snapshot.Route.Points)
+            {
+                builder
+                    .Append(':')
+                    .Append(ToRenderCoordinate(point.Latitude))
+                    .Append(',')
+                    .Append(ToRenderCoordinate(point.Longitude));
+            }
+        }
+
         return builder.ToString();
     }
 

@@ -55,11 +55,24 @@
 }
 
 .toast-host__dismiss {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     width: 1.8rem;
     height: 1.8rem;
     border-radius: 999px;
     border: 1px solid rgba(148, 163, 184, 0.22);
     color: var(--vk-muted);
     background: rgba(15, 23, 42, 0.68);
+    line-height: 1;
+    white-space: nowrap;
     cursor: pointer;
+}
+
+.toast-host__dismiss:hover,
+.toast-host__dismiss:focus-visible {
+    border-color: rgba(45, 212, 191, 0.34);
+    color: #f8fafc;
+    outline: none;
 }

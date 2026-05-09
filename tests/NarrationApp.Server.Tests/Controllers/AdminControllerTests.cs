@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Text;
 using NarrationApp.Server.Controllers;
+using NarrationApp.Server.Data;
 using NarrationApp.Server.Data.Entities;
 using NarrationApp.Server.Services;
 using NarrationApp.Server.Tests.Support;
@@ -14,6 +16,22 @@ namespace NarrationApp.Server.Tests.Controllers;
 
 public sealed class AdminControllerTests
 {
+    private static AdminController CreateController(
+        AppDbContext dbContext,
+        IQrWebPresenceTracker? qrWebPresenceTracker = null,
+        IVisitorMobilePresenceTracker? visitorMobilePresenceTracker = null)
+    {
+        return new AdminController(
+            new StubModerationService(),
+            new StubAnalyticsService(),
+            dbContext,
+            new VisitorDeviceDashboardService(
+                dbContext,
+                qrWebPresenceTracker ?? new StubQrWebPresenceTracker(),
+                visitorMobilePresenceTracker ?? new StubVisitorMobilePresenceTracker()),
+            new PoiReviewService(dbContext));
+    }
+
     [Fact]
     public async Task PoisAsync_does_not_expose_pending_moderation_for_published_poi()
     {
@@ -30,7 +48,7 @@ public sealed class AdminControllerTests
         });
         await dbContext.SaveChangesAsync();
 
-        var controller = new AdminController(new StubModerationService(), new StubAnalyticsService(), dbContext, new StubQrWebPresenceTracker(), new StubVisitorMobilePresenceTracker());
+        var controller = CreateController(dbContext);
 
         var actionResult = await controller.PoisAsync(CancellationToken.None);
         var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
@@ -39,6 +57,29 @@ public sealed class AdminControllerTests
 
         Assert.Equal(PoiStatus.Published, poi.Status);
         Assert.Null(poi.PendingModerationId);
+    }
+
+    [Fact]
+    public async Task UpdatePoiPriorityAsync_updates_priority_and_returns_admin_poi()
+    {
+        await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
+        var poi = await dbContext.Pois.AsNoTracking().FirstAsync();
+        var controller = CreateController(dbContext);
+
+        var actionResult = await controller.UpdatePoiPriorityAsync(
+            poi.Id,
+            new UpdatePoiPriorityRequest { Priority = poi.Priority + 25 },
+            CancellationToken.None);
+
+        var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
+        var response = Assert.IsType<ApiResponse<AdminPoiDto>>(okResult.Value);
+        var persistedPriority = await dbContext.Pois
+            .Where(item => item.Id == poi.Id)
+            .Select(item => item.Priority)
+            .SingleAsync();
+
+        Assert.Equal(poi.Priority + 25, response.Data!.Priority);
+        Assert.Equal(poi.Priority + 25, persistedPriority);
     }
 
     [Fact]
@@ -98,7 +139,7 @@ public sealed class AdminControllerTests
 
         await dbContext.SaveChangesAsync();
 
-        var controller = new AdminController(new StubModerationService(), new StubAnalyticsService(), dbContext, new StubQrWebPresenceTracker(), new StubVisitorMobilePresenceTracker());
+        var controller = CreateController(dbContext);
 
         var actionResult = await controller.UsersAsync(CancellationToken.None);
         var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
@@ -173,7 +214,7 @@ public sealed class AdminControllerTests
 
         await dbContext.SaveChangesAsync();
 
-        var controller = new AdminController(new StubModerationService(), new StubAnalyticsService(), dbContext, new StubQrWebPresenceTracker(), new StubVisitorMobilePresenceTracker());
+        var controller = CreateController(dbContext);
 
         var actionResult = await controller.VisitorDevicesAsync(CancellationToken.None);
         var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
@@ -224,7 +265,7 @@ public sealed class AdminControllerTests
 
         await dbContext.SaveChangesAsync();
 
-        var controller = new AdminController(new StubModerationService(), new StubAnalyticsService(), dbContext, new StubQrWebPresenceTracker(), new StubVisitorMobilePresenceTracker());
+        var controller = CreateController(dbContext);
 
         var actionResult = await controller.VisitorDevicesAsync(CancellationToken.None);
         var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
@@ -257,7 +298,7 @@ public sealed class AdminControllerTests
         var presenceTracker = new StubQrWebPresenceTracker();
         presenceTracker.Track("qr-web-heartbeat-001", now.AddSeconds(-5));
 
-        var controller = new AdminController(new StubModerationService(), new StubAnalyticsService(), dbContext, presenceTracker, new StubVisitorMobilePresenceTracker());
+        var controller = CreateController(dbContext, qrWebPresenceTracker: presenceTracker);
 
         var actionResult = await controller.VisitorDevicesAsync(CancellationToken.None);
         var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
@@ -278,12 +319,7 @@ public sealed class AdminControllerTests
         var mobilePresenceTracker = new StubVisitorMobilePresenceTracker();
         mobilePresenceTracker.Track("android-emulator-5554", "mobile-presence", "vi-VN", now.AddSeconds(-5));
 
-        var controller = new AdminController(
-            new StubModerationService(),
-            new StubAnalyticsService(),
-            dbContext,
-            new StubQrWebPresenceTracker(),
-            mobilePresenceTracker);
+        var controller = CreateController(dbContext, visitorMobilePresenceTracker: mobilePresenceTracker);
 
         var actionResult = await controller.VisitorDevicesAsync(CancellationToken.None);
         var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
@@ -297,6 +333,60 @@ public sealed class AdminControllerTests
         Assert.Equal(0, visitor.VisitCount);
         Assert.Equal(0, visitor.TriggerCount);
         Assert.Equal("vi-VN", visitor.PreferredLanguage);
+    }
+
+    [Fact]
+    public async Task ExportEventLogCsvAsync_returns_structured_visit_event_log_file()
+    {
+        await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
+        var poi = await dbContext.Pois.OrderBy(item => item.Id).FirstAsync();
+        poi.Name = "Ốc Oanh, Vĩnh Khánh";
+        dbContext.VisitEvents.Add(new VisitEvent
+        {
+            DeviceId = "demo-device-001",
+            PoiId = poi.Id,
+            EventType = EventType.AudioPlay,
+            Source = "mobile-app",
+            ListenDurationSeconds = 87,
+            Lat = 10.7609,
+            Lng = 106.7054,
+            CreatedAt = new DateTime(2026, 5, 9, 9, 30, 0, DateTimeKind.Utc)
+        });
+        await dbContext.SaveChangesAsync();
+        var controller = CreateController(dbContext);
+
+        var result = await controller.ExportEventLogCsvAsync(CancellationToken.None);
+
+        var file = Assert.IsType<FileContentResult>(result);
+        var csv = Encoding.UTF8.GetString(file.FileContents);
+        Assert.Equal("text/csv; charset=utf-8", file.ContentType);
+        Assert.StartsWith("visit-event-log-", file.FileDownloadName, StringComparison.Ordinal);
+        Assert.EndsWith(".csv", file.FileDownloadName, StringComparison.Ordinal);
+        Assert.Contains("event_id,created_at_utc,event_type,source,device_id,user_id,user_email,poi_id,poi_name,lat,lng,listen_duration_seconds", csv);
+        Assert.Contains("\"AudioPlay\"", csv);
+        Assert.Contains("\"mobile-app\"", csv);
+        Assert.Contains("\"demo-device-001\"", csv);
+        Assert.Contains("\"Ốc Oanh, Vĩnh Khánh\"", csv);
+        Assert.Contains("\"10.7609\"", csv);
+        Assert.Contains("\"106.7054\"", csv);
+        Assert.Contains("\"87\"", csv);
+    }
+
+    [Fact]
+    public async Task VisitorDevicesAsync_omits_presence_only_mobile_device_after_short_presence_timeout()
+    {
+        await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
+        var now = DateTime.UtcNow;
+        var mobilePresenceTracker = new StubVisitorMobilePresenceTracker();
+        mobilePresenceTracker.Track("android-emulator-stale", "mobile-presence", "vi-VN", now.AddSeconds(-11));
+
+        var controller = CreateController(dbContext, visitorMobilePresenceTracker: mobilePresenceTracker);
+
+        var actionResult = await controller.VisitorDevicesAsync(CancellationToken.None);
+        var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
+        var response = Assert.IsType<ApiResponse<IReadOnlyList<VisitorDeviceSummaryDto>>>(okResult.Value);
+
+        Assert.DoesNotContain(response.Data!, item => item.DeviceId == "android-emulator-stale");
     }
 
     private sealed class StubModerationService : IModerationService
@@ -377,6 +467,11 @@ public sealed class AdminControllerTests
         public IReadOnlyCollection<VisitorMobilePresenceSnapshot> GetAll()
         {
             return _presenceByDeviceId.Values.ToArray();
+        }
+
+        public void MarkOffline(string deviceId)
+        {
+            _presenceByDeviceId.Remove(deviceId);
         }
 
         public void Track(string deviceId, string source, string? preferredLanguage, DateTime? seenAtUtc = null)

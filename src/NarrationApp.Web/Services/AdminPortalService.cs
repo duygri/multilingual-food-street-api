@@ -97,6 +97,11 @@ public sealed class AdminPortalService(ApiClient apiClient) : IAdminPortalServic
         return apiClient.GetAsync<AudioPlayAnalyticsDto>("api/analytics/audio-plays", cancellationToken);
     }
 
+    public Task<ApiFileDownload> ExportEventLogCsvAsync(CancellationToken cancellationToken = default)
+    {
+        return apiClient.DownloadAsync("api/admin/analytics/event-log.csv", cancellationToken);
+    }
+
     public Task UpdateUserRoleAsync(Guid userId, UpdateUserRoleRequest request, CancellationToken cancellationToken = default)
     {
         return apiClient.PutAsync($"api/admin/users/{userId}/role", request, cancellationToken);

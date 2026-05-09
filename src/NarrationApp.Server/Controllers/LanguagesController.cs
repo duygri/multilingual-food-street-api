@@ -11,6 +11,7 @@ namespace NarrationApp.Server.Controllers;
 [Route("api/languages")]
 public sealed class LanguagesController(IManagedLanguageService managedLanguageService) : ControllerBase
 {
+    [AllowAnonymous]
     [HttpGet]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<ManagedLanguageDto>>>> GetAsync(CancellationToken cancellationToken)
     {

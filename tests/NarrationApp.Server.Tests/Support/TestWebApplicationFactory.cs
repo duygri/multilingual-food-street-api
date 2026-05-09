@@ -78,6 +78,6 @@ internal sealed class TestWebApplicationFactory : WebApplicationFactory<Program>
 
         await dbContext.Database.EnsureDeletedAsync();
         await dbContext.Database.EnsureCreatedAsync();
-        await seeder.SeedAsync();
+        await seeder.SeedAsync(includeAnalyticsSamples: false);
     }
 }

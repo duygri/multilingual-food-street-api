@@ -3,7 +3,10 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NarrationApp.Server.Data;
 using NarrationApp.Server.Data.Entities;
 using NarrationApp.Server.Data.Seed;
+using NarrationApp.Server.Services;
 using NarrationApp.Shared.Constants;
+using NarrationApp.Shared.DTOs.Analytics;
+using NarrationApp.Shared.Enums;
 
 namespace NarrationApp.Server.Tests.Data.Seed;
 
@@ -23,7 +26,24 @@ public sealed class DataSeederTests
         Assert.Equal(12, await dbContext.Geofences.CountAsync());
         Assert.Equal(12, await dbContext.PoiTranslations.CountAsync());
         Assert.Equal(5, await dbContext.ManagedLanguages.CountAsync());
+        Assert.Equal(1, await dbContext.Tours.CountAsync());
+        Assert.Equal(6, await dbContext.TourStops.CountAsync());
+        Assert.Equal(3, await dbContext.QrCodes.CountAsync());
+        Assert.Equal(121, await dbContext.VisitEvents.CountAsync(item => item.DeviceId.StartsWith("seed-admin-map-")));
         Assert.Equal(12, await dbContext.Pois.Select(poi => poi.OwnerId).Distinct().CountAsync());
+
+        var busTour = await dbContext.Tours
+            .Include(tour => tour.Stops)
+            .SingleAsync(tour => tour.Title == "Tuyến xe buýt Khánh Hội - Vĩnh Hội - Xóm Chiếu");
+        Assert.Equal(TourStatus.Published, busTour.Status);
+        Assert.Equal([1, 2, 3, 4, 5, 6], busTour.Stops.OrderBy(stop => stop.Sequence).Select(stop => stop.Sequence));
+
+        var seededQrCodes = await dbContext.QrCodes
+            .Where(qr => qr.TargetType == "tour")
+            .OrderBy(qr => qr.Code)
+            .ToListAsync();
+        Assert.Equal(["BUS-KHANH-HOI-TOUR", "BUS-VINH-HOI-TOUR", "BUS-XOM-CHIEU-TOUR"], seededQrCodes.Select(qr => qr.Code));
+        Assert.All(seededQrCodes, qr => Assert.Equal(busTour.Id, qr.TargetId));
 
         var admin = await dbContext.AppUsers.SingleAsync(user => user.Email == AppConstants.DefaultAdminEmail);
         var owner = await dbContext.AppUsers.SingleAsync(user => user.Email == AppConstants.DefaultOwnerEmail);
@@ -34,6 +54,21 @@ public sealed class DataSeederTests
         Assert.Equal(AppConstants.DefaultLanguage, owner.PreferredLanguage);
         Assert.NotEqual(default, admin.CreatedAtUtc);
         Assert.NotEqual(default, owner.CreatedAtUtc);
+
+        var analyticsService = new AnalyticsService(dbContext);
+        var heatmap = await analyticsService.GetHeatmapAsync(new HeatmapQueryDto
+        {
+            UseTimeDecay = false,
+            ApplyGaussianSmoothing = false
+        });
+        var movementFlows = await analyticsService.GetMovementFlowsAsync(new MovementFlowQueryDto
+        {
+            MinimumUniqueSessions = 3
+        });
+
+        Assert.NotEmpty(heatmap);
+        Assert.NotEmpty(movementFlows);
+        Assert.All(movementFlows, flow => Assert.True(flow.UniqueSessions >= 3));
     }
 
     [Fact]
@@ -51,6 +86,10 @@ public sealed class DataSeederTests
         Assert.Equal(12, await dbContext.Geofences.CountAsync());
         Assert.Equal(12, await dbContext.PoiTranslations.CountAsync());
         Assert.Equal(5, await dbContext.ManagedLanguages.CountAsync());
+        Assert.Equal(1, await dbContext.Tours.CountAsync());
+        Assert.Equal(6, await dbContext.TourStops.CountAsync());
+        Assert.Equal(3, await dbContext.QrCodes.CountAsync());
+        Assert.Equal(121, await dbContext.VisitEvents.CountAsync(item => item.DeviceId.StartsWith("seed-admin-map-")));
         Assert.Equal(12, await dbContext.Pois.Select(poi => poi.OwnerId).Distinct().CountAsync());
     }
 

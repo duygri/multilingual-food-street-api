@@ -69,6 +69,79 @@ public sealed class MobileProjectConfigurationTests
     }
 
     [Fact]
+    public void Mobile_project_pins_sqlite_android_native_package_with_sixteen_kb_page_size_support()
+    {
+        var filePath = Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "..",
+            "..",
+            "src",
+            "NarrationApp.Mobile",
+            "NarrationApp.Mobile.csproj");
+
+        var projectFile = File.ReadAllText(Path.GetFullPath(filePath));
+
+        Assert.Contains("<PackageReference Include=\"SQLitePCLRaw.bundle_green\" Version=\"2.1.11\" />", projectFile, StringComparison.Ordinal);
+        Assert.Contains("<PackageReference Include=\"SQLitePCLRaw.lib.e_sqlite3.android\" Version=\"2.1.11\" />", projectFile, StringComparison.Ordinal);
+        Assert.DoesNotContain("SQLitePCLRaw.lib.e_sqlite3.android\" Version=\"2.1.2\"", projectFile, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mobile_project_removes_default_visitor_api_asset_when_custom_config_is_provided()
+    {
+        var filePath = Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "..",
+            "..",
+            "src",
+            "NarrationApp.Mobile",
+            "NarrationApp.Mobile.csproj");
+
+        var projectFile = File.ReadAllText(Path.GetFullPath(filePath));
+
+        Assert.Contains(
+            "<MauiAsset Remove=\"Resources\\Raw\\visitor-api.json\" Condition=\"'$(VisitorApiConfigFile)' != ''\" />",
+            projectFile,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "<Content Remove=\"Resources\\Raw\\visitor-api.json\" Condition=\"'$(VisitorApiConfigFile)' != ''\" />",
+            projectFile,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "<MauiAsset Include=\"$(VisitorApiConfigFile)\" Condition=\"'$(VisitorApiConfigFile)' != '' and Exists('$(VisitorApiConfigFile)')\" LogicalName=\"visitor-api.json\" />",
+            projectFile,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mobile_default_visitor_api_config_does_not_package_stale_physical_device_lan_ip()
+    {
+        var filePath = Path.Combine(
+            AppContext.BaseDirectory,
+            "..",
+            "..",
+            "..",
+            "..",
+            "..",
+            "src",
+            "NarrationApp.Mobile",
+            "Resources",
+            "Raw",
+            "visitor-api.json");
+
+        var apiConfig = File.ReadAllText(Path.GetFullPath(filePath));
+
+        Assert.DoesNotContain("192.168.98.219", apiConfig, StringComparison.Ordinal);
+        Assert.Contains("\"androidDevice\": \"http://192.168.31.137:5000/\"", apiConfig, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Mobile_legacy_auth_runtime_files_have_been_removed()
     {
         var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));

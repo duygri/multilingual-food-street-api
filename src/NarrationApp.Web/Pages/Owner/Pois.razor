@@ -121,7 +121,6 @@ else
                                     <th>POI</th>
                                     <th>DANH MỤC</th>
                                     <th>TỌA ĐỘ</th>
-                                    <th>PRIORITY</th>
                                     <th>NỘI DUNG NGUỒN</th>
                                     <th>TRẠNG THÁI</th>
                                     <th>THAO TÁC</th>
@@ -144,7 +143,6 @@ else
                                             <span class="owner-workspace-badge owner-workspace-badge--category">@(row.CategoryName ?? "Chưa gán")</span>
                                         </td>
                                         <td>@GetCoordinateLabel(row)</td>
-                                        <td>@row.Priority</td>
                                         <td>
                                             <span class="owner-workspace-badge owner-workspace-badge--source">@GetSourceContentLabel(row.SourceContentKind)</span>
                                         </td>

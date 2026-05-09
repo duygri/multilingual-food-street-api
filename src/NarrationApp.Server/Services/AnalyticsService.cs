@@ -15,6 +15,10 @@ public sealed class AnalyticsService(AppDbContext dbContext) : IAnalyticsService
     private const double GaussianSigma = 1d;
     private const double MinimumVisibleHeatWeight = 0.05d;
     private const int MinimumAnonymousSessions = 3;
+    private const double District4MinimumLatitude = 10.747d;
+    private const double District4MaximumLatitude = 10.7735d;
+    private const double District4MinimumLongitude = 106.691d;
+    private const double District4MaximumLongitude = 106.718d;
 
     public async Task<DashboardDto> GetDashboardAsync(CancellationToken cancellationToken = default)
     {
@@ -85,6 +89,11 @@ public sealed class AnalyticsService(AppDbContext dbContext) : IAnalyticsService
         var visitEventsQuery = dbContext.VisitEvents
             .AsNoTracking()
             .Where(item => item.Lat.HasValue && item.Lng.HasValue)
+            .Where(item =>
+                item.Lat!.Value >= District4MinimumLatitude
+                    && item.Lat.Value <= District4MaximumLatitude
+                    && item.Lng!.Value >= District4MinimumLongitude
+                    && item.Lng.Value <= District4MaximumLongitude)
             .Where(item => !string.IsNullOrWhiteSpace(item.DeviceId));
 
         if (normalizedQuery.EventTypeFilter.HasValue)
@@ -127,6 +136,7 @@ public sealed class AnalyticsService(AppDbContext dbContext) : IAnalyticsService
                     Weight = Math.Min(item.Value, normalizedQuery.MaxWeight)
                 };
             })
+            .Where(item => IsWithinDistrict4Bounds(item.Lat, item.Lng))
             .ToArray();
     }
 
@@ -145,7 +155,12 @@ public sealed class AnalyticsService(AppDbContext dbContext) : IAnalyticsService
             .AsNoTracking()
             .Include(item => item.Poi)
             .Where(item => !string.IsNullOrWhiteSpace(item.DeviceId))
-            .Where(item => item.Poi != null);
+            .Where(item => item.Poi != null)
+            .Where(item =>
+                item.Poi!.Lat >= District4MinimumLatitude
+                    && item.Poi.Lat <= District4MaximumLatitude
+                    && item.Poi.Lng >= District4MinimumLongitude
+                    && item.Poi.Lng <= District4MaximumLongitude);
 
         if (normalizedQuery.EventTypeFilter.HasValue)
         {
@@ -364,6 +379,14 @@ public sealed class AnalyticsService(AppDbContext dbContext) : IAnalyticsService
         HeatmapTimeRange.Last30Days => referenceTimeUtc.AddDays(-30),
         _ => null
     };
+
+    private static bool IsWithinDistrict4Bounds(double lat, double lng)
+    {
+        return lat >= District4MinimumLatitude
+            && lat <= District4MaximumLatitude
+            && lng >= District4MinimumLongitude
+            && lng <= District4MaximumLongitude;
+    }
 
     private static Dictionary<GridCellKey, double> BuildSessionWeightedGrid(
         IReadOnlyList<HeatmapVisitRecord> events,

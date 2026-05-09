@@ -63,8 +63,9 @@ public sealed class QrManagementTests : TestContext
             Assert.Contains("Chưa track", cut.Markup);
             Assert.Contains("Xem", cut.Markup);
             Assert.Contains("Link đến POI", cut.Markup);
+            Assert.Contains("Link đến Tour", cut.Markup);
             Assert.Contains("Mở App", cut.Markup);
-            Assert.DoesNotContain("Link đến Tour", cut.Markup);
+            Assert.Contains("Tour xe buýt Khánh Hội", cut.Markup);
             Assert.DoesNotContain("Copy Link", cut.Markup);
             Assert.DoesNotContain("Đang chuyển sang workspace Tour", cut.Markup);
             Assert.Empty(cut.FindAll("select[data-field='qr-target-type']"));
@@ -76,47 +77,55 @@ public sealed class QrManagementTests : TestContext
         {
             Assert.Single(cut.FindAll("[data-panel='qr-composer']"));
             Assert.Single(cut.FindAll("select[data-field='qr-target-type']"));
-            Assert.DoesNotContain("option value=\"tour\"", cut.Markup, StringComparison.Ordinal);
+            Assert.Contains("option value=\"tour\"", cut.Markup, StringComparison.Ordinal);
             Assert.Empty(cut.FindAll("select[data-field='qr-tour-id']"));
         });
 
-        cut.Find("select[data-field='qr-target-type']").Change("open_app");
+        cut.Find("select[data-field='qr-target-type']").Change("tour");
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Single(cut.FindAll("select[data-field='qr-tour-id']"));
+            Assert.Contains("Tour xe buýt Khánh Hội", cut.Markup);
+        });
+
         cut.Find("input[data-field='qr-location-hint']").Change("Cổng tour đêm");
         cut.Find("button[data-action='create-qr']").Click();
 
         cut.WaitForAssertion(() =>
         {
             Assert.Contains("Đã tạo QR mới", cut.Markup);
-            Assert.Contains("QR-APP-003", cut.Markup);
+            Assert.Contains("QR-TOUR-003", cut.Markup);
             Assert.Empty(cut.FindAll("select[data-field='qr-target-type']"));
         });
 
-        cut.Find("select[data-field='qr-filter']").Change("open_app");
+        cut.Find("select[data-field='qr-filter']").Change("tour");
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Contains("QR-APP-003", cut.Markup);
+            Assert.Contains("QR-TOUR-003", cut.Markup);
             Assert.DoesNotContain("QR-POI-001", cut.Markup);
-            Assert.Contains("QR-APP-001", cut.Markup);
+            Assert.Contains("QR-TOUR-001", cut.Markup);
         });
 
         cut.Find("button[data-action='view-qr-3']").Click();
         cut.WaitForAssertion(() =>
         {
             Assert.Contains("Xem mã QR", cut.Markup);
-            Assert.Contains("QR-APP-003", cut.Markup);
+            Assert.Contains("QR-TOUR-003", cut.Markup);
             var qrImage = cut.Find("img[data-role='qr-image']");
             var qrImageSource = qrImage.GetAttribute("src");
             Assert.False(string.IsNullOrWhiteSpace(qrImageSource));
             Assert.StartsWith("data:image/png;base64,", qrImageSource, StringComparison.Ordinal);
-            Assert.Contains("https://narration.app/qr/QR-APP-003", cut.Markup);
+            Assert.Equal("https://narration.app/qr/QR-TOUR-003", qrImage.GetAttribute("data-qr-payload"));
+            Assert.Contains("QR mở trang public", cut.Markup);
+            Assert.Contains("https://narration.app/qr/QR-TOUR-003", cut.Markup);
         });
 
         cut.Find("button[data-action='delete-qr-3']").Click();
 
         cut.WaitForAssertion(() =>
         {
-            Assert.DoesNotContain("QR-APP-003", cut.Markup);
+            Assert.DoesNotContain("QR-TOUR-003", cut.Markup);
         });
     }
 
@@ -156,7 +165,16 @@ public sealed class QrManagementTests : TestContext
 
         public Task<IReadOnlyList<TourDto>> GetToursAsync(CancellationToken cancellationToken = default)
         {
-            return Task.FromResult<IReadOnlyList<TourDto>>([]);
+            return Task.FromResult<IReadOnlyList<TourDto>>(
+            [
+                new TourDto
+                {
+                    Id = 10,
+                    Title = "Tour xe buýt Khánh Hội",
+                    Status = TourStatus.Published,
+                    EstimatedMinutes = 45
+                }
+            ]);
         }
 
         public Task<TourDto> CreateTourAsync(CreateTourRequest request, CancellationToken cancellationToken = default)
@@ -199,6 +217,15 @@ public sealed class QrManagementTests : TestContext
             },
             new QrCodeDto
             {
+                Id = 5,
+                Code = "QR-TOUR-001",
+                TargetType = "tour",
+                TargetId = 10,
+                LocationHint = "Trạm xe buýt Khánh Hội",
+                ScanCount = null
+            },
+            new QrCodeDto
+            {
                 Id = 4,
                 Code = "QR-APP-002",
                 TargetType = "open_app",
@@ -224,7 +251,12 @@ public sealed class QrManagementTests : TestContext
             var created = new QrCodeDto
             {
                 Id = 3,
-                Code = request.TargetType == "open_app" ? "QR-APP-003" : "QR-POI-003",
+                Code = request.TargetType switch
+                {
+                    "open_app" => "QR-APP-003",
+                    "tour" => "QR-TOUR-003",
+                    _ => "QR-POI-003"
+                },
                 TargetType = request.TargetType,
                 TargetId = request.TargetId,
                 LocationHint = request.LocationHint,

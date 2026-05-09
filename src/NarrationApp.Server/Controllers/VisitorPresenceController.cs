@@ -35,6 +35,28 @@ public sealed class VisitorPresenceController(IVisitorMobilePresenceTracker visi
         });
     }
 
+    [AllowAnonymous]
+    [HttpPost("offline")]
+    public ActionResult<ApiResponse<object>> Offline([FromBody] VisitorPresenceOfflineRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.DeviceId))
+        {
+            return BadRequest(new ApiResponse<object>
+            {
+                Succeeded = false,
+                Message = "DeviceId is required."
+            });
+        }
+
+        visitorMobilePresenceTracker.MarkOffline(request.DeviceId);
+
+        return Ok(new ApiResponse<object>
+        {
+            Succeeded = true,
+            Message = "Visitor presence cleared."
+        });
+    }
+
     public sealed class VisitorPresenceHeartbeatRequest
     {
         public string DeviceId { get; init; } = string.Empty;
@@ -42,5 +64,10 @@ public sealed class VisitorPresenceController(IVisitorMobilePresenceTracker visi
         public string Source { get; init; } = "mobile-presence";
 
         public string PreferredLanguage { get; init; } = string.Empty;
+    }
+
+    public sealed class VisitorPresenceOfflineRequest
+    {
+        public string DeviceId { get; init; } = string.Empty;
     }
 }

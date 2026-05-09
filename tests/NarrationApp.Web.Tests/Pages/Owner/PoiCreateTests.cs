@@ -68,6 +68,7 @@ public sealed class PoiCreateTests : TestContext
             Assert.Contains("Lưu nháp", cut.Markup);
             Assert.Contains("Gửi duyệt", cut.Markup);
             Assert.DoesNotContain("URL hình ảnh", cut.Markup);
+            Assert.Empty(cut.FindAll("input[data-field='poi-priority']"));
         });
     }
 
@@ -133,7 +134,6 @@ public sealed class PoiCreateTests : TestContext
         cut.Find("input[data-field='poi-slug']").Change("oc-dem-vinh-khanh");
         cut.Find("input[data-field='poi-lat']").Change("10.759");
         cut.Find("input[data-field='poi-lng']").Change("106.702");
-        cut.Find("input[data-field='poi-priority']").Change("14");
         cut.Find("select[data-field='poi-category']").Change("2");
         cut.Find("textarea[data-field='poi-description']").Change("Quán ốc đêm đông khách.");
         cut.Find("textarea[data-field='poi-tts-script']").Change("Kịch bản nguồn để tạo audio.");

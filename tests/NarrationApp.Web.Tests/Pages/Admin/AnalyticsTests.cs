@@ -45,6 +45,54 @@ public sealed class AnalyticsTests : TestContext
     }
 
     [Fact]
+    public void Analytics_map_script_recovers_cached_maps_when_style_changes()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var scriptPath = Path.Combine(projectRoot, "src", "NarrationApp.Web", "wwwroot", "js", "adminAnalyticsMap.js");
+        var script = File.ReadAllText(scriptPath);
+
+        Assert.Contains("instance.styleUrl !== effectiveStyleUrl", script, StringComparison.Ordinal);
+        Assert.Contains("map.setStyle(effectiveStyleUrl)", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Analytics_map_canvas_uses_light_fallback_instead_of_black_surface()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var cssPath = Path.Combine(projectRoot, "src", "NarrationApp.Web", "Pages", "Admin", "Analytics.razor.css");
+        var css = File.ReadAllText(cssPath);
+
+        Assert.Contains("#eef7f9", css, StringComparison.Ordinal);
+        Assert.DoesNotContain("rgba(7, 15, 27, 0.96)", css, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Analytics_map_script_scopes_heatmap_and_flows_to_district_4()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var scriptPath = Path.Combine(projectRoot, "src", "NarrationApp.Web", "wwwroot", "js", "adminAnalyticsMap.js");
+        var script = File.ReadAllText(scriptPath);
+
+        Assert.Contains("district4Center = [106.7045, 10.7604]", script, StringComparison.Ordinal);
+        Assert.Contains("district4Bounds = [[106.691, 10.747], [106.718, 10.7735]]", script, StringComparison.Ordinal);
+        Assert.Contains("maxBounds: district4MaxBounds", script, StringComparison.Ordinal);
+        Assert.Contains("filterPointsWithinDistrict4(points ?? [])", script, StringComparison.Ordinal);
+        Assert.Contains("filterFlowsWithinDistrict4(flows ?? [])", script, StringComparison.Ordinal);
+        Assert.Contains("fitDistrict4Bounds(map)", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("fallbackCenter = [106.7009, 10.7769]", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Analytics_page_loads_portal_download_script()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var indexPath = Path.Combine(projectRoot, "src", "NarrationApp.Web", "wwwroot", "index.html");
+        var index = File.ReadAllText(indexPath);
+
+        Assert.Contains("js/portalDownloads.js", index, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Renders_heatmap_flow_and_listening_rankings()
     {
         JSInterop.Mode = JSRuntimeMode.Loose;
@@ -62,6 +110,9 @@ public sealed class AnalyticsTests : TestContext
         {
             Assert.Contains("Heatmap vị trí người dùng", cut.Markup);
             Assert.Contains("Tuyến di chuyển ẩn danh", cut.Markup);
+            Assert.Contains("trong Quận 4", cut.Markup);
+            Assert.Contains("Xuất event log CSV", cut.Markup);
+            Assert.Contains("data-export-event-log", cut.Markup);
             Assert.Contains("Top địa điểm được nghe nhiều nhất", cut.Markup);
             Assert.Contains("Thời gian trung bình nghe 1 POI", cut.Markup);
             Assert.Contains("1,247", cut.Markup);

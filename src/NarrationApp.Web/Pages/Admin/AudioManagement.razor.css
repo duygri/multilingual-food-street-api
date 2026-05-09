@@ -310,9 +310,16 @@
 }
 
 .audio-language-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 100%;
     min-width: 3.1rem;
+    min-height: 2.25rem;
     padding: 0.38rem 0.7rem;
     font-size: 0.86rem;
+    line-height: 1.1;
+    white-space: nowrap;
     text-transform: lowercase;
     cursor: pointer;
 }
@@ -346,9 +353,11 @@
 }
 
 .audio-preview {
+    box-sizing: border-box;
     display: inline-flex;
     align-items: center;
     gap: 0.9rem;
+    max-width: 100%;
     min-width: 14rem;
     padding: 0.7rem 0.85rem;
     border-radius: 1rem;
@@ -356,6 +365,7 @@
     background: rgba(11, 20, 37, 0.92);
     color: var(--text);
     text-decoration: none;
+    line-height: 1.1;
     cursor: pointer;
 }
 
@@ -409,16 +419,20 @@
 }
 
 .audio-row-button {
+    box-sizing: border-box;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    max-width: 100%;
     min-width: 5.6rem;
-    height: 2.5rem;
+    min-height: 2.5rem;
     padding: 0 0.95rem;
     border-radius: 0.85rem;
     border: 1px solid rgba(78, 114, 177, 0.3);
     background: rgba(18, 30, 56, 0.86);
     color: var(--text);
+    line-height: 1.1;
+    white-space: nowrap;
     cursor: pointer;
     transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
 }
@@ -449,15 +463,19 @@
 }
 
 .audio-modal__close {
+    box-sizing: border-box;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    max-width: 100%;
     width: 2.5rem;
     height: 2.5rem;
     border-radius: 0.85rem;
     border: 1px solid rgba(78, 114, 177, 0.3);
     background: rgba(18, 30, 56, 0.86);
     color: var(--text);
+    line-height: 1;
+    white-space: nowrap;
     cursor: pointer;
     transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
 }

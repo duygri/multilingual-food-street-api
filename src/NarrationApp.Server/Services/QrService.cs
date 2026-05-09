@@ -120,9 +120,11 @@ public sealed class QrService(AppDbContext dbContext) : IQrService
 
     private async Task<QrCode> FindActiveCodeAsync(string code, CancellationToken cancellationToken)
     {
+        var normalizedCode = code.Trim();
+        var normalizedLookupCode = normalizedCode.ToUpperInvariant();
         var qrCode = await dbContext.QrCodes
             .AsNoTracking()
-            .SingleOrDefaultAsync(item => item.Code == code, cancellationToken)
+            .SingleOrDefaultAsync(item => item.Code.ToUpper() == normalizedLookupCode, cancellationToken)
             ?? throw new KeyNotFoundException("QR code was not found.");
 
         if (qrCode.ExpiresAt is not null && qrCode.ExpiresAt <= DateTime.UtcNow)
@@ -156,6 +158,10 @@ public sealed class QrService(AppDbContext dbContext) : IQrService
                 _ = await dbContext.Pois.AsNoTracking().SingleOrDefaultAsync(item => item.Id == targetId, cancellationToken)
                     ?? throw new KeyNotFoundException("POI target was not found.");
                 return targetId;
+            case "tour":
+                _ = await dbContext.Tours.AsNoTracking().SingleOrDefaultAsync(item => item.Id == targetId, cancellationToken)
+                    ?? throw new KeyNotFoundException("Tour target was not found.");
+                return targetId;
             default:
                 throw new ArgumentException("Unsupported QR target type.", nameof(targetType));
         }
@@ -168,6 +174,7 @@ public sealed class QrService(AppDbContext dbContext) : IQrService
         {
             "open_app" => normalized,
             "poi" => normalized,
+            "tour" => normalized,
             _ => throw new ArgumentException("Unsupported QR target type.", nameof(targetType))
         };
     }

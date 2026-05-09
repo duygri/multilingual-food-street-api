@@ -4,7 +4,7 @@ namespace NarrationApp.Mobile.Components.Pages;
 
 public partial class Home
 {
-    private static readonly TimeSpan PresenceHeartbeatInterval = TimeSpan.FromSeconds(20);
+    private static readonly TimeSpan PresenceHeartbeatInterval = TimeSpan.FromSeconds(5);
     private CancellationTokenSource? _presenceHeartbeatLoopCts;
     private Task? _presenceHeartbeatLoopTask;
 
@@ -51,6 +51,25 @@ public partial class Home
         catch (Exception ex)
         {
             VisitorMobileDiagnostics.Log("Presence", $"Heartbeat failed: {ex.Message}");
+        }
+    }
+
+    private async Task SendPresenceOfflineBestEffortAsync()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+
+        try
+        {
+            await PresenceReporter.MarkOfflineAsync(cts.Token);
+            VisitorMobileDiagnostics.Log("Presence", "Offline sent.");
+        }
+        catch (OperationCanceledException)
+        {
+            VisitorMobileDiagnostics.Log("Presence", "Offline send canceled.");
+        }
+        catch (Exception ex)
+        {
+            VisitorMobileDiagnostics.Log("Presence", $"Offline send failed: {ex.Message}");
         }
     }
 }

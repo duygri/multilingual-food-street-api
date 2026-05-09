@@ -9,9 +9,15 @@
                 <p>Tất cả điểm tham quan gần bạn</p>
             </div>
         </div>
-        <button type="button" class="discover-refresh-button @(IsLoading ? "is-busy" : string.Empty)" @onclick="() => OnRefresh.InvokeAsync()">
-            ↻
-        </button>
+        <div class="discover-header__actions">
+            <button type="button" class="discover-language-button" @onclick="() => OnCycleLanguage.InvokeAsync()" aria-label="Đổi ngôn ngữ">
+                <span>🌐</span>
+                <strong>@CurrentLanguageChipLabel</strong>
+            </button>
+            <button type="button" class="discover-refresh-button @(IsLoading ? "is-busy" : string.Empty)" @onclick="() => OnRefresh.InvokeAsync()" aria-label="Làm mới dữ liệu">
+                ↻
+            </button>
+        </div>
     </header>
 
     <label class="discover-search discover-search--strict">
@@ -24,6 +30,7 @@
             readonly
             @onclick="OnOpenSearch"
             @onfocus="OnOpenSearch" />
+        <span class="search-field__hint">Tìm</span>
     </label>
 
     <section class="discover-chip-row">
@@ -125,8 +132,10 @@
     [Parameter] public bool IsUsingFallbackData { get; set; }
     [Parameter] public string DataSourceLabel { get; set; } = string.Empty;
     [Parameter] public string SyncMessage { get; set; } = string.Empty;
+    [Parameter] public string CurrentLanguageChipLabel { get; set; } = "VN";
     [Parameter] public EventCallback OnOpenSearch { get; set; }
     [Parameter] public EventCallback OnRefresh { get; set; }
+    [Parameter] public EventCallback OnCycleLanguage { get; set; }
     [Parameter] public EventCallback<string> OnSelectCategory { get; set; }
     [Parameter] public EventCallback<string> OnSelectPoi { get; set; }
 

@@ -7,6 +7,8 @@ public partial class Home
     public async ValueTask DisposeAsync()
     {
         VisitorPendingDeepLinkStore.PendingChanged -= HandlePendingDeepLinkChanged;
+        await SendPresenceOfflineBestEffortAsync();
+
         _foregroundLocationLoopCts?.Cancel();
         _presenceHeartbeatLoopCts?.Cancel();
 

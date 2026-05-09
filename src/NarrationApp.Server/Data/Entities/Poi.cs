@@ -47,4 +47,6 @@ public sealed class Poi
     public ICollection<TourStop> TourStops { get; set; } = [];
 
     public ICollection<VisitEvent> VisitEvents { get; set; } = [];
+
+    public ICollection<PoiReview> Reviews { get; set; } = [];
 }

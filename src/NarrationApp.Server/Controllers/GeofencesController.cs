@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using NarrationApp.Server.Extensions;
 using NarrationApp.Server.Services;
 using NarrationApp.Shared.DTOs.Common;
 using NarrationApp.Shared.DTOs.Geofence;
@@ -22,7 +23,25 @@ public sealed class GeofencesController(IGeofenceService geofenceService) : Cont
     [HttpPut("{poiId:int}")]
     public async Task<ActionResult<ApiResponse<GeofenceDto>>> UpdateAsync(int poiId, UpdateGeofenceRequest request, CancellationToken cancellationToken)
     {
-        var response = await geofenceService.UpdateAsync(poiId, request, cancellationToken);
-        return Ok(new ApiResponse<GeofenceDto> { Succeeded = true, Message = "Geofence updated.", Data = response });
+        try
+        {
+            var response = await geofenceService.UpdateAsync(
+                User.GetRequiredUserId(),
+                User.GetRequiredUserRole(),
+                poiId,
+                request,
+                cancellationToken);
+
+            return Ok(new ApiResponse<GeofenceDto> { Succeeded = true, Message = "Geofence updated.", Data = response });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new ApiResponse<GeofenceDto>
+            {
+                Succeeded = false,
+                Message = "Geofence update forbidden.",
+                Error = new ErrorResponse { Code = "geofence_forbidden", Message = ex.Message }
+            });
+        }
     }
 }

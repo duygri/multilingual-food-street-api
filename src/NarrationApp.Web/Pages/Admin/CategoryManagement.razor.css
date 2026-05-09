@@ -48,12 +48,19 @@
 }
 
 .category-action {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 100%;
     min-height: 2.1rem;
     padding: 0.35rem 0.8rem;
     border-radius: 0.72rem;
     border: 1px solid rgba(80, 137, 168, 0.24);
     background: rgba(14, 29, 50, 0.9);
     color: #d9ecff;
+    line-height: 1.1;
+    white-space: nowrap;
     cursor: pointer;
 }
 

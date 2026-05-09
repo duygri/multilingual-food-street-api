@@ -35,10 +35,33 @@ else
             <MetricCard Label="TB thời gian nghe" Value="@FormatDurationShort(_snapshot.AverageListenDurationSeconds)" Hint="@($"{_averageListenByPoi.Count:N0} POI có đủ dữ liệu nghe")" />
         </section>
 
+        <section class="analytics-export-card">
+            <div>
+                <p class="analytics-export-card__eyebrow">Event log</p>
+                <h3>Xuất event log CSV</h3>
+                <p>Xuất bảng `VisitEvents` thành file log để kiểm tra QR, GPS, audio và tuyến di chuyển khi cần phản biện.</p>
+                @if (!string.IsNullOrWhiteSpace(_eventLogExportMessage))
+                {
+                    <small class="analytics-export-card__status">@_eventLogExportMessage</small>
+                }
+                else if (!string.IsNullOrWhiteSpace(_eventLogExportErrorMessage))
+                {
+                    <small class="analytics-export-card__status analytics-export-card__status--error">@_eventLogExportErrorMessage</small>
+                }
+            </div>
+            <button type="button"
+                    class="app-button app-button--ghost"
+                    data-export-event-log
+                    disabled="@_isExportingEventLog"
+                    @onclick="DownloadEventLogCsvAsync">
+                @(_isExportingEventLog ? "Đang xuất..." : "Tải CSV")
+            </button>
+        </section>
+
         <section class="analytics-map-grid">
             <PanelShell Eyebrow="Bản đồ tín hiệu"
                         Title="Heatmap vị trí người dùng"
-                        Description="Heatmap Mapbox từ unique session đã snap grid 50m, clamp 50 và Gaussian smoothing."
+                        Description="Heatmap Mapbox trong Quận 4 từ unique session đã snap grid 50m, clamp 50 và Gaussian smoothing."
                         BadgeLabel="@($"{_heatmap.Count:N0} điểm")"
                         BadgeTone="StatusTone.Info">
                 <HeaderActions>
@@ -100,8 +123,8 @@ else
                         else if (_heatmap.Count == 0)
                         {
                             <div class="analytics-map-placeholder">
-                                <strong>Chưa có tín hiệu vị trí</strong>
-                                <p>Heatmap sẽ hiển thị khi hệ thống ghi nhận đủ visit events có lat/lng.</p>
+                                <strong>Chưa có tín hiệu vị trí Quận 4</strong>
+                                <p>Heatmap sẽ hiển thị khi hệ thống ghi nhận đủ visit events có lat/lng trong Quận 4.</p>
                             </div>
                         }
                         else
@@ -119,7 +142,7 @@ else
 
             <PanelShell Eyebrow="Luồng di chuyển"
                         Title="Tuyến di chuyển ẩn danh"
-                        Description="Route polyline tổng hợp giữa các POI, không hiển thị device_id raw."
+                        Description="Route polyline tổng hợp giữa các POI trong Quận 4, không hiển thị device_id raw."
                         BadgeLabel="@($"{_movementFlows.Count:N0} luồng")"
                         BadgeTone="StatusTone.Good">
                 <HeaderActions>
@@ -185,7 +208,7 @@ else
                         {
                             <div class="analytics-map-placeholder">
                                 <strong>Chưa đủ ngưỡng ẩn danh</strong>
-                                <p>Chỉ hiển thị những luồng có đủ số session tổng hợp để tránh trace theo thiết bị.</p>
+                                <p>Chỉ hiển thị những luồng trong Quận 4 có đủ số session tổng hợp để tránh trace theo thiết bị.</p>
                             </div>
                         }
                         else

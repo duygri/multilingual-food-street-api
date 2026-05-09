@@ -40,7 +40,8 @@ public partial class Home
                 return;
             }
 
-            await JS.InvokeVoidAsync("visitorAudio.preload", cue.StreamUrl, _audioBridge);
+            var playbackUrl = await VisitorAudioPlaybackSourceResolver.ResolveAsync(cue.StreamUrl, JS);
+            await JS.InvokeVoidAsync("visitorAudio.preload", playbackUrl, _audioBridge);
             await JS.InvokeVoidAsync("visitorAudio.setRate", AudioSpeedOptions[_audioSpeedIndex]);
 
             var shouldAutoplay = ShouldAutoplayCue(cue, autoPlay, forceAutoPlay);
@@ -55,16 +56,16 @@ public partial class Home
             }
 
             MarkAutoNarrationStarted(cue, forceAutoPlay);
-            await JS.InvokeVoidAsync("visitorAudio.play", cue.StreamUrl, _audioBridge);
+            await JS.InvokeVoidAsync("visitorAudio.play", playbackUrl, _audioBridge);
             var playbackLabel = forceAutoPlay
                 ? $"Đang phát từ QR • {cue.LanguageCode.ToUpperInvariant()}"
                 : $"Đang phát tự động • {cue.LanguageCode.ToUpperInvariant()}";
             _state.SetAudioPlaybackState(VisitorAudioPlaybackState.Playing, playbackLabel);
             await TrackAudioPlayAsync(cue);
         }
-        catch (JSException ex)
+        catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[AudioRuntime] JS interop failed: {ex.Message}");
+            VisitorMobileDiagnostics.Log("AudioRuntime", $"Playback source failed: {ex.Message}");
             _state.SetAudioPlaybackState(VisitorAudioPlaybackState.Error, "Audio chưa sẵn sàng");
         }
     }

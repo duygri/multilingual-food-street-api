@@ -207,6 +207,47 @@ public sealed class AnalyticsServiceTests
     }
 
     [Fact]
+    public async Task GetMovementFlowsAsync_returns_only_district_4_routes()
+    {
+        await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
+        var pois = await dbContext.Pois
+            .OrderBy(item => item.Id)
+            .Take(3)
+            .ToArrayAsync();
+        pois[2].Lat = 10.8231;
+        pois[2].Lng = 106.6297;
+        var referenceTimeUtc = new DateTime(2026, 4, 26, 12, 0, 0, DateTimeKind.Utc);
+
+        dbContext.VisitEvents.AddRange(
+            BuildVisitEvent("district-4-flow-a", pois[0].Id, EventType.QrScan, referenceTimeUtc.AddMinutes(0), pois[0].Lat, pois[0].Lng),
+            BuildVisitEvent("district-4-flow-a", pois[1].Id, EventType.AudioPlay, referenceTimeUtc.AddMinutes(4), pois[1].Lat, pois[1].Lng),
+            BuildVisitEvent("district-4-flow-b", pois[0].Id, EventType.QrScan, referenceTimeUtc.AddMinutes(10), pois[0].Lat, pois[0].Lng),
+            BuildVisitEvent("district-4-flow-b", pois[1].Id, EventType.AudioPlay, referenceTimeUtc.AddMinutes(14), pois[1].Lat, pois[1].Lng),
+            BuildVisitEvent("district-4-flow-c", pois[0].Id, EventType.QrScan, referenceTimeUtc.AddMinutes(20), pois[0].Lat, pois[0].Lng),
+            BuildVisitEvent("district-4-flow-c", pois[1].Id, EventType.AudioPlay, referenceTimeUtc.AddMinutes(24), pois[1].Lat, pois[1].Lng),
+            BuildVisitEvent("outside-flow-a", pois[0].Id, EventType.QrScan, referenceTimeUtc.AddMinutes(30), pois[0].Lat, pois[0].Lng),
+            BuildVisitEvent("outside-flow-a", pois[2].Id, EventType.AudioPlay, referenceTimeUtc.AddMinutes(34), pois[2].Lat, pois[2].Lng),
+            BuildVisitEvent("outside-flow-b", pois[0].Id, EventType.QrScan, referenceTimeUtc.AddMinutes(40), pois[0].Lat, pois[0].Lng),
+            BuildVisitEvent("outside-flow-b", pois[2].Id, EventType.AudioPlay, referenceTimeUtc.AddMinutes(44), pois[2].Lat, pois[2].Lng),
+            BuildVisitEvent("outside-flow-c", pois[0].Id, EventType.QrScan, referenceTimeUtc.AddMinutes(50), pois[0].Lat, pois[0].Lng),
+            BuildVisitEvent("outside-flow-c", pois[2].Id, EventType.AudioPlay, referenceTimeUtc.AddMinutes(54), pois[2].Lat, pois[2].Lng));
+        await dbContext.SaveChangesAsync();
+
+        var sut = new AnalyticsService(dbContext);
+        var result = await sut.GetMovementFlowsAsync(new MovementFlowQueryDto
+        {
+            TimeRange = HeatmapTimeRange.AllTime,
+            MinimumUniqueSessions = 3,
+            ReferenceTimeUtc = referenceTimeUtc
+        });
+
+        var flow = Assert.Single(result);
+        Assert.Equal(pois[0].Id, flow.FromPoiId);
+        Assert.Equal(pois[1].Id, flow.ToPoiId);
+        Assert.Equal(3, flow.UniqueSessions);
+    }
+
+    [Fact]
     public async Task GetAverageListenByPoiAsync_returns_ranked_average_durations()
     {
         await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
@@ -288,6 +329,35 @@ public sealed class AnalyticsServiceTests
 
         var point = Assert.Single(result);
         Assert.Equal(1d, point.Weight, 6);
+    }
+
+    [Fact]
+    public async Task GetHeatmapAsync_returns_only_district_4_points()
+    {
+        await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
+        var poi = await dbContext.Pois.OrderBy(item => item.Id).FirstAsync();
+        var referenceTimeUtc = new DateTime(2026, 4, 26, 12, 0, 0, DateTimeKind.Utc);
+
+        dbContext.VisitEvents.AddRange(
+            BuildVisitEvent("district-4-heatmap", poi.Id, EventType.GeofenceEnter, referenceTimeUtc.AddHours(-2), 10.7609, 106.7054),
+            BuildVisitEvent("outside-heatmap", poi.Id, EventType.GeofenceEnter, referenceTimeUtc.AddHours(-1), 10.8231, 106.6297));
+        await dbContext.SaveChangesAsync();
+
+        var sut = new AnalyticsService(dbContext);
+        var result = await sut.GetHeatmapAsync(new HeatmapQueryDto
+        {
+            TimeRange = HeatmapTimeRange.AllTime,
+            UseTimeDecay = false,
+            GridSizeMeters = 50d,
+            MaxWeight = 50d,
+            ApplyGaussianSmoothing = false,
+            ReferenceTimeUtc = referenceTimeUtc
+        });
+
+        var point = Assert.Single(result);
+        Assert.Equal(1d, point.Weight, 6);
+        Assert.InRange(point.Lat, 10.747d, 10.7735d);
+        Assert.InRange(point.Lng, 106.691d, 106.718d);
     }
 
     [Fact]

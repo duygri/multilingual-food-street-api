@@ -119,7 +119,6 @@ else if (_poi is not null && _editor is not null && _geofenceEditor is not null 
                 <div class="owner-workspace-detail-hero__meta">
                     <span class="owner-workspace-badge">@_poi.Lat.ToString("0.###"), @_poi.Lng.ToString("0.###")</span>
                     <span class="owner-workspace-badge">@GetRadiusSummary(_poi)</span>
-                    <span class="owner-workspace-badge">Priority @_poi.Priority</span>
                     <span class="owner-workspace-badge owner-workspace-badge--category">@( _poi.CategoryName ?? "Chưa gán danh mục")</span>
                     <span class="owner-workspace-badge">POI #@_poi.Id</span>
                 </div>
@@ -219,12 +218,12 @@ else if (_poi is not null && _editor is not null && _geofenceEditor is not null 
                     <div class="owner-workspace-form-grid">
                         <label class="owner-workspace-field">
                             <span>Tên POI</span>
-                            <input data-field="poi-name" @bind="_editor.Name" />
+                            <input data-field="poi-name" @bind="_editor.Name" @bind:event="oninput" />
                         </label>
 
                         <label class="owner-workspace-field">
                             <span>Slug</span>
-                            <input data-field="poi-slug" @bind="_editor.Slug" />
+                            <input data-field="poi-slug" @bind="_editor.Slug" @bind:event="oninput" />
                         </label>
 
                         <label class="owner-workspace-field">
@@ -235,11 +234,6 @@ else if (_poi is not null && _editor is not null && _geofenceEditor is not null 
                         <label class="owner-workspace-field">
                             <span>Longitude</span>
                             <input data-field="poi-lng" type="number" step="0.000001" @bind="_editor.Lng" />
-                        </label>
-
-                        <label class="owner-workspace-field">
-                            <span>Priority</span>
-                            <input data-field="poi-priority" type="number" @bind="_editor.Priority" />
                         </label>
 
                         <label class="owner-workspace-field">
@@ -265,25 +259,25 @@ else if (_poi is not null && _editor is not null && _geofenceEditor is not null 
 
                         <label class="owner-workspace-field">
                             <span>Link bản đồ</span>
-                            <input data-field="poi-map-link" @bind="_editor.MapLink" />
+                            <input data-field="poi-map-link" @bind="_editor.MapLink" @bind:event="oninput" />
                         </label>
                     </div>
 
                     <label class="owner-workspace-field owner-workspace-field--full">
                         <span>Mô tả nguồn</span>
-                        <textarea data-field="poi-description" @bind="_editor.Description"></textarea>
+                        <textarea data-field="poi-description" @bind="_editor.Description" @bind:event="oninput"></textarea>
                     </label>
 
                     <label class="owner-workspace-field owner-workspace-field--full">
                         <span>Kịch bản TTS</span>
-                        <textarea data-field="poi-tts-script" @bind="_editor.TtsScript"></textarea>
+                        <textarea data-field="poi-tts-script" @bind="_editor.TtsScript" @bind:event="oninput"></textarea>
                     </label>
 
                     <div class="owner-workspace-actions owner-workspace-actions--end">
-                        <button class="app-button app-button--primary"
+                        <button class="@PoiSaveButtonClass"
                                 data-action="save-poi"
                                 type="button"
-                                disabled="@_isSaving"
+                                disabled="@IsPoiSaveDisabled"
                                 @onclick="SavePoiAsync">
                             @(_isSaving ? "Đang lưu..." : "Lưu thay đổi")
                         </button>
@@ -391,11 +385,6 @@ else if (_poi is not null && _editor is not null && _geofenceEditor is not null 
                         <label class="owner-workspace-field">
                             <span>Bán kính (m)</span>
                             <input data-field="geofence-radius" type="number" @bind="_geofenceEditor.RadiusMeters" />
-                        </label>
-
-                        <label class="owner-workspace-field">
-                            <span>Độ ưu tiên</span>
-                            <input data-field="geofence-priority" type="number" @bind="_geofenceEditor.Priority" />
                         </label>
 
                         <label class="owner-workspace-field">

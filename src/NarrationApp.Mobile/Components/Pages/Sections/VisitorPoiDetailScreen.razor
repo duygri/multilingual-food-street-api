@@ -6,7 +6,14 @@
             <button type="button" class="poi-detail-hero__button" @onclick="OnBack">←</button>
             <button type="button" class="poi-detail-hero__button" @onclick="OnOpenMap">↗</button>
         </div>
-        <div class="poi-detail-hero__icon">@GetPoiIcon()</div>
+        @if (!string.IsNullOrWhiteSpace(Poi.ImageUrl))
+        {
+            <img class="poi-detail-hero__image" src="@Poi.ImageUrl" alt="@Poi.Name" loading="lazy" />
+        }
+        else
+        {
+            <div class="poi-detail-hero__icon">@GetPoiIcon()</div>
+        }
     </header>
 
     <section class="poi-detail-content">
@@ -65,7 +72,7 @@
                     </div>
                 </div>
                 <div class="poi-language-pills">
-                    @foreach (var language in Languages)
+                    @foreach (var language in GetAvailableAudioLanguages())
                     {
                         <button
                             type="button"
@@ -84,8 +91,8 @@
                 <span class="sheet-label">Nội dung</span>
                 <strong>Câu chuyện tại điểm dừng</strong>
             </header>
-            <p>@Poi.Description</p>
-            <p>@Poi.Highlight</p>
+            <p>@Poi.GetDescriptionForLanguage(SelectedLanguageCode)</p>
+            <p>@Poi.GetHighlightForLanguage(SelectedLanguageCode)</p>
             <div class="poi-detail-copy__tag">@Poi.StoryTag</div>
         </section>
 
@@ -141,6 +148,7 @@
 
         <div class="poi-detail-sticky-cta">
             <button type="button" class="secondary-pill poi-detail-map-button" @onclick="() => OnOpenMap.InvokeAsync()">🗺️ Bản đồ</button>
+            <button type="button" class="secondary-pill poi-detail-directions-button" @onclick="() => OnOpenDirections.InvokeAsync()">🚶 Dẫn tới đây</button>
             <button type="button" class="primary-pill poi-detail-listen-button" @onclick="() => OnPrimaryAction.InvokeAsync()">
                 @(IsPlaying ? "Tạm dừng thuyết minh" : "Nghe thuyết minh")
             </button>
@@ -160,6 +168,7 @@
     [Parameter] public string AudioSubtitle { get; set; } = string.Empty;
     [Parameter] public EventCallback OnBack { get; set; }
     [Parameter] public EventCallback OnOpenMap { get; set; }
+    [Parameter] public EventCallback OnOpenDirections { get; set; }
     [Parameter] public EventCallback OnOpenFullPlayer { get; set; }
     [Parameter] public EventCallback OnPlayToggle { get; set; }
     [Parameter] public EventCallback OnPrimaryAction { get; set; }
@@ -182,6 +191,9 @@
 
     private string GetCurrentLanguageLabel() =>
         Languages.FirstOrDefault(language => language.Code == SelectedLanguageCode)?.Label ?? SelectedLanguageCode.ToUpperInvariant();
+
+    private IReadOnlyList<VisitorLanguageOption> GetAvailableAudioLanguages() =>
+        VisitorAudioLanguageSelector.BuildForPoi(Poi, Languages);
 
     private int GetPriorityScore() =>
         Poi.Priority <= 10

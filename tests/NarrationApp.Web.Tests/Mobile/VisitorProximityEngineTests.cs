@@ -37,6 +37,20 @@ public sealed class VisitorProximityEngineTests
     }
 
     [Fact]
+    public void Evaluate_UsesConfiguredPoiRadiusWithoutMinimumExpansion()
+    {
+        var location = new VisitorLocationSnapshot(true, true, 10.7608, 106.7055, "Đã định vị");
+        var pois = new[]
+        {
+            new VisitorPoi("poi-just-outside", "Ốc Oanh", "food", "Hải sản", "Quận 4", "Live API", "desc", "highlight", 18, 52, 180, "3:12", "Sẵn sàng", 10.76125, 106.7055, GeofenceRadiusMeters: 30)
+        };
+
+        var match = VisitorProximityEngine.Evaluate(location, pois);
+
+        Assert.Null(match);
+    }
+
+    [Fact]
     public void Evaluate_PrefersHigherPriorityPoiWhenZonesOverlap()
     {
         var location = new VisitorLocationSnapshot(true, true, 10.76093, 106.70543, "Đã định vị");

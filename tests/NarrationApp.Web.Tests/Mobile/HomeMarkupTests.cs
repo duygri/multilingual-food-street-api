@@ -99,8 +99,9 @@ public sealed class HomeMarkupTests
             ("Home.BackgroundTracking.razor.cs", "SyncBackgroundTrackingAsync"),
             ("Home.MapRuntime.razor.cs", "RenderMapIfNeededAsync"),
             ("Home.RuntimeDisposal.razor.cs", "DisposeAsync"),
-            ("Home.MapControls.razor.cs", "ZoomMapInAsync"),
-            ("Home.MapPoiSheet.razor.cs", "OpenSelectedPoiDirectionsAsync"),
+            ("Home.MapControls.razor.cs", "CenterMapOnUserAsync"),
+            ("Home.MapPoiSheet.razor.cs", "GetMapPoiAudioStatus"),
+            ("Home.MapDirections.razor.cs", "OpenSelectedPoiDirectionsAsync"),
             ("Home.Content.razor.cs", "LoadContentAsync"),
             ("Home.ContentActions.razor.cs", "EnableLocationAsync"),
             ("Home.PermissionFlow.razor.cs", "CompletePermissionFlowAsync"),
@@ -187,9 +188,12 @@ public sealed class HomeMarkupTests
         var mapRuntimePath = Path.Combine(pageRoot, "Home.MapRuntime.razor.cs");
         var mapRuntimeLineCount = File.ReadAllLines(mapRuntimePath).Length;
         Assert.True(mapRuntimeLineCount <= 70, $"Home.MapRuntime.razor.cs should stay focused on map render orchestration, but has {mapRuntimeLineCount} lines.");
+        var mapRuntimeSource = File.ReadAllText(mapRuntimePath);
+        Assert.Contains("_mapRenderState.Reset();", mapRuntimeSource, StringComparison.Ordinal);
+        Assert.Contains("VisitorMobileDiagnostics.Log(\"MapRuntime\", $\"MapBox render failed", mapRuntimeSource, StringComparison.Ordinal);
         var mapControlsPath = Path.Combine(pageRoot, "Home.MapControls.razor.cs");
         var mapControlsLineCount = File.ReadAllLines(mapControlsPath).Length;
-        Assert.True(mapControlsLineCount <= 40, $"Home.MapControls.razor.cs should stay focused on map zoom controls, but has {mapControlsLineCount} lines.");
+        Assert.True(mapControlsLineCount <= 25, $"Home.MapControls.razor.cs should stay focused on the map locate control, but has {mapControlsLineCount} lines.");
         var mapPoiSheetPath = Path.Combine(pageRoot, "Home.MapPoiSheet.razor.cs");
         var mapPoiSheetLineCount = File.ReadAllLines(mapPoiSheetPath).Length;
         Assert.True(mapPoiSheetLineCount <= 55, $"Home.MapPoiSheet.razor.cs should stay focused on map-sheet actions/presentation, but has {mapPoiSheetLineCount} lines.");
@@ -278,6 +282,22 @@ public sealed class HomeMarkupTests
         Assert.DoesNotContain("Console.WriteLine", source, StringComparison.Ordinal);
         Assert.Contains("[Conditional(\"DEBUG\")]", source, StringComparison.Ordinal);
         Assert.Contains("[Conditional(\"SMOKE\")]", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mobile_home_manual_audio_playback_handles_js_failures_without_blazor_error_boundary()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var audioPlaybackPath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Home.AudioPlayback.razor.cs");
+
+        var source = File.ReadAllText(audioPlaybackPath);
+
+        Assert.Contains("VisitorAudioPlaybackSourceResolver.ResolveAsync", source, StringComparison.Ordinal);
+        Assert.Contains("catch (Exception ex)", source, StringComparison.Ordinal);
+        Assert.Contains("VisitorMobileDiagnostics.Log(\"AudioPlayback\", $\"Playback source failed", source, StringComparison.Ordinal);
+        Assert.Contains("VisitorAudioPlaybackState.Error", source, StringComparison.Ordinal);
+        Assert.Contains("\"Phát audio thất bại\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("await JS.InvokeVoidAsync(\"visitorAudio.play\", _state.CurrentAudioCue.StreamUrl, _audioBridge);\r\n        await JS.InvokeVoidAsync(\"visitorAudio.setRate\"", source, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -448,10 +468,10 @@ public sealed class HomeMarkupTests
         Assert.Contains("map-screen", mapSection, StringComparison.Ordinal);
         Assert.Contains("map-top-overlay", mapSection, StringComparison.Ordinal);
         Assert.Contains("map-top-controls", mapSection, StringComparison.Ordinal);
-        Assert.Contains("map-top-search", mapSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("map-top-search", mapSection, StringComparison.Ordinal);
         Assert.Contains("map-category-rail", mapSection, StringComparison.Ordinal);
         Assert.Contains("map-top-overlay--sheet-open", mapSection, StringComparison.Ordinal);
-        Assert.Contains("map-fab-rail", mapSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("map-fab-rail", mapSection, StringComparison.Ordinal);
         Assert.Contains("poi-sheet__grabber", mapSection, StringComparison.Ordinal);
         Assert.Contains("poi-sheet__meta-chips", mapSection, StringComparison.Ordinal);
     }
@@ -493,7 +513,9 @@ public sealed class HomeMarkupTests
 
         var source = File.ReadAllText(homePath);
 
-        Assert.Contains("VisitorMapSnapshotBuilder.Build(_state.FilteredPois, _state.SelectedPoiId, _state.CurrentLocation)", source, StringComparison.Ordinal);
+        Assert.Contains("VisitorMapSnapshotBuilder.Build(", source, StringComparison.Ordinal);
+        Assert.Contains("_state.FilteredPois", source, StringComparison.Ordinal);
+        Assert.Contains("GetCurrentWalkingRoute()", source, StringComparison.Ordinal);
         Assert.DoesNotContain("VisitorMapSnapshotBuilder.Build(_state.FeaturedPois, _state.SelectedPoiId, _state.CurrentLocation)", source, StringComparison.Ordinal);
     }
 
@@ -510,9 +532,9 @@ public sealed class HomeMarkupTests
         Assert.Contains("VisitorSearchScreen", markup, StringComparison.Ordinal);
         Assert.Contains("OpenSearchOverlay", markup, StringComparison.Ordinal);
         Assert.Contains("CloseSearchOverlay", markup, StringComparison.Ordinal);
-        Assert.Contains("readonly", mapSection, StringComparison.Ordinal);
-        Assert.Contains("OnOpenSearch", mapSection, StringComparison.Ordinal);
-        Assert.Contains("Tìm theo tên, danh mục", mapSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("readonly", mapSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("OnOpenSearch", mapSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("Tìm theo tên, danh mục", mapSection, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -526,6 +548,49 @@ public sealed class HomeMarkupTests
         Assert.Contains("VisitorFullPlayerScreen", markup, StringComparison.Ordinal);
         Assert.Contains("OpenFullPlayer", markup, StringComparison.Ordinal);
         Assert.Contains("CloseFullPlayer", markup, StringComparison.Ordinal);
+        Assert.Contains("ShowLanguagePicker=\"@_showFullPlayerLanguagePicker\"", markup, StringComparison.Ordinal);
+        Assert.Contains("AudioLanguages=\"@GetSelectedPoiAudioLanguages()\"", markup, StringComparison.Ordinal);
+        Assert.Contains("SelectedLanguageCode=\"@_state.SelectedLanguageCode\"", markup, StringComparison.Ordinal);
+        Assert.Contains("OnToggleLanguagePicker=\"ToggleFullPlayerLanguagePicker\"", markup, StringComparison.Ordinal);
+        Assert.Contains("OnSelectLanguage=\"SelectFullPlayerLanguageAsync\"", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("OnCycleLanguage=\"CycleFullPlayerLanguageAsync\"", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mobile_discover_screen_exposes_language_switcher_for_foreign_visitors()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var homePath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Home.razor");
+        var discoverPath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Sections", "VisitorDiscoverScreen.razor");
+
+        var homeMarkup = File.ReadAllText(homePath);
+        var discoverMarkup = File.ReadAllText(discoverPath);
+
+        Assert.Contains("CurrentLanguageChipLabel", discoverMarkup, StringComparison.Ordinal);
+        Assert.Contains("OnCycleLanguage", discoverMarkup, StringComparison.Ordinal);
+        Assert.Contains("discover-language-button", discoverMarkup, StringComparison.Ordinal);
+        Assert.Contains("CurrentLanguageChipLabel=\"@_state.CurrentLanguage.ChipLabel\"", homeMarkup, StringComparison.Ordinal);
+        Assert.Contains("OnCycleLanguage=\"CycleLanguage\"", homeMarkup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mobile_poi_detail_and_full_player_render_real_poi_images_when_available()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var detailPath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Sections", "VisitorPoiDetailScreen.razor");
+        var fullPlayerPath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Sections", "VisitorFullPlayerScreen.razor");
+        var discoveryCssPath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "wwwroot", "css", "mobile-discovery.css");
+
+        var detailMarkup = File.ReadAllText(detailPath);
+        var fullPlayerMarkup = File.ReadAllText(fullPlayerPath);
+        var css = File.ReadAllText(discoveryCssPath);
+
+        Assert.Contains("Poi.ImageUrl", detailMarkup, StringComparison.Ordinal);
+        Assert.Contains("poi-detail-hero__image", detailMarkup, StringComparison.Ordinal);
+        Assert.Contains("Poi.ImageUrl", fullPlayerMarkup, StringComparison.Ordinal);
+        Assert.Contains("full-player-hero__image", fullPlayerMarkup, StringComparison.Ordinal);
+        Assert.Contains(".poi-detail-hero__image", css, StringComparison.Ordinal);
+        Assert.Contains(".full-player-hero__image", css, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -543,6 +608,19 @@ public sealed class HomeMarkupTests
         Assert.Contains("VisitorTab.Discover", shellSurfacesSource, StringComparison.Ordinal);
         Assert.Contains("_discoverPoiDetailId", shellSurfacesSource, StringComparison.Ordinal);
         Assert.Contains("_state.PreviewPoi", shellSurfacesSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mobile_home_qr_flow_autoplays_tour_scans_without_gps()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var deepLinkPath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Home.DeepLinkNavigation.razor.cs");
+
+        var deepLinkSource = File.ReadAllText(deepLinkPath);
+
+        Assert.Contains("VisitorQrTargetKind.Tour", deepLinkSource, StringComparison.Ordinal);
+        Assert.Contains("HandlePoiDeepLinkAudioAsync", deepLinkSource, StringComparison.Ordinal);
+        Assert.Contains("forceAutoPlay: true", deepLinkSource, StringComparison.Ordinal);
     }
 
     [Fact]

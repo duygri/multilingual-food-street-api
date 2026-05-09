@@ -11,10 +11,12 @@
 }
 
 .notification-center__toggle {
+    box-sizing: border-box;
     position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    max-width: 100%;
     border: 0;
     border-radius: 999px;
     min-height: 2.85rem;
@@ -23,6 +25,8 @@
     background: rgba(12, 23, 39, 0.88);
     color: var(--vk-text);
     border: 1px solid rgba(80, 137, 168, 0.16);
+    line-height: 1;
+    white-space: nowrap;
     cursor: pointer;
     transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
 }
@@ -88,10 +92,27 @@
 }
 
 .notification-center__mark-all {
-    border: 0;
-    background: transparent;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.1rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    background: rgba(8, 17, 31, 0.42);
     color: var(--vk-accent-soft);
+    font-weight: 800;
+    line-height: 1.1;
+    white-space: nowrap;
     cursor: pointer;
+}
+
+.notification-center__mark-all:hover,
+.notification-center__mark-all:focus-visible {
+    border-color: rgba(45, 212, 191, 0.28);
+    background: rgba(13, 48, 56, 0.62);
+    color: #f8fafc;
+    outline: none;
 }
 
 .notification-center__shortcut {

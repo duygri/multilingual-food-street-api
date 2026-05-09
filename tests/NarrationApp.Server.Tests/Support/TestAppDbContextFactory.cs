@@ -17,7 +17,7 @@ internal static class TestAppDbContextFactory
 
         var dbContext = new AppDbContext(options);
         var seeder = new DataSeeder(dbContext, NullLogger<DataSeeder>.Instance);
-        await seeder.SeedAsync();
+        await seeder.SeedAsync(includeAnalyticsSamples: false);
         return dbContext;
     }
 

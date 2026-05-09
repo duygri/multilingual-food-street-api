@@ -13,6 +13,7 @@ public partial class Home
     {
         _isFullPlayerOpen = false;
         _showFullPlayerTranscript = false;
+        _showFullPlayerLanguagePicker = false;
     }
 
     private void CloseNonContentSurfaces()

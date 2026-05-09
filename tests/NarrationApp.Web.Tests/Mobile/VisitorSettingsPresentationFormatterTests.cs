@@ -62,6 +62,18 @@ public sealed class VisitorSettingsPresentationFormatterTests
     }
 
     [Fact]
+    public void Offline_pack_summary_includes_content_snapshot_and_cached_audio()
+    {
+        var summary = VisitorSettingsPresentationFormatter.FormatOfflinePackSummary(
+            poiCount: 9,
+            tourCount: 2,
+            cachedAudioFileCount: 12,
+            estimatedSizeMb: 48.35d);
+
+        Assert.Equal("9 POI • 2 tour • 12 audio • 48.4 MB offline", summary);
+    }
+
+    [Fact]
     public void Overview_summary_groups_settings_labels_for_the_overview_screen()
     {
         var summary = VisitorSettingsPresentationFormatter.CreateOverviewSummary(

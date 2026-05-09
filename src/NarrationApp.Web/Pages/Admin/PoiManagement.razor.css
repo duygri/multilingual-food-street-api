@@ -91,6 +91,11 @@
 }
 
 .admin-poi-filter {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 100%;
     min-height: 2.3rem;
     padding: 0.48rem 1.1rem;
     border: 1px solid transparent;
@@ -98,6 +103,8 @@
     background: transparent;
     color: #aebbd0;
     font-weight: 600;
+    line-height: 1.1;
+    white-space: nowrap;
     cursor: pointer;
     transition: background 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
 }
@@ -202,12 +209,19 @@
 }
 
 .admin-poi-action {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 100%;
     min-height: 2rem;
     padding: 0.32rem 0.75rem;
     border-radius: 0.65rem;
     border: 1px solid rgba(80, 137, 168, 0.22);
     background: rgba(14, 29, 50, 0.9);
     color: #d9ecff;
+    line-height: 1.1;
+    white-space: nowrap;
     cursor: pointer;
     transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
 }
@@ -250,6 +264,11 @@
 }
 
 .admin-poi-pagination__button {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 100%;
     min-width: 2.1rem;
     min-height: 2rem;
     padding: 0.32rem 0.7rem;
@@ -257,6 +276,8 @@
     border: 1px solid rgba(80, 137, 168, 0.22);
     background: rgba(13, 27, 46, 0.9);
     color: #c9daef;
+    line-height: 1.1;
+    white-space: nowrap;
     cursor: pointer;
 }
 
@@ -319,6 +340,26 @@
 .admin-poi-detail__card p,
 .admin-poi-detail__story p {
     margin: 0;
+}
+
+.admin-poi-priority {
+    display: grid;
+    gap: 0.4rem;
+}
+
+.admin-poi-priority input {
+    width: 100%;
+    border: 1px solid rgba(80, 137, 168, 0.28);
+    border-radius: 0.85rem;
+    background: rgba(8, 17, 31, 0.74);
+    color: #edf5ff;
+    padding: 0.7rem 0.85rem;
+    font: inherit;
+}
+
+.admin-poi-action:disabled {
+    cursor: not-allowed;
+    opacity: 0.48;
 }
 
 .admin-poi-detail__story-grid {

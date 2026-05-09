@@ -99,3 +99,8 @@ public sealed class UpdateUserRoleRequest
 {
     public UserRole Role { get; init; }
 }
+
+public sealed class UpdatePoiPriorityRequest
+{
+    public int Priority { get; init; }
+}

@@ -1,7 +1,19 @@
 window.adminAnalyticsMap = (() => {
     const instances = new Map();
-    const fallbackCenter = [106.7009, 10.7769];
-    const fallbackZoom = 12.4;
+    const district4Center = [106.7045, 10.7604];
+    const district4Bounds = [[106.691, 10.747], [106.718, 10.7735]];
+    const district4MaxBounds = [[106.6875, 10.7435], [106.7215, 10.777]];
+    const fallbackCenter = district4Center;
+    const fallbackZoom = 14.1;
+    const fallbackStyleUrl = "mapbox://styles/mapbox/light-v11";
+
+    function normalizeStyleUrl(styleUrl) {
+        if (typeof styleUrl !== "string" || !styleUrl.trim()) {
+            return fallbackStyleUrl;
+        }
+
+        return styleUrl.trim();
+    }
 
     function ensureContainer(containerId) {
         const container = document.getElementById(containerId);
@@ -18,8 +30,14 @@ window.adminAnalyticsMap = (() => {
     }
 
     function getOrCreateInstance(containerId, accessToken, styleUrl) {
+        const effectiveStyleUrl = normalizeStyleUrl(styleUrl);
         let instance = instances.get(containerId);
         if (instance) {
+            if (instance.styleUrl !== effectiveStyleUrl) {
+                instance.styleUrl = effectiveStyleUrl;
+                instance.map.setStyle(effectiveStyleUrl);
+            }
+
             return instance;
         }
 
@@ -27,13 +45,14 @@ window.adminAnalyticsMap = (() => {
 
         const map = new mapboxgl.Map({
             container: containerId,
-            style: styleUrl,
+            style: effectiveStyleUrl,
             center: fallbackCenter,
             zoom: fallbackZoom,
+            maxBounds: district4MaxBounds,
             attributionControl: false
         });
 
-        instance = { map };
+        instance = { map, styleUrl: effectiveStyleUrl };
         instances.set(containerId, instance);
         return instance;
     }
@@ -63,22 +82,31 @@ window.adminAnalyticsMap = (() => {
         }
     }
 
-    function fitBounds(map, coordinates) {
-        if (!coordinates.length) {
-            return;
-        }
+    function isWithinDistrict4(point) {
+        const [lng, lat] = point;
+        const [southWest, northEast] = district4Bounds;
+        return lng >= southWest[0]
+            && lng <= northEast[0]
+            && lat >= southWest[1]
+            && lat <= northEast[1];
+    }
 
-        const bounds = new mapboxgl.LngLatBounds();
-        coordinates.forEach(point => bounds.extend(point));
+    function filterPointsWithinDistrict4(points) {
+        return points.filter(point => isWithinDistrict4([point.lng, point.lat]));
+    }
 
-        if (bounds.isEmpty()) {
-            return;
-        }
+    function filterFlowsWithinDistrict4(flows) {
+        return flows.filter(flow =>
+            isWithinDistrict4([flow.fromLng, flow.fromLat])
+                && isWithinDistrict4([flow.toLng, flow.toLat]));
+    }
 
+    function fitDistrict4Bounds(map) {
+        const bounds = new mapboxgl.LngLatBounds(district4Bounds[0], district4Bounds[1]);
         map.fitBounds(bounds, {
-            padding: 42,
+            padding: 36,
             duration: 0,
-            maxZoom: 15
+            maxZoom: 14.8
         });
     }
 
@@ -86,9 +114,10 @@ window.adminAnalyticsMap = (() => {
         const sourceId = "analytics-heatmap-source";
         const heatLayerId = "analytics-heatmap-layer";
         const pointLayerId = "analytics-heatmap-points";
+        const scopedPoints = filterPointsWithinDistrict4(points ?? []);
         const geoJson = {
             type: "FeatureCollection",
-            features: points.map(point => ({
+            features: scopedPoints.map(point => ({
                 type: "Feature",
                 properties: { weight: point.weight },
                 geometry: {
@@ -145,7 +174,7 @@ window.adminAnalyticsMap = (() => {
             });
         }
 
-        fitBounds(map, points.map(point => [point.lng, point.lat]));
+        fitDistrict4Bounds(map);
     }
 
     function buildFlowNodeFeatures(flows) {
@@ -186,9 +215,10 @@ window.adminAnalyticsMap = (() => {
         const nodeSourceId = "analytics-flow-node-source";
         const lineLayerId = "analytics-flow-layer";
         const nodeLayerId = "analytics-flow-nodes";
+        const scopedFlows = filterFlowsWithinDistrict4(flows ?? []);
         const lineGeoJson = {
             type: "FeatureCollection",
-            features: flows.map(flow => ({
+            features: scopedFlows.map(flow => ({
                 type: "Feature",
                 properties: {
                     weight: flow.weight,
@@ -206,7 +236,7 @@ window.adminAnalyticsMap = (() => {
         };
         const nodeGeoJson = {
             type: "FeatureCollection",
-            features: buildFlowNodeFeatures(flows)
+            features: buildFlowNodeFeatures(scopedFlows)
         };
 
         updateGeoJsonSource(map, lineSourceId, lineGeoJson);
@@ -263,10 +293,7 @@ window.adminAnalyticsMap = (() => {
             });
         }
 
-        fitBounds(map, flows.flatMap(flow => [
-            [flow.fromLng, flow.fromLat],
-            [flow.toLng, flow.toLat]
-        ]));
+        fitDistrict4Bounds(map);
     }
 
     function renderWithStyle(containerId, accessToken, styleUrl, callback) {
@@ -277,8 +304,14 @@ window.adminAnalyticsMap = (() => {
 
         const instance = getOrCreateInstance(containerId, accessToken, styleUrl);
         const { map } = instance;
+        let hasApplied = false;
 
         const apply = () => {
+            if (hasApplied) {
+                return;
+            }
+
+            hasApplied = true;
             callback(map);
             map.resize();
         };
@@ -289,6 +322,7 @@ window.adminAnalyticsMap = (() => {
         }
 
         map.once("load", apply);
+        map.once("style.load", apply);
     }
 
     function renderHeatmap(containerId, accessToken, styleUrl, points) {

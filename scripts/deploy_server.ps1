@@ -10,6 +10,10 @@ param(
 
     [string]$Urls = "http://0.0.0.0:5000",
 
+    [string]$MapboxAccessToken = "",
+
+    [string]$MapboxStyleUrl = "",
+
     [switch]$NoRestore,
 
     [switch]$SkipZip,
@@ -22,6 +26,54 @@ $ErrorActionPreference = "Stop"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $projectPath = Join-Path $repoRoot "src\NarrationApp.Server\NarrationApp.Server.csproj"
 $configuration = if ($Environment -eq "Development") { "Debug" } else { "Release" }
+$defaultMapboxStyleUrl = "mapbox://styles/mapbox/dark-v11"
+
+function Resolve-SettingValue {
+    param(
+        [string]$Value,
+        [string]$EnvironmentValue,
+        [string]$Fallback = ""
+    )
+
+    if (-not [string]::IsNullOrWhiteSpace($Value)) {
+        return $Value.Trim()
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($EnvironmentValue)) {
+        return $EnvironmentValue.Trim()
+    }
+
+    return $Fallback
+}
+
+function Write-AdminMapboxLocalSettings {
+    param(
+        [string]$TargetRoot,
+        [string]$AccessToken,
+        [string]$StyleUrl
+    )
+
+    if ([string]::IsNullOrWhiteSpace($AccessToken)) {
+        Write-Host "Mapbox      : skipped (no token provided)"
+        return
+    }
+
+    $webRoot = Join-Path $TargetRoot "wwwroot"
+    if (-not (Test-Path $webRoot)) {
+        New-Item -ItemType Directory -Path $webRoot -Force | Out-Null
+    }
+
+    $settingsPath = Join-Path $webRoot "appsettings.Local.json"
+    $settings = [ordered]@{
+        Mapbox = [ordered]@{
+            AccessToken = $AccessToken
+            StyleUrl = if ([string]::IsNullOrWhiteSpace($StyleUrl)) { $defaultMapboxStyleUrl } else { $StyleUrl }
+        }
+    }
+
+    $settings | ConvertTo-Json -Depth 5 | Set-Content -Path $settingsPath -Encoding UTF8
+    Write-Host "Mapbox      : wrote admin map settings to wwwroot\appsettings.Local.json"
+}
 
 if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
     $OutputRoot = Join-Path $repoRoot "artifacts\server-publish"
@@ -59,6 +111,10 @@ Write-Host "OutputPath   : $outputPath"
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
+
+$resolvedMapboxAccessToken = Resolve-SettingValue -Value $MapboxAccessToken -EnvironmentValue $env:MAPBOX_ACCESS_TOKEN
+$resolvedMapboxStyleUrl = Resolve-SettingValue -Value $MapboxStyleUrl -EnvironmentValue $env:MAPBOX_STYLE_URL -Fallback $defaultMapboxStyleUrl
+Write-AdminMapboxLocalSettings -TargetRoot $outputPath -AccessToken $resolvedMapboxAccessToken -StyleUrl $resolvedMapboxStyleUrl
 
 if (-not $SkipZip) {
     if (Test-Path $zipPath) {

@@ -146,6 +146,40 @@ public sealed class PoiManagementTests : TestContext
     }
 
     [Fact]
+    public void Admin_can_update_priority_from_poi_detail_panel()
+    {
+        var adminService = new TestAdminPortalService();
+        var poiOperationsService = new TestAdminPoiOperationsService(adminService);
+
+        Services.AddSingleton<IAdminPortalService>(adminService);
+        Services.AddSingleton<IAdminPoiOperationsService>(poiOperationsService);
+
+        var cut = RenderComponent<PoiManagement>();
+
+        cut.WaitForAssertion(() => Assert.Contains("data-action=\"view-poi-12\"", cut.Markup));
+        cut.Find("button[data-action='view-poi-12']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Single(cut.FindAll("[data-panel='poi-detail']"));
+            Assert.Equal("14", cut.Find("input[data-field='admin-poi-priority']").GetAttribute("value"));
+        });
+
+        cut.Find("input[data-field='admin-poi-priority']").Change("25");
+        cut.Find("button[data-action='save-poi-priority']").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Single(poiOperationsService.PriorityUpdates);
+            Assert.Contains("Đã cập nhật priority POI Ốc đêm Vĩnh Hội.", cut.Markup);
+            Assert.Contains("Priority 25", cut.Markup);
+        });
+
+        Assert.Equal(12, poiOperationsService.PriorityUpdates[0].PoiId);
+        Assert.Equal(25, poiOperationsService.PriorityUpdates[0].Priority);
+    }
+
+    [Fact]
     public void Published_poi_with_stale_pending_id_does_not_render_moderation_actions_or_pending_counts()
     {
         var adminService = new TestAdminPortalService();
@@ -354,6 +388,36 @@ public sealed class PoiManagementTests : TestContext
             _pois.RemoveAll(item => item.Id == poiId);
         }
 
+        public AdminPoiDto UpdatePoiPriority(int poiId, int priority)
+        {
+            var index = _pois.FindIndex(item => item.Id == poiId);
+            var poi = _pois[index];
+            var updated = new AdminPoiDto
+            {
+                Id = poi.Id,
+                Name = poi.Name,
+                Slug = poi.Slug,
+                OwnerName = poi.OwnerName,
+                OwnerEmail = poi.OwnerEmail,
+                CategoryId = poi.CategoryId,
+                CategoryName = poi.CategoryName,
+                Description = poi.Description,
+                TtsScript = poi.TtsScript,
+                Priority = priority,
+                Lat = poi.Lat,
+                Lng = poi.Lng,
+                Status = poi.Status,
+                AudioAssetCount = poi.AudioAssetCount,
+                TranslationCount = poi.TranslationCount,
+                GeofenceCount = poi.GeofenceCount,
+                PendingModerationId = poi.PendingModerationId,
+                CreatedAtUtc = poi.CreatedAtUtc
+            };
+
+            _pois[index] = updated;
+            return updated;
+        }
+
         public void AddPoi(AdminPoiDto poi)
         {
             _pois.Add(poi);
@@ -362,7 +426,15 @@ public sealed class PoiManagementTests : TestContext
 
     private sealed class TestAdminPoiOperationsService(TestAdminPortalService adminPortalService) : IAdminPoiOperationsService
     {
+        public List<PriorityUpdateCall> PriorityUpdates { get; } = [];
+
         public List<int> DeletedPoiIds { get; } = [];
+
+        public Task<AdminPoiDto> UpdatePriorityAsync(int poiId, int priority, CancellationToken cancellationToken = default)
+        {
+            PriorityUpdates.Add(new PriorityUpdateCall(poiId, priority));
+            return Task.FromResult(adminPortalService.UpdatePoiPriority(poiId, priority));
+        }
 
         public Task DeleteAsync(int poiId, CancellationToken cancellationToken = default)
         {
@@ -370,5 +442,7 @@ public sealed class PoiManagementTests : TestContext
             adminPortalService.DeletePoi(poiId);
             return Task.CompletedTask;
         }
+
+        public readonly record struct PriorityUpdateCall(int PoiId, int Priority);
     }
 }

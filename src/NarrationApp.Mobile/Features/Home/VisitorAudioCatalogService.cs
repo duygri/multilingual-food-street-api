@@ -34,57 +34,66 @@ public sealed class VisitorAudioCatalogService(
         string? poiName = null,
         CancellationToken cancellationToken = default)
     {
+        var normalizedPreferredLanguageCode = NormalizeLanguageCode(preferredLanguageCode);
         if (!TryParseServerPoiId(poiId, out var serverPoiId))
         {
             return VisitorAudioCue.Unavailable(poiId, "Audio demo chưa gắn asset thật.");
         }
 
-        var cachedAudio = await FindCachedAudioAsync(poiId, preferredLanguageCode, cancellationToken);
-        if (cachedAudio is not null)
-        {
-            return ToAudioCue(cachedAudio, preferredLanguageCode);
-        }
-
         try
         {
-            var response = await httpClient.GetFromJsonAsync<ApiResponse<IReadOnlyList<AudioDto>>>(
-                $"api/audio?poiId={serverPoiId}",
-                cancellationToken);
-
-            var assets = response?.Data ?? [];
-            var readyAssets = assets
-                .Where(asset => asset.Status == AudioStatus.Ready)
-                .OrderBy(asset => asset.LanguageCode.Equals(preferredLanguageCode, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
-                .ThenBy(asset => asset.LanguageCode.Equals("vi", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
-                .ThenBy(asset => asset.SourceType == AudioSourceType.Recorded ? 0 : 1)
-                .ToList();
-
-            var selected = readyAssets.FirstOrDefault();
-            if (selected is null)
-            {
-                return VisitorAudioCue.Unavailable(poiId, "Chưa có audio sẵn sàng cho POI này.");
-            }
-
-            var streamUrl = ToAbsoluteUrl(selected.Url);
-            var cachedEntry = await CacheSelectedAudioAsync(poiId, poiName, selected, streamUrl, preferredLanguageCode, cancellationToken);
-            if (cachedEntry is not null)
-            {
-                return ToAudioCue(cachedEntry, preferredLanguageCode);
-            }
-
-            return new VisitorAudioCue(
-                PoiId: poiId,
-                LanguageCode: selected.LanguageCode,
-                StreamUrl: streamUrl,
-                DurationSeconds: selected.DurationSeconds,
-                IsAvailable: true,
-                StatusLabel: BuildStatusLabel(selected, preferredLanguageCode),
-                IsPreferredLanguage: selected.LanguageCode.Equals(preferredLanguageCode, StringComparison.OrdinalIgnoreCase));
+            return await LoadLiveCueAsync(poiId, serverPoiId, normalizedPreferredLanguageCode, poiName, cancellationToken);
         }
         catch (Exception ex)
         {
-            return VisitorAudioCue.Unavailable(poiId, $"Không tải được audio: {ex.Message}");
+            return await LoadCachedCueOrUnavailableAsync(poiId, normalizedPreferredLanguageCode, ex, cancellationToken);
         }
+    }
+
+    private async Task<VisitorAudioCue> LoadLiveCueAsync(
+        string poiId,
+        int serverPoiId,
+        string preferredLanguageCode,
+        string? poiName,
+        CancellationToken cancellationToken)
+    {
+        var response = await httpClient.GetFromJsonAsync<ApiResponse<IReadOnlyList<AudioDto>>>(
+            $"api/audio?poiId={serverPoiId}",
+            cancellationToken);
+
+        var selected = SelectReadyAsset(response?.Data ?? [], preferredLanguageCode);
+        if (selected is null)
+        {
+            return VisitorAudioCue.Unavailable(poiId, BuildUnavailableStatusLabel(preferredLanguageCode));
+        }
+
+        return await BuildCueFromReadyAssetAsync(poiId, poiName, selected, preferredLanguageCode, cancellationToken);
+    }
+
+    private async Task<VisitorAudioCue> BuildCueFromReadyAssetAsync(
+        string poiId,
+        string? poiName,
+        AudioDto selected,
+        string preferredLanguageCode,
+        CancellationToken cancellationToken)
+    {
+        var streamUrl = ToAbsoluteUrl(selected.Url);
+        var cachedEntry = await CacheSelectedAudioAsync(poiId, poiName, selected, streamUrl, preferredLanguageCode, cancellationToken);
+        return cachedEntry is not null
+            ? ToAudioCue(cachedEntry, preferredLanguageCode)
+            : ToNetworkAudioCue(poiId, selected, streamUrl, preferredLanguageCode);
+    }
+
+    private async Task<VisitorAudioCue> LoadCachedCueOrUnavailableAsync(
+        string poiId,
+        string preferredLanguageCode,
+        Exception liveLoadException,
+        CancellationToken cancellationToken)
+    {
+        var cachedAudio = await FindCachedAudioAsync(poiId, preferredLanguageCode, cancellationToken);
+        return cachedAudio is not null
+            ? ToAudioCue(cachedAudio, preferredLanguageCode)
+            : VisitorAudioCue.Unavailable(poiId, $"Không tải được audio: {liveLoadException.Message}");
     }
 
     private async Task<VisitorAudioCacheEntry?> FindCachedAudioAsync(
@@ -143,6 +152,22 @@ public sealed class VisitorAudioCatalogService(
             IsPreferredLanguage: entry.LanguageCode.Equals(preferredLanguageCode, StringComparison.OrdinalIgnoreCase));
     }
 
+    private static VisitorAudioCue ToNetworkAudioCue(
+        string poiId,
+        AudioDto selected,
+        string streamUrl,
+        string preferredLanguageCode)
+    {
+        return new VisitorAudioCue(
+            PoiId: poiId,
+            LanguageCode: selected.LanguageCode,
+            StreamUrl: streamUrl,
+            DurationSeconds: selected.DurationSeconds,
+            IsAvailable: true,
+            StatusLabel: BuildStatusLabel(selected, preferredLanguageCode),
+            IsPreferredLanguage: selected.LanguageCode.Equals(preferredLanguageCode, StringComparison.OrdinalIgnoreCase));
+    }
+
     private string ToAbsoluteUrl(string url)
     {
         if (Uri.TryCreate(url, UriKind.Absolute, out var absoluteUri))
@@ -179,6 +204,27 @@ public sealed class VisitorAudioCatalogService(
     {
         var liveStatus = BuildStatusLabel(asset, preferredLanguageCode);
         return liveStatus.Replace("Sẵn sàng phát", "Sẵn sàng phát offline", StringComparison.Ordinal);
+    }
+
+    private static string BuildUnavailableStatusLabel(string preferredLanguageCode)
+    {
+        return $"Chưa có audio sẵn sàng cho ngôn ngữ {preferredLanguageCode.ToUpperInvariant()}.";
+    }
+
+    private static AudioDto? SelectReadyAsset(IReadOnlyList<AudioDto> assets, string preferredLanguageCode)
+    {
+        return assets
+            .Where(asset => asset.Status == AudioStatus.Ready)
+            .Where(asset => asset.LanguageCode.Equals(preferredLanguageCode, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(asset => asset.SourceType == AudioSourceType.Recorded ? 0 : 1)
+            .FirstOrDefault();
+    }
+
+    private static string NormalizeLanguageCode(string languageCode)
+    {
+        return string.IsNullOrWhiteSpace(languageCode)
+            ? "vi"
+            : languageCode.Trim().ToLowerInvariant();
     }
 
     private static bool TryParseServerPoiId(string poiId, out int serverPoiId)

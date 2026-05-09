@@ -55,7 +55,7 @@ public sealed class VisitorAudioCatalogServiceTests
     }
 
     [Fact]
-    public async Task LoadBestForPoiAsync_FallsBackToVietnameseWhenSelectedLanguageMissing()
+    public async Task LoadBestForPoiAsync_ReturnsUnavailableWhenSelectedLanguageMissingEvenIfVietnameseExists()
     {
         var response = new ApiResponse<IReadOnlyList<AudioDto>>
         {
@@ -89,9 +89,111 @@ public sealed class VisitorAudioCatalogServiceTests
 
         var cue = await service.LoadBestForPoiAsync("poi-9", "en");
 
-        Assert.True(cue.IsAvailable);
-        Assert.Equal("vi", cue.LanguageCode);
-        Assert.Contains("Tiếng Việt", cue.StatusLabel);
+        Assert.False(cue.IsAvailable);
+        Assert.Equal(string.Empty, cue.LanguageCode);
+        Assert.Contains("EN", cue.StatusLabel, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task LoadBestForPoiAsync_ReturnsUnavailableWhenSelectedLanguageAndVietnameseAreMissing()
+    {
+        var response = new ApiResponse<IReadOnlyList<AudioDto>>
+        {
+            Succeeded = true,
+            Data =
+            [
+                new AudioDto
+                {
+                    Id = 30,
+                    PoiId = 9,
+                    LanguageCode = "ja",
+                    SourceType = AudioSourceType.Tts,
+                    Url = "/api/audio/30/stream",
+                    Status = AudioStatus.Ready,
+                    DurationSeconds = 92
+                }
+            ]
+        };
+
+        var service = CreateService((request, cancellationToken) => Task.FromResult(CreateJsonResponse(response)));
+
+        var cue = await service.LoadBestForPoiAsync("poi-9", "en");
+
+        Assert.False(cue.IsAvailable);
+        Assert.Equal(string.Empty, cue.LanguageCode);
+        Assert.Contains("EN", cue.StatusLabel, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task LoadBestForPoiAsync_DoesNotUseCachedUnrelatedLanguage()
+    {
+        var cacheStore = new FakeVisitorOfflineCacheStore();
+        cacheStore.AudioEntries.Add(new VisitorAudioCacheEntry(
+            Id: "cache-poi-7-ja",
+            PoiId: "poi-7",
+            PoiName: "Bến Nhà Rồng",
+            LanguageCode: "ja",
+            LocalFilePath: @"D:\cache\poi-7-ja.mp3",
+            SourceUrl: "https://10.0.2.2:5001/api/audio/44/stream",
+            SourceLabel: "Google TTS",
+            StatusLabel: "Sẵn sàng phát offline • JA",
+            DurationSeconds: 91,
+            SizeBytes: 2048,
+            CachedAtUtc: DateTimeOffset.UtcNow));
+        var service = CreateService((request, cancellationToken) =>
+        {
+            if (request.RequestUri!.AbsolutePath == "/api/audio")
+            {
+                return Task.FromResult(CreateJsonResponse(new ApiResponse<IReadOnlyList<AudioDto>>
+                {
+                    Succeeded = true,
+                    Data = []
+                }));
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        }, cacheStore);
+
+        var cue = await service.LoadBestForPoiAsync("poi-7", "en");
+
+        Assert.False(cue.IsAvailable);
+        Assert.NotEqual("ja", cue.LanguageCode);
+    }
+
+    [Fact]
+    public async Task LoadBestForPoiAsync_DoesNotUseCachedVietnameseWhenSelectedLanguageDiffers()
+    {
+        var cacheStore = new FakeVisitorOfflineCacheStore();
+        cacheStore.AudioEntries.Add(new VisitorAudioCacheEntry(
+            Id: "cache-poi-7-vi",
+            PoiId: "poi-7",
+            PoiName: "Bến Nhà Rồng",
+            LanguageCode: "vi",
+            LocalFilePath: @"D:\cache\poi-7-vi.mp3",
+            SourceUrl: "https://10.0.2.2:5001/api/audio/45/stream",
+            SourceLabel: "Recorded",
+            StatusLabel: "Sẵn sàng phát offline • VI",
+            DurationSeconds: 91,
+            SizeBytes: 2048,
+            CachedAtUtc: DateTimeOffset.UtcNow));
+        var service = CreateService((request, cancellationToken) =>
+        {
+            if (request.RequestUri!.AbsolutePath == "/api/audio")
+            {
+                return Task.FromResult(CreateJsonResponse(new ApiResponse<IReadOnlyList<AudioDto>>
+                {
+                    Succeeded = true,
+                    Data = []
+                }));
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        }, cacheStore);
+
+        var cue = await service.LoadBestForPoiAsync("poi-7", "en");
+
+        Assert.False(cue.IsAvailable);
+        Assert.NotEqual("vi", cue.LanguageCode);
     }
 
     [Fact]
@@ -107,7 +209,67 @@ public sealed class VisitorAudioCatalogServiceTests
     }
 
     [Fact]
-    public async Task LoadBestForPoiAsync_UsesCachedAudioBeforeCallingApi()
+    public async Task LoadBestForPoiAsync_RefreshesCachedAudioWhenApiHasReadySelectedLanguage()
+    {
+        var response = new ApiResponse<IReadOnlyList<AudioDto>>
+        {
+            Succeeded = true,
+            Data =
+            [
+                new AudioDto
+                {
+                    Id = 12,
+                    PoiId = 7,
+                    LanguageCode = "en",
+                    SourceType = AudioSourceType.Tts,
+                    Url = "/api/audio/12/stream",
+                    Status = AudioStatus.Ready,
+                    DurationSeconds = 88
+                }
+            ]
+        };
+        var cacheStore = new FakeVisitorOfflineCacheStore();
+        cacheStore.AudioEntries.Add(new VisitorAudioCacheEntry(
+            Id: "cache-poi-7-en-stale",
+            PoiId: "poi-7",
+            PoiName: "Bến Nhà Rồng",
+            LanguageCode: "en",
+            LocalFilePath: @"D:\cache\poi-7-en-stale.mp3",
+            SourceUrl: "https://10.0.2.2:5001/api/audio/old/stream",
+            SourceLabel: "Google TTS",
+            StatusLabel: "Sẵn sàng phát offline • EN",
+            DurationSeconds: 5,
+            SizeBytes: 1024,
+            CachedAtUtc: DateTimeOffset.UtcNow.AddDays(-2)));
+        var service = CreateService((request, cancellationToken) =>
+        {
+            if (request.RequestUri!.AbsolutePath == "/api/audio")
+            {
+                return Task.FromResult(CreateJsonResponse(response));
+            }
+
+            if (request.RequestUri!.AbsolutePath == "/api/audio/12/stream")
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new ByteArrayContent([9, 8, 7])
+                });
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        }, cacheStore);
+
+        var cue = await service.LoadBestForPoiAsync("poi-7", "en", "Bến Nhà Rồng");
+
+        Assert.True(cue.IsAvailable);
+        Assert.Equal("en", cue.LanguageCode);
+        Assert.Equal(88, cue.DurationSeconds);
+        Assert.Equal([9, 8, 7], cacheStore.LastCachedAudioBytes);
+        Assert.Equal("https://10.0.2.2:5001/api/audio/12/stream", Assert.Single(cacheStore.CacheRequests).SourceUrl);
+    }
+
+    [Fact]
+    public async Task LoadBestForPoiAsync_FallsBackToCachedAudioWhenApiFails()
     {
         var cacheStore = new FakeVisitorOfflineCacheStore();
         cacheStore.AudioEntries.Add(new VisitorAudioCacheEntry(
@@ -122,12 +284,18 @@ public sealed class VisitorAudioCatalogServiceTests
             DurationSeconds: 88,
             SizeBytes: 2048,
             CachedAtUtc: DateTimeOffset.UtcNow));
+        var apiCalled = false;
         var service = CreateService(
-            (request, cancellationToken) => throw new InvalidOperationException("Cache hit should not call API."),
+            (request, cancellationToken) =>
+            {
+                apiCalled = true;
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
+            },
             cacheStore);
 
         var cue = await service.LoadBestForPoiAsync("poi-7", "en");
 
+        Assert.True(apiCalled);
         Assert.True(cue.IsAvailable);
         Assert.Equal("en", cue.LanguageCode);
         Assert.StartsWith("file:///", cue.StreamUrl, StringComparison.OrdinalIgnoreCase);

@@ -67,6 +67,99 @@ public sealed class PoiServiceTests
     }
 
     [Fact]
+    public async Task CreateAsync_uses_default_priority_for_owner_created_poi()
+    {
+        await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
+        var owner = await TestAppDbContextFactory.AddOwnerAsync(dbContext, "owner-create-priority@narration.app");
+        var sut = new PoiService(dbContext);
+
+        var result = await sut.CreateAsync(owner.Id, new CreatePoiRequest
+        {
+            Name = "POI owner mới",
+            Slug = "poi-owner-moi",
+            Lat = 10.758,
+            Lng = 106.701,
+            Priority = 999,
+            NarrationMode = NarrationMode.Both,
+            Description = "Mô tả POI owner.",
+            TtsScript = "Script POI owner."
+        });
+
+        var persistedPoi = await dbContext.Pois.SingleAsync(item => item.Id == result.Id);
+
+        Assert.Equal(AppConstants.DefaultPoiPriority, result.Priority);
+        Assert.Equal(AppConstants.DefaultPoiPriority, persistedPoi.Priority);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_preserves_priority_when_owner_updates_owned_poi()
+    {
+        await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
+        var poi = await dbContext.Pois.AsNoTracking().FirstAsync();
+        var originalPriority = poi.Priority;
+        var sut = new PoiService(dbContext);
+
+        var result = await sut.UpdateAsync(
+            poi.OwnerId,
+            UserRole.PoiOwner,
+            poi.Id,
+            new UpdatePoiRequest
+            {
+                Name = poi.Name + " owner updated",
+                Slug = poi.Slug,
+                Lat = poi.Lat,
+                Lng = poi.Lng,
+                Priority = originalPriority + 100,
+                CategoryId = poi.CategoryId,
+                NarrationMode = poi.NarrationMode,
+                Description = "Owner cập nhật nội dung, không được đổi priority.",
+                TtsScript = "Owner cập nhật script, priority phải giữ nguyên.",
+                MapLink = poi.MapLink,
+                ImageUrl = poi.ImageUrl,
+                Status = poi.Status
+            });
+
+        var persistedPoi = await dbContext.Pois.SingleAsync(item => item.Id == poi.Id);
+
+        Assert.Equal(originalPriority, result.Priority);
+        Assert.Equal(originalPriority, persistedPoi.Priority);
+        Assert.Equal(poi.Name + " owner updated", persistedPoi.Name);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_allows_admin_to_change_priority()
+    {
+        await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
+        var poi = await dbContext.Pois.AsNoTracking().FirstAsync();
+        var sut = new PoiService(dbContext);
+
+        var result = await sut.UpdateAsync(
+            Guid.NewGuid(),
+            UserRole.Admin,
+            poi.Id,
+            new UpdatePoiRequest
+            {
+                Name = poi.Name,
+                Slug = poi.Slug,
+                Lat = poi.Lat,
+                Lng = poi.Lng,
+                Priority = poi.Priority + 100,
+                CategoryId = poi.CategoryId,
+                NarrationMode = poi.NarrationMode,
+                Description = poi.Description,
+                TtsScript = poi.TtsScript,
+                MapLink = poi.MapLink,
+                ImageUrl = poi.ImageUrl,
+                Status = poi.Status
+            });
+
+        var persistedPoi = await dbContext.Pois.SingleAsync(item => item.Id == poi.Id);
+
+        Assert.Equal(poi.Priority + 100, result.Priority);
+        Assert.Equal(poi.Priority + 100, persistedPoi.Priority);
+    }
+
+    [Fact]
     public async Task UploadImageAsync_updates_owner_poi_image_url()
     {
         await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();

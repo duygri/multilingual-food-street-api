@@ -25,7 +25,7 @@ public sealed class MainLayoutTests : TestContext
         var markupPath = Path.Combine(layoutRoot, "MainLayout.razor");
         var expectedPartials = new[]
         {
-            ("MainLayout.razor.cs", "OwnerSidebarProfileContent"),
+            ("MainLayout.razor.cs", "OnInitializedAsync"),
             ("MainLayout.State.razor.cs", "RefreshLayoutStateAsync"),
             ("MainLayout.RouteCopy.razor.cs", "UpdateRouteCopy"),
             ("MainLayout.Navigation.razor.cs", "BuildNavigation")
@@ -42,13 +42,6 @@ public sealed class MainLayoutTests : TestContext
             Assert.Contains("partial class MainLayout", source, StringComparison.Ordinal);
             Assert.Contains(marker, source, StringComparison.Ordinal);
         }
-
-        var profileCardMarkupPath = Path.Combine(layoutRoot, "OwnerSidebarProfileCard.razor");
-        var profileCardCodePath = Path.Combine(layoutRoot, "OwnerSidebarProfileCard.razor.cs");
-        Assert.True(File.Exists(profileCardMarkupPath), "OwnerSidebarProfileCard.razor should exist.");
-        Assert.True(File.Exists(profileCardCodePath), "OwnerSidebarProfileCard.razor.cs should exist.");
-        Assert.Contains("layout-owner-card", File.ReadAllText(profileCardMarkupPath), StringComparison.Ordinal);
-        Assert.Contains("partial class OwnerSidebarProfileCard", File.ReadAllText(profileCardCodePath), StringComparison.Ordinal);
 
         var coreLines = File.ReadAllLines(Path.Combine(layoutRoot, "MainLayout.razor.cs")).Length;
         Assert.True(coreLines <= 90, $"MainLayout.razor.cs should stay focused on lifecycle and shell state, but has {coreLines} lines.");
@@ -182,7 +175,7 @@ public sealed class MainLayoutTests : TestContext
     }
 
     [Fact]
-    public void Owner_layout_renders_profile_card_grouped_routes_and_owner_badges()
+    public void Owner_layout_renders_grouped_routes_and_owner_badges_without_sidebar_profile_card()
     {
         ConfigureAuthenticatedOwner(
             fullName: "Bà Tám Bún Bò",
@@ -200,23 +193,34 @@ public sealed class MainLayoutTests : TestContext
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Contains("Bà Tám Bún Bò", cut.Markup);
-            Assert.Contains("POI Owner", cut.Markup);
+            Assert.Empty(cut.FindAll(".portal-shell__profile"));
+            Assert.Empty(cut.FindAll(".layout-owner-card"));
             Assert.Contains("Tổng quan", cut.Markup);
             Assert.Contains("Nội dung", cut.Markup);
             Assert.Contains("Vận hành", cut.Markup);
             Assert.Contains("Tài khoản", cut.Markup);
             Assert.Contains("Tạo POI mới", cut.Markup);
             Assert.Contains("Moderation", cut.Markup);
-            Assert.Contains("Notifications", cut.Markup);
             Assert.Contains("Profile", cut.Markup);
-            Assert.Contains("2", cut.Markup);
-            Assert.Contains("7", cut.Markup);
+            Assert.DoesNotContain("Notifications", cut.Markup);
+
+            var badges = GetNavBadgeTexts(cut);
+            Assert.Contains("2", badges);
+            Assert.DoesNotContain("7", badges);
+            Assert.Contains("7", GetNotificationBadgeTexts(cut));
+        });
+
+        cut.Find(".notification-center__toggle").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var shortcut = cut.Find("a[data-action='open-notifications-page']");
+            Assert.Equal("/owner/notifications", shortcut.GetAttribute("href"));
         });
     }
 
     [Fact]
-    public void Owner_layout_renders_avatar_role_line_and_inline_owner_stats()
+    public void Owner_layout_does_not_render_sidebar_profile_card_or_inline_owner_stats()
     {
         ConfigureAuthenticatedOwner(
             fullName: "Nguyen Van A",
@@ -234,26 +238,17 @@ public sealed class MainLayoutTests : TestContext
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Equal("NA", cut.Find(".layout-owner-card__avatar").TextContent.Trim());
-            Assert.Equal("Nguyen Van A", cut.Find(".layout-owner-card__name").TextContent.Trim());
-            Assert.Equal("POI Owner", cut.Find(".layout-owner-card__role-label").TextContent.Trim());
-
-            var statValues = cut.FindAll(".layout-owner-card__stat-value")
-                .Select(item => item.TextContent.Trim())
-                .ToArray();
-            var statLabels = cut.FindAll(".layout-owner-card__stat-label")
-                .Select(item => item.TextContent.Trim())
-                .ToArray();
-
-            Assert.Equal(["6", "4", "2"], statValues);
-            Assert.Equal(["POI", "Published", "Pending"], statLabels);
+            Assert.Empty(cut.FindAll(".portal-shell__profile"));
+            Assert.Empty(cut.FindAll(".layout-owner-card"));
+            Assert.Empty(cut.FindAll(".layout-owner-card__avatar"));
+            Assert.Empty(cut.FindAll(".layout-owner-card__stat-value"));
         });
     }
 
     [Fact]
-    public void Owner_layout_refreshes_sidebar_summary_when_notification_state_changes()
+    public void Owner_layout_keeps_notifications_in_header_bell_only()
     {
-        var (ownerService, notificationService, _) = ConfigureAuthenticatedOwner(
+        var (_, notificationService, _) = ConfigureAuthenticatedOwner(
             shellSummary: new OwnerShellSummaryDto
             {
                 TotalPois = 5,
@@ -261,23 +256,22 @@ public sealed class MainLayoutTests : TestContext
                 PendingModerationRequests = 2,
                 UnreadNotifications = 7
             });
-        Services.GetRequiredService<NavigationManager>().NavigateTo("http://localhost/owner/notifications");
+        Services.GetRequiredService<NavigationManager>().NavigateTo("http://localhost/owner/pois");
 
         var cut = RenderComponent<MainLayout>(parameters => parameters
             .Add(layout => layout.Body, (RenderFragment)(builder => builder.AddMarkupContent(0, "<div>Body</div>"))));
 
-        cut.WaitForAssertion(() => Assert.Contains("7", GetNavBadgeTexts(cut)));
-
-        ownerService.ShellSummary = new OwnerShellSummaryDto
+        cut.WaitForAssertion(() =>
         {
-            TotalPois = 5,
-            PublishedPois = 3,
-            PendingModerationRequests = 2,
-            UnreadNotifications = 0
-        };
+            Assert.DoesNotContain("Notifications", cut.Markup);
+            Assert.DoesNotContain("7", GetNavBadgeTexts(cut));
+            Assert.Contains("7", GetNotificationBadgeTexts(cut));
+        });
+
+        notificationService.UnreadCount = 0;
         notificationService.RaiseChanged();
 
-        cut.WaitForAssertion(() => Assert.DoesNotContain("7", GetNavBadgeTexts(cut)));
+        cut.WaitForAssertion(() => Assert.DoesNotContain("7", GetNotificationBadgeTexts(cut)));
     }
 
     [Fact]
@@ -311,8 +305,7 @@ public sealed class MainLayoutTests : TestContext
         {
             var badges = GetNavBadgeTexts(cut);
             Assert.DoesNotContain("2", badges);
-            Assert.Contains("6", cut.Markup);
-            Assert.Contains("4", cut.Markup);
+            Assert.Contains("7", GetNotificationBadgeTexts(cut));
         });
     }
 
@@ -439,6 +432,8 @@ public sealed class MainLayoutTests : TestContext
     {
         public event Action? Changed;
 
+        public int UnreadCount { get; set; } = unreadCount;
+
         public ValueTask<IReadOnlyList<NotificationDto>> GetAsync(CancellationToken cancellationToken = default)
         {
             return ValueTask.FromResult<IReadOnlyList<NotificationDto>>(Array.Empty<NotificationDto>());
@@ -446,7 +441,7 @@ public sealed class MainLayoutTests : TestContext
 
         public ValueTask<int> GetUnreadCountAsync(CancellationToken cancellationToken = default)
         {
-            return ValueTask.FromResult(unreadCount);
+            return ValueTask.FromResult(UnreadCount);
         }
 
         public ValueTask MarkAllReadAsync(CancellationToken cancellationToken = default)
@@ -545,6 +540,13 @@ public sealed class MainLayoutTests : TestContext
     private static IReadOnlyList<string> GetNavBadgeTexts(IRenderedComponent<MainLayout> cut)
     {
         return cut.FindAll(".portal-shell__nav-badge")
+            .Select(item => item.TextContent)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<string> GetNotificationBadgeTexts(IRenderedComponent<MainLayout> cut)
+    {
+        return cut.FindAll(".notification-center__badge")
             .Select(item => item.TextContent)
             .ToArray();
     }

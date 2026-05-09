@@ -8,7 +8,7 @@ public partial class PoiDetail
 {
     private async Task SavePoiAsync()
     {
-        if (_poi is null || _editor is null)
+        if (_poi is null || _editor is null || !HasPoiEditorChanges)
         {
             return;
         }

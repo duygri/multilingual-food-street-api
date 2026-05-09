@@ -12,6 +12,10 @@ param(
 
     [string]$PublicQrBaseUrl = "",
 
+    [string]$MapboxAccessToken = "",
+
+    [string]$MapboxStyleUrl = "",
+
     [ValidateSet("None", "Foreground", "Background")]
     [string]$StartMode = "None"
 )
@@ -20,6 +24,54 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $environmentKey = $Environment.ToLowerInvariant()
+$defaultMapboxStyleUrl = "mapbox://styles/mapbox/dark-v11"
+
+function Resolve-SettingValue {
+    param(
+        [string]$Value,
+        [string]$EnvironmentValue,
+        [string]$Fallback = ""
+    )
+
+    if (-not [string]::IsNullOrWhiteSpace($Value)) {
+        return $Value.Trim()
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($EnvironmentValue)) {
+        return $EnvironmentValue.Trim()
+    }
+
+    return $Fallback
+}
+
+function Write-AdminMapboxLocalSettings {
+    param(
+        [string]$TargetRoot,
+        [string]$AccessToken,
+        [string]$StyleUrl
+    )
+
+    if ([string]::IsNullOrWhiteSpace($AccessToken)) {
+        Write-Host "Mapbox      : skipped (no token provided)"
+        return
+    }
+
+    $webRoot = Join-Path $TargetRoot "wwwroot"
+    if (-not (Test-Path $webRoot)) {
+        New-Item -ItemType Directory -Path $webRoot -Force | Out-Null
+    }
+
+    $settingsPath = Join-Path $webRoot "appsettings.Local.json"
+    $settings = [ordered]@{
+        Mapbox = [ordered]@{
+            AccessToken = $AccessToken
+            StyleUrl = if ([string]::IsNullOrWhiteSpace($StyleUrl)) { $defaultMapboxStyleUrl } else { $StyleUrl }
+        }
+    }
+
+    $settings | ConvertTo-Json -Depth 5 | Set-Content -Path $settingsPath -Encoding UTF8
+    Write-Host "Mapbox      : wrote admin map settings to current\wwwroot\appsettings.Local.json"
+}
 
 if ([string]::IsNullOrWhiteSpace($SourcePath)) {
     $zipCandidate = Join-Path $repoRoot ("artifacts\server-publish\narrationapp-server-" + $environmentKey + ".zip")
@@ -77,6 +129,10 @@ if (Test-Path $currentPath) {
 }
 
 Move-Item -LiteralPath $incomingPath -Destination $currentPath
+
+$resolvedMapboxAccessToken = Resolve-SettingValue -Value $MapboxAccessToken -EnvironmentValue $env:MAPBOX_ACCESS_TOKEN
+$resolvedMapboxStyleUrl = Resolve-SettingValue -Value $MapboxStyleUrl -EnvironmentValue $env:MAPBOX_STYLE_URL -Fallback $defaultMapboxStyleUrl
+Write-AdminMapboxLocalSettings -TargetRoot $currentPath -AccessToken $resolvedMapboxAccessToken -StyleUrl $resolvedMapboxStyleUrl
 
 $runnerPath = Join-Path $installRootPath "run-server.ps1"
 $runnerContent = @"

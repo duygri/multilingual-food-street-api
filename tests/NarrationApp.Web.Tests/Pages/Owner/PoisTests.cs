@@ -62,7 +62,7 @@ public sealed class PoisTests : TestContext
         Assert.Contains("POI", headers);
         Assert.Contains("DANH MỤC", headers);
         Assert.Contains("TỌA ĐỘ", headers);
-        Assert.Contains("PRIORITY", headers);
+        Assert.DoesNotContain("PRIORITY", headers);
         Assert.Contains("NỘI DUNG NGUỒN", headers);
         Assert.Contains("TRẠNG THÁI", headers);
         Assert.Contains("THAO TÁC", headers);

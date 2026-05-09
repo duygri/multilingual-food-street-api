@@ -133,14 +133,20 @@
 }
 
 .language-admin__suggestion {
+    box-sizing: border-box;
     display: grid;
     gap: 0.3rem;
+    max-width: 100%;
+    min-height: 4.8rem;
     text-align: left;
     border-radius: 1rem;
     border: 1px solid rgba(80, 121, 196, 0.25);
     background: rgba(15, 27, 48, 0.78);
     color: var(--text);
     padding: 0.9rem 1rem;
+    line-height: 1.2;
+    cursor: pointer;
+    transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
 }
 
 .language-admin__suggestion strong {
@@ -156,6 +162,13 @@
 .language-admin__suggestion:hover {
     border-color: rgba(45, 212, 191, 0.48);
     background: rgba(12, 45, 56, 0.72);
+    transform: translateY(-1px);
+}
+
+.language-admin__suggestion:focus-visible {
+    border-color: rgba(45, 212, 191, 0.56);
+    box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.14);
+    outline: none;
 }
 
 .language-admin__form-hint {

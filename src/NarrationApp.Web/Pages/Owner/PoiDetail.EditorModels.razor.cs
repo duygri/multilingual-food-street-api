@@ -46,7 +46,7 @@ public partial class PoiDetail
                 Slug = Slug,
                 Lat = Lat,
                 Lng = Lng,
-                Priority = Priority,
+                Priority = poi.Priority,
                 CategoryId = CategoryId,
                 NarrationMode = NarrationMode,
                 Description = Description,

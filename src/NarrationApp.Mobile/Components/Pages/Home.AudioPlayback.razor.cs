@@ -12,7 +12,7 @@ public partial class Home
             return;
         }
 
-        if (_state.CurrentAudioCue is null || _state.CurrentAudioCue.PoiId != _state.SelectedPoi.Id)
+        if (ShouldPrepareSelectedPoiAudio())
         {
             await PrepareSelectedPoiAudioAsync();
         }
@@ -22,19 +22,37 @@ public partial class Home
             return;
         }
 
-        _isAutoPlayingFromProximity = false;
-        await JS.InvokeVoidAsync("visitorAudio.play", _state.CurrentAudioCue.StreamUrl, _audioBridge);
-        await JS.InvokeVoidAsync("visitorAudio.setRate", AudioSpeedOptions[_audioSpeedIndex]);
-        _state.SetAudioPlaybackState(VisitorAudioPlaybackState.Playing, $"Đang phát • {_state.CurrentAudioCue.LanguageCode.ToUpperInvariant()}");
-        await TrackAudioPlayAsync(_state.CurrentAudioCue);
+        try
+        {
+            _isAutoPlayingFromProximity = false;
+            var playbackUrl = await VisitorAudioPlaybackSourceResolver.ResolveAsync(_state.CurrentAudioCue.StreamUrl, JS);
+            await JS.InvokeVoidAsync("visitorAudio.play", playbackUrl, _audioBridge);
+            await JS.InvokeVoidAsync("visitorAudio.setRate", AudioSpeedOptions[_audioSpeedIndex]);
+            _state.SetAudioPlaybackState(VisitorAudioPlaybackState.Playing, $"Đang phát • {_state.CurrentAudioCue.LanguageCode.ToUpperInvariant()}");
+            await TrackAudioPlayAsync(_state.CurrentAudioCue);
+        }
+        catch (Exception ex)
+        {
+            VisitorMobileDiagnostics.Log("AudioPlayback", $"Playback source failed: {ex.Message}");
+            _state.SetAudioPlaybackState(VisitorAudioPlaybackState.Error, "Phát audio thất bại");
+        }
     }
 
     private async Task TogglePlaybackAsync()
     {
         if (_state.IsAudioPlaying)
         {
-            await JS.InvokeVoidAsync("visitorAudio.pause");
-            _state.SetAudioPlaybackState(VisitorAudioPlaybackState.Paused, "Đã tạm dừng");
+            try
+            {
+                await JS.InvokeVoidAsync("visitorAudio.pause");
+                _state.SetAudioPlaybackState(VisitorAudioPlaybackState.Paused, "Đã tạm dừng");
+            }
+            catch (JSException ex)
+            {
+                VisitorMobileDiagnostics.Log("AudioPlayback", $"JS pause failed: {ex.Message}");
+                _state.SetAudioPlaybackState(VisitorAudioPlaybackState.Error, "Audio chưa sẵn sàng");
+            }
+
             return;
         }
 

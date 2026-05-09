@@ -19,6 +19,7 @@ public partial class Home
 
             _state.UpdateLocation(result.Location);
             _state.ApplyContent(result.Content, result.IsFallback, result.SourceLabel, result.Message);
+            await ApplyPendingDeepLinkAudioAfterContentAsync();
             var nextProximity = VisitorProximityEngine.Evaluate(result.Location, _state.Pois);
             await ApplyProximityNarrationAsync(previousProximity, nextProximity);
         }
@@ -26,5 +27,16 @@ public partial class Home
         {
             _isContentLoading = false;
         }
+    }
+
+    private async Task ApplyPendingDeepLinkAudioAfterContentAsync()
+    {
+        if (!_pendingDeepLinkAudioAfterContent || _state.SelectedPoi is null)
+        {
+            return;
+        }
+
+        _pendingDeepLinkAudioAfterContent = false;
+        await HandlePoiDeepLinkAudioAsync();
     }
 }

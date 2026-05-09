@@ -55,10 +55,13 @@ public sealed class UserManagementTests : TestContext
             Assert.Contains("Đang online", cut.Markup);
             Assert.Contains("android-pixel-7-tourist001", cut.Markup);
             Assert.Contains("Android Pixel 7", cut.Markup);
-            Assert.Contains("vi-VN", cut.Markup);
+            Assert.Contains("giây trước", cut.Markup);
             Assert.Contains("Thiết bị", cut.Markup);
             Assert.Contains("Visit", cut.Markup);
             Assert.Contains("Trigger", cut.Markup);
+            Assert.DoesNotContain("Ngôn ngữ", cut.Markup);
+            Assert.DoesNotContain("visitor-page__language", cut.Markup);
+            Assert.DoesNotContain("vi-VN", cut.Markup);
             Assert.DoesNotContain("Tổng visitor", cut.Markup);
             Assert.DoesNotContain("android-pixel-7-guest001", cut.Markup);
             Assert.DoesNotContain("Visitor quét QR", cut.Markup);
@@ -94,7 +97,7 @@ public sealed class UserManagementTests : TestContext
                 TrackingCount = 12,
                 VisitCount = 4,
                 TriggerCount = 2,
-                LastSeenAtUtc = DateTime.UtcNow.AddMinutes(-2)
+                LastSeenAtUtc = DateTime.UtcNow.AddSeconds(-20)
             },
             new()
             {

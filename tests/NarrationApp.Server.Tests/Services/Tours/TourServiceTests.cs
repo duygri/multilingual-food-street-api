@@ -15,6 +15,8 @@ public sealed class TourServiceTests
         await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
         var sut = CreateSut(dbContext);
         var pois = await dbContext.Pois.OrderBy(item => item.Priority).Take(3).ToListAsync();
+        var tourCountBefore = await dbContext.Tours.CountAsync();
+        var tourStopCountBefore = await dbContext.TourStops.CountAsync();
 
         var result = await sut.CreateAsync(new CreateTourRequest
         {
@@ -33,8 +35,8 @@ public sealed class TourServiceTests
         Assert.Equal(TourStatus.Draft, result.Status);
         Assert.Equal(3, result.Stops.Count);
         Assert.Equal(new[] { 1, 2, 3 }, result.Stops.Select(item => item.Sequence).ToArray());
-        Assert.Equal(1, await dbContext.Tours.CountAsync());
-        Assert.Equal(3, await dbContext.TourStops.CountAsync());
+        Assert.Equal(tourCountBefore + 1, await dbContext.Tours.CountAsync());
+        Assert.Equal(tourStopCountBefore + 3, await dbContext.TourStops.CountAsync());
     }
 
     [Fact]
@@ -119,15 +121,18 @@ public sealed class TourServiceTests
     {
         await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
         var sut = CreateSut(dbContext);
+        var publicCountBefore = (await sut.GetAsync(includeUnpublished: false)).Count;
+        var adminCountBefore = (await sut.GetAsync(includeUnpublished: true)).Count;
         await CreateTourAsync(sut, dbContext, "Draft tour", TourStatus.Draft);
         await CreateTourAsync(sut, dbContext, "Published tour", TourStatus.Published);
 
         var publicTours = await sut.GetAsync(includeUnpublished: false);
         var adminTours = await sut.GetAsync(includeUnpublished: true);
 
-        Assert.Single(publicTours);
-        Assert.Equal("Published tour", publicTours[0].Title);
-        Assert.Equal(2, adminTours.Count);
+        Assert.Equal(publicCountBefore + 1, publicTours.Count);
+        Assert.Contains(publicTours, item => item.Title == "Published tour");
+        Assert.DoesNotContain(publicTours, item => item.Title == "Draft tour");
+        Assert.Equal(adminCountBefore + 2, adminTours.Count);
     }
 
     [Fact]

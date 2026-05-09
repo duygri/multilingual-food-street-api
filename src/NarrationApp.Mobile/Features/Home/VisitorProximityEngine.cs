@@ -32,7 +32,7 @@ public static class VisitorProximityEngine
                 poi.Latitude,
                 poi.Longitude);
 
-            var triggerRadiusMeters = Math.Max(90, poi.GeofenceRadiusMeters);
+            var triggerRadiusMeters = Math.Max(0, poi.GeofenceRadiusMeters);
             if (distanceMeters > triggerRadiusMeters)
             {
                 continue;

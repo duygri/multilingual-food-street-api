@@ -39,6 +39,45 @@ public sealed class VisitorShellStateTests
     }
 
     [Fact]
+    public void ApplyContent_UpdatesLanguagesFromLiveSnapshot()
+    {
+        var state = VisitorShellState.CreateDefault();
+        state.SelectLanguage("en");
+
+        state.ApplyContent(new VisitorContentSnapshot(
+            [],
+            [],
+            Languages:
+            [
+                new VisitorLanguageOption("vi", "Tiếng Việt", "Mặc định", "VN"),
+                new VisitorLanguageOption("th", "ไทย", "Thai", "TH")
+            ]));
+
+        Assert.Equal(["vi", "th"], state.Languages.Select(language => language.Code));
+        Assert.Equal("vi", state.SelectedLanguageCode);
+    }
+
+    [Fact]
+    public void ApplyContent_KeepsSelectedLanguageWhenLiveSnapshotStillContainsIt()
+    {
+        var state = VisitorShellState.CreateDefault();
+        state.SelectLanguage("fr");
+
+        state.ApplyContent(new VisitorContentSnapshot(
+            [],
+            [],
+            Languages:
+            [
+                new VisitorLanguageOption("vi", "Tiếng Việt", "Mặc định", "VN"),
+                new VisitorLanguageOption("fr", "Français", "French", "FR"),
+                new VisitorLanguageOption("th", "ไทย", "Thai", "TH")
+            ]));
+
+        Assert.Equal("fr", state.SelectedLanguageCode);
+        Assert.Equal(["vi", "fr", "th"], state.Languages.Select(language => language.Code));
+    }
+
+    [Fact]
     public void OnboardingFlow_MovesIntoReadyState()
     {
         var state = VisitorShellState.CreateDefault();
@@ -51,6 +90,20 @@ public sealed class VisitorShellStateTests
         Assert.Equal(VisitorTab.Map, state.CurrentTab);
         Assert.Equal("en", state.SelectedLanguageCode);
         Assert.True(state.LocationPermissionGranted);
+    }
+
+    [Fact]
+    public void CompletePermissions_DoesNotAutoOpenPoiBeforeVisitorReachesRadius()
+    {
+        var state = VisitorShellState.CreateDefault();
+
+        state.AdvanceFromLanguageSelection();
+        state.CompletePermissions(granted: true);
+
+        Assert.Equal(VisitorIntroStep.Ready, state.CurrentStep);
+        Assert.Null(state.SelectedPoiId);
+        Assert.False(state.ShowPoiSheet);
+        Assert.False(state.ShowMiniPlayer);
     }
 
     [Fact]
@@ -319,16 +372,30 @@ public sealed class VisitorShellStateTests
         Assert.Single(state.Pois);
         Assert.Single(state.Tours);
         Assert.Equal(["all", "hai-san", "bun-pho"], state.Categories.Select(category => category.Id));
-        Assert.Equal("poi-live-001", state.SelectedPoiId);
         Assert.Equal("tour-live-001", state.SelectedTourId);
-        Assert.True(state.ShowPoiSheet);
-        Assert.True(state.ShowMiniPlayer);
+        Assert.Null(state.SelectedPoiId);
+        Assert.False(state.ShowPoiSheet);
+        Assert.False(state.ShowMiniPlayer);
     }
 
     [Fact]
-    public void ApplyProximityFocus_SelectsPoiAndShowsAutoNarrationPrompt()
+    public void SwitchTab_MapDoesNotAutoOpenFirstPoi()
     {
         var state = VisitorShellState.CreateDefault();
+        state.SwitchTab(VisitorTab.Settings);
+
+        state.SwitchTab(VisitorTab.Map);
+
+        Assert.Equal(VisitorTab.Map, state.CurrentTab);
+        Assert.Null(state.SelectedPoiId);
+        Assert.False(state.ShowPoiSheet);
+    }
+
+    [Fact]
+    public void ApplyProximityFocus_OpensPoiAndAddsNotificationWhenEnteringRadius()
+    {
+        var state = VisitorShellState.CreateDefault();
+        var initialNotificationCount = state.Notifications.Count;
 
         state.ApplyProximityFocus(new VisitorProximityMatch("poi-ben-nha-rong", "Bến Nhà Rồng", 42, 120));
 
@@ -338,6 +405,71 @@ public sealed class VisitorShellStateTests
         Assert.True(state.ShowMiniPlayer);
         Assert.True(state.HasAutoNarrationPrompt);
         Assert.Contains("42m", state.AutoNarrationPrompt);
+        Assert.Equal(initialNotificationCount + 1, state.Notifications.Count);
+        Assert.Contains("Bến Nhà Rồng", state.Notifications[0].Title);
+    }
+
+    [Fact]
+    public void ApplyProximityFocus_DoesNotReopenOrRenotifySamePoiAfterVisitorDismissesSheet()
+    {
+        var state = VisitorShellState.CreateDefault();
+
+        state.ApplyProximityFocus(new VisitorProximityMatch("poi-ben-nha-rong", "Bến Nhà Rồng", 42, 120));
+        var notificationCountAfterEntry = state.Notifications.Count;
+        state.ClosePoiSheet();
+        state.ApplyProximityFocus(new VisitorProximityMatch("poi-ben-nha-rong", "Bến Nhà Rồng", 35, 120));
+
+        Assert.Equal("poi-ben-nha-rong", state.SelectedPoiId);
+        Assert.False(state.ShowPoiSheet);
+        Assert.True(state.ShowMiniPlayer);
+        Assert.True(state.HasAutoNarrationPrompt);
+        Assert.Contains("35m", state.AutoNarrationPrompt);
+        Assert.Equal(notificationCountAfterEntry, state.Notifications.Count);
+    }
+
+    [Fact]
+    public void ApplyProximityFocus_ReopensDismissedPoiAfterVisitorLeavesAndReentersRadius()
+    {
+        var state = VisitorShellState.CreateDefault();
+
+        state.ApplyProximityFocus(new VisitorProximityMatch("poi-ben-nha-rong", "Bến Nhà Rồng", 42, 120));
+        state.ClosePoiSheet();
+        state.ApplyProximityFocus(null);
+        state.ApplyProximityFocus(new VisitorProximityMatch("poi-ben-nha-rong", "Bến Nhà Rồng", 28, 120));
+
+        Assert.Equal("poi-ben-nha-rong", state.SelectedPoiId);
+        Assert.True(state.ShowPoiSheet);
+        Assert.True(state.ShowMiniPlayer);
+        Assert.Contains("28m", state.AutoNarrationPrompt);
+    }
+
+    [Fact]
+    public void ApplyProximityFocus_SwitchesAndOpensDifferentPoiAfterDismiss()
+    {
+        var state = VisitorShellState.CreateDefault();
+
+        state.ApplyProximityFocus(new VisitorProximityMatch("poi-ben-nha-rong", "Bến Nhà Rồng", 42, 120));
+        state.ClosePoiSheet();
+        state.ApplyProximityFocus(new VisitorProximityMatch("poi-khanh-hoi-bridge", "Cầu Khánh Hội", 28, 120));
+
+        Assert.Equal("poi-khanh-hoi-bridge", state.SelectedPoiId);
+        Assert.True(state.ShowPoiSheet);
+        Assert.True(state.ShowMiniPlayer);
+        Assert.Contains("28m", state.AutoNarrationPrompt);
+    }
+
+    [Fact]
+    public void OpenPoi_StillOpensSheetWhenVisitorManuallySelectsProximityPoi()
+    {
+        var state = VisitorShellState.CreateDefault();
+
+        state.ApplyProximityFocus(new VisitorProximityMatch("poi-ben-nha-rong", "Bến Nhà Rồng", 42, 120));
+        state.ClosePoiSheet();
+        state.OpenPoi("poi-ben-nha-rong");
+
+        Assert.Equal("poi-ben-nha-rong", state.SelectedPoiId);
+        Assert.True(state.ShowPoiSheet);
+        Assert.True(state.ShowMiniPlayer);
     }
 
     [Fact]
@@ -661,7 +793,75 @@ public sealed class VisitorShellStateTests
 
         Assert.Equal(VisitorIntroStep.Ready, state.CurrentStep);
         Assert.Equal(VisitorTab.Map, state.CurrentTab);
-        Assert.NotNull(state.SelectedPoi);
+        Assert.Null(state.SelectedPoi);
+        Assert.False(state.ShowPoiSheet);
+        Assert.False(state.ShowMiniPlayer);
+    }
+
+    [Fact]
+    public void ApplyQrNavigationTarget_Tour_StartsTourAndOpensFirstStopWithoutGps()
+    {
+        var state = VisitorShellState.CreateDefault();
+        state.SelectLanguage("en");
+        state.AdvanceFromLanguageSelection();
+
+        state.ApplyQrNavigationTarget(new VisitorQrNavigationTarget("BUS-KHANH-HOI-TOUR", VisitorQrTargetKind.Tour, "tour-river"));
+
+        Assert.Equal(VisitorIntroStep.Ready, state.CurrentStep);
+        Assert.Equal("tour-river", state.SelectedTourId);
+        Assert.NotNull(state.ActiveTourSession);
+        Assert.Equal("poi-khanh-hoi-bridge", state.SelectedPoiId);
+        Assert.Equal("poi-khanh-hoi-bridge", state.ActiveTourSession!.NextPoiId);
+        Assert.True(state.ShowPoiSheet);
+        Assert.True(state.ShowMiniPlayer);
+    }
+
+    [Fact]
+    public void ApplyQrNavigationTarget_Tour_WaitsForLiveContentAndOpensFirstStop()
+    {
+        var state = VisitorShellState.CreateRuntimeDefault();
+
+        state.ApplyQrNavigationTarget(new VisitorQrNavigationTarget("BUS-KHANH-HOI-TOUR", VisitorQrTargetKind.Tour, "tour-live-bus"));
+
+        Assert.Equal(VisitorIntroStep.Ready, state.CurrentStep);
+        Assert.Null(state.SelectedPoiId);
+        Assert.Null(state.ActiveTourSession);
+
+        state.ApplyContent(new VisitorContentSnapshot(
+            [
+                new VisitorPoi(
+                    "poi-bus-khanh-hoi",
+                    "Điểm dừng xe buýt Khánh Hội",
+                    "bus",
+                    "Xe buýt",
+                    "Khánh Hội",
+                    "QR tại điểm dừng",
+                    "Điểm bắt đầu tour dành cho khách vừa quét QR tại trạm.",
+                    "Nghe ngay không cần GPS",
+                    0,
+                    30,
+                    120,
+                    "1:30",
+                    "Sẵn sàng",
+                    10.7607,
+                    106.7033)
+            ],
+            [
+                new VisitorTourCard(
+                    "tour-live-bus",
+                    "Tuyến trạm xe buýt Khánh Hội",
+                    "1 điểm dừng",
+                    "10 phút",
+                    "Dễ đi bộ",
+                    "Tour được mở trực tiếp từ QR tại trạm xe buýt.",
+                    ["poi-bus-khanh-hoi"])
+            ]),
+            isFallback: false);
+
+        Assert.Equal("tour-live-bus", state.SelectedTourId);
+        Assert.NotNull(state.ActiveTourSession);
+        Assert.Equal("poi-bus-khanh-hoi", state.SelectedPoiId);
+        Assert.Equal("poi-bus-khanh-hoi", state.ActiveTourSession!.NextPoiId);
         Assert.True(state.ShowPoiSheet);
         Assert.True(state.ShowMiniPlayer);
     }
