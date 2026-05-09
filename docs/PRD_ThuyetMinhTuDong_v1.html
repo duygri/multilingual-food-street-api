@@ -2368,6 +2368,8 @@ sequenceDiagram
   participant AudioSvc as VisitorAudioCatalogService
   participant AudioCtrl as AudioController
   participant State as VisitorShellState
+  participant ProxEngine as VisitorProximityEngine
+  participant Queue as VisitorProximityQueueCoordinator
   participant SnapshotBuilder as VisitorMapSnapshotBuilder
   participant VisibilityPolicy as VisitorMapMarkerVisibilityPolicy
   participant RouteSvc as VisitorWalkingDirectionsService
@@ -2401,8 +2403,14 @@ sequenceDiagram
   ContentSvc->>ContentSvc: VisitorContentMapper.Map() — filter Published/Updated, tính distance
   ContentSvc->>OfflineStore: SaveContentSnapshotAsync(snapshot)
   ContentSvc-->>App: VisitorContentResult(snapshot, isFallback=false, sourceLabel="Live API")
-  App->>State: UpdateLocation + ApplyContent + ApplyProximityFocus
-  App->>App: VisitorProximityEngine.Evaluate(location, pois)
+  App->>State: UpdateLocation + ApplyContent
+  App->>App: ResolveNextProximity(result.Location)
+  App->>ProxEngine: EvaluateCandidates(result.Location, State.Pois)
+  ProxEngine-->>App: Ordered proximity candidates
+  App->>Queue: Evaluate(currentQueueState, candidates, hasNarrationLock)
+  Queue-->>App: ActiveMatch + QueuedMatch sau stable debounce
+  App->>State: ApplyProximityFocus(activeMatch)
+  Note right of App: LoadContentAsync dùng chung ResolveNextProximity với GPS loop, không bypass debounce/cooldown
   App->>SnapshotBuilder: Build(FilteredPois, SelectedPoiId, CurrentLocation)
   SnapshotBuilder->>VisibilityPolicy: GetVisiblePois(pois, selectedPoiId, location)
   Note right of VisibilityPolicy: GetVisiblePois trả toàn bộ POI đã map, GPS chỉ dùng để tính nearest marker và center
@@ -3094,9 +3102,13 @@ flowchart TD
 
   M1 --> M2{"ProximityEngine.EvaluateCandidates distance <= geofence radius?"}
   M2 -->|No POI| H
-  M2 -->|Có POI| M3{"AudioAutoplayPolicy.ShouldAutoplay?"}
-  M3 -->|Đã phát rồi| H
-  M3 -->|POI mới| M4["LoadBestForPoiAsync cache-first + preload + play"]
+  M2 -->|Có POI| M2A["VisitorProximityQueueCoordinator.Evaluate()"]
+  M2A --> M2B{"Đủ 3 stable samples hoặc active cũ còn hợp lệ?"}
+  M2B -->|Chưa ổn định| H
+  M2B -->|Active candidate| M2C["VisitorAutoNarrationDecider.Evaluate()"]
+  M2C --> M3{"AudioAutoplayPolicy.ShouldAutoplay?"}
+  M3 -->|Cooldown / đã phát rồi| H
+  M3 -->|Được phép auto-play| M4["LoadBestForPoiAsync cache-first + preload + play"]
 
   I --> O["AudioCatalogService.LoadBestForPoiAsync(poiId, lang)"]
   I2 --> O
