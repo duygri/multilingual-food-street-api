@@ -30,6 +30,16 @@ public sealed class PublicQrDeploymentConfigurationTests
         Assert.Equal(string.Empty, configuration["PublicQr:BaseUrl"]);
     }
 
+    [Fact]
+    public void Web_project_can_copy_gitignored_local_mapbox_settings()
+    {
+        var projectPath = Path.Combine(GetRepositoryRoot(), "src", "NarrationApp.Web", "NarrationApp.Web.csproj");
+        var project = File.ReadAllText(projectPath);
+
+        Assert.Contains("wwwroot\\appsettings.Local.json", project, StringComparison.Ordinal);
+        Assert.Contains("CopyToPublishDirectory=\"PreserveNewest\"", project, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData("appsettings.Staging.json")]
     [InlineData("appsettings.Production.json")]

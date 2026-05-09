@@ -4,7 +4,7 @@
 
 .sample-surface__header {
     display: flex;
-    align-items: start;
+    align-items: center;
     justify-content: space-between;
     gap: 1rem;
     margin-bottom: 1rem;
@@ -24,8 +24,20 @@
     align-items: center;
 }
 
+.sample-surface__header-actions {
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+}
+
 .qr-filter-select {
-    min-width: 12rem;
+    min-height: 3.15rem;
+}
+
+.sample-surface__header-actions .app-button {
+    flex: 0 0 auto;
+    min-height: 3.15rem;
+    padding-inline: 1.2rem;
+    white-space: nowrap;
 }
 
 .qr-table-shell,
@@ -145,6 +157,12 @@
     background: rgba(8, 17, 31, 0.78);
     color: var(--vk-text);
     padding: 0.82rem 0.95rem;
+}
+
+.sample-surface__header-actions .qr-filter-select {
+    flex: 0 0 14.5rem;
+    width: 14.5rem;
+    min-width: 0;
 }
 
 @media (max-width: 1180px) {

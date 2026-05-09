@@ -19,4 +19,8 @@
     <ProjectReference Include="..\NarrationApp.SharedUI\NarrationApp.SharedUI.csproj" />
   </ItemGroup>
 
+  <ItemGroup Condition="Exists('wwwroot\appsettings.Local.json')">
+    <Content Update="wwwroot\appsettings.Local.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

@@ -75,9 +75,13 @@
 
 .analytics-filter-toolbar {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     justify-content: end;
     gap: 0.55rem;
+    max-width: min(100%, 30rem);
+    overflow-x: auto;
+    padding-bottom: 0.15rem;
+    scrollbar-width: thin;
 }
 
 .analytics-filter-chip {
@@ -85,6 +89,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    flex: 0 0 auto;
     max-width: 100%;
     min-height: 2.35rem;
     border: 1px solid rgba(80, 137, 168, 0.2);
