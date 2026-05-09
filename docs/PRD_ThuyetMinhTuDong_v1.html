@@ -317,7 +317,7 @@ tr:hover td{background:rgba(19,35,59,.32)}
           <li>Google Cloud credentials sẽ được cấp và không bị revoke.</li>
           <li>Dữ liệu POI ban đầu được nhập liệu thủ công hoặc import CSV.</li>
           <li>Ưu tiên pre-generate audio batch thay vì on-demand để tối ưu free tier.</li>
-          <li>Bán kính geofence lấy theo cấu hình server của từng POI; client dùng <code>VisitorProximityEngine.EvaluateCandidates()</code> để so sánh distance với <code>poi.GeofenceRadiusMeters</code>, sau đó ưu tiên POI theo priority và distance.</li>
+          <li>Bán kính geofence lấy theo cấu hình server của từng POI; client dùng <code>VisitorProximityEngine.EvaluateCandidates()</code> để so sánh distance với <code>poi.GeofenceRadiusMeters</code>, sau đó ưu tiên POI theo priority, distance và tên POI để tie-break ổn định.</li>
         </ul>
       </div>
       <div class="card">
@@ -524,7 +524,7 @@ graph TB
       <div class="card"><h3>pois</h3><p>Điểm thuyết minh: tên, địa chỉ, tọa độ (lat/lng), mức ưu tiên, hình ảnh, map_link, narration_mode, status, owner_id, <strong>category_id</strong>.</p></div>
       <div class="card"><h3>poi_translations</h3><p>Nội dung đa ngôn ngữ: title, description, story, highlight, is_fallback.</p></div>
       <div class="card"><h3>audio_assets</h3><p>Audio narration: poi_id, language_code, source_type (tts/recorded), provider, storage_path, url, status, generated_at.</p></div>
-      <div class="card"><h3>geofences</h3><p>Geofence config: poi_id, radius_meters, priority, debounce_seconds, cooldown_seconds, is_active, trigger_action, nearest_only. Mobile runtime dùng <code>VisitorProximityEngine.EvaluateCandidates()</code> với <code>triggerRadius = Math.Max(0, poi.GeofenceRadiusMeters)</code>, sau đó áp dụng priority-first, 3 stable samples và queue mềm để tránh spam audio.</p></div>
+      <div class="card"><h3>geofences</h3><p>Geofence config: poi_id, radius_meters, priority, debounce_seconds, cooldown_seconds, is_active, trigger_action, nearest_only. Mobile runtime dùng <code>VisitorProximityEngine.EvaluateCandidates()</code> với <code>triggerRadius = Math.Max(0, poi.GeofenceRadiusMeters)</code>, sau đó áp dụng priority-first, distance tie-break, name tie-break, 3 stable samples và queue mềm để tránh spam audio.</p></div>
       <div class="card"><h3>tours</h3><p>Tour: title, description, estimated_minutes, cover_image, status.</p></div>
       <div class="card"><h3>tour_stops</h3><p>Điểm dừng trong tour: tour_id, poi_id, sequence, radius_meters.</p></div>
       <div class="card"><h3>qr_codes</h3><p>QR code: code, target_type (<strong>open_app/poi/tour</strong>), target_id (nullable khi open_app), location_hint, expires_at, public_url, app_deep_link, scan_count. QR POI mở trang public <code>/qr/{code}</code>; QR tour mở app và phát stop đầu tiên ngay; QR open_app mở launcher page.</p></div>
@@ -546,7 +546,7 @@ graph TB
       <strong>Seed mẫu hiện hành:</strong> <code>DataSeeder.SeedToursAndQrCodesAsync()</code> tạo tour published <code>Tuyến xe buýt Khánh Hội - Vĩnh Hội - Xóm Chiếu</code> với 6 stop và 3 QR tour: <code>BUS-KHANH-HOI-TOUR</code>, <code>BUS-VINH-HOI-TOUR</code>, <code>BUS-XOM-CHIEU-TOUR</code>. Cả 3 mã có <code>target_type=tour</code>, trỏ về tour mẫu; quét là mở app, start tour và phát stop đầu tiên ngay.
     </div>
     <div class="alert warn">
-      Khu vực thí điểm có thể có đường hẹp, POI sát nhau. Runtime mobile hiện giải quyết overlap theo <strong>priority trước, distance sau</strong>, giữ <code>active POI</code> ổn định bằng debounce theo mẫu liên tiếp và queue mềm để tránh spam audio.
+      Khu vực thí điểm có thể có đường hẹp, POI sát nhau. Runtime mobile hiện giải quyết overlap theo <strong>priority trước, distance sau, rồi tên POI làm tie-break</strong>, giữ <code>active POI</code> ổn định bằng debounce theo mẫu liên tiếp và queue mềm để tránh spam audio.
     </div>
     <div class="alert info">
       <strong>Phạm vi Vĩnh Khánh:</strong> Dữ liệu V1 mặc định thuộc khu ẩm thực Vĩnh Khánh, nên server chỉ trả danh sách POI published qua <code>PoisController.GetAllAsync()</code> và không có query lọc khu vực. Nếu sau này mở rộng sang nhiều khu vực, tenant/region sẽ là module sau V1.
@@ -582,7 +582,7 @@ graph TB
         <tr><td>FR-02</td><td>Narration Engine — Audio thu sẵn</td><td>Hỗ trợ upload file audio thu sẵn tiếng Việt (giọng tự nhiên, chuyên nghiệp) làm audio nguồn chuẩn. Lưu Cloudflare R2 và dùng làm mốc để quản lý/generate audio đa ngôn ngữ.</td><td><span class="badge badge-green">Must</span></td><td>Upload file .mp3/.wav thành công, stream phát được</td></tr>
         <tr><td>FR-03</td><td>Audio Queue & Anti-duplicate</td><td>Quản lý hàng chờ audio: không phát trùng lặp, tự dừng khi có thông báo hệ thống khác. FIFO queue với priority.</td><td><span class="badge badge-green">Must</span></td><td>Không phát cùng POI 2 lần liên tiếp, auto-pause khi có system notification</td></tr>
         <tr><td>FR-04</td><td>GPS Tracking realtime</td><td>Lấy vị trí người dùng liên tục (foreground + background). FusedLocationProviderClient. Tối ưu pin và độ chính xác.</td><td><span class="badge badge-green">Must</span></td><td>Vị trí cập nhật mỗi 5-15s, battery drain &lt; 5%/giờ</td></tr>
-        <tr><td>FR-05</td><td>Geofence Engine</td><td>Thiết lập POI với tọa độ, bán kính kích hoạt (20-50m), mức ưu tiên. Khi overlap nhiều POI, runtime chọn theo <strong>priority trước, distance sau</strong>, có debounce theo mẫu liên tiếp, queue mềm và cooldown chống spam.</td><td><span class="badge badge-green">Must</span></td><td>Trigger đúng POI active theo priority/distance, không lặp trong cooldown period</td></tr>
+        <tr><td>FR-05</td><td>Geofence Engine</td><td>Thiết lập POI với tọa độ, bán kính kích hoạt (20-50m), mức ưu tiên. Khi overlap nhiều POI, runtime chọn theo <strong>priority trước, distance sau, rồi tên POI làm tie-break</strong>, có debounce theo mẫu liên tiếp, queue mềm và cooldown chống spam.</td><td><span class="badge badge-green">Must</span></td><td>Trigger đúng POI active theo priority/distance/tên ổn định, không lặp trong cooldown period</td></tr>
         <tr><td>FR-06</td><td>Map Discovery</td><td>Hiển thị vị trí user trên Mapbox và toàn bộ POI đã map từ dữ liệu published/updated. Mỗi POI có vòng bán kính đúng theo <code>GeofenceRadiusMeters</code>; GPS dùng để highlight nearest marker và kích hoạt audio khi user thật sự vào vùng. Tap marker lần 1 mở preview sheet; tap lại hoặc bấm CTA mới vào full POI detail.</td><td><span class="badge badge-green">Must</span></td><td>Map load nhanh, marker đúng vị trí, vòng bán kính đúng dữ liệu POI, nearest POI được highlight, preview/detail flow mượt</td></tr>
         <tr><td>FR-07</td><td>POI Content Management</td><td>Mỗi POI có: tọa độ <code>lat/lng</code>, bán kính kích hoạt, mức ưu tiên, mô tả văn bản, ảnh minh họa, link bản đồ, file audio hoặc script TTS. Owner CRUD POI và gửi duyệt; Admin duyệt.</td><td><span class="badge badge-green">Must</span></td><td>CRUD thành công, lưu đủ metadata POI, phân quyền đúng</td></tr>
         <tr><td>FR-08</td><td>POI Translation</td><td>Nội dung đa ngôn ngữ do Admin kiểm tra, xóa hoặc tạo mới bằng Google Cloud Translation; hỗ trợ mở rộng tất cả ngôn ngữ theo danh sách Google Cloud Translation hỗ trợ. Dịch nội dung không tự generate audio; audio chỉ được tạo khi Admin chủ động chạy generate cho ngôn ngữ đã có bản dịch.</td><td><span class="badge badge-green">Must</span></td><td>Hiển thị đúng ngôn ngữ đã có nội dung/audio ready, không cho nghe sai ngôn ngữ, Admin tạo/xóa/bật/tắt được ngôn ngữ mới</td></tr>
@@ -620,7 +620,7 @@ graph TB
         <tr><td>NFR-08</td><td>GPS Accuracy</td><td>Sử dụng Haversine + nearest-only để bù độ chính xác GPS</td><td><span class="badge badge-green">Must</span></td><td>Trigger đúng POI trong 90% trường hợp test thực địa</td></tr>
         <tr><td>NFR-09</td><td>Privacy</td><td>Visit events ghi ẩn danh (user_id nullable). Không track cá nhân bắt buộc.</td><td><span class="badge badge-orange">Should</span></td><td>Analytics không yêu cầu login</td></tr>
         <tr><td>NFR-10</td><td>Rate Limiting</td><td>Giới hạn request chống spam API</td><td><span class="badge badge-orange">Should</span></td><td>Rate limit enforced</td></tr>
-        <tr><td>NFR-11</td><td>Android Compatibility</td><td>Hỗ trợ Android 8.0+ (API 26+). Target Android 14.</td><td><span class="badge badge-green">Must</span></td><td>Chạy ổn trên Android 8.0+</td></tr>
+        <tr><td>NFR-11</td><td>Android Compatibility</td><td>Hỗ trợ Android 7.0+ (API 24+) theo <code>SupportedOSPlatformVersion=24.0</code>. Target build hiện tại là <code>net9.0-android35.0</code> (Android 15 / API 35).</td><td><span class="badge badge-green">Must</span></td><td>Chạy ổn trên Android 7.0+ và build APK/AAB theo target Android 15/API 35</td></tr>
       </table>
     </div>
   </section>
@@ -752,7 +752,7 @@ graph TB
         </div>
         <div class="timeline-item">
           <h4>Bước 3: Vào Map Discovery (Ready Step)</h4>
-          <p>Chuyển thẳng vào tab Map. App load nội dung bằng <code>VisitorContentService.LoadAsync</code>: lấy GPS, parallel fetch POI + Tours + Categories, rồi lưu snapshot qua <code>VisitorOfflineCacheStore.SaveContentSnapshotAsync</code>. Nếu gọi <code>api/pois/near</code> trả 0 kết quả → tự động fallback <code>api/pois</code> (all POI). Nếu API unreachable → thử dùng <code>LoadContentSnapshotAsync</code>; chỉ trả snapshot rỗng + banner <code>API unavailable</code> khi chưa có cache. Device ID được tạo tự động cho analytics ẩn danh.</p>
+          <p>Chuyển thẳng vào tab Map. App load nội dung bằng <code>VisitorContentService.LoadAsync</code>: lấy GPS, parallel fetch POI + Tours + Categories + Managed Languages, sau đó gọi <code>LoadReadyAudioLanguageCodesByPoiAsync()</code> để biết POI nào có audio ready theo từng ngôn ngữ, rồi lưu snapshot qua <code>VisitorOfflineCacheStore.SaveContentSnapshotAsync</code>. Nếu gọi <code>api/pois/near</code> trả 0 kết quả → tự động fallback <code>api/pois</code> (all POI). Nếu API unreachable → thử dùng <code>LoadContentSnapshotAsync</code>; chỉ trả snapshot rỗng + banner <code>API unavailable</code> khi chưa có cache. Device ID được tạo tự động cho analytics ẩn danh.</p>
         </div>
       </div>
     </div>
@@ -1053,7 +1053,7 @@ GET    /api/health/cloudflare-r2           # Admin</div>
       </div>
       <div class="timeline-item">
         <h4>Exception: Geofence chồng lấn</h4>
-        <p>Nhiều POI trong bán kính → Geofence Engine sort theo <strong>priority trước, distance sau</strong> → giữ <code>active POI</code> hiện tại nếu đang có auto narration lock → candidate mới phải ổn định đủ <strong>3 mẫu liên tiếp</strong> mới được promote. Cùng một POI có cooldown tự động <strong>5 phút</strong>; POI còn lại đi vào queue mềm, không chen ngang audio đang phát.</p>
+        <p>Nhiều POI trong bán kính → Geofence Engine sort theo <strong>priority trước, distance sau, rồi tên POI làm tie-break</strong> → giữ <code>active POI</code> hiện tại nếu đang có auto narration lock → candidate mới phải ổn định đủ <strong>3 mẫu liên tiếp</strong> mới được promote. Cùng một POI có cooldown tự động <strong>5 phút</strong>; POI còn lại đi vào queue mềm, không chen ngang audio đang phát.</p>
       </div>
     </div>
 
@@ -1067,6 +1067,7 @@ GET    /api/health/cloudflare-r2           # Admin</div>
         <ol style="padding-left:18px">
           <li style="color:var(--muted);font-size:14px;margin-bottom:8px"><strong style="color:var(--accent)">Priority-first:</strong> Khi overlap nhiều POI, <code>priority</code> lớn hơn được ưu tiên trước.</li>
           <li style="color:var(--muted);font-size:14px;margin-bottom:8px"><strong style="color:var(--accent)">Distance tie-break:</strong> Nếu cùng <code>priority</code>, mới so Haversine distance để chọn POI gần hơn.</li>
+          <li style="color:var(--muted);font-size:14px;margin-bottom:8px"><strong style="color:var(--accent)">Name tie-break:</strong> Nếu cả <code>priority</code> và khoảng cách đều bằng nhau, dùng <code>PoiName</code> theo alphabet để kết quả ổn định, không random giữa các lần GPS refresh.</li>
           <li style="color:var(--muted);font-size:14px;margin-bottom:8px"><strong style="color:var(--accent)">Stable-sample debounce:</strong> Candidate mới phải đứng top liên tục 3 mẫu mới được promote thành active.</li>
           <li style="color:var(--muted);font-size:14px;margin-bottom:8px"><strong style="color:var(--accent)">Soft queue:</strong> POI kế tiếp chỉ vào hàng chờ mềm và không chen ngang audio đang phát.</li>
         </ol>
@@ -1144,7 +1145,7 @@ Nếu quay lại sau 6 phút → cooldown hết → có thể auto-phát lại</
       <div class="card">
         <h4>🗺️ MVP hiện tại: Offline Schematic Map/List</h4>
         <ul>
-          <li><code>VisitorContentService.SaveContentSnapshotAsync()</code> lưu snapshot POI/Tour/Category vào SQLite sau mỗi lần tải live thành công.</li>
+          <li><code>VisitorContentService.SaveContentSnapshotAsync()</code> là wrapper an toàn gọi <code>VisitorOfflineCacheStore.SaveContentSnapshotAsync()</code> để lưu snapshot POI/Tour/Category/Managed Language và metadata audio ready vào SQLite sau mỗi lần tải live thành công.</li>
           <li><code>visitorMap.renderOfflineFallback()</code> dựng bản đồ sơ đồ/list nội bộ khi thiếu Mapbox token hoặc <code>window.mapboxgl</code> không tải được.</li>
           <li><code>VisitorMapSnapshotBuilder.Build()</code> gọi <code>VisitorMapMarkerVisibilityPolicy.GetVisiblePois()</code>: code hiện tại trả toàn bộ POI đã map từ nội dung published/updated; GPS chỉ dùng để tính nearest marker và chọn tâm bản đồ khi vị trí nằm gần cụm POI. Mỗi marker giữ <code>RadiusMeters = poi.GeofenceRadiusMeters</code> để JS vẽ vòng bán kính đúng theo POI.</li>
           <li>Hạn chế: đây không phải tile offline thật, không thay thế Mapbox Offline SDK nếu cần bản đồ nền chi tiết khi mất mạng.</li>
@@ -1263,14 +1264,14 @@ VisitorAudioCatalogService.LoadBestForPoiAsync():
           <tr><th>Secret</th><th>Nơi sử dụng</th><th>Cách lưu</th></tr>
           <tr><td>Database Connection String</td><td>Server, EF Core</td><td>Environment variable / Secret Manager</td></tr>
           <tr><td>JWT Secret Key</td><td>Auth Module</td><td>Secret Manager (không commit)</td></tr>
-          <tr><td>Mapbox Access Token</td><td>Map (web + mobile)</td><td>Environment variable</td></tr>
+          <tr><td>Mapbox Access Token</td><td>Map (web + mobile)</td><td>Environment variable hoặc <code>appsettings.Local.json</code> ignored; file tracked chỉ dùng placeholder</td></tr>
           <tr><td>Google Cloud Service Account</td><td>TTS, Translation</td><td>JSON file, không commit</td></tr>
           <tr><td>Cloudflare R2 Config</td><td>Audio pipeline</td><td>Environment variable</td></tr>
         </table>
       </div>
     </div>
     <div class="alert warn">
-      <strong>Lưu ý bảo mật:</strong> KHÔNG commit secrets vào git. Sử dụng .gitignore và .NET Secret Manager tool.
+      <strong>Lưu ý bảo mật:</strong> KHÔNG commit secrets vào git. Mapbox token public/runtime cũng không để trong file tracked; local dùng <code>src/NarrationApp.Web/wwwroot/appsettings.Local.json</code> hoặc biến môi trường khi publish, còn mobile inject bằng <code>MAPBOX_ACCESS_TOKEN</code> lúc build nếu cần.
     </div>
   </section>
 
@@ -2489,7 +2490,7 @@ sequenceDiagram
   App->>ProxEngine: EvaluateCandidates(location, allPois)
   ProxEngine->>ProxEngine: VisitorGeoMath.CalculateDistanceMeters(...)
   ProxEngine->>ProxEngine: triggerRadius = Math.Max(0, poi.GeofenceRadiusMeters)
-  ProxEngine->>ProxEngine: overlap sort = priority desc → distance asc
+  ProxEngine->>ProxEngine: overlap sort = priority desc → distance asc → PoiName asc
 
   alt Có POI trong vùng (distance ≤ triggerRadius)
     ProxEngine-->>App: Ordered proximity candidates
@@ -3064,7 +3065,7 @@ sequenceDiagram
 flowchart TD
   A[Mở app] --> B{Lần đầu?}
   B -->|Có| C["Chọn ngôn ngữ từ managed_languages active + GPS Permission"]
-  B -->|Không| F["VisitorContentService.LoadAsync() — GPS + parallel fetch POI/Tours/Categories"]
+  B -->|Không| F["VisitorContentService.LoadAsync() — GPS + parallel fetch POI/Tours/Categories/Languages"]
   C --> F
 
   F --> G{Live API thành công?}
@@ -3223,7 +3224,7 @@ stateDiagram-v2
 
   <!-- ========== FOOTER ========== -->
   <div class="footer">
-    PRD & UML v2.0 — Ứng dụng Thuyết Minh Tự Động &bull; Cập nhật: 08/05/2026 &bull; Tech Stack: .NET 8 / MAUI Android / Blazor WASM / PostgreSQL / Mapbox / Google Cloud Translation / Google Cloud Text-to-Speech / Cloudflare R2
+    PRD & UML v2.0 — Ứng dụng Thuyết Minh Tự Động &bull; Cập nhật: 09/05/2026 &bull; Tech Stack: ASP.NET Core/Blazor .NET 8 / MAUI Android .NET 9 / PostgreSQL / Mapbox / Google Cloud Translation / Google Cloud Text-to-Speech / Cloudflare R2
   </div>
 </main>
 
