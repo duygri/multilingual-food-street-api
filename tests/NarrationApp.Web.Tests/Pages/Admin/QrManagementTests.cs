@@ -63,6 +63,7 @@ public sealed class QrManagementTests : TestContext
             Assert.Contains("Chưa track", cut.Markup);
             Assert.Contains("Xem", cut.Markup);
             Assert.Contains("Link đến POI", cut.Markup);
+            Assert.Contains("Danh sách POI", cut.Markup);
             Assert.Contains("Link đến Tour", cut.Markup);
             Assert.Contains("Mở App", cut.Markup);
             Assert.Contains("Tour xe buýt Khánh Hội", cut.Markup);
@@ -77,6 +78,7 @@ public sealed class QrManagementTests : TestContext
         {
             Assert.Single(cut.FindAll("[data-panel='qr-composer']"));
             Assert.Single(cut.FindAll("select[data-field='qr-target-type']"));
+            Assert.Contains("option value=\"poi_list\"", cut.Markup, StringComparison.Ordinal);
             Assert.Contains("option value=\"tour\"", cut.Markup, StringComparison.Ordinal);
             Assert.Empty(cut.FindAll("select[data-field='qr-tour-id']"));
         });
@@ -254,6 +256,7 @@ public sealed class QrManagementTests : TestContext
                 Code = request.TargetType switch
                 {
                     "open_app" => "QR-APP-003",
+                    "poi_list" => "QR-POI-LIST-003",
                     "tour" => "QR-TOUR-003",
                     _ => "QR-POI-003"
                 },

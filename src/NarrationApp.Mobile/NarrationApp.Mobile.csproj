@@ -28,10 +28,10 @@
         <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
         <ApplicationVersion>1</ApplicationVersion>
         <AndroidPackageFormats>apk</AndroidPackageFormats>
-        <RuntimeIdentifiers>android-arm;android-arm64;android-x86;android-x64</RuntimeIdentifiers>
         <VisitorApiConfigFile></VisitorApiConfigFile>
 
         <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">24.0</SupportedOSPlatformVersion>
+        <RuntimeIdentifiers Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">android-arm;android-arm64;android-x86;android-x64</RuntimeIdentifiers>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
@@ -54,10 +54,14 @@
         <ApplicationTitle>Food Street Visitor Staging</ApplicationTitle>
         <ApplicationId>com.foodstreet.tourist.staging</ApplicationId>
         <AndroidPackageFormats>apk</AndroidPackageFormats>
+        <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
+        <AndroidUseSharedRuntime>false</AndroidUseSharedRuntime>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)' == 'Release'">
         <AndroidPackageFormats>aab</AndroidPackageFormats>
+        <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
+        <AndroidUseSharedRuntime>false</AndroidUseSharedRuntime>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(MOBILE_VERSION_NAME)' != ''">

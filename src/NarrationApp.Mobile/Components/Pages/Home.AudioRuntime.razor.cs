@@ -17,7 +17,7 @@ public partial class Home
         var previousDurationSeconds = _state.AudioDurationSeconds;
         var previousPlaybackState = _state.AudioPlaybackState;
 
-        _state.SetAudioPlaybackState(VisitorAudioPlaybackState.Loading, "Đang kiểm tra audio...");
+        _state.SetAudioPlaybackState(VisitorAudioPlaybackState.Loading, UiText.CheckingAudioLabel());
         var cue = await AudioCatalogService.LoadBestForPoiAsync(
             _state.SelectedPoi.Id,
             _state.SelectedLanguageCode,

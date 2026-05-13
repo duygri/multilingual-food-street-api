@@ -26,20 +26,23 @@ public partial class Home : IAsyncDisposable
     private bool _isFullPlayerOpen;
     private bool _showFullPlayerTranscript;
     private bool _showFullPlayerLanguagePicker;
+    private bool _isNotificationFeedLoading;
     private bool _startupWorkQueued;
     private bool _isMapSurfaceMounted;
     private bool _isCachePreloadRunning;
     private double _cachePreloadProgressPercent;
-    private string _cachePreloadStatusLabel = "Sẵn sàng tải trước audio cho ngôn ngữ hiện tại.";
+    private string _cachePreloadStatusLabel = string.Empty;
     private VisitorMapRoute? _walkingRoute;
     private string? _walkingRoutePoiId;
     private string? _walkingDirectionsStatus;
     private bool _isWalkingRouteLoading;
+    private DateTime? _lastNotificationFeedRefreshUtc;
     private CancellationTokenSource? _foregroundLocationLoopCts;
     private Task? _foregroundLocationLoopTask;
     private int _audioSpeedIndex = 1;
     private string? _aboutStatusMessage;
     private static readonly double[] AudioSpeedOptions = [0.75d, 1d, 1.25d, 1.5d, 2d];
+    private VisitorUiText UiText => VisitorUiTextCatalog.ForLanguage(_state.SelectedAppLanguageCode);
 
     private bool IsDiscoverPoiDetailVisible =>
         _state.CurrentTab == VisitorTab.Discover

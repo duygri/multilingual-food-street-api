@@ -13,21 +13,23 @@
 @inject IVisitorOfflineCacheStore OfflineCacheStore
 @inject IVisitorQrDeepLinkService DeepLinkService
 @inject IVisitorPresenceReporter PresenceReporter
+@inject IVisitorNotificationFeedService NotificationFeedService
 @inject IVisitorWalkingDirectionsService WalkingDirectionsService
 @inject IJSRuntime JS
 @inject VisitorMapOptions MapOptions
 
-<PageTitle>Food Street Visitor</PageTitle>
+<PageTitle>@UiText.PageTitle</PageTitle>
 
 @if (_state.CurrentStep != VisitorIntroStep.Ready)
 {
     <VisitorSetupFlow
         State="_state"
+        Text="UiText"
         LanguageTileClassSelector="GetLanguageTileClass"
+        OnContinueWelcome="ContinueFromWelcomeAsync"
         OnSelectLanguage="SelectSetupLanguage"
         OnContinueLanguage="ContinueFromLanguageSelection"
-        OnEnableLocation="EnableLocationAsync"
-        OnSkipLocation="SkipLocationAsync" />
+        OnEnableLocation="EnableLocationAsync" />
 }
 else
 {
@@ -38,11 +40,10 @@ else
                 <header class="mobile-topbar">
                     <div>
                         <span class="eyebrow">Food Street</span>
-                        <h1>@GetHeaderTitle()</h1>
+                        <h1>@UiText.HeaderSettingsTitle</h1>
                     </div>
                     <div class="topbar-actions">
-                        <button type="button" class="icon-button" @onclick="ToggleNotificationsPanel">🔔</button>
-                        <button type="button" class="icon-button" @onclick="CycleLanguage">@_state.CurrentLanguage.ChipLabel</button>
+                        <button type="button" class="icon-button" @onclick="CycleLanguage">@_state.CurrentAppLanguage.ChipLabel</button>
                     </div>
                 </header>
             }
@@ -51,13 +52,13 @@ else
             {
                 <VisitorMapScreen
                     State="_state"
+                    Text="UiText"
                     CategoryChipClassSelector="GetCategoryChipClass"
                     CategoryIconSelector="GetCategoryIcon"
                     GeofenceToastMessageProvider="GetGeofenceToastMessage"
                     GeofenceQueueBadgeProvider="GetGeofenceQueueBadge"
                     PoiCategoryLabelSelector="GetPoiCategoryLabel"
                     OnToggleNotifications="ToggleNotificationsPanel"
-                    OnCycleLanguage="CycleLanguage"
                     OnSelectCategory="SelectDiscoverCategory"
                     OnCenterOnUser="CenterMapOnUserAsync"
                     OnClosePoiSheet="@(() => _state.ClosePoiSheet())"
@@ -68,7 +69,11 @@ else
                     OnClearDirections="ClearWalkingDirectionsAsync"
                     OnOpenDirections="OpenSelectedPoiDirectionsAsync"
                     OnOpenPoiDetail="OpenSelectedPoiDetailFromMapAsync"
-                    OnPlaySelectedPoi="PlaySelectedPoiAsync" />
+                    OnPlaySelectedPoi="PlaySelectedPoiAsync"
+                    SelectedPoiDistanceLabel="@GetSelectedPoiDistanceLabel()"
+                    AudioLanguages="@GetSelectedPoiAudioLanguages()"
+                    SelectedLanguageCode="@_state.SelectedLanguageCode"
+                    OnSelectAudioLanguage="SelectMapPoiLanguageAsync" />
             }
             else if (_state.CurrentTab == VisitorTab.Discover)
             {
@@ -76,6 +81,7 @@ else
                 {
                     <VisitorPoiDetailScreen
                         Poi="_state.SelectedPoi"
+                        Text="UiText"
                         Categories="_state.Categories"
                         Languages="@GetSelectedPoiAudioLanguages()"
                         RelatedPois="@GetRelatedPois()"
@@ -96,7 +102,7 @@ else
                 else
                 {
                     <VisitorDiscoverScreen
-                        Pois="_state.FeaturedDiscoverPois"
+                        Pois="_state.DiscoverPois"
                         Categories="_state.Categories"
                         SelectedCategoryId="@_state.SelectedCategoryId"
                         SearchTerm="@_state.SearchTerm"
@@ -104,7 +110,8 @@ else
                         IsUsingFallbackData="@_state.IsUsingFallbackData"
                         DataSourceLabel="@_state.DataSourceLabel"
                         SyncMessage="@_state.SyncMessage"
-                        CurrentLanguageChipLabel="@_state.CurrentLanguage.ChipLabel"
+                        CurrentLanguageChipLabel="@_state.CurrentAppLanguage.ChipLabel"
+                        Text="UiText"
                         OnOpenSearch="OpenSearchOverlay"
                         OnRefresh="RefreshDiscoverAsync"
                         OnCycleLanguage="CycleLanguage"
@@ -118,6 +125,7 @@ else
                 {
                     <VisitorTourDetailScreen
                         Tour="_state.SelectedTour"
+                        Text="UiText"
                         Stops="@GetSelectedTourStopItems()"
                         HeroIcon="@GetTourHeroIcon(_state.SelectedTour)"
                         ThemeClass="@GetTourHeroTone(_state.SelectedTour)"
@@ -133,6 +141,7 @@ else
                 {
                     <VisitorTourListScreen
                         Tours="_state.Tours"
+                        Text="UiText"
                         IsLoading="@_isContentLoading"
                         OnSelectTour="OpenTourDetail" />
                 }
@@ -142,6 +151,7 @@ else
                 @if (_state.CurrentSettingsScreen == VisitorSettingsScreen.Audio)
                 {
                     <VisitorAudioSettingsScreen
+                        Text="UiText"
                         Preferences="_state.AudioPreferences"
                         SpeedOptions="AudioSpeedOptions"
                         OnBack="CloseSettingsScreen"
@@ -154,9 +164,10 @@ else
                 else if (_state.CurrentSettingsScreen == VisitorSettingsScreen.Gps)
                 {
                     <VisitorGpsSettingsScreen
+                        Text="UiText"
                         Preferences="_state.GpsPreferences"
                         GeofenceDebugEvents="GeofenceDebugEvents"
-                        StatusLabel="@(_state.LocationPermissionGranted ? "Vị trí đã bật" : "Vị trí đang tắt")"
+                        StatusLabel="@(_state.LocationPermissionGranted ? UiText.LocationEnabledLabel() : UiText.LocationDisabledLabel())"
                         OnBack="CloseSettingsScreen"
                         OnBackgroundTrackingChanged="SetGpsBackgroundTrackingEnabledAsync"
                         OnAutoFocusChanged="SetGpsAutoFocusEnabledAsync"
@@ -165,6 +176,7 @@ else
                 else if (_state.CurrentSettingsScreen == VisitorSettingsScreen.Cache)
                 {
                     <VisitorCacheManagerScreen
+                        Text="UiText"
                         Items="_state.CachedAudioItems"
                         PoiCount="_state.Pois.Count"
                         TourCount="_state.Tours.Count"
@@ -181,6 +193,7 @@ else
                 else if (_state.CurrentSettingsScreen == VisitorSettingsScreen.History)
                 {
                     <VisitorListenHistoryScreen
+                        Text="UiText"
                         Days="_state.ListeningHistoryDays"
                         OnBack="CloseSettingsScreen"
                         OnOpenPoi="OpenPoiFromHistoryAsync" />
@@ -188,6 +201,7 @@ else
                 else if (_state.CurrentSettingsScreen == VisitorSettingsScreen.About)
                 {
                     <VisitorAboutScreen
+                        Text="UiText"
                         VersionLabel="@GetAboutVersionLabel()"
                         RuntimeLabel="@GetAboutRuntimeLabel()"
                         TechStack="@GetAboutTechStack()"
@@ -200,11 +214,12 @@ else
                 else
                 {
                     <VisitorSettingsOverviewScreen
+                        Text="UiText"
                         VisitorMode="@GetVisitorModeSummary()"
                         Overview="@GetSettingsOverviewSummary()"
                         Stats="@GetSettingsStats()"
-                        Languages="_state.Languages"
-                        LanguageChipClassSelector="GetLanguageChipClass"
+                        Languages="_state.AppLanguages"
+                        SelectedLanguageCode="@_state.SelectedAppLanguageCode"
                         OnSelectLanguage="SelectSettingsLanguageAsync"
                         OnOpenAudio="@(() => OpenSettingsScreen(VisitorSettingsScreen.Audio))"
                         OnOpenGps="@(() => OpenSettingsScreen(VisitorSettingsScreen.Gps))"
@@ -217,6 +232,7 @@ else
             @if (_isSearchOverlayOpen)
             {
                 <VisitorSearchScreen
+                    Text="UiText"
                     SearchTerm="@_state.SearchTerm"
                     SelectedCategoryId="@_state.SelectedCategoryId"
                     Results="@GetSearchResultsSummary()"
@@ -232,6 +248,7 @@ else
             {
                 <VisitorFullPlayerScreen
                     Poi="_state.SelectedPoi"
+                    Text="UiText"
                     Categories="_state.Categories"
                     IsPlaying="_state.IsAudioPlaying"
                     CurrentLanguageLabel="@GetCurrentAudioLanguageLabel()"
@@ -275,26 +292,26 @@ else
                             </div>
                         </div>
                     </button>
-                    <button type="button" class="mini-toggle" @onclick="_state.ToggleMiniPlayer">Thu gọn</button>
+                    <button type="button" class="mini-toggle" @onclick="_state.ToggleMiniPlayer">@UiText.HideButton</button>
                 </section>
             }
 
             <nav class="bottom-nav">
                 <button type="button" class="nav-pill @GetTabClass(VisitorTab.Map)" @onclick="() => SwitchTabFromShell(VisitorTab.Map)">
                     <span class="nav-pill__icon">🗺️</span>
-                    <span>Bản đồ</span>
+                    <span>@UiText.TabMap</span>
                 </button>
                 <button type="button" class="nav-pill @GetTabClass(VisitorTab.Tours)" @onclick="() => SwitchTabFromShell(VisitorTab.Tours)">
                     <span class="nav-pill__icon">🚶</span>
-                    <span>Tour</span>
+                    <span>@UiText.TabTours</span>
                 </button>
                 <button type="button" class="nav-pill @GetTabClass(VisitorTab.Discover)" @onclick="() => SwitchTabFromShell(VisitorTab.Discover)">
                     <span class="nav-pill__icon">📍</span>
-                    <span>Khám phá</span>
+                    <span>@UiText.TabDiscover</span>
                 </button>
                 <button type="button" class="nav-pill @GetTabClass(VisitorTab.Settings)" @onclick="() => SwitchTabFromShell(VisitorTab.Settings)">
                     <span class="nav-pill__icon">👤</span>
-                    <span>Tôi</span>
+                    <span>@UiText.TabMe</span>
                 </button>
             </nav>
         </div>

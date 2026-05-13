@@ -5,7 +5,7 @@
         <div class="tour-detail-hero__actions">
             <button type="button" class="poi-detail-hero__button" @onclick="OnBack">←</button>
         </div>
-        <span class="tour-detail-hero__pill">@Tour.DifficultyLabel</span>
+        <span class="tour-detail-hero__pill">@Text.LocalizeKnownStatus(Tour.DifficultyLabel)</span>
         <span class="tour-detail-hero__icon">@HeroIcon</span>
         <div class="tour-detail-hero__copy">
             <h1>@Tour.Title</h1>
@@ -15,37 +15,37 @@
 
     <section class="tour-detail-content">
         <section class="tour-detail-overview">
-            <span class="sheet-label">Tour đã chọn</span>
-            <strong>@Tour.StopCountLabel • @Tour.DurationLabel</strong>
-            <p>@PrimaryActionLabel.ToLowerInvariant() để app dẫn bạn qua từng điểm dừng và tiếp tục lưu tiến trình nghe.</p>
+            <span class="sheet-label">@Text.TourSelectedLabel()</span>
+            <strong>@Text.FormatStopCountLabel(Tour.StopCountLabel) • @Text.LocalizeKnownStatus(Tour.DurationLabel)</strong>
+            <p>@Text.FormatTourOverviewDescription(PrimaryActionLabel)</p>
         </section>
 
         <section class="tour-detail-stats">
             <article class="poi-detail-stat-card">
-                <strong>@Tour.StopCountLabel.Replace(" điểm dừng", string.Empty)</strong>
-                <span>Điểm dừng</span>
+                <strong>@GetStopCountValue()</strong>
+                <span>@Text.TourStopsLabel()</span>
             </article>
             <article class="poi-detail-stat-card">
-                <strong>@Tour.DurationLabel</strong>
-                <span>Thời gian</span>
+                <strong>@Text.LocalizeKnownStatus(Tour.DurationLabel)</strong>
+                <span>@Text.TourDurationLabel()</span>
             </article>
             <article class="poi-detail-stat-card">
                 <strong>@RouteDistanceLabel</strong>
-                <span>Quãng đường</span>
+                <span>@Text.TourDistanceLabel()</span>
             </article>
             <article class="poi-detail-stat-card">
                 <strong>@ParticipationLabel</strong>
-                <span>Đã tham gia</span>
+                <span>@Text.TourParticipantsLabel()</span>
             </article>
         </section>
 
         <section class="tour-progress-track">
             <div class="tour-progress-track__head">
-                <strong>🗂 Tiến trình của bạn</strong>
+                <strong>🗂 @Text.TourProgressTitle()</strong>
                 <span>@ProgressLabel</span>
             </div>
             <div class="tour-progress-track__summary">
-                <span>Đi theo lộ trình đã gợi ý để mở từng điểm dừng theo đúng nhịp tour.</span>
+                <span>@Text.TourProgressDescription()</span>
             </div>
             <div class="tour-progress-track__bar">
                 <span style="width:@ProgressPercent"></span>
@@ -53,7 +53,7 @@
         </section>
 
         <section class="tour-stop-timeline">
-            <header class="tour-stop-timeline__header">🗺 Lộ trình</header>
+            <header class="tour-stop-timeline__header">🗺 @Text.TourRouteLabel()</header>
             @foreach (var stop in Stops)
             {
                 <article class="tour-stop-timeline__item @GetStopClass(stop)">
@@ -65,7 +65,7 @@
                             <strong>@stop.PoiName</strong>
                             <p>@stop.Summary</p>
                             <div class="tour-stop-timeline__chips">
-                                <span class="tour-stop-chip @GetStopChipClass(stop)">@stop.StateLabel</span>
+                                <span class="tour-stop-chip @GetStopChipClass(stop)">@Text.LocalizeKnownStatus(stop.StateLabel)</span>
                                 <span class="tour-stop-chip">@stop.DistanceLabel</span>
                             </div>
                         </div>
@@ -75,7 +75,7 @@
         </section>
 
         <div class="sheet-actions tour-detail-sheet-actions">
-            <button type="button" class="secondary-pill" @onclick="OnBack">Quay lại</button>
+            <button type="button" class="secondary-pill" @onclick="OnBack">@Text.BackButtonLabel()</button>
             <button type="button" class="primary-pill" @onclick="OnPrimaryAction">@PrimaryActionLabel</button>
         </div>
     </section>
@@ -83,14 +83,15 @@
 
 @code {
     [Parameter, EditorRequired] public VisitorTourCard Tour { get; set; } = default!;
+    [Parameter] public VisitorUiText Text { get; set; } = VisitorUiTextCatalog.ForLanguage("vi");
     [Parameter] public IReadOnlyList<VisitorTourStopItem> Stops { get; set; } = [];
     [Parameter] public string HeroIcon { get; set; } = "🏛️";
     [Parameter] public string ThemeClass { get; set; } = "is-history";
     [Parameter] public string RouteDistanceLabel { get; set; } = "1.2km";
     [Parameter] public string ParticipationLabel { get; set; } = "187";
-    [Parameter] public string ProgressLabel { get; set; } = "0/0 điểm";
+    [Parameter] public string ProgressLabel { get; set; } = "0/0";
     [Parameter] public string ProgressPercent { get; set; } = "0%";
-    [Parameter] public string PrimaryActionLabel { get; set; } = "Bắt đầu";
+    [Parameter] public string PrimaryActionLabel { get; set; } = "Start";
     [Parameter] public EventCallback OnBack { get; set; }
     [Parameter] public EventCallback OnPrimaryAction { get; set; }
 
@@ -132,5 +133,11 @@
         }
 
         return string.Empty;
+    }
+
+    private string GetStopCountValue()
+    {
+        var digits = new string(Tour.StopCountLabel.TakeWhile(char.IsDigit).ToArray());
+        return string.IsNullOrWhiteSpace(digits) ? Tour.StopCountLabel : digits;
     }
 }

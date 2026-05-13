@@ -5,7 +5,7 @@
         <div class="settings-profile-card__top">
             <div class="settings-avatar">@VisitorMode.Initials</div>
             <div class="settings-row__copy">
-                <span class="eyebrow">Thiết bị hiện tại</span>
+                <span class="eyebrow">@Text.CurrentDeviceLabel</span>
                 <strong class="settings-row__title">@VisitorMode.Title</strong>
                 <span class="settings-row__subtitle">@VisitorMode.Subtitle</span>
                 <span class="settings-row__subtitle">@VisitorMode.ModeLabel</span>
@@ -24,27 +24,25 @@
     </article>
 
     <article class="setting-card">
-        <span class="sheet-label">Ngôn ngữ ưu tiên</span>
+        <span class="sheet-label">@Text.AppLanguageLabel</span>
         <strong>@Overview.CurrentLanguageLabel</strong>
-        <p>Nội dung thuyết minh sẽ ưu tiên ngôn ngữ này khi có recorded hoặc Google TTS phù hợp.</p>
+        <p>@Text.AppLanguageDescription</p>
 
-        <div class="settings-language-strip">
-            @foreach (var language in Languages)
-            {
-                <button
-                    type="button"
-                    class="language-chip @LanguageChipClassSelector(language.Code)"
-                    @onclick="() => OnSelectLanguage.InvokeAsync(language.Code)">
-                    @language.ChipLabel • @language.Label
-                </button>
-            }
-        </div>
+        <label class="settings-language-dropdown">
+            <span>@Text.SettingsLanguageSelectLabel</span>
+            <select class="settings-language-select" value="@SelectedLanguageCode" @onchange="OnLanguageChangedAsync">
+                @foreach (var language in Languages)
+                {
+                    <option value="@language.Code">@language.ChipLabel • @Text.LocalizeLanguageLabel(language.Label)</option>
+                }
+            </select>
+        </label>
     </article>
 
     <div class="settings-nav-list">
         <button type="button" class="setting-card settings-row" @onclick="OnOpenAudio">
             <div class="settings-row__copy">
-                <strong class="settings-row__title">Audio & thuyết minh</strong>
+                <strong class="settings-row__title">@Text.AudioSettingsTitle</strong>
                 <span class="settings-row__subtitle">@Overview.AudioSummary</span>
             </div>
             <span class="settings-row__value">›</span>
@@ -52,7 +50,7 @@
 
         <button type="button" class="setting-card settings-row" @onclick="OnOpenGps">
             <div class="settings-row__copy">
-                <strong class="settings-row__title">Vị trí & GPS</strong>
+                <strong class="settings-row__title">@Text.GpsSettingsTitle</strong>
                 <span class="settings-row__subtitle">@Overview.GpsSummary</span>
             </div>
             <span class="settings-row__value">›</span>
@@ -60,7 +58,7 @@
 
         <button type="button" class="setting-card settings-row" @onclick="OnOpenCache">
             <div class="settings-row__copy">
-                <strong class="settings-row__title">Gói offline</strong>
+                <strong class="settings-row__title">@Text.ContentAudioCacheTitle</strong>
                 <span class="settings-row__subtitle">@Overview.CacheSummary</span>
             </div>
             <span class="settings-row__value">›</span>
@@ -68,7 +66,7 @@
 
         <button type="button" class="setting-card settings-row" @onclick="OnOpenHistory">
             <div class="settings-row__copy">
-                <strong class="settings-row__title">Lịch sử nghe</strong>
+                <strong class="settings-row__title">@Text.ListenHistoryTitle</strong>
                 <span class="settings-row__subtitle">@Overview.HistorySummary</span>
             </div>
             <span class="settings-row__value">›</span>
@@ -76,7 +74,7 @@
 
         <button type="button" class="setting-card settings-row" @onclick="OnOpenAbout">
             <div class="settings-row__copy">
-                <strong class="settings-row__title">Về ứng dụng</strong>
+                <strong class="settings-row__title">@Text.AboutAppTitle</strong>
                 <span class="settings-row__subtitle">@Overview.AboutSummary</span>
             </div>
             <span class="settings-row__value">›</span>
@@ -86,14 +84,23 @@
 
 @code {
     [Parameter] public VisitorModeSummary VisitorMode { get; set; } = new(string.Empty, string.Empty, string.Empty, "GT");
+    [Parameter] public VisitorUiText Text { get; set; } = VisitorUiTextCatalog.ForLanguage("vi");
     [Parameter] public VisitorSettingsOverviewSummary Overview { get; set; } = new(string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty);
     [Parameter] public IReadOnlyList<VisitorSettingsStat> Stats { get; set; } = [];
     [Parameter] public IReadOnlyList<VisitorLanguageOption> Languages { get; set; } = [];
-    [Parameter] public Func<string, string> LanguageChipClassSelector { get; set; } = static _ => string.Empty;
+    [Parameter] public string SelectedLanguageCode { get; set; } = "vi";
     [Parameter] public EventCallback<string> OnSelectLanguage { get; set; }
     [Parameter] public EventCallback OnOpenAudio { get; set; }
     [Parameter] public EventCallback OnOpenGps { get; set; }
     [Parameter] public EventCallback OnOpenCache { get; set; }
     [Parameter] public EventCallback OnOpenHistory { get; set; }
     [Parameter] public EventCallback OnOpenAbout { get; set; }
+
+    private Task OnLanguageChangedAsync(ChangeEventArgs args)
+    {
+        var languageCode = args.Value?.ToString();
+        return string.IsNullOrWhiteSpace(languageCode)
+            ? Task.CompletedTask
+            : OnSelectLanguage.InvokeAsync(languageCode);
+    }
 }

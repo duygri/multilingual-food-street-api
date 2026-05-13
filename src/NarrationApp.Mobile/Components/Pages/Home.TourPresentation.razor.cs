@@ -8,10 +8,10 @@ public partial class Home
         VisitorTourPresentationFormatter.GetHeroCopy(_state.ActiveTourSession);
 
     private string GetTourActionLabel(string tourId) =>
-        VisitorTourPresentationFormatter.GetActionLabel(_state.ActiveTourSession, tourId);
+        UiText.FormatTourActionLabel(_state.ActiveTourSession, tourId);
 
     private string GetSelectedTourPrimaryActionLabel() =>
-        VisitorTourPresentationFormatter.GetSelectedTourPrimaryActionLabel(_state.SelectedTour, _state.ActiveTourSession);
+        UiText.FormatSelectedTourActionLabel(_state.SelectedTour, _state.ActiveTourSession);
 
     private string GetSelectedTourStatusBadge() =>
         VisitorTourPresentationFormatter.GetSelectedTourStatusBadge(_state.SelectedTour, _state.ActiveTourSession);
@@ -35,13 +35,13 @@ public partial class Home
         VisitorTourPresentationFormatter.GetParticipationLabel(tour);
 
     private string GetTourProgressLabel() =>
-        VisitorTourPresentationFormatter.GetProgressLabel(_state.SelectedTour, _state.ActiveTourSession);
+        UiText.FormatTourProgressLabel(_state.SelectedTour, _state.ActiveTourSession);
 
     private string GetTourProgressPercent() =>
         VisitorTourPresentationFormatter.GetProgressPercent(_state.SelectedTour, _state.ActiveTourSession);
 
     private string GetTourStopStateLabel(string tourId, string poiId, int stopIndex) =>
-        VisitorTourPresentationFormatter.GetStopStateLabel(_state.ActiveTourSession, tourId, poiId, stopIndex);
+        UiText.FormatTourStopStateLabel(_state.ActiveTourSession, tourId, poiId, stopIndex);
 
     private string GetTourStopClass(string poiId) =>
         VisitorTourPresentationFormatter.GetStopClass(_state.ActiveTourSession, _state.SelectedPoi?.Id, poiId);

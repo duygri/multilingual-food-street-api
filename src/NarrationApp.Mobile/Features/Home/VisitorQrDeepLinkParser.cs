@@ -5,11 +5,15 @@ namespace NarrationApp.Mobile.Features.Home;
 public enum VisitorQrTargetKind
 {
     OpenApp,
+    PoiList,
     Poi,
     Tour
 }
 
-public sealed record VisitorQrDeepLinkRequest(string Code, string SourceUri);
+public sealed record VisitorQrDeepLinkRequest(string Code, string SourceUri)
+{
+    public string? QrLaunchMode { get; init; }
+}
 
 public sealed record VisitorQrNavigationTarget(string Code, VisitorQrTargetKind Kind, string? TargetId)
 {
@@ -21,6 +25,7 @@ public sealed record VisitorQrNavigationTarget(string Code, VisitorQrTargetKind 
         {
             "poi" when qrCode.TargetId > 0 => new VisitorQrNavigationTarget(qrCode.Code, VisitorQrTargetKind.Poi, $"poi-{qrCode.TargetId}"),
             "tour" when qrCode.TargetId > 0 => new VisitorQrNavigationTarget(qrCode.Code, VisitorQrTargetKind.Tour, $"tour-{qrCode.TargetId}"),
+            "poi_list" => new VisitorQrNavigationTarget(qrCode.Code, VisitorQrTargetKind.PoiList, null),
             "open_app" => new VisitorQrNavigationTarget(qrCode.Code, VisitorQrTargetKind.OpenApp, null),
             _ => new VisitorQrNavigationTarget(qrCode.Code, VisitorQrTargetKind.OpenApp, null)
         };
@@ -50,7 +55,10 @@ public static class VisitorQrDeepLinkParser
             return false;
         }
 
-        request = new VisitorQrDeepLinkRequest(Uri.UnescapeDataString(code), uri!.AbsoluteUri);
+        request = new VisitorQrDeepLinkRequest(Uri.UnescapeDataString(code), uri!.AbsoluteUri)
+        {
+            QrLaunchMode = ExtractQueryValue(uri, "qrLaunch")
+        };
         return true;
     }
 
@@ -109,12 +117,22 @@ public static class VisitorQrDeepLinkParser
             return null;
         }
 
+        return ExtractQueryValue(uri, "code");
+    }
+
+    private static string? ExtractQueryValue(Uri uri, string key)
+    {
+        if (string.IsNullOrWhiteSpace(uri.Query))
+        {
+            return null;
+        }
+
         var query = uri.Query.TrimStart('?');
         foreach (var pair in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
         {
             var parts = pair.Split('=', 2);
             var name = Uri.UnescapeDataString(parts[0]).Replace("+", " ", StringComparison.Ordinal);
-            if (!name.Equals("code", StringComparison.OrdinalIgnoreCase))
+            if (!name.Equals(key, StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }

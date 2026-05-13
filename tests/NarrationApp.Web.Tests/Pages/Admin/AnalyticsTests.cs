@@ -126,15 +126,11 @@ public sealed class AnalyticsTests : TestContext
             Assert.Contains("154 giây", cut.Markup);
             Assert.Contains("24h", cut.Markup);
             Assert.Contains("7 ngày", cut.Markup);
-            Assert.Contains("30 ngày", cut.Markup);
             Assert.Contains("Tất cả", cut.Markup);
-            Assert.Contains("Decay", cut.Markup);
-            Assert.Contains("Geofence", cut.Markup);
-            Assert.Contains("QR", cut.Markup);
-            Assert.Contains("Audio", cut.Markup);
-            Assert.Contains("Min 2", cut.Markup);
-            Assert.Contains("Min 3", cut.Markup);
-            Assert.Contains("Min 5", cut.Markup);
+            Assert.DoesNotContain("Decay", cut.Markup);
+            Assert.DoesNotContain("data-heatmap-event", cut.Markup);
+            Assert.DoesNotContain("data-flow-event", cut.Markup);
+            Assert.DoesNotContain("data-flow-min-sessions", cut.Markup);
             Assert.DoesNotContain("Phân tích vận hành", cut.Markup);
             Assert.DoesNotContain("Signal floor", cut.Markup);
             Assert.DoesNotContain("Peak weight", cut.Markup);
@@ -142,7 +138,7 @@ public sealed class AnalyticsTests : TestContext
             Assert.NotNull(portalService.LastHeatmapQuery);
             Assert.Equal(HeatmapTimeRange.Last7Days, portalService.LastHeatmapQuery!.TimeRange);
             Assert.Null(portalService.LastHeatmapQuery.EventTypeFilter);
-            Assert.True(portalService.LastHeatmapQuery.UseTimeDecay);
+            Assert.False(portalService.LastHeatmapQuery.UseTimeDecay);
             Assert.Equal(50d, portalService.LastHeatmapQuery.GridSizeMeters);
             Assert.Equal(50d, portalService.LastHeatmapQuery.MaxWeight);
             Assert.True(portalService.LastHeatmapQuery.ApplyGaussianSmoothing);
@@ -155,38 +151,23 @@ public sealed class AnalyticsTests : TestContext
             Assert.False(portalService.UsedLegacyMovementFlowEndpoint);
         });
 
-        cut.Find("[data-heatmap-event='QrScan']").Click();
-
-        cut.WaitForAssertion(() =>
-        {
-            Assert.NotNull(portalService.LastHeatmapQuery);
-            Assert.Equal(EventType.QrScan, portalService.LastHeatmapQuery!.EventTypeFilter);
-        });
-
         cut.Find("[data-heatmap-range='Last24Hours']").Click();
 
         cut.WaitForAssertion(() =>
         {
             Assert.NotNull(portalService.LastHeatmapQuery);
             Assert.Equal(HeatmapTimeRange.Last24Hours, portalService.LastHeatmapQuery!.TimeRange);
-            Assert.Equal(EventType.QrScan, portalService.LastHeatmapQuery.EventTypeFilter);
+            Assert.Null(portalService.LastHeatmapQuery.EventTypeFilter);
         });
 
-        cut.Find("[data-flow-event='AudioPlay']").Click();
+        cut.Find("[data-flow-range='AllTime']").Click();
 
         cut.WaitForAssertion(() =>
         {
             Assert.NotNull(portalService.LastMovementFlowQuery);
-            Assert.Equal(EventType.AudioPlay, portalService.LastMovementFlowQuery!.EventTypeFilter);
-        });
-
-        cut.Find("[data-flow-min-sessions='5']").Click();
-
-        cut.WaitForAssertion(() =>
-        {
-            Assert.NotNull(portalService.LastMovementFlowQuery);
-            Assert.Equal(5, portalService.LastMovementFlowQuery!.MinimumUniqueSessions);
-            Assert.Equal(EventType.AudioPlay, portalService.LastMovementFlowQuery.EventTypeFilter);
+            Assert.Equal(HeatmapTimeRange.AllTime, portalService.LastMovementFlowQuery!.TimeRange);
+            Assert.Equal(3, portalService.LastMovementFlowQuery.MinimumUniqueSessions);
+            Assert.Null(portalService.LastMovementFlowQuery.EventTypeFilter);
         });
     }
 

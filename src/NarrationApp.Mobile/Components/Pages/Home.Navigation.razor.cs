@@ -16,11 +16,21 @@ public partial class Home
         CloseSearchOverlaySurface();
         CloseFullPlayerSurface();
 
+        var shouldLoadNotifications = !_state.ShowNotifications;
         if (_state.CurrentTab != VisitorTab.Map)
         {
             _state.SwitchTab(VisitorTab.Map);
         }
 
         _state.ToggleNotifications();
+
+        if (shouldLoadNotifications)
+        {
+            _ = InvokeAsync(async () =>
+            {
+                await RefreshNotificationsAsync(force: true);
+                StateHasChanged();
+            });
+        }
     }
 }

@@ -7,7 +7,7 @@
             <div class="full-player-topbar__actions">
                 <button type="button" class="full-player-pill" @onclick="OnToggleSpeed">@SpeedLabel</button>
                 <button type="button" class="full-player-pill" @onclick="OnToggleTranscript">
-                    @(ShowTranscript ? "Ẩn transcript" : "Transcript")
+                    @(ShowTranscript ? Text.HideTranscriptButton : Text.TranscriptButton)
                 </button>
             </div>
         </header>
@@ -26,10 +26,10 @@
         <section class="full-player-summary">
             <div class="full-player-summary__meta">
                 <span class="discover-badge">@GetCategoryLabel()</span>
-                <span class="full-player-summary__status">@CurrentLanguageLabel • @AudioStatusLabel</span>
+                <span class="full-player-summary__status">@Text.LocalizeLanguageLabel(CurrentLanguageLabel) • @Text.LocalizeKnownStatus(AudioStatusLabel)</span>
             </div>
             <h1>@Poi.Name</h1>
-            <p>Nghe thuyết minh toàn màn hình với transcript đồng bộ và thao tác nhanh.</p>
+            <p>@Text.FullPlayerDescription</p>
         </section>
 
         <div class="full-player-progress">
@@ -54,6 +54,7 @@
             </button>
             <button type="button"
                     class="full-player-control full-player-control--language @(ShowLanguagePicker ? "is-active" : string.Empty)"
+                    aria-label="@Text.LanguagePickerAriaLabel"
                     aria-controls="full-player-language-picker"
                     aria-expanded="@ShowLanguagePicker"
                     @onclick="OnToggleLanguagePicker">
@@ -64,15 +65,15 @@
 
         @if (ShowLanguagePicker)
         {
-            <section id="full-player-language-picker" class="full-player-language-picker" aria-label="Chọn ngôn ngữ thuyết minh">
+            <section id="full-player-language-picker" class="full-player-language-picker" aria-label="@Text.LanguagePickerAriaLabel">
                 <div class="full-player-language-picker__header">
-                    <strong>Chọn ngôn ngữ</strong>
-                    <span>Chỉ hiển thị ngôn ngữ đã có audio cho POI này</span>
+                    <strong>@Text.LanguagePickerTitle</strong>
+                    <span>@Text.LanguagePickerDescription</span>
                 </div>
 
                 @if (AudioLanguages.Count == 0)
                 {
-                    <p class="full-player-language-empty">Chưa có ngôn ngữ audio khả dụng.</p>
+                    <p class="full-player-language-empty">@Text.LanguagePickerEmpty</p>
                 }
                 else
                 {
@@ -85,8 +86,8 @@
                                     @onclick="() => OnSelectLanguage.InvokeAsync(language.Code)">
                                 <span class="full-player-language-option__code">@language.ChipLabel</span>
                                 <span class="full-player-language-option__copy">
-                                    <strong>@language.Label</strong>
-                                    <span>@language.SubLabel</span>
+                                    <strong>@Text.LocalizeLanguageLabel(language.Label)</strong>
+                                    <span>@Text.LocalizeLanguageLabel(language.SubLabel)</span>
                                 </span>
                                 <span class="full-player-language-option__check" aria-hidden="true">@(isSelected ? "✓" : string.Empty)</span>
                             </button>
@@ -100,7 +101,7 @@
             <div class="full-player-transcript__surface">
                 <div class="full-player-transcript__header">
                     <strong>Transcript</strong>
-                    <span>@CurrentLanguageLabel</span>
+                    <span>@Text.LocalizeLanguageLabel(CurrentLanguageLabel)</span>
                 </div>
 
                 @if (ShowTranscript)
@@ -119,6 +120,7 @@
 
 @code {
     [Parameter, EditorRequired] public VisitorPoi Poi { get; set; } = default!;
+    [Parameter] public VisitorUiText Text { get; set; } = VisitorUiTextCatalog.ForLanguage("vi");
     [Parameter] public IReadOnlyList<VisitorCategory> Categories { get; set; } = [];
     [Parameter] public bool IsPlaying { get; set; }
     [Parameter] public string CurrentLanguageLabel { get; set; } = string.Empty;
@@ -153,8 +155,8 @@
 
     private string GetCategoryLabel() =>
         string.IsNullOrWhiteSpace(Poi.CategoryLabel)
-            ? Categories.FirstOrDefault(category => category.Id == Poi.CategoryId)?.Label ?? Poi.District
-            : Poi.CategoryLabel;
+            ? Text.LocalizeCategoryLabel(Categories.FirstOrDefault(category => category.Id == Poi.CategoryId)?.Label ?? Poi.District)
+            : Text.LocalizeCategoryLabel(Poi.CategoryLabel);
 
     private int GetActiveBarCount() =>
         Math.Clamp((int)Math.Round(ProgressPercent / 100d * 60d, MidpointRounding.AwayFromZero), 0, 60);

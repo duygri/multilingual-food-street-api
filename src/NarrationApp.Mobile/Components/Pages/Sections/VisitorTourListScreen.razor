@@ -3,8 +3,8 @@
 <section class="tour-list-screen">
     <header class="tour-list-header">
         <div class="tour-list-header__copy">
-            <h1>Tour khám phá</h1>
-            <p>Lộ trình được vạch sẵn — chỉ cần đi theo</p>
+            <h1>@Text.TourListTitle()</h1>
+            <p>@Text.TourListSubtitle()</p>
         </div>
     </header>
 
@@ -45,8 +45,8 @@
                             <p class="tour-showcase-card__description">@tour.Description</p>
                         </div>
                         <div class="tour-showcase-card__metrics">
-                            <span>📍 @tour.StopCountLabel</span>
-                            <span>⏱️ @tour.DurationLabel</span>
+                            <span>📍 @Text.FormatStopCountLabel(tour.StopCountLabel)</span>
+                            <span>⏱️ @Text.LocalizeKnownStatus(tour.DurationLabel)</span>
                             <span>👣 @GetParticipationLabel(tour)</span>
                         </div>
                     </div>
@@ -58,21 +58,22 @@
     <section class="tour-list-footer-stats">
         <article class="tour-list-footer-stats__item">
             <strong>@Tours.Count</strong>
-            <span>Lộ trình sẵn sàng</span>
+            <span>@Text.TourReadyRoutesLabel()</span>
         </article>
         <article class="tour-list-footer-stats__item">
             <strong>@GetTotalStops()</strong>
-            <span>Tổng điểm dừng</span>
+            <span>@Text.TourTotalStopsLabel()</span>
         </article>
         <article class="tour-list-footer-stats__item">
             <strong>@GetAverageDurationLabel()</strong>
-            <span>Nhịp tour trung bình</span>
+            <span>@Text.TourAveragePaceLabel()</span>
         </article>
     </section>
 </section>
 
 @code {
     [Parameter] public IReadOnlyList<VisitorTourCard> Tours { get; set; } = [];
+    [Parameter] public VisitorUiText Text { get; set; } = VisitorUiTextCatalog.ForLanguage("vi");
     [Parameter] public bool IsLoading { get; set; }
     [Parameter] public EventCallback<string> OnSelectTour { get; set; }
 
@@ -108,23 +109,23 @@
         return "is-history";
     }
 
-    private static string GetTourBadge(VisitorTourCard tour)
+    private string GetTourBadge(VisitorTourCard tour)
     {
         var text = $"{tour.Title} {tour.Description}".ToLowerInvariant();
         if (text.Contains("ẩm thực") || text.Contains("food"))
         {
-            return "⭐ Phổ biến";
+            return $"⭐ {Text.PopularBadgeLabel()}";
         }
 
         if (text.Contains("đêm") || text.Contains("night"))
         {
-            return "🆕 Mới";
+            return $"🆕 {Text.NewBadgeLabel()}";
         }
 
-        return "🏙️ Văn hóa";
+        return $"🏙️ {Text.CultureBadgeLabel()}";
     }
 
-    private static string GetParticipationLabel(VisitorTourCard tour)
+    private string GetParticipationLabel(VisitorTourCard tour)
     {
         var count = tour.StopPoiIds.Count switch
         {
@@ -134,7 +135,7 @@
             _ => 187
         };
 
-        return $"{count} đã tham gia";
+        return Text.FormatParticipantLabel(count);
     }
 
     private int GetTotalStops() => Tours.Sum(tour => ParseLeadingNumber(tour.StopCountLabel));

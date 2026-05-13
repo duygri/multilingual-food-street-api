@@ -5,29 +5,29 @@
     <header class="settings-detail-header">
         <button type="button" class="icon-button" @onclick="OnBack">←</button>
         <div>
-            <span class="eyebrow">Offline pack</span>
-            <h2>Gói offline</h2>
-            <p>Lưu snapshot POI, tour và audio theo ngôn ngữ hiện tại để app vẫn dùng được khi mạng yếu.</p>
+            <span class="eyebrow">Content/audio cache</span>
+            <h2>@Text.ContentAudioCacheTitle</h2>
+            <p>@Text.CacheDescription()</p>
         </div>
     </header>
 
     <article class="setting-card cache-summary-card">
-        <span class="sheet-label">Dữ liệu đang giữ trên máy</span>
+        <span class="sheet-label">@Text.StoredDataLabel()</span>
         <strong>@PoiCount POI • @TourCount tour</strong>
-        <p>@Items.Count file audio thuộc @GetDistinctPoiCount() POI khác nhau.</p>
+        <p>@Text.FormatStoredAudioCount(Items.Count, GetDistinctPoiCount())</p>
     </article>
 
     <article class="setting-card cache-summary-card">
-        <span class="sheet-label">Dung lượng audio offline</span>
+        <span class="sheet-label">@Text.CachedAudioStorageLabel()</span>
         <strong>@GetUsedStorageLabel()</strong>
-        <p>Tải trước audio cho ngôn ngữ đang chọn để quét QR hoặc vào geofence vẫn nghe được.</p>
+        <p>@Text.CachedAudioStorageDescription()</p>
         <div class="settings-progress">
             <span class="settings-progress__fill" style="@GetProgressStyle()"></span>
         </div>
         <div class="sheet-actions">
             <button type="button" class="primary-pill" @onclick="OnPreload" disabled="@IsPreloadRunning">@PreloadActionLabel</button>
-            <button type="button" class="secondary-pill" @onclick="OnRefresh">Quét lại cache</button>
-            <button type="button" class="secondary-pill secondary-pill--danger" @onclick="OnClearAll" disabled="@(Items.Count == 0)">Xóa tất cả</button>
+            <button type="button" class="secondary-pill" @onclick="OnRefresh">@Text.RescanCacheButtonLabel()</button>
+            <button type="button" class="secondary-pill secondary-pill--danger" @onclick="OnClearAll" disabled="@(Items.Count == 0)">@Text.ClearAllButtonLabel()</button>
         </div>
         <div class="cache-preload-status @(IsPreloadRunning ? "is-running" : string.Empty)">
             <span>@PreloadStatusLabel</span>
@@ -41,8 +41,8 @@
         @if (Items.Count == 0)
         {
             <article class="setting-card cache-item cache-item--empty">
-                <strong>Chưa có file audio cục bộ.</strong>
-                <p>Tải hoặc nghe một vài POI để app lưu cache cho lần sau.</p>
+                <strong>@Text.EmptyCacheTitle()</strong>
+                <p>@Text.EmptyCacheDescription()</p>
             </article>
         }
         else
@@ -52,10 +52,10 @@
                 <article class="setting-card cache-item">
                     <div class="cache-item__copy">
                         <strong>@item.PoiName</strong>
-                        <span>@item.LanguageCode.ToUpperInvariant() • @item.SourceLabel</span>
-                        <span>@item.SizeMb.ToString("0.0", CultureInfo.InvariantCulture) MB • @item.UpdatedLabel</span>
+                        <span>@item.LanguageCode.ToUpperInvariant() • @Text.LocalizeKnownStatus(item.SourceLabel)</span>
+                        <span>@item.SizeMb.ToString("0.0", CultureInfo.InvariantCulture) MB • @Text.LocalizeKnownStatus(item.UpdatedLabel)</span>
                     </div>
-                    <button type="button" class="secondary-pill secondary-pill--danger" @onclick="() => OnDeleteItem.InvokeAsync(item.Id)">Xóa</button>
+                    <button type="button" class="secondary-pill secondary-pill--danger" @onclick="() => OnDeleteItem.InvokeAsync(item.Id)">@Text.DeleteButtonLabel()</button>
                 </article>
             }
         }
@@ -64,11 +64,12 @@
 
 @code {
     [Parameter] public IReadOnlyList<VisitorCachedAudioItem> Items { get; set; } = [];
+    [Parameter] public VisitorUiText Text { get; set; } = VisitorUiTextCatalog.ForLanguage("vi");
     [Parameter] public double CapacityMb { get; set; } = 64d;
     [Parameter] public int PoiCount { get; set; }
     [Parameter] public int TourCount { get; set; }
-    [Parameter] public string PreloadActionLabel { get; set; } = "Tải trước audio";
-    [Parameter] public string PreloadStatusLabel { get; set; } = "Sẵn sàng tải trước audio.";
+    [Parameter] public string PreloadActionLabel { get; set; } = "Preload audio";
+    [Parameter] public string PreloadStatusLabel { get; set; } = "Ready to preload audio.";
     [Parameter] public double PreloadProgressPercent { get; set; }
     [Parameter] public bool IsPreloadRunning { get; set; }
     [Parameter] public EventCallback OnBack { get; set; }

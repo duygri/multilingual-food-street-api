@@ -5,11 +5,11 @@ namespace NarrationApp.Web.Tests.Mobile;
 public sealed class VisitorShellStateTests
 {
     [Fact]
-    public void CreateDefault_StartsInLanguageStep()
+    public void CreateDefault_StartsInWelcomeStep()
     {
         var state = VisitorShellState.CreateDefault();
 
-        Assert.Equal(VisitorIntroStep.Language, state.CurrentStep);
+        Assert.Equal(VisitorIntroStep.Welcome, state.CurrentStep);
         Assert.Equal(VisitorTab.Map, state.CurrentTab);
         Assert.Equal(VisitorSettingsScreen.Overview, state.CurrentSettingsScreen);
         Assert.NotEmpty(state.Pois);
@@ -20,7 +20,7 @@ public sealed class VisitorShellStateTests
     {
         var state = VisitorShellState.CreateRuntimeDefault();
 
-        Assert.Equal(VisitorIntroStep.Language, state.CurrentStep);
+        Assert.Equal(VisitorIntroStep.Welcome, state.CurrentStep);
         Assert.Empty(state.Pois);
         Assert.Empty(state.Tours);
         Assert.Equal(["all"], state.Categories.Select(category => category.Id));
@@ -36,6 +36,28 @@ public sealed class VisitorShellStateTests
         var state = VisitorShellState.CreateDefault();
 
         Assert.Equal(["vi", "en", "ja", "ko", "zh", "fr"], state.Languages.Select(language => language.Code));
+    }
+
+    [Fact]
+    public void CreateDefault_AppLanguageOptionsStayVietnameseAndEnglishOnly()
+    {
+        var state = VisitorShellState.CreateDefault();
+
+        Assert.Equal(["vi", "en"], state.AppLanguages.Select(language => language.Code));
+        Assert.Equal("vi", state.SelectedAppLanguageCode);
+    }
+
+    [Fact]
+    public void ChangeAppLanguage_DoesNotChangeNarrationLanguage()
+    {
+        var state = VisitorShellState.CreateDefault();
+        state.SelectLanguage("ja");
+
+        state.ChangeAppLanguage("en");
+        state.ChangeAppLanguage("fr");
+
+        Assert.Equal("en", state.SelectedAppLanguageCode);
+        Assert.Equal("ja", state.SelectedLanguageCode);
     }
 
     [Fact]
@@ -82,6 +104,7 @@ public sealed class VisitorShellStateTests
     {
         var state = VisitorShellState.CreateDefault();
 
+        state.ContinueFromWelcome();
         state.SelectLanguage("en");
         state.AdvanceFromLanguageSelection();
         state.CompletePermissions(granted: true);
@@ -97,6 +120,7 @@ public sealed class VisitorShellStateTests
     {
         var state = VisitorShellState.CreateDefault();
 
+        state.ContinueFromWelcome();
         state.AdvanceFromLanguageSelection();
         state.CompletePermissions(granted: true);
 
@@ -114,6 +138,16 @@ public sealed class VisitorShellStateTests
         state.SelectLanguage("en");
 
         Assert.Equal("en", state.SelectedLanguageCode);
+        Assert.Equal(VisitorIntroStep.Welcome, state.CurrentStep);
+    }
+
+    [Fact]
+    public void ContinueFromWelcome_MovesIntoLanguageStep()
+    {
+        var state = VisitorShellState.CreateDefault();
+
+        state.ContinueFromWelcome();
+
         Assert.Equal(VisitorIntroStep.Language, state.CurrentStep);
     }
 
@@ -122,6 +156,7 @@ public sealed class VisitorShellStateTests
     {
         var state = VisitorShellState.CreateDefault();
 
+        state.ContinueFromWelcome();
         state.SelectLanguage("en");
         state.AdvanceFromLanguageSelection();
 
@@ -796,6 +831,46 @@ public sealed class VisitorShellStateTests
         Assert.Null(state.SelectedPoi);
         Assert.False(state.ShowPoiSheet);
         Assert.False(state.ShowMiniPlayer);
+    }
+
+    [Fact]
+    public void ApplyQrNavigationTarget_PoiList_SkipsOnboardingAndOpensDiscoverList()
+    {
+        var state = VisitorShellState.CreateDefault();
+        state.AdvanceFromLanguageSelection();
+        state.SelectCategory("food");
+        state.SetSearchTerm("oc");
+
+        state.ApplyQrNavigationTarget(new VisitorQrNavigationTarget("QR-POI-LIST", VisitorQrTargetKind.PoiList, null));
+
+        Assert.Equal(VisitorIntroStep.Ready, state.CurrentStep);
+        Assert.Equal(VisitorTab.Discover, state.CurrentTab);
+        Assert.Equal("all", state.SelectedCategoryId);
+        Assert.Equal(string.Empty, state.SearchTerm);
+        Assert.Null(state.SelectedPoi);
+        Assert.False(state.ShowPoiSheet);
+        Assert.False(state.ShowMiniPlayer);
+    }
+
+    [Fact]
+    public void AddQrLaunchNotification_StrongQrLaunchAddsLocalNotification()
+    {
+        var state = VisitorShellState.CreateRuntimeDefault();
+        var request = new VisitorQrDeepLinkRequest(
+            "QR-POI-LIST",
+            "foodstreet://qr/QR-POI-LIST?qrLaunch=strong0")
+        {
+            QrLaunchMode = "strong0"
+        };
+
+        state.AddQrLaunchNotification(
+            request,
+            new VisitorQrNavigationTarget("QR-POI-LIST", VisitorQrTargetKind.PoiList, null));
+
+        var notification = Assert.Single(state.Notifications);
+        Assert.Equal("QR cấu hình mạnh", notification.Title);
+        Assert.Contains("danh sách POI", notification.Body, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("Vừa xong", notification.TimeLabel);
     }
 
     [Fact]

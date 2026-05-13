@@ -27,7 +27,7 @@ public partial class Home
         if (_state.AudioPreferences.AutoPlayEnabled && autoNarrationDecision.ShouldPauseCurrentAudio)
         {
             await PauseCurrentAudioBestEffortAsync();
-            _state.SetAudioPlaybackState(VisitorAudioPlaybackState.Paused, "Đã rời vùng phát tự động");
+            _state.SetAudioPlaybackState(VisitorAudioPlaybackState.Paused, UiText.LeftAutoPlayZoneLabel());
             ClearCurrentAutoNarration();
         }
     }

@@ -1,6 +1,5 @@
 using NarrationApp.Shared.DTOs.Admin;
 using NarrationApp.Shared.DTOs.Analytics;
-using NarrationApp.Shared.Enums;
 using NarrationApp.Web.Services;
 
 namespace NarrationApp.Web.Pages.Admin;
@@ -24,10 +23,7 @@ public partial class Analytics : IAsyncDisposable
     private IReadOnlyList<MovementFlowDto> _movementFlows = Array.Empty<MovementFlowDto>();
     private IReadOnlyList<PoiAverageListenDto> _averageListenByPoi = Array.Empty<PoiAverageListenDto>();
     private HeatmapTimeRange _selectedHeatmapTimeRange = HeatmapTimeRange.Last7Days;
-    private EventType? _selectedHeatmapEventType;
-    private bool _useHeatmapDecay = true;
     private HeatmapTimeRange _selectedMovementFlowTimeRange = HeatmapTimeRange.Last7Days;
-    private EventType? _selectedMovementFlowEventType;
     private int _minimumMovementFlowSessions = 3;
 
     protected override async Task OnInitializedAsync()

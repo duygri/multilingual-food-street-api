@@ -15,6 +15,7 @@ public partial class Home
         _isAutoPlayingFromProximity = false;
         _pendingDeepLinkAudioAfterContent = false;
         _state.ApplyQrNavigationTarget(resolution.NavigationTarget);
+        _state.AddQrLaunchNotification(resolution.Request, resolution.NavigationTarget);
         VisitorMobileDiagnostics.Log(
             "Home",
             $"State after apply currentStep={_state.CurrentStep} currentTab={_state.CurrentTab} selectedPoi={_state.SelectedPoi?.Id ?? "<null>"} selectedTour={_state.SelectedTour?.Id ?? "<null>"}");
@@ -29,6 +30,11 @@ public partial class Home
             }
 
             QueueDeepLinkAudioAfterContent("POI");
+            return;
+        }
+
+        if (resolution.NavigationTarget.Kind == VisitorQrTargetKind.PoiList)
+        {
             return;
         }
 

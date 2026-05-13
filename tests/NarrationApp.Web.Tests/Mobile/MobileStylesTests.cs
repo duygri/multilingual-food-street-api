@@ -51,9 +51,14 @@ public sealed class MobileStylesTests
         Assert.Contains(".visitor-app--setup", css, StringComparison.Ordinal);
         Assert.Contains("justify-content: flex-start;", css, StringComparison.Ordinal);
         Assert.Contains(".setup-card--language", css, StringComparison.Ordinal);
+        Assert.Contains(".setup-card--welcome", css, StringComparison.Ordinal);
         Assert.Contains(".setup-phone-chrome", css, StringComparison.Ordinal);
         Assert.Contains(".setup-statusbar", css, StringComparison.Ordinal);
         Assert.Contains(".setup-dynamic-island", css, StringComparison.Ordinal);
+        Assert.Contains(".setup-stack--welcome", css, StringComparison.Ordinal);
+        Assert.Contains(".setup-welcome-hero", css, StringComparison.Ordinal);
+        Assert.Contains(".setup-welcome-icon", css, StringComparison.Ordinal);
+        Assert.Contains(".setup-feature-card", css, StringComparison.Ordinal);
         Assert.Contains(".setup-stack--language", css, StringComparison.Ordinal);
         Assert.Contains(".setup-language-list", css, StringComparison.Ordinal);
         Assert.Contains(".setup-language-option", css, StringComparison.Ordinal);
@@ -250,7 +255,8 @@ public sealed class MobileStylesTests
         Assert.Contains(".settings-stat-grid", css, StringComparison.Ordinal);
         Assert.Contains(".settings-nav-list", css, StringComparison.Ordinal);
         Assert.Contains(".settings-row", css, StringComparison.Ordinal);
-        Assert.Contains(".settings-language-strip", css, StringComparison.Ordinal);
+        Assert.Contains(".settings-language-dropdown", css, StringComparison.Ordinal);
+        Assert.Contains(".settings-language-select", css, StringComparison.Ordinal);
         Assert.Contains(".settings-detail-screen", css, StringComparison.Ordinal);
         Assert.Contains(".settings-detail-header", css, StringComparison.Ordinal);
         Assert.Contains(".settings-toggle-row", css, StringComparison.Ordinal);

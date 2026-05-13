@@ -1,5 +1,4 @@
 using NarrationApp.Shared.DTOs.Analytics;
-using NarrationApp.Shared.Enums;
 using NarrationApp.Web.Services;
 
 namespace NarrationApp.Web.Pages.Admin;
@@ -13,37 +12,10 @@ public partial class Analytics
         await LoadHeatmapAsync();
     }
 
-    private async Task ChangeHeatmapEventTypeAsync(EventType? eventType)
-    {
-        if (_selectedHeatmapEventType == eventType && !_isHeatmapLoading) return;
-        _selectedHeatmapEventType = eventType;
-        await LoadHeatmapAsync();
-    }
-
-    private async Task ToggleHeatmapDecayAsync()
-    {
-        _useHeatmapDecay = !_useHeatmapDecay;
-        await LoadHeatmapAsync();
-    }
-
     private async Task ChangeMovementFlowTimeRangeAsync(HeatmapTimeRange timeRange)
     {
         if (_selectedMovementFlowTimeRange == timeRange && !_isMovementFlowLoading) return;
         _selectedMovementFlowTimeRange = timeRange;
-        await LoadMovementFlowsAsync();
-    }
-
-    private async Task ChangeMovementFlowEventTypeAsync(EventType? eventType)
-    {
-        if (_selectedMovementFlowEventType == eventType && !_isMovementFlowLoading) return;
-        _selectedMovementFlowEventType = eventType;
-        await LoadMovementFlowsAsync();
-    }
-
-    private async Task ChangeMovementFlowMinimumSessionsAsync(int minimumUniqueSessions)
-    {
-        if (_minimumMovementFlowSessions == minimumUniqueSessions && !_isMovementFlowLoading) return;
-        _minimumMovementFlowSessions = minimumUniqueSessions;
         await LoadMovementFlowsAsync();
     }
 
@@ -57,8 +29,8 @@ public partial class Analytics
             _heatmap = await AdminPortalService.GetHeatmapAsync(new HeatmapQueryDto
             {
                 TimeRange = _selectedHeatmapTimeRange,
-                EventTypeFilter = _selectedHeatmapEventType,
-                UseTimeDecay = _useHeatmapDecay,
+                EventTypeFilter = null,
+                UseTimeDecay = false,
                 GridSizeMeters = 50d,
                 MaxWeight = 50d,
                 ApplyGaussianSmoothing = true
@@ -86,7 +58,7 @@ public partial class Analytics
             _movementFlows = await AdminPortalService.GetMovementFlowsAsync(new MovementFlowQueryDto
             {
                 TimeRange = _selectedMovementFlowTimeRange,
-                EventTypeFilter = _selectedMovementFlowEventType,
+                EventTypeFilter = null,
                 MinimumUniqueSessions = _minimumMovementFlowSessions
             });
         }

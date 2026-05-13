@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sequence QR POI List - Device Config 0/1</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #06111f;
+      --panel: #101f35;
+      --border: #24476d;
+      --text: #e8f1ff;
+      --muted: #a6b6cc;
+      --accent: #22d3ee;
+      --green: #34d399;
+      --amber: #fbbf24;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 28px;
+      background:
+        radial-gradient(circle at top left, rgba(34, 211, 238, .18), transparent 30%),
+        linear-gradient(180deg, #020617 0%, var(--bg) 100%);
+      color: var(--text);
+      font-family: "Segoe UI", system-ui, sans-serif;
+    }
+
+    main {
+      width: min(100%, 1280px);
+      margin: 0 auto;
+      display: grid;
+      gap: 18px;
+    }
+
+    .hero,
+    .diagram-card,
+    .note {
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      background: rgba(16, 31, 53, .92);
+      box-shadow: 0 22px 70px rgba(2, 6, 23, .35);
+    }
+
+    .hero {
+      padding: 24px;
+    }
+
+    .eyebrow {
+      margin: 0 0 10px;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: .18em;
+      font-weight: 800;
+      font-size: 12px;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(2rem, 4vw, 3.5rem);
+      line-height: 1.05;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.65;
+      font-size: 1rem;
+    }
+
+    .badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 0 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(34, 211, 238, .35);
+      background: rgba(8, 47, 73, .45);
+      color: #cffafe;
+      font-weight: 700;
+    }
+
+    .badge strong {
+      color: var(--green);
+      margin-right: 5px;
+    }
+
+    .badge--weak strong {
+      color: var(--amber);
+    }
+
+    .diagram-card {
+      padding: 16px;
+      overflow-x: auto;
+    }
+
+    .mermaid {
+      min-width: 1100px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .note {
+      padding: 18px;
+      display: grid;
+      gap: 8px;
+    }
+
+    code {
+      color: #99f6e4;
+      background: rgba(2, 6, 23, .45);
+      border: 1px solid rgba(148, 163, 184, .16);
+      border-radius: 8px;
+      padding: 2px 6px;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <p class="eyebrow">QR POI List Sequence</p>
+      <h1>Luồng QR danh sách POI theo cấu hình thiết bị 0/1</h1>
+      <p>
+        Sequence này chỉ mô tả QR <code>poi_list</code>. Khi quét QR, backend service dùng phương thức
+        <code>QrDeviceConfigService.Decide()</code> để quyết định <code>deviceConfig = 0</code> hoặc <code>1</code>.
+        Nếu service trả <code>0</code> là cấu hình mạnh thì tự mở app; nếu trả <code>1</code> là cấu hình yếu thì
+        giữ web fallback để người dùng vẫn xem danh sách POI và nghe audio trên trình duyệt.
+      </p>
+      <div class="badges">
+        <span class="badge"><strong>0</strong> Cấu hình mạnh - mở app</span>
+        <span class="badge badge--weak"><strong>1</strong> Cấu hình yếu - web fallback</span>
+        <span class="badge">Cần mạng để resolve QR lần đầu</span>
+      </div>
+    </section>
+
+    <section class="diagram-card">
+      <pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor Tourist as Người dùng
+  participant Camera as Camera / QR Scanner
+  participant Browser as Mobile Browser
+  participant QrLaunch as QrLaunchController
+  participant QrSvc as QrService
+  participant DB as AppDbContext
+  participant LinkBuilder as QrPublicLinkBuilder
+  participant PoiSvc as PoiService
+  participant AudioSvc as AudioService
+  participant DeviceSvc as QrDeviceConfigService
+  participant Config as IConfiguration
+  participant Random as RandomNumberGenerator
+  participant DeviceDecision as QrDeviceConfigDecision
+  participant Html as QrLaunchHtmlBuilder
+  participant Gate as HTML launch script
+  participant QrApi as QrController
+  participant QrPresence as IQrWebPresenceTracker
+  participant PresenceStore as InMemoryQrWebPresenceTracker
+  participant OS as Android OS
+  participant MainActivity as MainActivity
+  participant PendingStore as VisitorPendingDeepLinkStore
+  participant Parser as VisitorQrDeepLinkParser
+  participant Home as Home.DeepLink
+  participant DeepLinkSvc as VisitorQrDeepLinkService
+  participant DeviceId as IVisitorDeviceIdentityProvider
+  participant QrMobileApi as VisitorQrApiService
+  participant NavTarget as VisitorQrNavigationTarget
+  participant Shell as VisitorShellState
+  participant App as Mobile App
+  participant Web as Web fallback POI list
+
+  Tourist->>Camera: Quét QR danh sách POI
+  Camera->>Browser: Mở URL /qr/{code}
+  Browser->>QrLaunch: Gọi controller LaunchAsync(code, cancellationToken)
+  QrLaunch->>QrSvc: Gọi phương thức qrService.ResolveAsync(code, cancellationToken)
+  QrSvc->>QrSvc: Gọi phương thức FindActiveCodeAsync(code, cancellationToken)
+  QrSvc->>DB: dbContext.QrCodes.AsNoTracking().SingleOrDefaultAsync(...)
+  alt QR hết hạn
+    QrSvc-->>QrLaunch: Throw InvalidOperationException
+    QrLaunch->>Html: Gọi phương thức BuildErrorHtml với nội dung QR hết hạn
+    QrLaunch->>QrLaunch: Gọi phương thức Html(html)
+    QrLaunch-->>Browser: Return ContentResult lỗi 410
+  else QR không tồn tại
+    QrSvc-->>QrLaunch: Throw KeyNotFoundException
+    QrLaunch->>Html: Gọi phương thức BuildErrorHtml với nội dung QR không tồn tại
+    QrLaunch->>QrLaunch: Gọi phương thức Html(html)
+    QrLaunch-->>Browser: Return ContentResult lỗi 404
+  else QR hợp lệ
+    QrSvc->>QrSvc: Gọi phương thức BuildDtoAsync(qrCode, cancellationToken)
+    QrSvc->>QrSvc: Gọi phương thức QrCode.ToDto()
+    QrSvc-->>QrLaunch: Return QrCodeDto targetType=poi_list
+  end
+  QrLaunch->>LinkBuilder: Gọi phương thức qrPublicLinkBuilder.BuildAppDeepLink(qrCode.Code)
+  LinkBuilder-->>QrLaunch: Return appDeepLink
+  QrLaunch->>LinkBuilder: Gọi phương thức qrPublicLinkBuilder.BuildPublicUrl(HttpContext, qrCode.Code)
+  LinkBuilder->>LinkBuilder: Gọi phương thức ResolveBaseAddress(context)
+  alt PublicQr:BaseUrl có cấu hình hợp lệ
+    LinkBuilder->>LinkBuilder: Gọi phương thức EnsureTrailingSlash(absoluteBaseAddress)
+  else Request là localhost/loopback
+    LinkBuilder->>LinkBuilder: Gọi phương thức IsLoopbackHost(context.Request.Host.Host)
+    LinkBuilder->>LinkBuilder: Gọi phương thức TryResolveLanBaseAddress(out baseAddress)
+    LinkBuilder->>LinkBuilder: Gọi phương thức ResolvePrivateIpv4Address()
+    LinkBuilder->>LinkBuilder: Gọi phương thức SelectPreferredLanAddress(candidates)
+    LinkBuilder->>LinkBuilder: Gọi phương thức EnsureTrailingSlash(requestBaseAddress)
+  end
+  LinkBuilder-->>QrLaunch: Return publicUrl
+  QrLaunch->>QrLaunch: Gọi phương thức BuildPoiListLaunchResponseAsync(qrCode.Code, appDeepLink, publicUrl, cancellationToken)
+  QrLaunch->>PoiSvc: Gọi phương thức poiService.GetAllAsync(cancellationToken)
+  PoiSvc-->>QrLaunch: Danh sách POI published
+  loop Mỗi POI trong danh sách
+    QrLaunch->>AudioSvc: Gọi phương thức audioService.GetByPoiAsync(poi.Id, languageCode: null, cancellationToken)
+    AudioSvc-->>QrLaunch: Audio ready theo ngôn ngữ
+  end
+
+  Note over QrLaunch,DeviceDecision: Từ đây là phần random 0/1 đúng theo code
+  QrLaunch->>DeviceSvc: Gọi phương thức qrDeviceConfigService.Decide()
+  DeviceSvc->>Config: Đọc configuration key QrDeviceConfig:ForcedValue
+  DeviceSvc->>DeviceSvc: Gọi phương thức int.TryParse(configuredValue, out forcedValue)
+  alt QrDeviceConfig:ForcedValue hợp lệ 0 hoặc 1
+    Config-->>DeviceSvc: Return forcedValue
+    DeviceSvc->>DeviceDecision: Gọi phương thức QrDeviceConfigDecision.FromValue(forcedValue)
+  else Không có ForcedValue hợp lệ
+    DeviceSvc->>Random: Gọi phương thức RandomNumberGenerator.GetInt32(0, 2)
+    Random-->>DeviceSvc: Return value 0 hoặc 1
+    DeviceSvc->>DeviceDecision: Gọi phương thức QrDeviceConfigDecision.FromValue(value)
+  end
+  alt value == 0
+    DeviceDecision-->>DeviceSvc: Return ShouldOpenApp=true, Label cấu hình mạnh 0, LaunchMode strong0
+  else value == 1
+    DeviceDecision-->>DeviceSvc: Return ShouldOpenApp=false, Label cấu hình yếu 1, LaunchMode weak1
+  end
+  DeviceSvc-->>QrLaunch: Return QrDeviceConfigDecision deviceConfig
+  QrLaunch->>Html: Gọi phương thức QrLaunchHtmlBuilder.BuildPoiListLaunchHtml(code, pois, audioByPoiId, appDeepLink, publicUrl, deviceConfig)
+  Html->>DeviceDecision: Gọi phương thức deviceConfig.BuildAppDeepLink(appDeepLink)
+  DeviceDecision-->>Html: Return appLaunchDeepLink
+  Html->>Html: Gọi phương thức BuildPoiListCardsHtml(pois, audioItemsByPoiId)
+  loop Mỗi POI card public
+    Html->>Html: Gọi phương thức BuildPoiListCardHtml(poi, audioItems)
+    Html->>Html: Gọi phương thức ResolvePrimaryTranslation(poi)
+    Html->>Html: Gọi phương thức SelectReadyAudio(audioItems)
+    Html->>Html: Gọi phương thức BuildAudioLabel(defaultAudio)
+    Html->>Html: Gọi phương thức BuildAudioButtonsHtml(readyAudio)
+    loop Mỗi audio chip
+      Html->>Html: Gọi phương thức BuildAudioLabel(audio)
+    end
+  end
+  Html->>Html: Gọi phương thức BuildPublicQrTrackingScript(safeScanEndpoint, safePresenceEndpoint, safeAppDeepLink, trackVisibilityChange: false, deviceConfig)
+  alt deviceConfig.ShouldOpenApp == true
+    Html->>Html: Sinh JS window.setTimeout rồi đổi window.location.href = safeAppDeepLink
+  else deviceConfig.ShouldOpenApp == false
+    Html->>Html: Sinh JS console.info và giữ trang web fallback
+  end
+  Html-->>QrLaunch: HTML có danh sách POI + audio web + kết quả service
+  QrLaunch->>QrLaunch: Gọi phương thức Html(html)
+  QrLaunch-->>Browser: Return ContentResult text/html
+
+  Browser->>Gate: Chạy app/web gate theo deviceConfig server đã quyết định
+  alt deviceConfig.Value == 0 - cấu hình mạnh
+    Gate->>Browser: Set label "Cấu hình mạnh (0)"
+    Gate->>OS: window.location.href = foodstreet://qr/{code}?qrLaunch=strong0
+    OS->>MainActivity: Gọi OnCreate(intent) hoặc OnNewIntent(intent)
+    MainActivity->>PendingStore: Gọi phương thức SetPendingUri(intent.DataString)
+    PendingStore->>Parser: Gọi phương thức VisitorQrDeepLinkParser.TryParse(rawUri, out request)
+    Parser->>Parser: Gọi phương thức TryParse(Uri, out request)
+    Parser->>Parser: Gọi phương thức ExtractCode(uri)
+    Parser->>Parser: Gọi phương thức ExtractCustomSchemeCode(uri)
+    Parser->>Parser: Gọi phương thức ExtractQueryCode(uri)
+    Parser->>Parser: Gọi phương thức ExtractQueryValue(uri, qrLaunch)
+    App->>Home: Gọi phương thức ProcessPendingDeepLinkAsync()
+    Home->>PendingStore: Gọi phương thức Consume()
+    Home->>DeepLinkSvc: Gọi phương thức ResolveAsync(request)
+    DeepLinkSvc->>DeviceId: Gọi phương thức GetDeviceIdAsync(cancellationToken)
+    DeepLinkSvc->>QrMobileApi: Gọi phương thức OpenAsync(request.Code, deviceId, cancellationToken)
+    QrMobileApi->>QrMobileApi: Gọi phương thức ScanAsync(code, deviceId, cancellationToken)
+    QrMobileApi->>QrApi: Gọi controller ScanAsync(code, X-Device-Id, cancellationToken)
+    alt ScanAsync lỗi
+      QrMobileApi->>QrMobileApi: Gọi phương thức ResolveAsync(code, cancellationToken)
+      QrMobileApi->>QrApi: Gọi controller ResolveAsync(code, cancellationToken)
+    end
+    QrMobileApi->>QrMobileApi: Gọi phương thức SendAsync(request, cancellationToken)
+    QrMobileApi->>QrMobileApi: Gọi phương thức ReadEnvelopeAsync(response, cancellationToken)
+    DeepLinkSvc->>NavTarget: Gọi phương thức FromQrCode(qrCode)
+    Home->>Home: Gọi phương thức ApplyResolvedDeepLinkAsync(resolution)
+    Home->>Shell: Gọi phương thức ApplyQrNavigationTarget(target)
+    Shell->>Shell: Gọi phương thức EnterReadyFromExternalEntry()
+    Shell->>Shell: Gọi phương thức TryApplyQrNavigationTarget(target)
+    Shell->>Shell: Gọi phương thức SwitchTab(VisitorTab.Map)
+    Home->>Shell: Gọi phương thức AddQrLaunchNotification(request, target)
+    Shell->>Shell: Gọi phương thức AddNotificationToTopIfUnique(notification)
+    Shell->>Shell: Gọi phương thức TrimNotifications()
+    App-->>Tourist: Mở app vào danh sách POI + hiện thông báo QR cấu hình mạnh
+  else deviceConfig.Value == 1 - cấu hình yếu
+    Gate->>Browser: Set label "Cấu hình yếu (1)"
+    Gate->>Web: Không gọi app deep link, giữ web fallback
+    Web-->>Tourist: Xem danh sách POI và nghe audio trên web
+  end
+
+  Browser->>Gate: Thực thi phương thức JS getOrCreateVisitorDeviceId()
+  alt Chưa có localStorage device id
+    Gate->>Gate: Thực thi phương thức JS generateVisitorDeviceId()
+  end
+  Browser->>Gate: Thực thi phương thức JS trackPublicQrVisit()
+  Gate->>QrApi: Gọi controller ScanAsync(code, deviceId, cancellationToken)
+  QrApi->>QrSvc: Gọi phương thức qrService.ScanAsync(code, normalizedDeviceId, cancellationToken)
+  QrSvc->>QrSvc: Gọi phương thức FindActiveCodeAsync(code, cancellationToken)
+  QrSvc->>DB: dbContext.QrCodes.AsNoTracking().SingleOrDefaultAsync(...)
+  alt targetType = poi
+    QrSvc->>DB: Kiểm tra DuplicateQrVisitCooldown 30 phút
+    QrSvc->>DB: dbContext.VisitEvents.Add(QrScan) nếu chưa trùng gần đây
+  else targetType = poi_list
+    QrSvc-->>QrSvc: Không tạo VisitEvent QR scan POI riêng
+  end
+  QrSvc->>DB: dbContext.SaveChangesAsync(cancellationToken)
+  QrSvc->>QrSvc: Gọi phương thức BuildDtoAsync(qrCode, cancellationToken)
+  QrSvc->>QrSvc: Gọi phương thức QrCode.ToDto()
+  QrSvc-->>QrApi: Return QrCodeDto
+  QrApi->>QrPresence: Gọi phương thức qrWebPresenceTracker.Track(normalizedDeviceId)
+  QrPresence->>PresenceStore: Gọi phương thức Track(deviceId, seenAtUtc)
+  PresenceStore->>PresenceStore: _lastSeenByDeviceId[deviceId.Trim()] = DateTime.UtcNow
+  QrApi->>LinkBuilder: Gọi phương thức qrPublicLinkBuilder.Enrich(HttpContext, response)
+  LinkBuilder->>LinkBuilder: Gọi phương thức BuildPublicUrl(HttpContext, dto.Code)
+  LinkBuilder->>LinkBuilder: Gọi phương thức BuildAppDeepLink(dto.Code)
+  QrApi-->>Gate: Return ApiResponse(QrCodeDto)
+  Browser->>Gate: Thực thi phương thức JS trackPublicQrPresence()
+  loop Mỗi 4 giây khi web fallback còn mở
+    Gate->>QrApi: Gọi controller TrackPresenceAsync(code, deviceId, cancellationToken)
+    QrApi->>QrSvc: Gọi phương thức qrService.ResolveAsync(code, cancellationToken)
+    QrSvc->>QrSvc: Gọi phương thức FindActiveCodeAsync(code, cancellationToken)
+    QrSvc->>DB: dbContext.QrCodes.AsNoTracking().SingleOrDefaultAsync(...)
+    QrSvc->>QrSvc: Gọi phương thức BuildDtoAsync(qrCode, cancellationToken)
+    QrSvc->>QrSvc: Gọi phương thức QrCode.ToDto()
+    QrApi->>QrPresence: Gọi phương thức qrWebPresenceTracker.Track(normalizedDeviceId)
+    QrPresence->>PresenceStore: Gọi phương thức Track(deviceId, seenAtUtc)
+    QrApi-->>Gate: Return ApiResponse(object)
+  end
+      </pre>
+    </section>
+
+    <section class="note">
+      <p><strong>Ghi chú triển khai:</strong></p>
+      <p>
+        Các tên trong sequence bám theo code thật. Luồng public QR bắt đầu ở
+        <code>QrLaunchController.LaunchAsync(code, cancellationToken)</code>, sau đó gọi
+        <code>qrService.ResolveAsync(code, cancellationToken)</code>,
+        <code>qrPublicLinkBuilder.BuildAppDeepLink(qrCode.Code)</code>,
+        <code>qrPublicLinkBuilder.BuildPublicUrl(HttpContext, qrCode.Code)</code> và private method
+        <code>BuildPoiListLaunchResponseAsync(qrCode.Code, appDeepLink, publicUrl, cancellationToken)</code>.
+        Phần random chỉ nằm ở phương thức <code>QrDeviceConfigService.Decide()</code>.
+        Nếu không cấu hình <code>QrDeviceConfig:ForcedValue</code>, service gọi
+        <code>RandomNumberGenerator.GetInt32(0, 2)</code>. Sau khi có giá trị <code>0</code> hoặc
+        <code>1</code>, service gọi tiếp phương thức <code>QrDeviceConfigDecision.FromValue(value)</code>
+        để chuyển số đó thành quyết định
+        <code>ShouldOpenApp</code>, <code>Label</code>, <code>Notice</code> và <code>LaunchMode</code>.
+        Trong HTML builder, phương thức <code>deviceConfig.BuildAppDeepLink(appDeepLink)</code> thêm
+        <code>qrLaunch</code> vào deep link, còn
+        <code>BuildPublicQrTrackingScript(...)</code> sinh script gọi scan/presence.
+        Script này có các phương thức JS <code>generateVisitorDeviceId()</code>,
+        <code>getOrCreateVisitorDeviceId()</code>, <code>trackPublicQrVisit()</code> và
+        <code>trackPublicQrPresence()</code>; presence QR web được gửi mỗi <code>4000ms</code>.
+        Khi web QR chạy, phương thức <code>QrController.ScanAsync(code, deviceId, cancellationToken)</code>
+        và <code>QrController.TrackPresenceAsync(code, deviceId, cancellationToken)</code> chỉ được giữ trong
+        sequence vì chúng nằm trong cùng script QR public sau khi server đã render quyết định <code>0/1</code>.
+        Phần dashboard/admin visitor devices không nằm trong sequence này nữa vì không trực tiếp quyết định
+        random cấu hình mạnh/yếu.
+        Nhánh <code>0</code> tự gọi deep link mở app; nhánh <code>1</code> không chuyển app,
+        nên trình duyệt tiếp tục hiển thị web fallback.
+      </p>
+    </section>
+  </main>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: "dark",
+      themeVariables: {
+        primaryColor: "#13233b",
+        primaryTextColor: "#e2e8f0",
+        lineColor: "#22d3ee",
+        secondaryColor: "#172b48",
+        tertiaryColor: "#0f172a"
+      }
+    });
+  </script>
+</body>
+</html>

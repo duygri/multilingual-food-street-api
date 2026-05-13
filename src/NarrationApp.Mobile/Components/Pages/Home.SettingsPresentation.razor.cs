@@ -5,11 +5,11 @@ namespace NarrationApp.Mobile.Components.Pages;
 public partial class Home
 {
     private VisitorModeSummary GetVisitorModeSummary() =>
-        VisitorSettingsPresentationFormatter.CreateVisitorModeSummary();
+        UiText.CreateVisitorModeSummary();
 
     private VisitorSettingsOverviewSummary GetSettingsOverviewSummary() =>
         VisitorSettingsPresentationFormatter.CreateOverviewSummary(
-            currentLanguageLabel: _state.CurrentLanguage.Label,
+            currentLanguageLabel: UiText.LocalizeLanguageLabel(_state.CurrentAppLanguage.Label),
             audioSummary: GetAudioSettingsSummary(),
             gpsSummary: GetGpsSettingsSummary(),
             cacheSummary: GetAudioCacheSummary(),
@@ -17,13 +17,13 @@ public partial class Home
             aboutSummary: $"{GetAboutVersionLabel()} • {GetAboutRuntimeLabel()}");
 
     private string GetAudioSettingsSummary() =>
-        VisitorSettingsPresentationFormatter.FormatAudioSettingsSummary(
+        UiText.FormatAudioSettingsSummary(
             _state.AudioPreferences.AutoPlayEnabled,
             _state.AudioPreferences.SourcePreference,
             _state.AudioPreferences.DefaultPlaybackSpeed);
 
     private string GetGpsSettingsSummary() =>
-        VisitorSettingsPresentationFormatter.FormatGpsSettingsSummary(
+        UiText.FormatGpsSettingsSummary(
             _state.LocationPermissionGranted,
             _state.GpsPreferences.AccuracyMode);
 }

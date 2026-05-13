@@ -5,13 +5,13 @@ namespace NarrationApp.Mobile.Components.Pages;
 public partial class Home
 {
     private IReadOnlyList<VisitorSettingsStat> GetSettingsStats() =>
-        VisitorSettingsPresentationFormatter.CreateSettingsStats(
+        UiText.CreateSettingsStats(
             _state.ListeningHistoryDays.SelectMany(day => day.Entries).Select(entry => entry.PoiId).Distinct(StringComparer.OrdinalIgnoreCase).Count(),
             _state.Tours.Count,
             _state.CachedAudioItems.Count);
 
     private string GetAudioCacheSummary() =>
-        VisitorSettingsPresentationFormatter.FormatOfflinePackSummary(
+        UiText.FormatOfflinePackSummary(
             _state.Pois.Count,
             _state.Tours.Count,
             _state.CachedAudioItems.Count,
@@ -21,6 +21,6 @@ public partial class Home
     {
         var entries = _state.ListeningHistoryDays.SelectMany(day => day.Entries).ToList();
         var completed = entries.Count(entry => entry.CompletionPercent >= 100);
-        return VisitorSettingsPresentationFormatter.FormatListeningHistoryHeadline(entries.Count, completed);
+        return UiText.FormatListeningHistoryHeadline(entries.Count, completed);
     }
 }

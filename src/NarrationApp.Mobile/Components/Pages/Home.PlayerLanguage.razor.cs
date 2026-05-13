@@ -1,3 +1,4 @@
+using Microsoft.Maui.Storage;
 using NarrationApp.Mobile.Features.Home;
 
 namespace NarrationApp.Mobile.Components.Pages;
@@ -24,6 +25,7 @@ public partial class Home
 
         var shouldResume = keepPlayback && _state.IsAudioPlaying;
         _state.ChangeLanguage(languageCode);
+        Preferences.Default.Set(PreferredLanguageCodeKey, languageCode);
 
         if (_state.SelectedPoi is not null)
         {

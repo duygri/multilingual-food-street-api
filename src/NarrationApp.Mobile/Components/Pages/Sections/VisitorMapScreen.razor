@@ -13,12 +13,6 @@
                             <path d="M10.2 18a1.8 1.8 0 0 0 3.6 0" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8" />
                         </svg>
                     </button>
-                    <button type="button" class="map-icon-button" @onclick="OnCycleLanguage">
-                        <svg class="map-icon-glyph" viewBox="0 0 24 24" aria-hidden="true">
-                            <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.8" />
-                            <path d="M4 12h16M12 4a13 13 0 0 1 0 16M12 4a13 13 0 0 0 0 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8" />
-                        </svg>
-                    </button>
                 </div>
 
                 <div class="map-category-rail">
@@ -30,7 +24,7 @@
                                 class="category-chip @CategoryChipClassSelector(category.Id)"
                                 @onclick="() => OnSelectCategory.InvokeAsync(category.Id)">
                                 <span>@CategoryIconSelector(category.Id)</span>
-                                <span>@category.Label</span>
+                                <span>@Text.LocalizeCategoryLabel(category.Label)</span>
                             </button>
                         }
                     </section>
@@ -39,7 +33,7 @@
                 @if (State.IsUsingFallbackData)
                 {
                     <aside class="offline-banner">
-                        <strong>Offline mode</strong>
+                        <strong>@Text.SavedDataModeLabel</strong>
                         <span>@State.SyncMessage</span>
                     </aside>
                 }
@@ -51,20 +45,30 @@
                     <div class="notification-panel__surface">
                         <div class="panel-header">
                             <div class="notification-panel__copy">
-                                <span class="eyebrow">Thông báo</span>
-                                <strong>Cập nhật gần đây</strong>
+                                <span class="eyebrow">@Text.NotificationEyebrow</span>
+                                <strong>@Text.NotificationTitle</strong>
                             </div>
-                            <button type="button" class="panel-close" @onclick="OnToggleNotifications">Đóng</button>
+                            <button type="button" class="panel-close" @onclick="OnToggleNotifications">@Text.CloseButton</button>
                         </div>
 
                         <div class="panel-list">
-                            @foreach (var notification in State.Notifications)
+                            @if (State.Notifications.Count == 0)
                             {
-                                <article class="panel-item">
-                                    <strong>@notification.Title</strong>
-                                    <p>@notification.Body</p>
-                                    <span>@notification.TimeLabel</span>
+                                <article class="panel-item panel-item--empty">
+                                    <strong>@Text.NoNotificationsTitle</strong>
+                                    <p>@Text.NoNotificationsDescription</p>
                                 </article>
+                            }
+                            else
+                            {
+                                @foreach (var notification in State.Notifications)
+                                {
+                                    <article class="panel-item">
+                                        <strong>@notification.Title</strong>
+                                        <p>@notification.Body</p>
+                                        <span>@notification.TimeLabel</span>
+                                    </article>
+                                }
                             }
                         </div>
                     </div>
@@ -92,7 +96,7 @@
                             }
                         </div>
                     }
-                    <button type="button" class="walking-route-banner__clear" @onclick="OnClearDirections">Tắt dẫn đường</button>
+                    <button type="button" class="walking-route-banner__clear" @onclick="OnClearDirections">@Text.ClearDirectionsButton</button>
                 </aside>
             }
 
@@ -100,8 +104,8 @@
                 type="button"
                 class="map-fab-button map-fab-button--locate map-locate-control @(State.ShowPoiSheet ? "map-locate-control--sheet-open" : string.Empty)"
                 @onclick="OnCenterOnUser"
-                aria-label="Về vị trí của tôi"
-                title="Về vị trí của tôi">⌖</button>
+                aria-label="@Text.CenterOnUserLabel"
+                title="@Text.CenterOnUserLabel">⌖</button>
 
             @if (State.SelectedPoi is not null && State.ShowPoiSheet)
             {
@@ -112,26 +116,39 @@
                         <div class="poi-sheet__title">
                             <h3>@State.SelectedPoi.Name</h3>
                             <span class="poi-sheet__badge">@PoiCategoryLabelSelector(State.SelectedPoi)</span>
-                            <p class="poi-sheet__location">📍 @State.SelectedPoi.DistanceMeters m • @State.SelectedPoi.District</p>
+                            <p class="poi-sheet__location">📍 @SelectedPoiDistanceLabel • @State.SelectedPoi.District</p>
                         </div>
-                        <button type="button" class="poi-sheet__close" @onclick="OnClosePoiSheet">Đóng</button>
+                        <button type="button" class="poi-sheet__close" @onclick="OnClosePoiSheet">@Text.CloseButton</button>
                     </div>
 
                     <div class="poi-sheet__meta-chips">
-                        <span class="poi-meta-chip">🎯 Bán kính @State.SelectedPoi.GeofenceRadiusMeters m</span>
-                        <span class="poi-meta-chip">⭐ Ưu tiên @State.SelectedPoi.Priority</span>
-                        <span class="poi-meta-chip">🔊 @State.SelectedPoi.StatusLabel</span>
-                        <span class="poi-meta-chip">🌐 @State.SelectedPoi.AvailableLanguageCount ngôn ngữ</span>
+                        <span class="poi-meta-chip">🎯 @Text.GeofenceRadiusLabel @State.SelectedPoi.GeofenceRadiusMeters m</span>
+                        <span class="poi-meta-chip">⭐ @Text.PriorityLabel @State.SelectedPoi.Priority</span>
+                        <span class="poi-meta-chip">🔊 @Text.LocalizeKnownStatus(State.SelectedPoi.StatusLabel)</span>
+                        <span class="poi-meta-chip">🌐 @Text.FormatLanguageCount(State.SelectedPoi.AvailableLanguageCount)</span>
                     </div>
 
                     <div class="poi-sheet__description">
-                        <p>@State.SelectedPoi.Description</p>
-                        <strong>@State.SelectedPoi.Highlight</strong>
+                        <p>@State.SelectedPoi.GetDescriptionForLanguage(SelectedLanguageCode)</p>
+                        <strong>@State.SelectedPoi.GetHighlightForLanguage(SelectedLanguageCode)</strong>
                     </div>
 
                     <div class="poi-sheet__audio-status">
                         <span class="poi-meta-chip">🎧 @MapPoiAudioStatus</span>
                     </div>
+
+                    @if (AudioLanguages.Count > 0)
+                    {
+                        <label class="poi-sheet__language-picker">
+                        <span>@Text.NarrationLanguageLabel()</span>
+                            <select value="@SelectedLanguageCode" @onchange="OnAudioLanguageChangedAsync">
+                                @foreach (var language in AudioLanguages)
+                                {
+                                    <option value="@language.Code">@language.ChipLabel @language.Label</option>
+                                }
+                            </select>
+                        </label>
+                    }
 
                     @if (!string.IsNullOrWhiteSpace(QueuedPoiStatus))
                     {
@@ -148,10 +165,10 @@
                     }
 
                     <div class="sheet-actions sheet-actions--poi">
-                        <button type="button" class="secondary-pill" @onclick="OnClosePoiSheet">Ẩn</button>
-                        <button type="button" class="secondary-pill" @onclick="OnOpenDirections">Dẫn tới đây</button>
-                        <button type="button" class="secondary-pill" @onclick="OnOpenPoiDetail">Xem chi tiết</button>
-                        <button type="button" class="primary-pill" @onclick="OnPlaySelectedPoi">Nghe ngay</button>
+                        <button type="button" class="secondary-pill" @onclick="OnClosePoiSheet">@Text.HideButton</button>
+                        <button type="button" class="secondary-pill" @onclick="OnOpenDirections">@Text.DirectionsButton</button>
+                        <button type="button" class="secondary-pill" @onclick="OnOpenPoiDetail">@Text.DetailButton</button>
+                        <button type="button" class="primary-pill" @onclick="OnPlaySelectedPoi">@Text.ListenNowButton</button>
                     </div>
                 </section>
             }
@@ -159,7 +176,7 @@
             @if (State.ActiveProximity is not null)
             {
                 <aside @key="State.ActiveProximity.PoiId" class="geofence-toast geofence-toast--notice" role="status" aria-live="polite">
-                    <strong>Đang ở gần @State.ActiveProximity.PoiName</strong>
+                    <strong>@Text.NearbyPoiPrefix @State.ActiveProximity.PoiName</strong>
                     <span>@GeofenceToastMessageProvider()</span>
                     @if (!string.IsNullOrWhiteSpace(GeofenceQueueBadgeProvider()))
                     {
@@ -173,17 +190,20 @@
 
 @code {
     [Parameter] public VisitorShellState State { get; set; } = default!;
+    [Parameter] public VisitorUiText Text { get; set; } = VisitorUiTextCatalog.ForLanguage("vi");
     [Parameter] public Func<string, string> CategoryChipClassSelector { get; set; } = static _ => string.Empty;
     [Parameter] public Func<string, string> CategoryIconSelector { get; set; } = static _ => string.Empty;
     [Parameter] public Func<string> GeofenceToastMessageProvider { get; set; } = static () => string.Empty;
     [Parameter] public Func<string?> GeofenceQueueBadgeProvider { get; set; } = static () => null;
     [Parameter] public Func<VisitorPoi, string> PoiCategoryLabelSelector { get; set; } = static poi => poi.CategoryLabel;
     [Parameter] public EventCallback OnToggleNotifications { get; set; }
-    [Parameter] public EventCallback OnCycleLanguage { get; set; }
     [Parameter] public EventCallback<string> OnSelectCategory { get; set; }
     [Parameter] public EventCallback OnCenterOnUser { get; set; }
     [Parameter] public EventCallback OnClosePoiSheet { get; set; }
     [Parameter] public string MapPoiAudioStatus { get; set; } = string.Empty;
+    [Parameter] public string SelectedPoiDistanceLabel { get; set; } = string.Empty;
+    [Parameter] public IReadOnlyList<VisitorLanguageOption> AudioLanguages { get; set; } = [];
+    [Parameter] public string SelectedLanguageCode { get; set; } = "vi";
     [Parameter] public string? QueuedPoiStatus { get; set; }
     [Parameter] public string? DirectionsStatus { get; set; }
     [Parameter] public VisitorWalkingDirectionsNotice? DirectionsNotice { get; set; }
@@ -191,4 +211,13 @@
     [Parameter] public EventCallback OnOpenDirections { get; set; }
     [Parameter] public EventCallback OnOpenPoiDetail { get; set; }
     [Parameter] public EventCallback OnPlaySelectedPoi { get; set; }
+    [Parameter] public EventCallback<string> OnSelectAudioLanguage { get; set; }
+
+    private Task OnAudioLanguageChangedAsync(ChangeEventArgs args)
+    {
+        var languageCode = args.Value?.ToString();
+        return string.IsNullOrWhiteSpace(languageCode)
+            ? Task.CompletedTask
+            : OnSelectAudioLanguage.InvokeAsync(languageCode);
+    }
 }

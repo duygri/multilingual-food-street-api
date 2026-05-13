@@ -40,6 +40,7 @@ public static class MauiProgram
         builder.Services.AddScoped<IVisitorQrApiService, VisitorQrApiService>();
         builder.Services.AddScoped<IVisitorQrDeepLinkService, VisitorQrDeepLinkService>();
         builder.Services.AddScoped<IVisitorPresenceReporter, VisitorPresenceReporter>();
+        builder.Services.AddScoped<IVisitorNotificationFeedService, VisitorNotificationFeedService>();
         builder.Services.AddScoped<IVisitorWalkingDirectionsService, VisitorWalkingDirectionsService>();
         builder.Services.AddScoped<IVisitorLocationService, DeviceVisitorLocationService>();
 #if ANDROID

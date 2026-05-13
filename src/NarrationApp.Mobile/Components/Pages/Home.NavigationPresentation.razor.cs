@@ -5,7 +5,13 @@ namespace NarrationApp.Mobile.Components.Pages;
 public partial class Home
 {
     private string GetHeaderTitle() =>
-        VisitorNavigationPresentationFormatter.GetHeaderTitle(_state.CurrentTab);
+        _state.CurrentTab switch
+        {
+            VisitorTab.Map => UiText.TabMap,
+            VisitorTab.Discover => UiText.TabDiscover,
+            VisitorTab.Tours => UiText.TabTours,
+            _ => UiText.TabMe
+        };
 
     private string GetVisitorAppClass() =>
         VisitorNavigationPresentationFormatter.GetVisitorAppClass(_state.CurrentTab);
@@ -14,7 +20,7 @@ public partial class Home
         VisitorNavigationPresentationFormatter.GetVisitorFrameClass(_state.CurrentTab);
 
     private string GetLanguageTileClass(string languageCode) =>
-        VisitorNavigationPresentationFormatter.GetSelectionClass(_state.SelectedLanguageCode == languageCode);
+        VisitorNavigationPresentationFormatter.GetSelectionClass(_state.SelectedAppLanguageCode == languageCode);
 
     private string GetLanguageChipClass(string languageCode) =>
         VisitorNavigationPresentationFormatter.GetSelectionClass(_state.SelectedLanguageCode == languageCode);
@@ -35,19 +41,14 @@ public partial class Home
         VisitorCategoryPresentationFormatter.GetCategoryIcon(categoryId, _state.Categories);
 
     private string GetPoiCategoryLabel(VisitorPoi poi) =>
-        VisitorNavigationPresentationFormatter.GetPoiCategoryLabel(poi, _state.Categories);
+        UiText.LocalizeCategoryLabel(VisitorNavigationPresentationFormatter.GetPoiCategoryLabel(poi, _state.Categories));
 
     private string GetAutoAudioStatus() =>
-        VisitorNavigationPresentationFormatter.GetAutoAudioStatus(
-            _state.AudioPreferences.AutoPlayEnabled,
-            _state.ActiveProximity);
+        UiText.FormatAutoAudioStatus(_state.AudioPreferences.AutoPlayEnabled, _state.ActiveProximity);
 
     private string GetGeofenceToastMessage() =>
-        VisitorNavigationPresentationFormatter.GetGeofenceToastMessage(
-            _state.AudioPreferences.AutoPlayEnabled,
-            _state.ActiveProximity,
-            _state.IsAudioPlaying);
+        UiText.FormatGeofenceToastMessage(_state.AudioPreferences.AutoPlayEnabled, _state.ActiveProximity, _state.IsAudioPlaying);
 
     private string? GetGeofenceQueueBadge() =>
-        VisitorNavigationPresentationFormatter.GetGeofenceQueueBadge(_proximityQueueState.QueuedMatch);
+        UiText.FormatGeofenceQueueBadge(_proximityQueueState.QueuedMatch);
 }

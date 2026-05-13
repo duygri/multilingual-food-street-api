@@ -189,6 +189,25 @@ public sealed class QrServiceTests
     }
 
     [Fact]
+    public async Task CreateAsync_accepts_poi_list_target_type_without_single_poi_target()
+    {
+        await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
+        var sut = new QrService(dbContext);
+
+        var result = await sut.CreateAsync(new CreateQrRequest
+        {
+            TargetType = "poi_list",
+            TargetId = 999,
+            LocationHint = "Danh sách POI Vĩnh Khánh"
+        });
+
+        Assert.False(string.IsNullOrWhiteSpace(result.Code));
+        Assert.Equal("poi_list", result.TargetType);
+        Assert.Equal(0, result.TargetId);
+        Assert.Null(result.ScanCount);
+    }
+
+    [Fact]
     public async Task CreateAsync_rejects_missing_tour_target()
     {
         await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();

@@ -28,7 +28,7 @@ public sealed class DataSeederTests
         Assert.Equal(5, await dbContext.ManagedLanguages.CountAsync());
         Assert.Equal(1, await dbContext.Tours.CountAsync());
         Assert.Equal(6, await dbContext.TourStops.CountAsync());
-        Assert.Equal(3, await dbContext.QrCodes.CountAsync());
+        Assert.Equal(4, await dbContext.QrCodes.CountAsync());
         Assert.Equal(121, await dbContext.VisitEvents.CountAsync(item => item.DeviceId.StartsWith("seed-admin-map-")));
         Assert.Equal(12, await dbContext.Pois.Select(poi => poi.OwnerId).Distinct().CountAsync());
 
@@ -44,6 +44,10 @@ public sealed class DataSeederTests
             .ToListAsync();
         Assert.Equal(["BUS-KHANH-HOI-TOUR", "BUS-VINH-HOI-TOUR", "BUS-XOM-CHIEU-TOUR"], seededQrCodes.Select(qr => qr.Code));
         Assert.All(seededQrCodes, qr => Assert.Equal(busTour.Id, qr.TargetId));
+
+        var poiListQr = await dbContext.QrCodes.SingleAsync(qr => qr.Code == "VINH-KHANH-POI-LIST");
+        Assert.Equal("poi_list", poiListQr.TargetType);
+        Assert.Equal(0, poiListQr.TargetId);
 
         var admin = await dbContext.AppUsers.SingleAsync(user => user.Email == AppConstants.DefaultAdminEmail);
         var owner = await dbContext.AppUsers.SingleAsync(user => user.Email == AppConstants.DefaultOwnerEmail);
@@ -88,7 +92,7 @@ public sealed class DataSeederTests
         Assert.Equal(5, await dbContext.ManagedLanguages.CountAsync());
         Assert.Equal(1, await dbContext.Tours.CountAsync());
         Assert.Equal(6, await dbContext.TourStops.CountAsync());
-        Assert.Equal(3, await dbContext.QrCodes.CountAsync());
+        Assert.Equal(4, await dbContext.QrCodes.CountAsync());
         Assert.Equal(121, await dbContext.VisitEvents.CountAsync(item => item.DeviceId.StartsWith("seed-admin-map-")));
         Assert.Equal(12, await dbContext.Pois.Select(poi => poi.OwnerId).Distinct().CountAsync());
     }

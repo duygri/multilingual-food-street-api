@@ -11,17 +11,17 @@
                 <input
                     class="search-input"
                     type="text"
-                    placeholder="Tìm theo tên, danh mục..."
+                    placeholder="@Text.SearchPlaceholder"
                     value="@SearchTerm"
                     @oninput="OnSearchChanged"
                     autofocus />
-                <span class="search-field__hint">Gõ tên POI</span>
+                <span class="search-field__hint">@Text.SearchInputHint()</span>
             </label>
         </header>
 
         <section class="search-screen__summary">
             <div class="search-result-count">@GetResultCountLabel()</div>
-            <p>Chạm vào POI hoặc tour để mở nhanh đúng ngữ cảnh nghe thuyết minh.</p>
+            <p>@Text.SearchSummaryDescription()</p>
         </section>
 
         <section class="search-suggestion-chips">
@@ -32,7 +32,7 @@
                     class="category-chip @(SelectedCategoryId == category.Id ? "is-selected" : string.Empty)"
                     @onclick="() => OnSelectCategory.InvokeAsync(category.Id)">
                     <span>@GetCategoryIcon(category.Id)</span>
-                    <span>@category.Label</span>
+                    <span>@Text.LocalizeCategoryLabel(category.Label)</span>
                 </button>
             }
         </section>
@@ -40,15 +40,15 @@
         <div class="search-results">
             <section class="search-section">
                 <div class="search-section__header">
-                    <strong>📍 Điểm tham quan</strong>
+                    <strong>📍 @Text.SearchPoiSectionTitle()</strong>
                     <span>@Results.PoiResults.Count</span>
                 </div>
 
                 @if (Results.PoiResults.Count == 0)
                 {
                     <article class="search-section__empty">
-                        <strong>Chưa có POI phù hợp.</strong>
-                        <p>Thử đổi từ khóa hoặc chọn lại chip gợi ý.</p>
+                        <strong>@Text.EmptyPoiTitle</strong>
+                        <p>@Text.EmptyPoiDescription</p>
                     </article>
                 }
                 else
@@ -62,15 +62,15 @@
                             <div class="search-result-item__body">
                                 <div class="search-result-item__eyebrow">
                                     <span class="discover-badge">@GetCategoryLabel(poi)</span>
-                                    <span>POI gần bạn</span>
+                                    <span>@Text.NearbyPoiLabel()</span>
                                 </div>
                                 <div class="search-result-item__headline">
                                     <strong>@HighlightText(poi.Name)</strong>
                                     <span>@poi.DistanceMeters m</span>
                                 </div>
                                 <div class="search-result-item__meta">
-                                    <span>🔊 @poi.StatusLabel</span>
-                                    <span>🌐 @poi.AvailableLanguageCount ngôn ngữ</span>
+                                    <span>🔊 @Text.LocalizeKnownStatus(poi.StatusLabel)</span>
+                                    <span>🌐 @Text.FormatLanguageCount(poi.AvailableLanguageCount)</span>
                                 </div>
                                 <p class="search-result-item__summary">@HighlightText(VisitorSearchPresentationFormatter.Truncate(poi.Description, 92))</p>
                             </div>
@@ -81,15 +81,15 @@
 
             <section class="search-section">
                 <div class="search-section__header">
-                    <strong>🚶 Tour liên quan</strong>
+                    <strong>🚶 @Text.SearchTourSectionTitle()</strong>
                     <span>@Results.TourResults.Count</span>
                 </div>
 
                 @if (Results.TourResults.Count == 0)
                 {
                     <article class="search-section__empty">
-                        <strong>Chưa có tour phù hợp.</strong>
-                        <p>Tìm thêm theo tên tour hoặc điểm dừng liên quan.</p>
+                        <strong>@Text.SearchEmptyTourTitle()</strong>
+                        <p>@Text.SearchEmptyTourDescription()</p>
                     </article>
                 }
                 else
@@ -102,15 +102,15 @@
                             </div>
                             <div class="search-result-item__body">
                                 <div class="search-result-item__eyebrow">
-                                    <span class="discover-badge">@tour.StopCountLabel</span>
-                                    <span>Tour gợi ý</span>
+                                    <span class="discover-badge">@Text.FormatStopCountLabel(tour.StopCountLabel)</span>
+                                    <span>@Text.SuggestedTourLabel()</span>
                                 </div>
                                 <div class="search-result-item__headline">
                                     <strong>@HighlightText(tour.Title)</strong>
-                                    <span>@tour.DurationLabel</span>
+                                    <span>@Text.LocalizeKnownStatus(tour.DurationLabel)</span>
                                 </div>
                                 <div class="search-result-item__meta">
-                                    <span>@tour.DifficultyLabel</span>
+                                    <span>@Text.LocalizeKnownStatus(tour.DifficultyLabel)</span>
                                 </div>
                                 <p class="search-result-item__summary">@HighlightText(VisitorSearchPresentationFormatter.Truncate(tour.Description, 96))</p>
                             </div>
@@ -124,6 +124,7 @@
 
 @code {
     [Parameter] public string SearchTerm { get; set; } = string.Empty;
+    [Parameter] public VisitorUiText Text { get; set; } = VisitorUiTextCatalog.ForLanguage("vi");
     [Parameter] public string SelectedCategoryId { get; set; } = "all";
     [Parameter] public VisitorSearchResultsSummary Results { get; set; } = new(0, [], []);
     [Parameter] public IReadOnlyList<VisitorCategory> Categories { get; set; } = [];
@@ -134,7 +135,7 @@
     [Parameter] public EventCallback<string> OnSelectTour { get; set; }
 
     private string GetResultCountLabel() =>
-        VisitorSearchPresentationFormatter.FormatResultCountLabel(Results.ResultCount);
+        Text.FormatSearchResultCount(Results.ResultCount);
 
     private string GetCategoryIcon(string categoryId) =>
         VisitorCategoryPresentationFormatter.GetCategoryIcon(categoryId, Categories);
@@ -145,8 +146,8 @@
     private string GetPoiTone(string categoryId) =>
         VisitorCategoryPresentationFormatter.GetCategoryTone(categoryId, Categories);
 
-    private static string GetCategoryLabel(VisitorPoi poi) =>
-        VisitorSearchPresentationFormatter.GetCategoryLabel(poi);
+    private string GetCategoryLabel(VisitorPoi poi) =>
+        Text.LocalizeCategoryLabel(VisitorSearchPresentationFormatter.GetCategoryLabel(poi));
 
     private static string GetTourTone(VisitorTourCard tour) =>
         VisitorSearchPresentationFormatter.GetTourTone(tour);

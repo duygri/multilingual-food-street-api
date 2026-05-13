@@ -20,6 +20,7 @@ public partial class QrManagement
             TargetId = TargetType switch
             {
                 "open_app" => 0,
+                "poi_list" => 0,
                 "tour" => TourId,
                 _ => PoiId
             },

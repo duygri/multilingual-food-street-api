@@ -12,15 +12,16 @@ public sealed record VisitorWalkingDirectionsNotice(
 
 public static class VisitorWalkingDirectionsPresentationFormatter
 {
-    private const string LoadingStatus = "Đang vẽ đường đi bộ trong app...";
-
     public static VisitorWalkingDirectionsNotice? Build(
         VisitorPoi? selectedPoi,
         string? routePoiId,
         VisitorMapRoute? route,
         string? statusLabel,
-        bool isLoading)
+        bool isLoading,
+        VisitorUiText? text = null)
     {
+        text ??= VisitorUiTextCatalog.ForLanguage("vi");
+
         if (selectedPoi is null
             || !string.Equals(routePoiId, selectedPoi.Id, StringComparison.OrdinalIgnoreCase))
         {
@@ -29,10 +30,10 @@ public static class VisitorWalkingDirectionsPresentationFormatter
 
         var isAvailable = route is not null && !isLoading;
         return new VisitorWalkingDirectionsNotice(
-            isLoading ? $"Đang tìm đường tới {selectedPoi.Name}" : $"Dẫn tới {selectedPoi.Name}",
-            string.IsNullOrWhiteSpace(statusLabel) ? LoadingStatus : statusLabel,
+            text.FormatDirectionsTitle(selectedPoi.Name, isLoading),
+            string.IsNullOrWhiteSpace(statusLabel) ? text.WalkingLoadingStatus() : text.LocalizeKnownStatus(statusLabel),
             route is null ? null : FormatDistance(route.DistanceMeters),
-            route is null ? null : FormatDuration(route.DurationMinutes),
+            route is null ? null : text.FormatDurationLabel(route.DurationMinutes),
             isLoading,
             isAvailable);
     }

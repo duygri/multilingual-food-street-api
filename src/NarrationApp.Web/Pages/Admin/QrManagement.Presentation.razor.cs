@@ -32,12 +32,13 @@ public partial class QrManagement
     private string GetQrTargetLabel(QrCodeDto qr) => qr.TargetType switch
     {
         "poi" => _poiOptions.FirstOrDefault(item => item.Id == qr.TargetId)?.Name ?? $"POI #{qr.TargetId}",
+        "poi_list" => "Danh sách POI",
         "tour" => _tourOptions.FirstOrDefault(item => item.Id == qr.TargetId)?.Title ?? $"Tour #{qr.TargetId}",
         "open_app" => "Mở ứng dụng chính",
         _ => $"Target #{qr.TargetId}"
     };
 
     private static string GetScanCountLabel(QrCodeDto qr) => qr.ScanCount?.ToString("N0") ?? "Chưa track";
-    private static string GetQrTypeLabel(string targetType) => targetType switch { "open_app" => "Open App", "poi" => "POI", "tour" => "Tour", _ => targetType };
-    private static StatusTone GetQrTone(string targetType) => targetType switch { "open_app" => StatusTone.Neutral, "poi" => StatusTone.Good, "tour" => StatusTone.Warn, _ => StatusTone.Neutral };
+    private static string GetQrTypeLabel(string targetType) => targetType switch { "open_app" => "Open App", "poi_list" => "Danh sách POI", "poi" => "POI", "tour" => "Tour", _ => targetType };
+    private static StatusTone GetQrTone(string targetType) => targetType switch { "open_app" => StatusTone.Neutral, "poi_list" => StatusTone.Info, "poi" => StatusTone.Good, "tour" => StatusTone.Warn, _ => StatusTone.Neutral };
 }

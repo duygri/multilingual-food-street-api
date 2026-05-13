@@ -18,11 +18,11 @@
 
     <section class="poi-detail-content">
         <div class="poi-detail-headline">
-            <span class="poi-detail-headline__eyebrow">Điểm tham quan nổi bật</span>
+            <span class="poi-detail-headline__eyebrow">@Text.FeaturedPoiEyebrow</span>
             <h1>@Poi.Name</h1>
             <div class="poi-detail-headline__chips">
                 <span class="discover-badge">@GetCategoryLabel()</span>
-                <span class="tour-stop-chip">@Poi.StatusLabel</span>
+                <span class="tour-stop-chip">@Text.LocalizeKnownStatus(Poi.StatusLabel)</span>
             </div>
             <div class="poi-detail-headline__meta">
                 <span class="poi-detail-headline__distance">📍 @Poi.DistanceMeters m • @Poi.District</span>
@@ -32,26 +32,26 @@
         <section class="poi-detail-stats">
             <article class="poi-detail-stat-card">
                 <strong>@Poi.GeofenceRadiusMeters m</strong>
-                <span>Bán kính geofence</span>
+                <span>@Text.GeofenceRadiusLabel geofence</span>
             </article>
             <article class="poi-detail-stat-card">
                 <strong>@GetPriorityScore()/10</strong>
-                <span>Mức ưu tiên</span>
+                <span>@Text.PriorityStatLabel</span>
             </article>
             <article class="poi-detail-stat-card">
                 <strong>@AudioAssetCount file</strong>
-                <span>Audio thuyết minh</span>
+                <span>@Text.AudioFilesStatLabel</span>
             </article>
             <article class="poi-detail-stat-card">
-                <strong>@Poi.AvailableLanguageCount ngôn ngữ</strong>
-                <span>Hỗ trợ</span>
+                <strong>@Text.FormatLanguageCount(Poi.AvailableLanguageCount)</strong>
+                <span>@Text.SupportedLanguagesStatLabel</span>
             </article>
         </section>
 
         <section class="poi-detail-audio-card">
             <header class="poi-detail-audio-heading">
-                <span class="poi-detail-audio-heading__title">🎧 Thuyết minh</span>
-                <button type="button" class="poi-audio-panel__open poi-detail-audio-heading__action" @onclick="OnOpenFullPlayer">Toàn màn</button>
+                <span class="poi-detail-audio-heading__title">🎧 @Text.NarrationLabel</span>
+                <button type="button" class="poi-audio-panel__open poi-detail-audio-heading__action" @onclick="OnOpenFullPlayer">@Text.FullscreenButton</button>
             </header>
             <section class="poi-audio-panel">
                 <div class="poi-audio-panel__player">
@@ -60,7 +60,7 @@
                             @(IsPlaying ? "❚❚" : "▶")
                         </button>
                         <div>
-                            <strong>Thuyết minh — @GetCurrentLanguageLabel()</strong>
+                            <strong>@Text.NarrationLabel — @GetCurrentLanguageLabel()</strong>
                             <span>@AudioSubtitle</span>
                         </div>
                     </div>
@@ -79,7 +79,7 @@
                             class="poi-language-pill @(language.Code == SelectedLanguageCode ? "is-active" : string.Empty)"
                             @onclick="() => OnSelectLanguage.InvokeAsync(language.Code)">
                             <span>@language.ChipLabel</span>
-                            <span>@language.Label</span>
+                    <span>@Text.LocalizeLanguageLabel(language.Label)</span>
                         </button>
                     }
                 </div>
@@ -88,8 +88,8 @@
 
         <section class="poi-detail-copy">
             <header class="poi-detail-section-header">
-                <span class="sheet-label">Nội dung</span>
-                <strong>Câu chuyện tại điểm dừng</strong>
+                <span class="sheet-label">@Text.ContentLabel</span>
+                <strong>@Text.StoryAtStopTitle</strong>
             </header>
             <p>@Poi.GetDescriptionForLanguage(SelectedLanguageCode)</p>
             <p>@Poi.GetHighlightForLanguage(SelectedLanguageCode)</p>
@@ -99,7 +99,7 @@
         <section class="poi-detail-transcript">
             <header class="poi-detail-section-header">
                 <span class="sheet-label">Transcript</span>
-                <strong>Bản thuyết minh xem nhanh</strong>
+                <strong>@Text.TranscriptQuickTitle</strong>
             </header>
             <div class="poi-detail-transcript__body">
                 @foreach (var paragraph in TranscriptParagraphs)
@@ -112,16 +112,16 @@
         <section class="poi-detail-related">
             <div class="poi-detail-related__header">
                 <header class="poi-detail-section-header">
-                    <span class="sheet-label">Liên quan</span>
-                    <strong>Điểm tham quan gần phong cách này</strong>
+                    <span class="sheet-label">@Text.RelatedLabel</span>
+                    <strong>@Text.RelatedTitle</strong>
                 </header>
             </div>
             <div class="poi-detail-related__list">
                 @if (RelatedPois.Count == 0)
                 {
                     <article class="poi-detail-related__empty">
-                        <strong>Chưa có POI liên quan phù hợp.</strong>
-                        <p>Tiếp tục dùng tab Khám phá để xem thêm các điểm gần bạn.</p>
+                        <strong>@Text.RelatedEmptyTitle</strong>
+                        <p>@Text.RelatedEmptyDescription</p>
                     </article>
                 }
                 else
@@ -137,7 +137,7 @@
                             </div>
                             <div class="poi-detail-related__copy">
                                 <strong>@relatedPoi.Name</strong>
-                                <span>@GetRelatedPoiLabel(relatedPoi)</span>
+                <span>@GetRelatedPoiLabel(relatedPoi)</span>
                                 <p>@Truncate(relatedPoi.Description, 86)</p>
                             </div>
                         </button>
@@ -147,10 +147,10 @@
         </section>
 
         <div class="poi-detail-sticky-cta">
-            <button type="button" class="secondary-pill poi-detail-map-button" @onclick="() => OnOpenMap.InvokeAsync()">🗺️ Bản đồ</button>
-            <button type="button" class="secondary-pill poi-detail-directions-button" @onclick="() => OnOpenDirections.InvokeAsync()">🚶 Dẫn tới đây</button>
+            <button type="button" class="secondary-pill poi-detail-map-button" @onclick="() => OnOpenMap.InvokeAsync()">🗺️ @Text.MapButton</button>
+            <button type="button" class="secondary-pill poi-detail-directions-button" @onclick="() => OnOpenDirections.InvokeAsync()">🚶 @Text.DirectionsButton</button>
             <button type="button" class="primary-pill poi-detail-listen-button" @onclick="() => OnPrimaryAction.InvokeAsync()">
-                @(IsPlaying ? "Tạm dừng thuyết minh" : "Nghe thuyết minh")
+                @(IsPlaying ? Text.PauseNarrationButton : Text.ListenNarrationButton)
             </button>
         </div>
     </section>
@@ -158,6 +158,7 @@
 
 @code {
     [Parameter, EditorRequired] public VisitorPoi Poi { get; set; } = default!;
+    [Parameter] public VisitorUiText Text { get; set; } = VisitorUiTextCatalog.ForLanguage("vi");
     [Parameter] public IReadOnlyList<VisitorCategory> Categories { get; set; } = [];
     [Parameter] public IReadOnlyList<VisitorLanguageOption> Languages { get; set; } = [];
     [Parameter] public IReadOnlyList<VisitorPoi> RelatedPois { get; set; } = [];
@@ -186,11 +187,11 @@
 
     private string GetCategoryLabel() =>
         string.IsNullOrWhiteSpace(Poi.CategoryLabel)
-            ? Categories.FirstOrDefault(category => category.Id == Poi.CategoryId)?.Label ?? Poi.District
-            : Poi.CategoryLabel;
+            ? Text.LocalizeCategoryLabel(Categories.FirstOrDefault(category => category.Id == Poi.CategoryId)?.Label ?? Poi.District)
+            : Text.LocalizeCategoryLabel(Poi.CategoryLabel);
 
     private string GetCurrentLanguageLabel() =>
-        Languages.FirstOrDefault(language => language.Code == SelectedLanguageCode)?.Label ?? SelectedLanguageCode.ToUpperInvariant();
+        Text.LocalizeLanguageLabel(Languages.FirstOrDefault(language => language.Code == SelectedLanguageCode)?.Label ?? SelectedLanguageCode.ToUpperInvariant());
 
     private IReadOnlyList<VisitorLanguageOption> GetAvailableAudioLanguages() =>
         VisitorAudioLanguageSelector.BuildForPoi(Poi, Languages);
@@ -208,8 +209,8 @@
 
     private string GetCategoryLabel(VisitorPoi poi) =>
         string.IsNullOrWhiteSpace(poi.CategoryLabel)
-            ? Categories.FirstOrDefault(category => category.Id == poi.CategoryId)?.Label ?? poi.District
-            : poi.CategoryLabel;
+            ? Text.LocalizeCategoryLabel(Categories.FirstOrDefault(category => category.Id == poi.CategoryId)?.Label ?? poi.District)
+            : Text.LocalizeCategoryLabel(poi.CategoryLabel);
 
     private static string GetWaveHeight(int index)
     {

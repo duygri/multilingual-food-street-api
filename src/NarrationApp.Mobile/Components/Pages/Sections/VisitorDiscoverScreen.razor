@@ -5,16 +5,16 @@
         <div class="discover-header__title">
             <span class="discover-header__icon">📍</span>
             <div>
-                <h1>Khám phá</h1>
-                <p>Tất cả điểm tham quan gần bạn</p>
+                <h1>@Text.DiscoverTitle</h1>
+                <p>@Text.DiscoverSubtitle</p>
             </div>
         </div>
         <div class="discover-header__actions">
-            <button type="button" class="discover-language-button" @onclick="() => OnCycleLanguage.InvokeAsync()" aria-label="Đổi ngôn ngữ">
+            <button type="button" class="discover-language-button" @onclick="() => OnCycleLanguage.InvokeAsync()" aria-label="@Text.ChangeLanguageLabel">
                 <span>🌐</span>
                 <strong>@CurrentLanguageChipLabel</strong>
             </button>
-            <button type="button" class="discover-refresh-button @(IsLoading ? "is-busy" : string.Empty)" @onclick="() => OnRefresh.InvokeAsync()" aria-label="Làm mới dữ liệu">
+            <button type="button" class="discover-refresh-button @(IsLoading ? "is-busy" : string.Empty)" @onclick="() => OnRefresh.InvokeAsync()" aria-label="@Text.RefreshDataLabel">
                 ↻
             </button>
         </div>
@@ -25,12 +25,12 @@
         <input
             class="search-input"
             type="text"
-            placeholder="Tìm theo tên, danh mục..."
+            placeholder="@Text.SearchPlaceholder"
             value="@SearchTerm"
             readonly
             @onclick="OnOpenSearch"
             @onfocus="OnOpenSearch" />
-        <span class="search-field__hint">Tìm</span>
+        <span class="search-field__hint">@Text.SearchHint</span>
     </label>
 
     <section class="discover-chip-row">
@@ -41,7 +41,7 @@
                 class="category-chip @(SelectedCategoryId == category.Id ? "is-selected" : string.Empty)"
                 @onclick="() => OnSelectCategory.InvokeAsync(category.Id)">
                 <span>@GetCategoryIcon(category.Id)</span>
-                <span>@category.Label</span>
+                <span>@Text.LocalizeCategoryLabel(category.Label)</span>
             </button>
         }
     </section>
@@ -49,8 +49,8 @@
     @if (IsUsingFallbackData && !string.IsNullOrWhiteSpace(SyncMessage))
     {
         <aside class="discover-sync-banner">
-            <strong>@DataSourceLabel</strong>
-            <p>@SyncMessage</p>
+            <strong>@Text.LocalizeKnownStatus(DataSourceLabel)</strong>
+            <p>@Text.LocalizeKnownStatus(SyncMessage)</p>
         </aside>
     }
 
@@ -82,8 +82,8 @@
         else if (Pois.Count == 0)
         {
             <article class="discover-poi-card discover-poi-card--empty">
-                <strong>Chưa có điểm phù hợp bộ lọc hiện tại.</strong>
-                <p>Thử đổi từ khóa hoặc chọn danh mục khác.</p>
+                <strong>@Text.EmptyPoiTitle</strong>
+                <p>@Text.EmptyPoiDescription</p>
             </article>
         }
         else
@@ -111,8 +111,8 @@
                         <div class="discover-poi-card__meta">
                             <span class="discover-badge">@GetCategoryLabel(poi)</span>
                             <div class="discover-poi-card__status">
-                                <span>🔊 @poi.StatusLabel</span>
-                                <span>🌐 @poi.AvailableLanguageCount ngôn ngữ</span>
+                                <span>🔊 @Text.LocalizeKnownStatus(poi.StatusLabel)</span>
+                                <span>🌐 @Text.FormatLanguageCount(poi.AvailableLanguageCount)</span>
                             </div>
                         </div>
                         <p class="discover-poi-card__summary">@Truncate(poi.Description, 88)</p>
@@ -125,6 +125,7 @@
 
 @code {
     [Parameter] public IReadOnlyList<VisitorPoi> Pois { get; set; } = [];
+    [Parameter] public VisitorUiText Text { get; set; } = VisitorUiTextCatalog.ForLanguage("vi");
     [Parameter] public IReadOnlyList<VisitorCategory> Categories { get; set; } = [];
     [Parameter] public string SelectedCategoryId { get; set; } = "all";
     [Parameter] public string SearchTerm { get; set; } = string.Empty;
@@ -150,8 +151,8 @@
 
     private string GetCategoryLabel(VisitorPoi poi) =>
         string.IsNullOrWhiteSpace(poi.CategoryLabel)
-            ? Categories.FirstOrDefault(category => category.Id == poi.CategoryId)?.Label ?? poi.District
-            : poi.CategoryLabel;
+            ? Text.LocalizeCategoryLabel(Categories.FirstOrDefault(category => category.Id == poi.CategoryId)?.Label ?? poi.District)
+            : Text.LocalizeCategoryLabel(poi.CategoryLabel);
 
     private static string Truncate(string text, int maxLength)
     {

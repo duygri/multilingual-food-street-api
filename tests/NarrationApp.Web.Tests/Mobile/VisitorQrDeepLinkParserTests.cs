@@ -31,6 +31,19 @@ public sealed class VisitorQrDeepLinkParserTests
     }
 
     [Fact]
+    public void TryParse_CapturesQrLaunchModeForAppNotification()
+    {
+        var success = VisitorQrDeepLinkParser.TryParse(
+            "foodstreet://qr/QR-POI-LIST?qrLaunch=strong0",
+            out var request);
+
+        Assert.True(success);
+        Assert.NotNull(request);
+        Assert.Equal("QR-POI-LIST", request!.Code);
+        Assert.Equal("strong0", request.QrLaunchMode);
+    }
+
+    [Fact]
     public void TryParse_AcceptsCustomSchemeQrPathWithoutHost()
     {
         var success = VisitorQrDeepLinkParser.TryParse(
@@ -92,6 +105,21 @@ public sealed class VisitorQrDeepLinkParserTests
 
         Assert.Equal(VisitorQrTargetKind.Tour, target.Kind);
         Assert.Equal("tour-2", target.TargetId);
+    }
+
+    [Fact]
+    public void FromQrCodeDto_MapsPoiListTargetToDiscoverList()
+    {
+        var target = VisitorQrNavigationTarget.FromQrCode(new QrCodeDto
+        {
+            Code = "QR-POI-LIST",
+            TargetType = "poi_list",
+            TargetId = 0
+        });
+
+        Assert.Equal(VisitorQrTargetKind.PoiList, target.Kind);
+        Assert.Null(target.TargetId);
+        Assert.Equal("QR-POI-LIST", target.Code);
     }
 
     [Fact]

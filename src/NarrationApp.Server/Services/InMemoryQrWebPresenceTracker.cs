@@ -17,6 +17,13 @@ public sealed class InMemoryQrWebPresenceTracker : IQrWebPresenceTracker
         return _lastSeenByDeviceId.TryGetValue(normalizedDeviceId, out var value) ? value : null;
     }
 
+    public IReadOnlyCollection<QrWebPresenceSnapshot> GetAll()
+    {
+        return _lastSeenByDeviceId
+            .Select(item => new QrWebPresenceSnapshot(item.Key, item.Value))
+            .ToArray();
+    }
+
     public void Track(string deviceId, DateTime? seenAtUtc = null)
     {
         if (string.IsNullOrWhiteSpace(deviceId))

@@ -247,7 +247,7 @@ public sealed class AdminControllerTests
     }
 
     [Fact]
-    public async Task VisitorDevicesAsync_marks_qr_web_device_offline_after_thirty_seconds_without_presence()
+    public async Task VisitorDevicesAsync_marks_qr_web_device_offline_after_five_seconds_without_presence()
     {
         await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
         var poiId = await dbContext.Pois.Select(item => item.Id).FirstAsync();
@@ -296,7 +296,7 @@ public sealed class AdminControllerTests
         await dbContext.SaveChangesAsync();
 
         var presenceTracker = new StubQrWebPresenceTracker();
-        presenceTracker.Track("qr-web-heartbeat-001", now.AddSeconds(-5));
+        presenceTracker.Track("qr-web-heartbeat-001", now.AddSeconds(-3));
 
         var controller = CreateController(dbContext, qrWebPresenceTracker: presenceTracker);
 
@@ -308,7 +308,7 @@ public sealed class AdminControllerTests
         Assert.Equal("qr-web-heartbeat-001", visitor.DeviceId);
         Assert.True(visitor.IsOnline);
         Assert.NotNull(visitor.LastSeenAtUtc);
-        Assert.True(visitor.LastSeenAtUtc >= now.AddSeconds(-10));
+        Assert.True(visitor.LastSeenAtUtc >= now.AddSeconds(-5));
     }
 
     [Fact]
@@ -317,7 +317,7 @@ public sealed class AdminControllerTests
         await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
         var now = DateTime.UtcNow;
         var mobilePresenceTracker = new StubVisitorMobilePresenceTracker();
-        mobilePresenceTracker.Track("android-emulator-5554", "mobile-presence", "vi-VN", now.AddSeconds(-5));
+        mobilePresenceTracker.Track("android-emulator-5554", "mobile-presence", "vi-VN", now.AddSeconds(-3));
 
         var controller = CreateController(dbContext, visitorMobilePresenceTracker: mobilePresenceTracker);
 
@@ -329,6 +329,32 @@ public sealed class AdminControllerTests
         Assert.Equal("android-emulator-5554", visitor.DeviceId);
         Assert.Equal("guest", visitor.RoleName);
         Assert.True(visitor.IsOnline);
+        Assert.Equal(0, visitor.TrackingCount);
+        Assert.Equal(0, visitor.VisitCount);
+        Assert.Equal(0, visitor.TriggerCount);
+        Assert.Equal("vi-VN", visitor.PreferredLanguage);
+    }
+
+    [Fact]
+    public async Task VisitorDevicesAsync_includes_presence_only_qr_web_device_as_online_guest()
+    {
+        await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
+        var now = DateTime.UtcNow;
+        var qrWebPresenceTracker = new StubQrWebPresenceTracker();
+        qrWebPresenceTracker.Track("qr-web-poi-list-001", now.AddSeconds(-3));
+
+        var controller = CreateController(dbContext, qrWebPresenceTracker: qrWebPresenceTracker);
+
+        var actionResult = await controller.VisitorDevicesAsync(CancellationToken.None);
+        var okResult = Assert.IsType<OkObjectResult>(actionResult.Result);
+        var response = Assert.IsType<ApiResponse<IReadOnlyList<VisitorDeviceSummaryDto>>>(okResult.Value);
+
+        var visitor = Assert.Single(response.Data!);
+        Assert.Equal("qr-web-poi-list-001", visitor.DeviceId);
+        Assert.Equal("guest", visitor.RoleName);
+        Assert.True(visitor.IsOnline);
+        Assert.False(visitor.AutoPlayEnabled);
+        Assert.False(visitor.BackgroundTrackingEnabled);
         Assert.Equal(0, visitor.TrackingCount);
         Assert.Equal(0, visitor.VisitCount);
         Assert.Equal(0, visitor.TriggerCount);
@@ -378,7 +404,7 @@ public sealed class AdminControllerTests
         await using var dbContext = await TestAppDbContextFactory.CreateSeededAsync();
         var now = DateTime.UtcNow;
         var mobilePresenceTracker = new StubVisitorMobilePresenceTracker();
-        mobilePresenceTracker.Track("android-emulator-stale", "mobile-presence", "vi-VN", now.AddSeconds(-11));
+        mobilePresenceTracker.Track("android-emulator-stale", "mobile-presence", "vi-VN", now.AddSeconds(-6));
 
         var controller = CreateController(dbContext, visitorMobilePresenceTracker: mobilePresenceTracker);
 
@@ -447,6 +473,13 @@ public sealed class AdminControllerTests
         public DateTime? GetLastSeenUtc(string deviceId)
         {
             return _lastSeenByDeviceId.TryGetValue(deviceId, out var value) ? value : null;
+        }
+
+        public IReadOnlyCollection<QrWebPresenceSnapshot> GetAll()
+        {
+            return _lastSeenByDeviceId
+                .Select(item => new QrWebPresenceSnapshot(item.Key, item.Value))
+                .ToArray();
         }
 
         public void Track(string deviceId, DateTime? seenAtUtc = null)

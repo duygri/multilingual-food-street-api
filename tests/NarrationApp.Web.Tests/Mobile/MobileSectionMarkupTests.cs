@@ -46,11 +46,16 @@ public sealed class MobileSectionMarkupTests
     {
         var markup = ReadSectionMarkup("VisitorSetupFlow.razor");
 
+        Assert.Contains("case VisitorIntroStep.Welcome:", markup, StringComparison.Ordinal);
         Assert.Contains("case VisitorIntroStep.Language:", markup, StringComparison.Ordinal);
         Assert.Contains("case VisitorIntroStep.Permissions:", markup, StringComparison.Ordinal);
         Assert.Contains("setup-phone-chrome", markup, StringComparison.Ordinal);
         Assert.Contains("setup-statusbar", markup, StringComparison.Ordinal);
         Assert.Contains("setup-dynamic-island", markup, StringComparison.Ordinal);
+        Assert.Contains("setup-card--welcome", markup, StringComparison.Ordinal);
+        Assert.Contains("setup-stack--welcome", markup, StringComparison.Ordinal);
+        Assert.Contains("setup-welcome-hero", markup, StringComparison.Ordinal);
+        Assert.Contains("Text.StartExploringButton", markup, StringComparison.Ordinal);
         Assert.Contains("setup-card--language", markup, StringComparison.Ordinal);
         Assert.Contains("setup-stack--language", markup, StringComparison.Ordinal);
         Assert.Contains("setup-card--permissions", markup, StringComparison.Ordinal);
@@ -59,9 +64,9 @@ public sealed class MobileSectionMarkupTests
         Assert.Contains("setup-language-option__code", markup, StringComparison.Ordinal);
         Assert.Contains("setup-language-option__indicator", markup, StringComparison.Ordinal);
         Assert.Contains("setup-permission-icon", markup, StringComparison.Ordinal);
-        Assert.Contains("Tiếp tục", markup, StringComparison.Ordinal);
-        Assert.Contains("Cho phép vị trí", markup, StringComparison.Ordinal);
-        Assert.Contains("Bỏ qua — Dùng QR / thủ công", markup, StringComparison.Ordinal);
+        Assert.Contains("Text.ContinueButton", markup, StringComparison.Ordinal);
+        Assert.Contains("Text.EnableLocationButton", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Bỏ qua — Dùng QR / thủ công", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("VisitorAuthScreen", markup, StringComparison.Ordinal);
     }
 
@@ -85,9 +90,9 @@ public sealed class MobileSectionMarkupTests
         Assert.Contains("QueuedPoiStatus", markup, StringComparison.Ordinal);
         Assert.Contains("poi-sheet__directions", markup, StringComparison.Ordinal);
         Assert.Contains("DirectionsStatus", markup, StringComparison.Ordinal);
-        Assert.Contains("Dẫn tới đây", markup, StringComparison.Ordinal);
+        Assert.Contains("Text.DirectionsButton", markup, StringComparison.Ordinal);
         Assert.Contains("OnOpenDirections", markup, StringComparison.Ordinal);
-        Assert.Contains("Xem chi tiết", markup, StringComparison.Ordinal);
+        Assert.Contains("Text.DetailButton", markup, StringComparison.Ordinal);
         Assert.Contains("OnOpenPoiDetail", markup, StringComparison.Ordinal);
         Assert.Contains("geofence-toast geofence-toast--notice", markup, StringComparison.Ordinal);
         Assert.Contains("aria-live=\"polite\"", markup, StringComparison.Ordinal);
@@ -116,7 +121,7 @@ public sealed class MobileSectionMarkupTests
         Assert.Contains("DirectionsNotice.DistanceLabel", mapMarkup, StringComparison.Ordinal);
         Assert.Contains("DirectionsNotice.DurationLabel", mapMarkup, StringComparison.Ordinal);
         Assert.Contains("OnClearDirections", mapMarkup, StringComparison.Ordinal);
-        Assert.Contains("Tắt dẫn đường", mapMarkup, StringComparison.Ordinal);
+        Assert.Contains("Text.ClearDirectionsButton", mapMarkup, StringComparison.Ordinal);
         Assert.Contains("OnClearDirections=\"ClearWalkingDirectionsAsync\"", homeMarkup, StringComparison.Ordinal);
         Assert.DoesNotContain("Launcher.Default.OpenAsync", source, StringComparison.Ordinal);
         Assert.DoesNotContain("VisitorMapDirectionsLinkBuilder", source, StringComparison.Ordinal);
@@ -131,7 +136,7 @@ public sealed class MobileSectionMarkupTests
 
         Assert.Contains("OnCenterOnUser=\"CenterMapOnUserAsync\"", homeMarkup, StringComparison.Ordinal);
         Assert.Contains("OnCenterOnUser", mapMarkup, StringComparison.Ordinal);
-        Assert.Contains("Về vị trí của tôi", mapMarkup, StringComparison.Ordinal);
+        Assert.Contains("Text.CenterOnUserLabel", mapMarkup, StringComparison.Ordinal);
         Assert.Contains("visitorMap.centerOnUser", controlsSource, StringComparison.Ordinal);
         Assert.DoesNotContain("OnZoomIn", homeMarkup, StringComparison.Ordinal);
         Assert.DoesNotContain("OnZoomOut", homeMarkup, StringComparison.Ordinal);
@@ -154,7 +159,7 @@ public sealed class MobileSectionMarkupTests
         var detailMarkup = File.ReadAllText(detailPath);
 
         Assert.Contains("OnOpenDirections", detailMarkup, StringComparison.Ordinal);
-        Assert.Contains("Dẫn tới đây", detailMarkup, StringComparison.Ordinal);
+        Assert.Contains("Text.DirectionsButton", detailMarkup, StringComparison.Ordinal);
         Assert.Contains("OnOpenDirections=\"OpenSelectedPoiDirectionsAsync\"", homeMarkup, StringComparison.Ordinal);
     }
 
@@ -166,8 +171,10 @@ public sealed class MobileSectionMarkupTests
         Assert.Contains("settings-screen", markup, StringComparison.Ordinal);
         Assert.Contains("settings-profile-card", markup, StringComparison.Ordinal);
         Assert.Contains("settings-stat-grid", markup, StringComparison.Ordinal);
-        Assert.Contains("Thiết bị hiện tại", markup, StringComparison.Ordinal);
-        Assert.Contains("settings-language-strip", markup, StringComparison.Ordinal);
+        Assert.Contains("Text.CurrentDeviceLabel", markup, StringComparison.Ordinal);
+        Assert.Contains("settings-language-dropdown", markup, StringComparison.Ordinal);
+        Assert.Contains("settings-language-select", markup, StringComparison.Ordinal);
+        Assert.Contains("OnLanguageChangedAsync", markup, StringComparison.Ordinal);
         Assert.Contains("settings-nav-list", markup, StringComparison.Ordinal);
         Assert.Contains("OnOpenAudio", markup, StringComparison.Ordinal);
         Assert.Contains("OnOpenGps", markup, StringComparison.Ordinal);

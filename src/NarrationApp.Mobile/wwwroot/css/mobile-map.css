@@ -450,16 +450,25 @@
     left: 14px;
     right: 14px;
     width: auto;
+    bottom: calc(var(--mobile-bottom-nav-height) + env(safe-area-inset-bottom) + 170px);
+    min-height: 220px;
+    overflow: hidden;
     border-radius: 26px;
     background: rgba(8, 16, 31, 0.96);
     border: 1px solid rgba(84, 118, 174, 0.24);
     box-shadow: var(--shadow);
-    z-index: 5;
+    z-index: 12;
+    pointer-events: auto;
+    touch-action: pan-y;
 }
 
 .notification-panel__surface {
     display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
     gap: 2px;
+    height: 100%;
+    min-height: 0;
+    max-height: 100%;
     backdrop-filter: blur(12px);
 }
 
@@ -478,8 +487,30 @@
 
 .panel-list {
     display: grid;
+    align-content: start;
     gap: 12px;
     padding: 16px;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(30, 214, 175, 0.42) rgba(10, 18, 34, 0.4);
+}
+
+.panel-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.panel-list::-webkit-scrollbar-track {
+    background: rgba(10, 18, 34, 0.4);
+    border-radius: 999px;
+}
+
+.panel-list::-webkit-scrollbar-thumb {
+    background: rgba(30, 214, 175, 0.42);
+    border-radius: 999px;
 }
 
 .panel-item {
@@ -495,6 +526,10 @@
         color: var(--muted-soft);
         font-size: 0.85rem;
     }
+
+.panel-item--empty p {
+    color: var(--muted);
+}
 
 .poi-sheet {
     position: relative;
@@ -618,6 +653,41 @@
     color: var(--text);
 }
 
+.poi-sheet__language-picker {
+    display: grid;
+    gap: 7px;
+    padding: 10px;
+    border-radius: 16px;
+    border: 1px solid rgba(78, 114, 171, 0.24);
+    background: rgba(9, 17, 31, 0.86);
+}
+
+.poi-sheet__language-picker span {
+    color: var(--muted-soft);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.poi-sheet__language-picker select {
+    min-height: 40px;
+    width: 100%;
+    border-radius: 13px;
+    border: 1px solid rgba(82, 119, 176, 0.36);
+    background: linear-gradient(180deg, rgba(12, 24, 43, 0.96), rgba(8, 17, 31, 0.98));
+    color: var(--text);
+    font: inherit;
+    font-weight: 800;
+    padding: 0 12px;
+    outline: none;
+}
+
+.poi-sheet__language-picker select:focus {
+    border-color: rgba(30, 214, 175, 0.62);
+    box-shadow: 0 0 0 3px rgba(30, 214, 175, 0.12);
+}
+
 .poi-sheet__queue {
     display: grid;
 }
@@ -727,6 +797,17 @@
 .poi-sheet--floating .poi-sheet__description strong {
     -webkit-line-clamp: 2;
     font-size: 0.84rem;
+}
+
+.poi-sheet--floating .poi-sheet__language-picker {
+    gap: 6px;
+    padding: 8px;
+    border-radius: 14px;
+}
+
+.poi-sheet--floating .poi-sheet__language-picker select {
+    min-height: 36px;
+    font-size: 0.78rem;
 }
 
 .walking-route-banner {

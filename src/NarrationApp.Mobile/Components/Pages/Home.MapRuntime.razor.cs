@@ -18,7 +18,8 @@ public partial class Home
             _state.FilteredPois,
             _state.SelectedPoiId,
             _state.CurrentLocation,
-            GetCurrentWalkingRoute());
+            GetCurrentWalkingRoute(),
+            UiText.Pick("Your location", "Vị trí của bạn"));
         if (!_mapRenderState.ShouldRender(mapSnapshot))
         {
             return;

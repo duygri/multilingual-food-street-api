@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NarrationApp.Server.Services;
+using NarrationApp.Shared.DTOs.Audio;
 
 namespace NarrationApp.Server.Controllers;
 
@@ -11,6 +12,7 @@ namespace NarrationApp.Server.Controllers;
 public sealed class QrLaunchController(
     IQrService qrService,
     QrPublicLinkBuilder qrPublicLinkBuilder,
+    IQrDeviceConfigService qrDeviceConfigService,
     IPoiService poiService,
     IAudioService audioService) : ControllerBase
 {
@@ -28,6 +30,11 @@ public sealed class QrLaunchController(
             if (string.Equals(qrCode.TargetType, "poi", StringComparison.OrdinalIgnoreCase))
             {
                 return await BuildPoiLaunchResponseAsync(qrCode.Code, qrCode.TargetId, appDeepLink, publicUrl, cancellationToken);
+            }
+
+            if (string.Equals(qrCode.TargetType, "poi_list", StringComparison.OrdinalIgnoreCase))
+            {
+                return await BuildPoiListLaunchResponseAsync(qrCode.Code, appDeepLink, publicUrl, cancellationToken);
             }
 
             return Html(QrLaunchHtmlBuilder.BuildLaunchHtml(qrCode.Code, qrCode.TargetType, appDeepLink, publicUrl));
@@ -60,6 +67,24 @@ public sealed class QrLaunchController(
 
         var audioItems = await audioService.GetByPoiAsync(poiId, languageCode: null, cancellationToken);
         return Html(QrLaunchHtmlBuilder.BuildPoiLaunchHtml(code, poi, audioItems, appDeepLink, publicUrl));
+    }
+
+    private async Task<IActionResult> BuildPoiListLaunchResponseAsync(
+        string code,
+        string appDeepLink,
+        string publicUrl,
+        CancellationToken cancellationToken)
+    {
+        var pois = await poiService.GetAllAsync(cancellationToken);
+        var audioByPoiId = new Dictionary<int, IReadOnlyList<AudioDto>>();
+
+        foreach (var poi in pois)
+        {
+            audioByPoiId[poi.Id] = await audioService.GetByPoiAsync(poi.Id, languageCode: null, cancellationToken);
+        }
+
+        var deviceConfig = qrDeviceConfigService.Decide();
+        return Html(QrLaunchHtmlBuilder.BuildPoiListLaunchHtml(code, pois, audioByPoiId, appDeepLink, publicUrl, deviceConfig));
     }
 
     private ContentResult Html(string html)

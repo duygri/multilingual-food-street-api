@@ -6,10 +6,10 @@ namespace NarrationApp.Mobile.Components.Pages;
 public partial class Home
 {
     private string GetCurrentAudioLanguageLabel() =>
-        _state.CurrentAudioCue is null
+        UiText.LocalizeLanguageLabel(_state.CurrentAudioCue is null
             ? _state.CurrentLanguage.Label
             : _state.Languages.FirstOrDefault(language => language.Code == _state.CurrentAudioCue.LanguageCode)?.Label
-                ?? _state.CurrentAudioCue.LanguageCode.ToUpperInvariant();
+                ?? _state.CurrentAudioCue.LanguageCode.ToUpperInvariant());
 
     private string GetAudioSpeedLabel() => VisitorSettingsPresentationFormatter.FormatPlaybackSpeed(AudioSpeedOptions[_audioSpeedIndex]);
 
@@ -17,10 +17,12 @@ public partial class Home
     {
         if (_state.CurrentAudioCue is not null)
         {
-            return $"{_state.AudioStatusLabel} • {_state.SelectedPoi?.AudioDuration}";
+            return $"{UiText.LocalizeKnownStatus(_state.AudioStatusLabel)} • {_state.SelectedPoi?.AudioDuration}";
         }
 
-        return $"Recorded • {_state.SelectedPoi?.AudioDuration} • ưu tiên {_state.CurrentLanguage.Label}";
+        return UiText.UsesEnglishUi()
+            ? $"Recorded • {_state.SelectedPoi?.AudioDuration} • preferred {UiText.LocalizeLanguageLabel(_state.CurrentLanguage.Label)}"
+            : $"Recorded • {_state.SelectedPoi?.AudioDuration} • ưu tiên {_state.CurrentLanguage.Label}";
     }
 
     private IReadOnlyList<string> GetPoiTranscriptParagraphs()
@@ -47,15 +49,19 @@ public partial class Home
     {
         if (_state.CurrentAudioCue is not null)
         {
-            return _state.AudioStatusLabel;
+            return UiText.LocalizeKnownStatus(_state.AudioStatusLabel);
         }
 
         if (_state.ActiveProximity is not null)
         {
-            return $"{_state.ActiveProximity.DistanceMeters}m • chờ audio phù hợp";
+            return UiText.UsesEnglishUi()
+                ? $"{_state.ActiveProximity.DistanceMeters}m • waiting for matching audio"
+                : $"{_state.ActiveProximity.DistanceMeters}m • chờ audio phù hợp";
         }
 
-        return $"Ưu tiên {_state.CurrentLanguage.Label} • {_state.SelectedPoi?.AudioDuration}";
+        return UiText.UsesEnglishUi()
+            ? $"Preferred {UiText.LocalizeLanguageLabel(_state.CurrentLanguage.Label)} • {_state.SelectedPoi?.AudioDuration}"
+            : $"Ưu tiên {_state.CurrentLanguage.Label} • {_state.SelectedPoi?.AudioDuration}";
     }
 
     private string GetMiniProgressStyle() =>

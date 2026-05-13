@@ -63,20 +63,10 @@ else
                         Title="Heatmap vị trí người dùng"
                         Description="Heatmap Mapbox trong Quận 4 từ unique session đã snap grid 50m, clamp 50 và Gaussian smoothing."
                         BadgeLabel="@($"{_heatmap.Count:N0} điểm")"
-                        BadgeTone="StatusTone.Info">
+                        BadgeTone="StatusTone.Info"
+                        ClassName="analytics-map-panel">
                 <HeaderActions>
                     <div class="analytics-filter-toolbar">
-                        @foreach (var option in HeatmapEventTypeOptions)
-                        {
-                            <button type="button"
-                                    class="analytics-filter-chip @(Equals(option.EventType, _selectedHeatmapEventType) ? "is-active" : null)"
-                                    data-heatmap-event="@option.Key"
-                                    disabled="@_isHeatmapLoading"
-                                    @onclick="() => ChangeHeatmapEventTypeAsync(option.EventType)">
-                                @option.Label
-                            </button>
-                        }
-
                         @foreach (var option in HeatmapRangeOptions)
                         {
                             <button type="button"
@@ -87,14 +77,6 @@ else
                                 @option.Label
                             </button>
                         }
-
-                        <button type="button"
-                                class="analytics-filter-chip analytics-filter-chip--decay @(_useHeatmapDecay ? "is-active" : null)"
-                                data-heatmap-decay="@_useHeatmapDecay"
-                                disabled="@_isHeatmapLoading"
-                                @onclick="ToggleHeatmapDecayAsync">
-                            Decay @(_useHeatmapDecay ? "bật" : "tắt")
-                        </button>
                     </div>
                 </HeaderActions>
                 <ChildContent>
@@ -144,21 +126,11 @@ else
                         Title="Tuyến di chuyển ẩn danh"
                         Description="Route polyline tổng hợp giữa các POI trong Quận 4, không hiển thị device_id raw."
                         BadgeLabel="@($"{_movementFlows.Count:N0} luồng")"
-                        BadgeTone="StatusTone.Good">
+                        BadgeTone="StatusTone.Good"
+                        ClassName="analytics-map-panel">
                 <HeaderActions>
                     <div class="analytics-filter-toolbar">
-                        @foreach (var option in HeatmapEventTypeOptions)
-                        {
-                            <button type="button"
-                                    class="analytics-filter-chip @(Equals(option.EventType, _selectedMovementFlowEventType) ? "is-active" : null)"
-                                    data-flow-event="@option.Key"
-                                    disabled="@_isMovementFlowLoading"
-                                    @onclick="() => ChangeMovementFlowEventTypeAsync(option.EventType)">
-                                @option.Label
-                            </button>
-                        }
-
-                        @foreach (var option in HeatmapRangeOptions)
+                        @foreach (var option in MovementFlowRangeOptions)
                         {
                             <button type="button"
                                     class="analytics-filter-chip @(option.Range == _selectedMovementFlowTimeRange ? "is-active" : null)"
@@ -166,17 +138,6 @@ else
                                     disabled="@_isMovementFlowLoading"
                                     @onclick="() => ChangeMovementFlowTimeRangeAsync(option.Range)">
                                 @option.Label
-                            </button>
-                        }
-
-                        @foreach (var minimumSessions in MovementFlowMinimumSessionOptions)
-                        {
-                            <button type="button"
-                                    class="analytics-filter-chip @(minimumSessions == _minimumMovementFlowSessions ? "is-active" : null)"
-                                    data-flow-min-sessions="@minimumSessions"
-                                    disabled="@_isMovementFlowLoading"
-                                    @onclick="() => ChangeMovementFlowMinimumSessionsAsync(minimumSessions)">
-                                Min @minimumSessions
                             </button>
                         }
                     </div>

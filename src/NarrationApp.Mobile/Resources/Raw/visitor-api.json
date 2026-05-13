@@ -1,9 +1,9 @@
 {
   "development": {
     "default": "http://localhost:5000/",
-    "android": "http://192.168.31.137:5000/",
+    "android": "http://192.168.31.136:5000/",
     "androidEmulator": "http://10.0.2.2:5000/",
-    "androidDevice": "http://192.168.31.137:5000/"
+    "androidDevice": "http://192.168.31.136:5000/"
   },
   "staging": {
     "default": "https://staging-api.foodstreet.example/",

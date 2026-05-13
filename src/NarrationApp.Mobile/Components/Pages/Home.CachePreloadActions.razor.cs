@@ -5,7 +5,7 @@ namespace NarrationApp.Mobile.Components.Pages;
 public partial class Home
 {
     private string GetCachePreloadActionLabel() =>
-        $"Tải gói {_state.CurrentLanguage.Label}";
+        UiText.FormatPreloadAudioLabel(UiText.LocalizeLanguageLabel(_state.CurrentLanguage.Label));
 
     private async Task PreloadSelectedLanguageAudioAsync()
     {
@@ -16,7 +16,7 @@ public partial class Home
 
         _isCachePreloadRunning = true;
         _cachePreloadProgressPercent = 0;
-        _cachePreloadStatusLabel = $"Đang chuẩn bị gói offline {_state.CurrentLanguage.Label}...";
+        _cachePreloadStatusLabel = UiText.FormatPreparingCacheStatus(UiText.LocalizeLanguageLabel(_state.CurrentLanguage.Label));
 
         try
         {
@@ -28,7 +28,7 @@ public partial class Home
         }
         catch (Exception ex)
         {
-            _cachePreloadStatusLabel = $"Không tải trước được audio: {ex.Message}";
+            _cachePreloadStatusLabel = UiText.FormatPreloadFailure(ex.Message);
         }
         finally
         {
@@ -39,22 +39,13 @@ public partial class Home
 
     private void UpdateCachePreloadProgress(VisitorAudioPreloadProgress progress)
     {
-        _cachePreloadStatusLabel = progress.StatusLabel;
+        _cachePreloadStatusLabel = UiText.LocalizeKnownStatus(progress.StatusLabel);
         _cachePreloadProgressPercent = progress.Total == 0
             ? 100d
             : Math.Clamp(progress.Completed * 100d / progress.Total, 0d, 100d);
         _ = InvokeAsync(StateHasChanged);
     }
 
-    private static string BuildCachePreloadResultLabel(VisitorAudioPreloadResult result)
-    {
-        if (result.Total == 0)
-        {
-            return "Không có POI nào có audio sẵn cho gói offline ngôn ngữ hiện tại.";
-        }
-
-        return result.Failed > 0
-            ? $"Đã tải {result.Downloaded}, bỏ qua {result.Skipped}, lỗi {result.Failed}."
-            : $"Gói offline đã sẵn sàng: tải mới {result.Downloaded}, đã có {result.Skipped}.";
-    }
+    private string BuildCachePreloadResultLabel(VisitorAudioPreloadResult result) =>
+        UiText.FormatPreloadResult(result);
 }

@@ -16,7 +16,8 @@ public partial class Home
             _walkingRoutePoiId,
             _walkingRoute,
             _walkingDirectionsStatus,
-            _isWalkingRouteLoading);
+            _isWalkingRouteLoading,
+            UiText);
     }
 
     private VisitorMapRoute? GetCurrentWalkingRoute()

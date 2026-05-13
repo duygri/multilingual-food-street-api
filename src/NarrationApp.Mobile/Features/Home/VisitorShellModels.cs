@@ -101,7 +101,7 @@ public sealed record VisitorPoiTranslation(
     string Story,
     string Highlight);
 
-public sealed record VisitorNotification(string Title, string Body, string TimeLabel);
+public sealed record VisitorNotification(string Title, string Body, string TimeLabel, bool IsLive = false);
 
 public sealed record VisitorTourCard(
     string Id,

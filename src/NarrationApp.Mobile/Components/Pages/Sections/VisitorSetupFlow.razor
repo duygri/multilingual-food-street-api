@@ -1,7 +1,7 @@
 @using NarrationApp.Mobile.Features.Home
 
 <main class="visitor-app visitor-app--setup">
-    <section class="setup-card @(State.CurrentStep == VisitorIntroStep.Language ? "setup-card--language" : "setup-card--permissions")">
+    <section class="setup-card @GetSetupCardClass()">
         <div class="setup-phone-chrome">
             <div class="setup-statusbar">
                 <span class="setup-statusbar__time">16:02</span>
@@ -12,30 +12,63 @@
 
         @switch (State.CurrentStep)
         {
+            case VisitorIntroStep.Welcome:
+                <div class="setup-stack setup-stack--welcome">
+                    <div class="setup-welcome-hero">
+                        <span class="setup-welcome-icon" aria-hidden="true">🎧</span>
+                        <h1>@Text.WelcomeTitlePrefix <span>NarrationApp</span></h1>
+                        <p class="setup-copy setup-copy--centered">
+                            @Text.WelcomeDescription
+                        </p>
+                    </div>
+
+                    <div class="setup-feature-list">
+                        <article class="setup-feature-card">
+                            <span aria-hidden="true">📍</span>
+                            <p><strong>@Text.FeatureAutoPlayTitle</strong> @Text.FeatureAutoPlayBody</p>
+                        </article>
+                        <article class="setup-feature-card">
+                            <span aria-hidden="true">🌐</span>
+                            <p><strong>@Text.FeatureLanguageTitle</strong> — @Text.FeatureLanguageBody</p>
+                        </article>
+                        <article class="setup-feature-card">
+                            <span aria-hidden="true">🗺️</span>
+                            <p><strong>@Text.FeatureTourTitle</strong> — @Text.FeatureTourBody</p>
+                        </article>
+                    </div>
+
+                    <div class="setup-actions setup-actions--stacked setup-actions--welcome">
+                        <button type="button" class="primary-pill primary-pill--wide setup-cta-button" @onclick="OnContinueWelcome">
+                            @Text.StartExploringButton
+                        </button>
+                    </div>
+                </div>
+                break;
+
             case VisitorIntroStep.Language:
                 <div class="setup-stack setup-stack--language">
                     <div class="setup-intro setup-intro--language">
                         <span class="setup-hero-icon" aria-hidden="true">🌐</span>
                         <div class="setup-intro__copy">
-                            <h1>Chọn ngôn ngữ</h1>
+                            <h1>@Text.LanguageTitle</h1>
                             <p class="setup-copy">
-                                Chọn ngôn ngữ bạn muốn nghe thuyết minh. Có thể thay đổi sau.
+                                @Text.LanguageDescription
                             </p>
                         </div>
                     </div>
 
                     <div class="setup-language-list">
-                        @foreach (var language in State.Languages)
+                        @foreach (var language in State.AppLanguages)
                         {
-                            var isSelected = string.Equals(State.SelectedLanguageCode, language.Code, StringComparison.Ordinal);
+                            var isSelected = string.Equals(State.SelectedAppLanguageCode, language.Code, StringComparison.Ordinal);
                             <button
                                 type="button"
                                 class="setup-language-option @LanguageTileClassSelector(language.Code)"
                                 @onclick="() => OnSelectLanguage.InvokeAsync(language.Code)">
                                 <span class="setup-language-option__code">@language.ChipLabel</span>
                                 <span class="setup-language-option__copy">
-                                    <strong>@language.Label</strong>
-                                    <span>@language.SubLabel</span>
+                                    <strong>@Text.LocalizeLanguageLabel(language.Label)</strong>
+                                    <span>@Text.LocalizeLanguageLabel(language.SubLabel)</span>
                                 </span>
                                 <span class="setup-language-option__indicator" aria-hidden="true">
                                     @if (isSelected)
@@ -49,7 +82,7 @@
 
                     <div class="setup-actions setup-actions--stacked">
                         <button type="button" class="primary-pill primary-pill--wide setup-cta-button" @onclick="OnContinueLanguage">
-                            Tiếp tục →
+                            @Text.ContinueButton
                         </button>
                     </div>
                 </div>
@@ -59,18 +92,15 @@
                 <div class="setup-stack setup-stack--permissions">
                     <div class="setup-permission-hero">
                         <span class="setup-permission-icon" aria-hidden="true">📍</span>
-                        <h1>Cho phép truy cập vị trí</h1>
+                        <h1>@Text.LocationPermissionTitle</h1>
                         <p class="setup-copy setup-copy--centered">
-                            Để tự động phát thuyết minh khi bạn đến gần điểm tham quan, ứng dụng cần truy cập GPS của bạn.
+                            @Text.LocationPermissionDescription
                         </p>
                     </div>
 
                     <div class="setup-actions setup-actions--stacked">
                         <button type="button" class="primary-pill primary-pill--wide setup-cta-button" @onclick="OnEnableLocation">
-                            Cho phép vị trí
-                        </button>
-                        <button type="button" class="secondary-pill secondary-pill--wide" @onclick="OnSkipLocation">
-                            Bỏ qua — Dùng QR / thủ công
+                            @Text.EnableLocationButton
                         </button>
                     </div>
                 </div>
@@ -81,9 +111,17 @@
 
 @code {
     [Parameter] public VisitorShellState State { get; set; } = default!;
+    [Parameter] public VisitorUiText Text { get; set; } = VisitorUiTextCatalog.ForLanguage("vi");
     [Parameter] public Func<string, string> LanguageTileClassSelector { get; set; } = static _ => string.Empty;
+    [Parameter] public EventCallback OnContinueWelcome { get; set; }
     [Parameter] public EventCallback<string> OnSelectLanguage { get; set; }
     [Parameter] public EventCallback OnContinueLanguage { get; set; }
     [Parameter] public EventCallback OnEnableLocation { get; set; }
-    [Parameter] public EventCallback OnSkipLocation { get; set; }
+
+    private string GetSetupCardClass() => State.CurrentStep switch
+    {
+        VisitorIntroStep.Welcome => "setup-card--welcome",
+        VisitorIntroStep.Language => "setup-card--language",
+        _ => "setup-card--permissions"
+    };
 }

@@ -307,7 +307,7 @@ public sealed class HomeMarkupTests
         Assert.Contains("catch (Exception ex)", source, StringComparison.Ordinal);
         Assert.Contains("VisitorMobileDiagnostics.Log(\"AudioPlayback\", $\"Playback source failed", source, StringComparison.Ordinal);
         Assert.Contains("VisitorAudioPlaybackState.Error", source, StringComparison.Ordinal);
-        Assert.Contains("\"Phát audio thất bại\"", source, StringComparison.Ordinal);
+        Assert.Contains("UiText.AudioPlaybackFailedLabel()", source, StringComparison.Ordinal);
         Assert.DoesNotContain("await JS.InvokeVoidAsync(\"visitorAudio.play\", _state.CurrentAudioCue.StreamUrl, _audioBridge);\r\n        await JS.InvokeVoidAsync(\"visitorAudio.setRate\"", source, StringComparison.Ordinal);
     }
 
@@ -322,28 +322,31 @@ public sealed class HomeMarkupTests
         var codeBehind = File.ReadAllText(codeBehindPath);
 
         Assert.Contains("VisitorTab.Map", markup, StringComparison.Ordinal);
-        Assert.Contains("Bản đồ", markup, StringComparison.Ordinal);
+        Assert.Contains("@UiText.TabMap", markup, StringComparison.Ordinal);
         Assert.Contains("CurrentTab != VisitorTab.Map", codeBehind, StringComparison.Ordinal);
         Assert.Contains("OnOpenPoiDetail=\"OpenSelectedPoiDetailFromMapAsync\"", markup, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Mobile_home_setup_starts_at_language_without_auth_or_guest_gate()
+    public void Mobile_home_setup_starts_at_welcome_without_auth_or_guest_gate()
     {
         var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
         var homePath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Sections", "VisitorSetupFlow.razor");
 
         var markup = File.ReadAllText(homePath);
 
-        Assert.DoesNotContain("case VisitorIntroStep.Welcome:", markup, StringComparison.Ordinal);
+        Assert.Contains("case VisitorIntroStep.Welcome:", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("VisitorAuthScreen", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("ContinueFromSetupAsync", markup, StringComparison.Ordinal);
+        Assert.Contains("Text.WelcomeTitlePrefix", markup, StringComparison.Ordinal);
+        Assert.Contains("Text.StartExploringButton", markup, StringComparison.Ordinal);
+        Assert.Contains("OnContinueWelcome", markup, StringComparison.Ordinal);
         Assert.Contains("case VisitorIntroStep.Language:", markup, StringComparison.Ordinal);
         Assert.Contains("setup-phone-chrome", markup, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Mobile_home_language_setup_is_first_step_before_permissions()
+    public void Mobile_home_language_setup_remains_available_before_permissions()
     {
         var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
         var homePath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Sections", "VisitorSetupFlow.razor");
@@ -353,8 +356,8 @@ public sealed class HomeMarkupTests
 
         Assert.Contains("setup-language-list", languageSection, StringComparison.Ordinal);
         Assert.Contains("setup-language-option", languageSection, StringComparison.Ordinal);
-        Assert.Contains("Chọn ngôn ngữ", languageSection, StringComparison.Ordinal);
-        Assert.Contains("Tiếp tục", languageSection, StringComparison.Ordinal);
+        Assert.Contains("Text.LanguageTitle", languageSection, StringComparison.Ordinal);
+        Assert.Contains("Text.ContinueButton", languageSection, StringComparison.Ordinal);
         Assert.DoesNotContain("VisitorAuthScreen", languageSection, StringComparison.Ordinal);
     }
 
@@ -373,8 +376,8 @@ public sealed class HomeMarkupTests
 
         Assert.DoesNotContain("guest", permissionsSection, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("đăng nhập", permissionsSection, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Cho phép truy cập vị trí", permissionsSection, StringComparison.Ordinal);
-        Assert.Contains("Bỏ qua — Dùng QR / thủ công", permissionsSection, StringComparison.Ordinal);
+        Assert.Contains("Text.LocationPermissionTitle", permissionsSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("Bỏ qua — Dùng QR / thủ công", permissionsSection, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -580,7 +583,7 @@ public sealed class HomeMarkupTests
         Assert.Contains("CurrentLanguageChipLabel", discoverMarkup, StringComparison.Ordinal);
         Assert.Contains("OnCycleLanguage", discoverMarkup, StringComparison.Ordinal);
         Assert.Contains("discover-language-button", discoverMarkup, StringComparison.Ordinal);
-        Assert.Contains("CurrentLanguageChipLabel=\"@_state.CurrentLanguage.ChipLabel\"", homeMarkup, StringComparison.Ordinal);
+        Assert.Contains("CurrentLanguageChipLabel=\"@_state.CurrentAppLanguage.ChipLabel\"", homeMarkup, StringComparison.Ordinal);
         Assert.Contains("OnCycleLanguage=\"CycleLanguage\"", homeMarkup, StringComparison.Ordinal);
     }
 

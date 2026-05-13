@@ -43,6 +43,7 @@ else
         <section class="metric-grid qr-surface__metrics">
             <MetricCard Label="QR hoạt động" Value="@_qrItems.Count.ToString("N0")" Hint="Tổng mã đang dùng" />
             <MetricCard Label="Link đến POI" Value="@CountByTarget("poi").ToString("N0")" Hint="Mở chi tiết điểm đến" />
+            <MetricCard Label="Danh sách POI" Value="@CountByTarget("poi_list").ToString("N0")" Hint="Một QR mở toàn bộ POI" />
             <MetricCard Label="Link đến Tour" Value="@CountByTarget("tour").ToString("N0")" Hint="Quét là nghe tour ngay" />
             <MetricCard Label="Mở App" Value="@CountByTarget("open_app").ToString("N0")" Hint="Deep link vào ứng dụng" />
         </section>
@@ -60,6 +61,7 @@ else
                             value="@_qrFilter"
                             @onchange="args => ChangeQrFilterAsync(args.Value?.ToString())">
                         <option value="">Tất cả target</option>
+                        <option value="poi_list">Danh sách POI</option>
                         <option value="poi">POI</option>
                         <option value="tour">Tour</option>
                         <option value="open_app">Open App</option>
@@ -150,6 +152,7 @@ else
                                     value="@_qrEditor.TargetType"
                                     @onchange="args => UpdateQrTargetType(args.Value?.ToString())">
                                 <option value="poi">POI</option>
+                                <option value="poi_list">Danh sách POI</option>
                                 <option value="tour">Tour</option>
                                 <option value="open_app">Open App</option>
                             </select>
@@ -185,6 +188,13 @@ else
                                         <option value="@tour.Id">@tour.Title</option>
                                     }
                                 </select>
+                            </div>
+                        }
+                        else if (string.Equals(_qrEditor.TargetType, "poi_list", StringComparison.OrdinalIgnoreCase))
+                        {
+                            <div class="editor-field">
+                                <label for="qr-poi-list">Danh sách POI</label>
+                                <input id="qr-poi-list" class="editor-select" value="Mở danh sách POI trong app/web" disabled />
                             </div>
                         }
                         else

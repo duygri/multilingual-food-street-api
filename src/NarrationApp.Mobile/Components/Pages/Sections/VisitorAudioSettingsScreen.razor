@@ -6,41 +6,41 @@
         <button type="button" class="icon-button" @onclick="OnBack">←</button>
         <div>
             <span class="eyebrow">Audio settings</span>
-            <h2>Audio & Thuyết minh</h2>
-            <p>Tinh chỉnh cách mobile tự phát, ưu tiên nguồn audio và tốc độ nghe mặc định.</p>
+            <h2>@Text.AudioSettingsTitle</h2>
+            <p>@Text.AudioSettingsDescription()</p>
         </div>
     </header>
 
     <article class="setting-card">
-        <span class="sheet-label">Tự động phát</span>
+        <span class="sheet-label">@Text.AutoPlaySectionLabel()</span>
 
         <button type="button" class="settings-toggle-row" @onclick="() => OnAutoPlayChanged.InvokeAsync(!Preferences.AutoPlayEnabled)">
             <div class="settings-row__copy">
-                <strong class="settings-row__title">Phát khi vào geofence</strong>
-                <span class="settings-row__subtitle">Bật audio ngay khi bạn bước vào đúng bán kính kích hoạt.</span>
+                <strong class="settings-row__title">@Text.AutoPlayGeofenceTitle()</strong>
+                <span class="settings-row__subtitle">@Text.AutoPlayGeofenceDescription()</span>
             </div>
             <span class="settings-switch @(Preferences.AutoPlayEnabled ? "is-on" : string.Empty)">@GetToggleLabel(Preferences.AutoPlayEnabled)</span>
         </button>
 
         <button type="button" class="settings-toggle-row" @onclick="() => OnSpokenAnnouncementsChanged.InvokeAsync(!Preferences.SpokenAnnouncementsEnabled)">
             <div class="settings-row__copy">
-                <strong class="settings-row__title">Thông báo bằng giọng nói</strong>
-                <span class="settings-row__subtitle">Đọc nhắc ngắn trước khi bắt đầu phần thuyết minh chính.</span>
+                <strong class="settings-row__title">@Text.SpokenAnnouncementsTitle()</strong>
+                <span class="settings-row__subtitle">@Text.SpokenAnnouncementsDescription()</span>
             </div>
             <span class="settings-switch @(Preferences.SpokenAnnouncementsEnabled ? "is-on" : string.Empty)">@GetToggleLabel(Preferences.SpokenAnnouncementsEnabled)</span>
         </button>
 
         <button type="button" class="settings-toggle-row" @onclick="() => OnAutoAdvanceChanged.InvokeAsync(!Preferences.AutoAdvanceEnabled)">
             <div class="settings-row__copy">
-                <strong class="settings-row__title">Tự chuyển POI tiếp theo</strong>
-                <span class="settings-row__subtitle">Khi đang theo tour, app sẽ gợi ý chuyển sang điểm kế tiếp sau khi nghe xong.</span>
+                <strong class="settings-row__title">@Text.AutoAdvanceTitle()</strong>
+                <span class="settings-row__subtitle">@Text.AutoAdvanceDescription()</span>
             </div>
             <span class="settings-switch @(Preferences.AutoAdvanceEnabled ? "is-on" : string.Empty)">@GetToggleLabel(Preferences.AutoAdvanceEnabled)</span>
         </button>
     </article>
 
     <article class="setting-card">
-        <span class="sheet-label">Nguồn audio ưu tiên</span>
+        <span class="sheet-label">@Text.AudioSourcePreferenceLabel()</span>
         <div class="settings-segment">
             @foreach (var option in Enum.GetValues<VisitorAudioSourcePreference>())
             {
@@ -58,7 +58,7 @@
     </article>
 
     <article class="setting-card">
-        <span class="sheet-label">Tốc độ phát mặc định</span>
+        <span class="sheet-label">@Text.DefaultPlaybackSpeedLabel()</span>
         <div class="settings-speed-grid">
             @foreach (var speed in SpeedOptions)
             {
@@ -72,14 +72,15 @@
         </div>
 
         <div class="auth-inline auth-inline--summary">
-            <span>@Preferences.CooldownLabel</span>
-            <span>@Preferences.QueueLabel</span>
+            <span>@Text.LocalizeKnownStatus(Preferences.CooldownLabel)</span>
+            <span>@Text.LocalizeKnownStatus(Preferences.QueueLabel)</span>
         </div>
     </article>
 </section>
 
 @code {
     [Parameter] public VisitorAudioPreferences Preferences { get; set; } = new(true, true, false, VisitorAudioSourcePreference.RecordedFirst, 1d, string.Empty, string.Empty);
+    [Parameter] public VisitorUiText Text { get; set; } = VisitorUiTextCatalog.ForLanguage("vi");
     [Parameter] public IReadOnlyList<double> SpeedOptions { get; set; } = [];
     [Parameter] public EventCallback OnBack { get; set; }
     [Parameter] public EventCallback<bool> OnAutoPlayChanged { get; set; }
@@ -88,19 +89,11 @@
     [Parameter] public EventCallback<VisitorAudioSourcePreference> OnSourcePreferenceChanged { get; set; }
     [Parameter] public EventCallback<double> OnSpeedChanged { get; set; }
 
-    private static string GetToggleLabel(bool isEnabled) => isEnabled ? "Bật" : "Tắt";
+    private string GetToggleLabel(bool isEnabled) => Text.ToggleLabel(isEnabled);
 
-    private static string GetSourcePreferenceLabel(VisitorAudioSourcePreference preference) =>
-        preference switch
-        {
-            VisitorAudioSourcePreference.TextToSpeech => "Google TTS",
-            _ => "Recorded trước"
-        };
+    private string GetSourcePreferenceLabel(VisitorAudioSourcePreference preference) =>
+        Text.SourcePreferenceLabel(preference);
 
-    private static string GetSourcePreferenceDescription(VisitorAudioSourcePreference preference) =>
-        preference switch
-        {
-            VisitorAudioSourcePreference.TextToSpeech => "Ưu tiên audio generate bằng Google Cloud TTS khi có sẵn đúng ngôn ngữ.",
-            _ => "Ưu tiên bản thu gốc tiếng Việt/recorded, chỉ rơi về TTS khi chưa có file phù hợp."
-        };
+    private string GetSourcePreferenceDescription(VisitorAudioSourcePreference preference) =>
+        Text.SourcePreferenceDescription(preference);
 }

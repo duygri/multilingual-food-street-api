@@ -70,7 +70,7 @@ public sealed class VisitorSettingsPresentationFormatterTests
             cachedAudioFileCount: 12,
             estimatedSizeMb: 48.35d);
 
-        Assert.Equal("9 POI • 2 tour • 12 audio • 48.4 MB offline", summary);
+        Assert.Equal("9 POI • 2 tour • 12 audio • 48.4 MB cache", summary);
     }
 
     [Fact]

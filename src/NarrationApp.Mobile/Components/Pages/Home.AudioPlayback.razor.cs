@@ -28,13 +28,13 @@ public partial class Home
             var playbackUrl = await VisitorAudioPlaybackSourceResolver.ResolveAsync(_state.CurrentAudioCue.StreamUrl, JS);
             await JS.InvokeVoidAsync("visitorAudio.play", playbackUrl, _audioBridge);
             await JS.InvokeVoidAsync("visitorAudio.setRate", AudioSpeedOptions[_audioSpeedIndex]);
-            _state.SetAudioPlaybackState(VisitorAudioPlaybackState.Playing, $"Đang phát • {_state.CurrentAudioCue.LanguageCode.ToUpperInvariant()}");
+            _state.SetAudioPlaybackState(VisitorAudioPlaybackState.Playing, UiText.FormatPlayingLabel(_state.CurrentAudioCue.LanguageCode));
             await TrackAudioPlayAsync(_state.CurrentAudioCue);
         }
         catch (Exception ex)
         {
             VisitorMobileDiagnostics.Log("AudioPlayback", $"Playback source failed: {ex.Message}");
-            _state.SetAudioPlaybackState(VisitorAudioPlaybackState.Error, "Phát audio thất bại");
+            _state.SetAudioPlaybackState(VisitorAudioPlaybackState.Error, UiText.AudioPlaybackFailedLabel());
         }
     }
 
@@ -45,12 +45,12 @@ public partial class Home
             try
             {
                 await JS.InvokeVoidAsync("visitorAudio.pause");
-                _state.SetAudioPlaybackState(VisitorAudioPlaybackState.Paused, "Đã tạm dừng");
+                _state.SetAudioPlaybackState(VisitorAudioPlaybackState.Paused, UiText.AudioPausedLabel());
             }
             catch (JSException ex)
             {
                 VisitorMobileDiagnostics.Log("AudioPlayback", $"JS pause failed: {ex.Message}");
-                _state.SetAudioPlaybackState(VisitorAudioPlaybackState.Error, "Audio chưa sẵn sàng");
+                _state.SetAudioPlaybackState(VisitorAudioPlaybackState.Error, UiText.AudioNotReadyLabel());
             }
 
             return;

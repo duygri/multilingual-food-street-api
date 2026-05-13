@@ -53,6 +53,7 @@ public partial class Home
 
         var nextProximity = ResolveNextProximity(location);
         await ApplyProximityNarrationAsync(previousProximity, nextProximity);
+        await RefreshNotificationsAsync();
 
         await InvokeAsync(StateHasChanged);
     }

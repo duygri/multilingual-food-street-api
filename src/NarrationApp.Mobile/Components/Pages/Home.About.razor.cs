@@ -18,16 +18,11 @@ public partial class Home
     ];
 
     private IReadOnlyList<VisitorAboutLinkItem> GetAboutLinks() =>
-    [
-        new VisitorAboutLinkItem("Điều khoản sử dụng", "Mở bản web hoặc help center để xem chi tiết."),
-        new VisitorAboutLinkItem("Chính sách quyền riêng tư", "Giải thích cách app dùng vị trí và audio history."),
-        new VisitorAboutLinkItem("Giấy phép mã nguồn mở", "Danh sách package và giấy phép đang dùng."),
-        new VisitorAboutLinkItem("Gửi phản hồi", "Dùng khi cần báo bug hoặc góp ý bản visitor.")
-    ];
+        UiText.AboutLinks();
 
     private Task OpenAboutLinkAsync(string label)
     {
-        ShowSettingsFeedback($"{label} sẽ nối sang web/support ở lượt hoàn thiện tiếp theo.");
+        ShowSettingsFeedback(UiText.FormatAboutFeedback(label));
         return Task.CompletedTask;
     }
 

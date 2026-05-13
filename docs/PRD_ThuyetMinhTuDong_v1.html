@@ -66,6 +66,13 @@ tr:hover td{background:rgba(19,35,59,.32)}
 .code-block{background:#0b1220;border:1px solid var(--border);border-radius:12px;padding:16px;font-family:"Cascadia Code","Consolas",monospace;font-size:12.5px;white-space:pre;overflow-x:auto;color:#dbe4ee;margin:14px 0}
 .diagram{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;margin:16px 0;overflow-x:auto}
 .diagram .mermaid{display:flex;justify-content:center}
+.sequence-toc{background:linear-gradient(135deg,rgba(19,35,59,.9),rgba(23,43,72,.72));border:1px solid var(--border);border-radius:14px;padding:16px;margin:16px 0 24px}
+.sequence-toc h3{margin-top:0}
+.sequence-toc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.sequence-toc-group{background:rgba(8,17,31,.38);border:1px solid rgba(40,64,94,.7);border-radius:12px;padding:12px}
+.sequence-toc-group strong{display:block;color:var(--text);font-size:13px;margin-bottom:8px}
+.sequence-toc-group a{display:block;padding:4px 0;font-size:12.5px;color:var(--muted)}
+.sequence-toc-group a:hover{color:var(--accent-2)}
 .timeline{position:relative;padding-left:28px;margin:16px 0}
 .timeline::before{content:"";position:absolute;left:8px;top:0;bottom:0;width:2px;background:var(--accent)}
 .timeline-item{position:relative;margin-bottom:18px}
@@ -75,7 +82,7 @@ tr:hover td{background:rgba(19,35,59,.32)}
 .footer{text-align:center;color:var(--dim);font-size:12px;padding-top:28px;border-top:1px solid var(--border)}
 .version-badge{position:absolute;top:20px;right:30px;background:var(--accent);color:#000;font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px}
 @media(max-width:1100px){.stats{grid-template-columns:repeat(3,1fr)}.module-grid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:900px){.sidebar{display:none}.main{margin-left:0;padding:20px}.grid-2,.grid-3,.grid-4,.module-grid,.stats{grid-template-columns:1fr}}
+@media(max-width:900px){.sidebar{display:none}.main{margin-left:0;padding:20px}.grid-2,.grid-3,.grid-4,.module-grid,.stats,.sequence-toc-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -188,25 +195,25 @@ tr:hover td{background:rgba(19,35,59,.32)}
   <section id="metrics">
     <h2>2. Success Metrics / KPI</h2>
     <div class="alert info">
-      Các chỉ số đo lường để xác định sản phẩm đã "xong" — trả lời câu hỏi "đo bằng gì".
+      Các chỉ số dưới đây phản ánh dữ liệu thật đang có trong database dev hiện tại, không dùng target phóng đại.
     </div>
     <div class="grid-4">
-      <div class="stat"><div class="num">30+</div><div class="label">POI số hóa</div></div>
-      <div class="stat"><div class="num">80%</div><div class="label">POI đa ngôn ngữ</div></div>
-      <div class="stat"><div class="num">70%</div><div class="label">POI có audio sẵn sàng</div></div>
-      <div class="stat"><div class="num">500+</div><div class="label">Lượt trigger/tháng</div></div>
+      <div class="stat"><div class="num">12</div><div class="label">POI published</div></div>
+      <div class="stat"><div class="num">7</div><div class="label">Ngôn ngữ active</div></div>
+      <div class="stat"><div class="num">44</div><div class="label">Audio ready</div></div>
+      <div class="stat"><div class="num">203</div><div class="label">Visit events</div></div>
     </div>
     <div class="table-wrap">
       <table>
-        <tr><th>Metric</th><th>Target</th><th>Cách đo lường</th><th>Tần suất</th></tr>
-        <tr><td>Số POI đã số hóa</td><td>30+ POI</td><td>Đếm record trong bảng pois với status = published</td><td>Hàng tuần</td></tr>
-        <tr><td>Tỷ lệ POI có audio đa ngôn ngữ</td><td>≥ 80%</td><td>Đếm POI có audio_assets ready theo nhóm managed_languages đang bật / Tổng POI published</td><td>Hàng tuần</td></tr>
-        <tr><td>Tỷ lệ audio sẵn sàng</td><td>≥ 70%</td><td>Đếm POI có audio_assets status = ready / Tổng POI</td><td>Hàng tuần</td></tr>
-        <tr><td>Số lượt geofence trigger</td><td>500+/tháng</td><td>Đếm visit_events với event_type = geofence_enter</td><td>Hàng tháng</td></tr>
-        <tr><td>Số lượt QR scan</td><td>200+/tháng</td><td>Đếm visit_events với event_type = qr_scan</td><td>Hàng tháng</td></tr>
-        <tr><td>API response time (P95)</td><td>&lt; 500ms</td><td>Log timing từ API middleware</td><td>Hàng ngày</td></tr>
-        <tr><td>Tỷ lệ narration completion</td><td>≥ 60%</td><td>Đếm audio phát hết / tổng lượt phát</td><td>Hàng tháng</td></tr>
-        <tr><td>Battery drain rate</td><td>&lt; 5%/giờ</td><td>Test thực địa: GPS tracking + audio playback 1 giờ liên tục</td><td>Mỗi release</td></tr>
+        <tr><th>Metric</th><th>Hiện trạng DB dev</th><th>Nguồn kiểm chứng</th><th>Ghi chú</th></tr>
+        <tr><td>Số POI đã số hóa</td><td>12 POI published</td><td>pois.status = Published</td><td>Dữ liệu seed/demo hiện có</td></tr>
+        <tr><td>Ngôn ngữ đang bật</td><td>7 ngôn ngữ: vi, en, ja, ko, zh, fr, th</td><td>managed_languages.is_active = true</td><td>Admin có thể thêm/bớt</td></tr>
+        <tr><td>Audio sẵn sàng</td><td>44 audio ready, phủ 12/12 POI; 6 POI có audio nguồn tiếng Việt</td><td>audio_assets.status = Ready</td><td>Không tự tạo audio khi chỉ dịch</td></tr>
+        <tr><td>Bản dịch hiện có</td><td>67 bản dịch, phủ 12/12 POI</td><td>poi_translations</td><td>Ngôn ngữ mới chỉ hiện khi có audio/bản dịch phù hợp</td></tr>
+        <tr><td>QR code</td><td>5 QR: open_app 1, poi_list 1, tour 3</td><td>qr_codes.target_type</td><td>QR POI list/web-first và tour app-first</td></tr>
+        <tr><td>Tour</td><td>1 tour published, 6 tour stops</td><td>tours + tour_stops</td><td>Seed demo điểm dừng xe buýt</td></tr>
+        <tr><td>Visit events</td><td>203 events; geofence 37, QR 32, audio play 97, tour progress 37</td><td>visit_events.event_type</td><td>40 device_id unique trong dữ liệu hiện có</td></tr>
+        <tr><td>Chỉ số runtime chưa đo tự động</td><td>Chưa có log P95 API, narration completion và battery drain trong DB</td><td>Chưa triển khai bảng/log đo riêng</td><td>Không ghi target khi chưa có số liệu thật</td></tr>
       </table>
     </div>
   </section>
@@ -268,7 +275,7 @@ tr:hover td{background:rgba(19,35,59,.32)}
           <li><code>fr</code> - Français</li>
         </ul>
         <div class="alert info" style="margin-top:12px">
-          <strong>Ghi chú:</strong> Danh sách trên là bộ seed ban đầu, không phải giới hạn cố định. Mobile lấy danh sách ngôn ngữ active từ <code>managed_languages</code> thông qua <code>LanguagesController.GetAsync()</code> và <code>VisitorContentService.LoadManagedLanguagesAsync()</code>. Admin có thể thêm/bật/tắt ngôn ngữ mới theo danh sách Google Cloud Translation hỗ trợ (100+ ngôn ngữ). Mobile chỉ hiển thị lựa chọn nghe khi POI có audio ready tương ứng, tránh cho du khách bấm vào ngôn ngữ chưa có nội dung nghe.
+          <strong>Ghi chú:</strong> Danh sách trên là bộ ngôn ngữ thuyết minh seed ban đầu, không phải giới hạn cố định. Mobile lấy danh sách ngôn ngữ audio active từ <code>managed_languages</code> thông qua <code>LanguagesController.GetAsync()</code> và <code>VisitorContentService.LoadManagedLanguagesAsync()</code>. Admin có thể thêm/bật/tắt ngôn ngữ mới theo danh sách Google Cloud Translation hỗ trợ (100+ ngôn ngữ). Riêng giao diện app mobile chỉ chuyển giữa <code>vi</code> và <code>en</code> bằng <code>VisitorUiTextCatalog</code>/<code>SelectedAppLanguageCode</code>; phần thuyết minh vẫn đa ngôn ngữ và chỉ hiển thị lựa chọn nghe khi POI có audio ready tương ứng.
         </div>
       </div>
     </div>
@@ -278,14 +285,16 @@ tr:hover td{background:rgba(19,35,59,.32)}
   <section id="out-of-scope">
     <h2>4. Out of Scope — Future</h2>
     <div class="alert warn">
-      Sau khi chốt phạm vi đồ án, một số hạng mục <strong>Future V1</strong> đã được đưa vào ở mức demo/controlled scope để tăng tính hoàn chỉnh: offline pack, khu vực, share public và review/rating có moderation. Các hạng mục lớn như payment/chatbot vẫn để sau vì cần mô hình vận hành riêng.
+      Sau khi chốt phạm vi đồ án, một số hạng mục <strong>Future V1</strong> đã được đưa vào ở mức demo/controlled scope để tăng tính hoàn chỉnh: offline content/audio pack, share public và review/rating có moderation. Các hạng mục lớn như payment/chatbot vẫn để sau vì cần mô hình vận hành riêng.
     </div>
     <div class="table-wrap">
       <table>
         <tr><th>Hạng mục</th><th>Trạng thái trong đồ án</th><th>Ghi chú triển khai</th></tr>
         <tr><td>Thanh toán (Payment)</td><td>Cần tích hợp cổng thanh toán như MoMo/VNPay/Stripe, mô hình gói premium, lịch sử giao dịch và xử lý hoàn tiền. Nếu đưa vào ngay sẽ làm lệch trọng tâm thuyết minh tự động.</td><td><span class="badge badge-muted">Để sau</span> Chỉ xem xét sau V1 khi sản phẩm có nhu cầu monetization rõ ràng: free basic tour + premium tour/audio chuyên sâu có phí.</td></tr>
         <tr><td>Chatbot AI hỏi đáp POI</td><td>Cần knowledge base chuẩn hóa từ POI/tour, guardrails chống hallucination, kiểm soát nội dung đa ngôn ngữ và chi phí LLM.</td><td><span class="badge badge-muted">Để sau</span> Chỉ đưa vào sau V1 khi dữ liệu POI đủ sạch, có transcript/audio ổn định và có chính sách an toàn nội dung.</td></tr>
-        <tr><td>Offline Map toàn phần</td><td><span class="badge badge-purple">Future V1 demo</span> Đã có gói offline nội dung: SQLite snapshot POI/tour, audio cache-first, cache manager và schematic fallback khi Mapbox không tải được.</td><td>Offline tile pack bản đồ nền thật vẫn để sau vì cần Mapbox native offline SDK và quản lý dung lượng tile.</td></tr>
+        <tr><td>Offline nội dung + audio cache</td><td><span class="badge badge-purple">Đã đưa vào demo</span> Đã có gói offline nội dung: SQLite snapshot POI/tour, audio cache-first, cache manager và schematic fallback khi Mapbox không tải được. Đây không phải offline tile map thật.</td><td>Offline tile map thật (Mapbox/Here native offline SDK, tile region Quận 4/Vĩnh Khánh, quản lý dung lượng/cập nhật tile) là hướng phát triển sau, không claim trong MVP.</td></tr>
+        <tr><td>Offline map tile thật</td><td><span class="badge badge-muted">Future sau V1</span> Chưa triển khai tile pack bản đồ nền chạy hoàn toàn offline.</td><td>Nếu làm production cần native SDK, chính sách tải/cập nhật tile, giới hạn dung lượng, license bản đồ và UX quản lý vùng tải.</td></tr>
+        <tr><td>Audio nâng cao</td><td><span class="badge badge-muted">Future polish</span> Hiện đã có audio/TTS ready, cache-first và player full màn hình. Các tính năng nâng cao để sau.</td><td>Hướng phát triển: SSML/voice profile, resume chính xác theo timeline thật, fade in/out, tốc độ đọc, download quality và xử lý audio dài tốt hơn.</td></tr>
         <tr><td>Social sharing</td><td><span class="badge badge-purple">Future V1 demo</span> Đã có public share page cho POI/tour qua <code>ShareController.PoiAsync()</code>, <code>ShareController.TourAsync()</code> và <code>SharePreviewHtmlBuilder</code>.</td><td>Người nhận link có thể xem preview web, nghe audio public nếu có và bấm mở app.</td></tr>
         <tr><td>Review/Rating POI</td><td><span class="badge badge-purple">Future V1 demo</span> Đã có bảng <code>poi_reviews</code>, API gửi review, summary public và admin moderation approve/reject.</td><td>Review mới luôn ở trạng thái pending, chỉ review approved mới tính vào điểm trung bình public.</td></tr>
         <tr><td>AR (Augmented Reality)</td><td><span class="badge badge-muted">Để sau demo</span> Yêu cầu camera, cảm biến, nhận diện hướng nhìn, tối ưu hiệu năng thiết bị và thiết kế UX riêng.</td><td>Không cần cho phản biện hiện tại; có thể làm spike sau nếu muốn nâng trải nghiệm trực quan.</td></tr>
@@ -296,7 +305,9 @@ tr:hover td{background:rgba(19,35,59,.32)}
     <div class="table-wrap">
       <table>
         <tr><th>Ưu tiên</th><th>Hạng mục Future V1</th><th>Deliverable chính</th><th>Acceptance criteria</th></tr>
-        <tr><td><span class="badge badge-red">P1</span></td><td>Offline Pack demo</td><td><span class="badge badge-purple">Đã đưa vào</span> Lưu snapshot POI/tour bằng <code>VisitorOfflineCacheStore.SaveContentSnapshotAsync()</code>, tải trước audio bằng <code>VisitorAudioPreloadService.PreloadAsync()</code>, hiển thị gói offline trong Settings.</td><td>Du khách mở app, xem lại POI/tour từ cache khi API lỗi và phát audio cache theo ngôn ngữ đã tải.</td></tr>
+        <tr><td><span class="badge badge-red">P1</span></td><td>Offline content/audio pack demo</td><td><span class="badge badge-purple">Đã đưa vào</span> Lưu snapshot POI/tour bằng <code>VisitorOfflineCacheStore.SaveContentSnapshotAsync()</code>, tải trước audio bằng <code>VisitorAudioPreloadService.PreloadAsync()</code>, hiển thị gói offline trong Settings. Không bao gồm offline tile map thật.</td><td>Du khách mở app, xem lại POI/tour từ cache khi API lỗi và phát audio cache theo ngôn ngữ đã tải; nếu Mapbox lỗi thì dùng schematic/list fallback.</td></tr>
+        <tr><td><span class="badge badge-blue">P3</span></td><td>Offline map tile thật</td><td>Tích hợp Mapbox/Here native offline SDK, tải tile theo vùng Quận 4/Vĩnh Khánh và quản lý dung lượng tile.</td><td>Thiết bị tắt mạng vẫn xem được bản đồ nền tile thật, không chỉ schematic/list fallback; người dùng có thể tải/xóa/cập nhật vùng offline.</td></tr>
+        <tr><td><span class="badge badge-blue">P3</span></td><td>Audio nâng cao</td><td>Bổ sung voice profile/SSML, resume theo timeline thật, điều chỉnh tốc độ đọc và xử lý audio dài.</td><td>Nghe audio dài ổn định, tua/resume đúng thời lượng thật, chất lượng giọng đọc đồng nhất theo ngôn ngữ.</td></tr>
         <tr><td><span class="badge badge-orange">P2</span></td><td>Social sharing</td><td><span class="badge badge-purple">Đã đưa vào</span> Public share page cho POI/tour với preview metadata và audio public nếu có.</td><td>Người dùng chia sẻ link <code>/share/poi/{id}</code> hoặc <code>/share/tour/{id}</code>; người nhận mở được web preview và có CTA mở app.</td></tr>
         <tr><td><span class="badge badge-orange">P2</span></td><td>Review/Rating POI</td><td><span class="badge badge-purple">Đã đưa vào</span> Tourist gửi review pending, Admin duyệt/từ chối qua queue, summary public chỉ lấy review approved.</td><td>Review mới không làm bẩn dữ liệu public trước khi duyệt; admin có thể approve/reject; POI hiển thị điểm trung bình từ review hợp lệ.</td></tr>
         <tr><td><span class="badge badge-blue">P3</span></td><td>AR POI overlay</td><td>Spike trải nghiệm camera overlay: hiển thị tên POI/khoảng cách/hướng nhìn ở gần vị trí thật, ưu tiên prototype trước production.</td><td>Người dùng bật chế độ AR thử nghiệm, thấy POI gần nhất trên camera overlay; nếu thiết bị không hỗ trợ thì fallback về bản đồ.</td></tr>
@@ -390,12 +401,12 @@ tr:hover td{background:rgba(19,35,59,.32)}
         <tr><td><span class="badge badge-orange">MVP</span></td><td>Analytics Dashboard</td><td>Lưu tuyến di chuyển ẩn danh, top địa điểm được nghe nhiều nhất, thời gian trung bình nghe 1 POI, heatmap vị trí người dùng.</td></tr>
         <tr><td><span class="badge badge-orange">MVP</span></td><td>Tour Management</td><td>Gom nhiều POI thành hành trình có thứ tự, ước lượng thời gian, theo dõi tiến trình.</td></tr>
         <tr><td><span class="badge badge-orange">MVP</span></td><td>Moderation & Realtime</td><td>Owner gửi duyệt thay đổi POI → Admin approve/reject. SignalR thông báo realtime.</td></tr>
-        <tr><td><span class="badge badge-orange">MVP</span></td><td>Notification Center</td><td>Trung tâm thông báo hiển thị ở góc trên bên phải (bell icon) trên web portal cho Admin/Owner. Dropdown panel hiển thị moderation, audio ready, tour mới, cập nhật POI. Tourist mobile chỉ có local hints, không có backend notification center.</td></tr>
+        <tr><td><span class="badge badge-orange">MVP</span></td><td>Notification Center</td><td>Trung tâm thông báo hiển thị ở góc trên bên phải (bell icon) trên web portal cho Admin/Owner. Tourist mobile có bell icon riêng trên tab Map, gọi <code>GET /api/visitor-notifications</code> để lấy gợi ý gần vị trí hiện tại; panel danh sách cuộn độc lập và không đặt bell trong Settings.</td></tr>
         <tr><td><span class="badge badge-orange">MVP</span></td><td>Categories (Danh mục)</td><td>Admin tạo/sửa/xóa danh mục phân loại POI. Owner chọn danh mục khi tạo POI. Tourist lọc theo danh mục trên bản đồ.</td></tr>
         <tr><td><span class="badge badge-orange">MVP</span></td><td>Visitor Devices</td><td>Admin theo dõi thiết bị visitor đang online gần realtime, dùng <code>device_id</code> làm định danh chính. Không còn là màn usage history theo user truyền thống.</td></tr>
         <tr><td><span class="badge badge-muted">Để sau</span></td><td>Thanh toán (Payment)</td><td>Sau V1 mới xem xét tích hợp cổng thanh toán (MoMo/VNPay/Stripe) và mô hình gói premium, vì cần chính sách giá, giao dịch, hoàn tiền và vận hành thương mại riêng.</td></tr>
         <tr><td><span class="badge badge-muted">Để sau</span></td><td>Chatbot AI</td><td>Sau V1 mới xem xét chatbot hỏi đáp POI bằng LLM, vì cần knowledge base sạch, guardrails chống hallucination, kiểm soát nội dung đa ngôn ngữ và chi phí vận hành.</td></tr>
-        <tr><td><span class="badge badge-purple">Future V1 demo</span></td><td>Offline Pack</td><td>Đã có snapshot POI/tour, audio preload/cache manager và fallback offline cache; offline tile pack nền bản đồ thật vẫn là bước sau nếu cần SDK native.</td></tr>
+        <tr><td><span class="badge badge-purple">Future V1 demo</span></td><td>Offline content/audio pack</td><td>Đã có snapshot POI/tour, audio preload/cache manager và fallback offline cache; offline tile map thật vẫn là bước sau nếu cần SDK native.</td></tr>
         <tr><td><span class="badge badge-muted">Để sau</span></td><td>Nhiều khu vực</td><td>Tạm bỏ khỏi V1 vì sản phẩm đang định vị là thuyết minh ẩm thực khu vực Vĩnh Khánh. Khi mở rộng sang khu khác mới cần tenant/region filter riêng.</td></tr>
         <tr><td><span class="badge badge-purple">Future V1 demo</span></td><td>Social sharing</td><td>Đã có public share page <code>/share/poi/{id}</code> và <code>/share/tour/{id}</code> với preview metadata, audio public nếu có và CTA mở app.</td></tr>
         <tr><td><span class="badge badge-purple">Future V1 demo</span></td><td>Review/Rating POI</td><td>Đã có <code>poi_reviews</code>, tourist submit review pending, public summary approved-only và admin approve/reject queue.</td></tr>
@@ -416,10 +427,10 @@ tr:hover td{background:rgba(19,35,59,.32)}
       <div class="module"><div class="icon">🔳</div><div class="name">QR Code Deep Link</div><div class="desc">QR quét ngoài app (camera thiết bị) hỗ trợ <code>open_app</code>, <code>poi</code> và <code>tour</code>. QR tour dùng cho điểm dừng xe buýt: mở app, start tour và autoplay stop đầu tiên ngay, không phụ thuộc GPS.</div></div>
       <div class="module"><div class="icon">📊</div><div class="name">Analytics</div><div class="desc">Tuyến di chuyển ẩn danh, top POI nghe nhiều nhất, thời gian trung bình nghe 1 POI, heatmap vị trí người dùng. Dashboard cho Admin.</div></div>
       <div class="module"><div class="icon">📡</div><div class="name">SignalR Realtime</div><div class="desc">Thông báo thay đổi nội dung, trạng thái moderation, audio ready.</div></div>
-      <div class="module"><div class="icon">🔔</div><div class="name">Notification Center</div><div class="desc">Bell icon góc trên bên phải trên web portal (Admin/Owner). Dropdown panel hiển thị thông báo moderation, audio ready, tour mới, cập nhật POI. Tourist mobile không dùng backend notification center.</div></div>
+      <div class="module"><div class="icon">🔔</div><div class="name">Notification Center</div><div class="desc">Web portal dùng bell icon top-right cho Admin/Owner. Tourist mobile dùng notification feed riêng trên tab Map qua <code>api/visitor-notifications</code>; panel mở từ bell icon, cuộn độc lập và Settings không có bell để tránh rối thao tác.</div></div>
       <div class="module"><div class="icon">📂</div><div class="name">Categories</div><div class="desc">Danh mục phân loại POI: Hải sản, Bún/Phở, Ăn vặt, Đồ uống… Admin CRUD, Owner chọn khi tạo POI, Tourist lọc theo danh mục trên map.</div></div>
       <div class="module"><div class="icon">👥</div><div class="name">Visitor Devices</div><div class="desc">Màn theo dõi thiết bị visitor đang online gần realtime. Ưu tiên hiển thị mã thiết bị thật, số visit/trigger/tracking, và presence riêng cho QR web.</div></div>
-      <div class="module"><div class="icon">💾</div><div class="name">Offline Pack</div><div class="desc">Settings hiển thị gói offline gồm snapshot POI/tour và audio cache theo ngôn ngữ. <code>VisitorAudioPreloadService.PreloadAsync()</code> tải trước audio ready, <code>VisitorOfflineCacheStore</code> lưu và fallback khi API lỗi.</div></div>
+      <div class="module"><div class="icon">💾</div><div class="name">Offline content/audio pack</div><div class="desc">Settings hiển thị gói offline gồm snapshot POI/tour và audio cache theo ngôn ngữ. <code>VisitorAudioPreloadService.PreloadAsync()</code> tải trước audio ready, <code>VisitorOfflineCacheStore</code> lưu và fallback khi API lỗi. Đây là offline nội dung/audio, không phải offline tile map thật.</div></div>
       <div class="module"><div class="icon">🔗</div><div class="name">Social Sharing</div><div class="desc">Public share page cho POI/tour qua <code>ShareController</code>, có Open Graph metadata, audio public nếu có và nút mở app.</div></div>
       <div class="module"><div class="icon">⭐</div><div class="name">Review / Rating</div><div class="desc">Du khách gửi review ẩn danh cho POI; Admin duyệt/từ chối. Summary public chỉ tính review approved để tránh làm bẩn dữ liệu.</div></div>
     </div>
@@ -527,7 +538,7 @@ graph TB
       <div class="card"><h3>geofences</h3><p>Geofence config: poi_id, radius_meters, priority, debounce_seconds, cooldown_seconds, is_active, trigger_action, nearest_only. Mobile runtime dùng <code>VisitorProximityEngine.EvaluateCandidates()</code> với <code>triggerRadius = Math.Max(0, poi.GeofenceRadiusMeters)</code>, sau đó áp dụng priority-first, distance tie-break, name tie-break, 3 stable samples và queue mềm để tránh spam audio.</p></div>
       <div class="card"><h3>tours</h3><p>Tour: title, description, estimated_minutes, cover_image, status.</p></div>
       <div class="card"><h3>tour_stops</h3><p>Điểm dừng trong tour: tour_id, poi_id, sequence, radius_meters.</p></div>
-      <div class="card"><h3>qr_codes</h3><p>QR code: code, target_type (<strong>open_app/poi/tour</strong>), target_id (nullable khi open_app), location_hint, expires_at, public_url, app_deep_link, scan_count. QR POI mở trang public <code>/qr/{code}</code>; QR tour mở app và phát stop đầu tiên ngay; QR open_app mở launcher page.</p></div>
+      <div class="card"><h3>qr_codes</h3><p>QR code: code, target_type (<strong>open_app/poi/poi_list/tour</strong>), target_id (nullable khi open_app/poi_list), location_hint, expires_at, public_url, app_deep_link, scan_count. QR POI mở trang public <code>/qr/{code}</code>; QR poi_list mở danh sách POI public hoặc app theo cấu hình thiết bị; QR tour mở app và phát stop đầu tiên ngay; QR open_app mở launcher page.</p></div>
       <div class="card"><h3>visit_events</h3><p>Sự kiện: user_id (nullable), <strong>device_id</strong>, poi_id, event_type (geofence_enter/qr_scan/audio_play/tour_progress...), source, listen_duration_seconds, lat, lng, created_at. Đây là nguồn chính cho analytics và visitor monitoring ẩn danh.</p></div>
       <div class="card"><h3>poi_reviews</h3><p>Đánh giá POI: poi_id, rating, reviewer_name, comment, status (pending/approved/rejected), review_note, created_at. <code>PoiReviewService.GetSummaryAsync()</code> chỉ tính review approved.</p></div>
       <div class="card"><h3>notifications</h3><p>Thông báo: user_id, type, title, message, is_read, created_at.</p></div>
@@ -562,7 +573,7 @@ graph TB
         <tr><td>geofences</td><td>poi_id, radius_meters, priority, debounce_seconds, cooldown_seconds</td><td>1 POI → 1 geofence</td></tr>
         <tr><td>tours</td><td>id, title, estimated_minutes, status</td><td>1 tour → nhiều tour_stops</td></tr>
         <tr><td>tour_stops</td><td>tour_id, poi_id, sequence</td><td>N:1 POI, N:1 Tour</td></tr>
-        <tr><td>qr_codes</td><td>code, target_type (open_app/poi/tour), target_id, public_url, app_deep_link</td><td>Deep link đến launcher app, trang POI public hoặc tour trong app</td></tr>
+        <tr><td>qr_codes</td><td>code, target_type (open_app/poi/poi_list/tour), target_id, public_url, app_deep_link</td><td>Deep link đến launcher app, trang POI public, danh sách POI public hoặc tour trong app</td></tr>
         <tr><td>visit_events</td><td>user_id (nullable), device_id, poi_id, event_type, lat, lng</td><td>N:1 POI, nguồn analytics/visitor devices</td></tr>
         <tr><td>poi_reviews</td><td>poi_id, rating, reviewer_name, comment, status, review_note</td><td>N:1 POI; public summary chỉ đọc status approved</td></tr>
         <tr><td>moderation_requests</td><td>entity_type, entity_id, status</td><td>Link đến POI hoặc owner_registration</td></tr>
@@ -587,17 +598,17 @@ graph TB
         <tr><td>FR-07</td><td>POI Content Management</td><td>Mỗi POI có: tọa độ <code>lat/lng</code>, bán kính kích hoạt, mức ưu tiên, mô tả văn bản, ảnh minh họa, link bản đồ, file audio hoặc script TTS. Owner CRUD POI và gửi duyệt; Admin duyệt.</td><td><span class="badge badge-green">Must</span></td><td>CRUD thành công, lưu đủ metadata POI, phân quyền đúng</td></tr>
         <tr><td>FR-08</td><td>POI Translation</td><td>Nội dung đa ngôn ngữ do Admin kiểm tra, xóa hoặc tạo mới bằng Google Cloud Translation; hỗ trợ mở rộng tất cả ngôn ngữ theo danh sách Google Cloud Translation hỗ trợ. Dịch nội dung không tự generate audio; audio chỉ được tạo khi Admin chủ động chạy generate cho ngôn ngữ đã có bản dịch.</td><td><span class="badge badge-green">Must</span></td><td>Hiển thị đúng ngôn ngữ đã có nội dung/audio ready, không cho nghe sai ngôn ngữ, Admin tạo/xóa/bật/tắt được ngôn ngữ mới</td></tr>
         <tr><td>FR-09</td><td>Authentication & Authorization</td><td>Đăng nhập JWT cho Admin/Owner trên web portal. Tourist <strong>không cần đăng nhập</strong> — mở app là dùng ngay, truy cập toàn bộ tính năng (map, geofence, nghe thuyết minh, xem tour, chọn ngôn ngữ) mà không cần tài khoản.</td><td><span class="badge badge-green">Must</span></td><td>Admin/Owner login đúng, Tourist truy cập trực tiếp không cần auth</td></tr>
-        <tr><td>FR-10</td><td>QR Code Deep Link</td><td>QR Code được quét ngoài app bằng camera thiết bị hoặc app QR bên ngoài. Hiện có 3 target: <strong>open_app</strong>, <strong>poi</strong> và <strong>tour</strong>. QR POI đi theo hướng <strong>web-first</strong>: mở trang public <code>/qr/{code}</code> có nội dung POI + audio đa ngôn ngữ + nút nhỏ “Mở ứng dụng”. QR tour đi theo hướng <strong>app-first</strong>: resolve <code>target_type=tour</code>, mở app, gọi <code>VisitorShellState.StartTour(tourId)</code>, chọn stop đầu tiên và phát audio ngay bằng <code>PrepareSelectedPoiAudioAsync(autoPlay=true, forceAutoPlay=true)</code>.</td><td><span class="badge badge-orange">Should</span></td><td>QR resolve đúng target (open_app/poi/tour), POI public page mở được, QR tour mở tour và phát stop đầu tiên không cần GPS, scan/presence được ghi nhận</td></tr>
+        <tr><td>FR-10</td><td>QR Code Deep Link</td><td>QR Code được quét ngoài app bằng camera thiết bị hoặc app QR bên ngoài. Hiện có 4 target: <strong>open_app</strong>, <strong>poi</strong>, <strong>poi_list</strong> và <strong>tour</strong>. QR POI đi theo hướng <strong>web-first</strong>: mở trang public <code>/qr/{code}</code> có nội dung POI + audio đa ngôn ngữ + nút nhỏ “Mở ứng dụng”. QR <code>poi_list</code> dùng <code>QrDeviceConfigService.Decide()</code> + <code>QrDeviceConfigDecision.FromValue(...)</code>: cấu hình mạnh <code>0</code> tự mở app, cấu hình yếu <code>1</code> giữ web fallback. QR tour đi theo hướng <strong>app-first</strong>: resolve <code>target_type=tour</code>, mở app, gọi <code>VisitorShellState.StartTour(tourId)</code>, chọn stop đầu tiên và phát audio ngay bằng <code>PrepareSelectedPoiAudioAsync(autoPlay=true, forceAutoPlay=true)</code>.</td><td><span class="badge badge-orange">Should</span></td><td>QR resolve đúng target (open_app/poi/poi_list/tour), POI public page mở được, QR poi_list tự quyết định app/web fallback, QR tour mở tour và phát stop đầu tiên không cần GPS, scan/presence được ghi nhận</td></tr>
         <tr><td>FR-11</td><td>Offline Audio Cache</td><td>Audio được cache local (SQLite) sau lần nghe đầu. Phát lại khi mạng yếu.</td><td><span class="badge badge-orange">Should</span></td><td>Lần phát sau ưu tiên local cache, gọi network khi cache miss</td></tr>
         <tr><td>FR-12</td><td>CMS Web Portal</td><td>Blazor WASM quản trị: Owner quản lý POI và nội dung nguồn của POI; Admin quản lý Audio, Bản dịch, Lịch sử và Tour theo role.</td><td><span class="badge badge-orange">Should</span></td><td>Admin/Owner truy cập đúng tính năng theo role</td></tr>
         <tr><td>FR-13</td><td>Analytics Dashboard</td><td>Lưu tuyến di chuyển ẩn danh, top địa điểm được nghe nhiều nhất, thời gian trung bình nghe 1 POI, heatmap vị trí người dùng.</td><td><span class="badge badge-orange">Should</span></td><td>Dashboard hiển thị 4 loại dữ liệu analytics chính xác</td></tr>
         <tr><td>FR-14</td><td>Tour Management</td><td>Gom POI thành tour có thứ tự, ước lượng thời gian. Tourist xem tour và geofence tự động phát narration khi đến stop — không cần đăng nhập.</td><td><span class="badge badge-orange">Should</span></td><td>Tour creation + xem tour + auto-play tại stops hoạt động</td></tr>
         <tr><td>FR-15</td><td>Moderation Flow</td><td>Owner gửi duyệt thay đổi POI → Admin approve/reject. SignalR thông báo realtime.</td><td><span class="badge badge-orange">Should</span></td><td>Trạng thái moderation thay đổi đúng, thông báo realtime</td></tr>
         <tr><td>FR-16</td><td>Language Selection</td><td>Tourist chọn ngôn ngữ ưu tiên từ danh sách <code>managed_languages</code> đang active. Ngôn ngữ ảnh hưởng narration, nội dung POI, bộ lọc khám phá và lựa chọn audio trên detail/player.</td><td><span class="badge badge-green">Must</span></td><td>Đổi ngôn ngữ → chỉ hiện POI/audio có nội dung nghe phù hợp; nếu POI thiếu audio ready cho ngôn ngữ đó thì không cho phát sai ngôn ngữ</td></tr>
-        <tr><td>FR-17</td><td>Notification Center</td><td>Trung tâm thông báo hiển thị ở góc trên bên phải trên web portal (Admin/Owner). Nhận thông báo realtime qua SignalR: kết quả moderation, audio ready, tour mới xuất bản, cập nhật POI. Dropdown panel từ bell icon — không đặt trong sidebar. Tourist mobile không dùng notification center backend.</td><td><span class="badge badge-orange">Should</span></td><td>Bell icon hiển thị đúng vị trí (top-right) trên web portal, badge count chính xác, dropdown hiển thị danh sách thông báo, mark as read hoạt động</td></tr>
+        <tr><td>FR-17</td><td>Notification Center</td><td>Web portal Admin/Owner nhận thông báo realtime qua SignalR: kết quả moderation, audio ready, tour mới xuất bản, cập nhật POI. Tourist mobile có feed riêng không cần đăng nhập: <code>VisitorNotificationFeedService.LoadAsync()</code> gọi <code>GET /api/visitor-notifications</code> theo vị trí/ngôn ngữ hiện tại, mở bằng bell icon trên Map; Settings không hiển thị bell.</td><td><span class="badge badge-orange">Should</span></td><td>Web portal có bell top-right, badge count và mark-as-read hoạt động; mobile Map mở panel thông báo cuộn được, không che cứng nội dung và không xuất hiện bell ở Settings</td></tr>
         <tr><td>FR-18</td><td>Categories (Danh mục)</td><td>Admin tạo/sửa/xóa danh mục phân loại POI (ví dụ: Hải sản, Bún/Phở, Ăn vặt, Đồ uống). Owner chọn danh mục khi tạo/sửa POI. Tourist có thể lọc POI theo danh mục trên bản đồ.</td><td><span class="badge badge-orange">Should</span></td><td>CRUD danh mục hoạt động, POI gán danh mục đúng, filter theo danh mục trên map</td></tr>
         <tr><td>FR-19</td><td>Visitor Devices</td><td>Admin xem các thiết bị visitor đang online gần realtime, dựa trên <code>device_id</code>, last seen, visit/trigger/tracking counts. Presence riêng cho QR web dùng heartbeat ngắn để rơi offline nhanh.</td><td><span class="badge badge-orange">Should</span></td><td>Admin thấy đúng danh sách thiết bị đang online, trạng thái presence phản ánh gần realtime</td></tr>
-        <tr><td>FR-20</td><td>Offline Pack</td><td>Mobile lưu snapshot POI/tour/category bằng <code>VisitorOfflineCacheStore.SaveContentSnapshotAsync()</code>, hiển thị summary bằng <code>VisitorSettingsPresentationFormatter.FormatOfflinePackSummary()</code> và tải trước audio qua <code>Home.CachePreloadActions.PreloadSelectedLanguageAudioAsync()</code>.</td><td><span class="badge badge-purple">Future V1</span></td><td>API lỗi vẫn mở được snapshot gần nhất; audio đã preload phát từ cache theo ngôn ngữ hiện tại</td></tr>
+        <tr><td>FR-20</td><td>Offline content/audio pack</td><td>Mobile lưu snapshot POI/tour/category bằng <code>VisitorOfflineCacheStore.SaveContentSnapshotAsync()</code>, hiển thị summary bằng <code>VisitorSettingsPresentationFormatter.FormatOfflinePackSummary()</code> và tải trước audio qua <code>Home.CachePreloadActions.PreloadSelectedLanguageAudioAsync()</code>. Phạm vi này không bao gồm offline tile map thật.</td><td><span class="badge badge-purple">Future V1</span></td><td>API lỗi vẫn mở được snapshot gần nhất; audio đã preload phát từ cache theo ngôn ngữ thuyết minh hiện tại; Mapbox lỗi thì fallback schematic/list từ cache</td></tr>
         <tr><td>FR-21</td><td>Social Sharing</td><td>Public share page cho POI/tour qua <code>ShareController.PoiAsync()</code> và <code>ShareController.TourAsync()</code>. HTML preview dựng bởi <code>SharePreviewHtmlBuilder.BuildPoiShareHtml()</code> hoặc <code>BuildTourShareHtml()</code>.</td><td><span class="badge badge-purple">Future V1</span></td><td>Link <code>/share/poi/{id}</code> và <code>/share/tour/{id}</code> mở được không cần login, có metadata preview và CTA mở app</td></tr>
         <tr><td>FR-22</td><td>Review / Rating POI</td><td>Tourist gửi review bằng <code>PoisController.CreateReviewAsync()</code>. Public summary dùng <code>PoisController.GetReviewSummaryAsync()</code>. Admin xử lý queue bằng <code>AdminController.PendingPoiReviewsAsync()</code>, <code>ApprovePoiReviewAsync()</code>, <code>RejectPoiReviewAsync()</code>.</td><td><span class="badge badge-purple">Future V1</span></td><td>Review mới pending; chỉ review approved mới tính average rating; review invalid bị reject bởi service validation</td></tr>
       </table>
@@ -614,7 +625,7 @@ graph TB
         <tr><td>NFR-02</td><td>Battery Efficiency</td><td>GPS tracking + audio playback &lt; 5% battery drain / giờ. Adaptive interval.</td><td><span class="badge badge-green">Must</span></td><td>Test thực địa 1 giờ liên tục</td></tr>
         <tr><td>NFR-03</td><td>Security</td><td>JWT, route protection, owner-scoped access. HTTPS everywhere.</td><td><span class="badge badge-green">Must</span></td><td>Security audit pass</td></tr>
         <tr><td>NFR-04</td><td>Reliability / Fallback</td><td>TTS/Translation/Mapbox lỗi → graceful fallback (text, danh sách POI)</td><td><span class="badge badge-green">Must</span></td><td>Hệ thống vẫn usable khi external API lỗi</td></tr>
-        <tr><td>NFR-05</td><td>Offline Support</td><td>Audio cache + POI data cache bằng SQLite cho khi mạng yếu/gián đoạn. Nếu Mapbox token/script không tải được, app dùng offline schematic map/list từ dữ liệu đã lưu; offline tile pack Mapbox native là future scope riêng. GPS + geofence vẫn hoạt động độc lập.</td><td><span class="badge badge-orange">Should</span></td><td>Phát audio cached + hiển thị POI/list fallback + geofence trigger thành công khi offline</td></tr>
+        <tr><td>NFR-05</td><td>Offline Support</td><td>Audio cache + POI data cache bằng SQLite cho khi mạng yếu/gián đoạn. Nếu Mapbox token/script không tải được, app dùng offline schematic map/list từ dữ liệu đã lưu; offline tile map Mapbox native là future scope riêng. GPS + geofence vẫn hoạt động độc lập.</td><td><span class="badge badge-orange">Should</span></td><td>Phát audio cached + hiển thị POI/list fallback + geofence trigger thành công khi offline</td></tr>
         <tr><td>NFR-06</td><td>Maintainability</td><td>Tách server/web/mobile/shared rõ ràng. Clean Architecture.</td><td><span class="badge badge-orange">Should</span></td><td>Code review pass</td></tr>
         <tr><td>NFR-07</td><td>Extensibility</td><td>Dễ thêm ngôn ngữ, POI và tour mới trong phạm vi Vĩnh Khánh mà không cần code mới</td><td><span class="badge badge-orange">Should</span></td><td>Thêm language/POI/tour qua CMS</td></tr>
         <tr><td>NFR-08</td><td>GPS Accuracy</td><td>Sử dụng Haversine + nearest-only để bù độ chính xác GPS</td><td><span class="badge badge-green">Must</span></td><td>Trigger đúng POI trong 90% trường hợp test thực địa</td></tr>
@@ -671,7 +682,7 @@ graph TB
         </div>
         <ul>
           <li><code>Chọn ngôn ngữ</code>: đổi ngôn ngữ hiển thị + narration.</li>
-          <li><code>Bản đồ</code>: xem vị trí user, marker POI, nearest POI.</li>
+          <li><code>Bản đồ</code>: xem vị trí user, marker POI, nearest POI, mở notification feed bằng bell icon trên Map.</li>
           <li><code>Chi tiết POI</code>: ảnh, mô tả, map link.</li>
           <li><code>Nghe thuyết minh</code>: tự động (geofence) hoặc thủ công.</li>
           <li><code>QR Deep Link</code>: nhận deep link từ QR (quét ngoài app bằng camera thiết bị) → hỗ trợ <code>open_app</code>, <code>poi</code> và <code>tour</code>; QR tour tại điểm dừng xe buýt mở app và phát stop đầu tiên ngay, không cần GPS.</li>
@@ -695,7 +706,7 @@ graph TB
         <tr><td><span class="badge badge-orange">Owner</span></td><td>POI CRUD</td><td>Thêm / sửa / xóa POI kèm lat/lng, bán kính, priority, mô tả, ảnh, map link, file audio hoặc script TTS → gửi duyệt</td><td>20.7</td></tr>
         <tr><td><span class="badge badge-orange">Owner</span></td><td>Gửi duyệt thay đổi</td><td>Tạo moderation request cho POI draft</td><td>20.8</td></tr>
         <tr><td><span class="badge badge-orange">Owner</span></td><td>Notification Center</td><td>Nhận kết quả duyệt và yêu cầu bổ sung</td><td>20.9</td></tr>
-        <tr><td><span class="badge badge-blue">Tourist</span></td><td>Chọn ngôn ngữ</td><td>Đổi ngôn ngữ UI + narration</td><td>20.10</td></tr>
+        <tr><td><span class="badge badge-blue">Tourist</span></td><td>Chọn ngôn ngữ</td><td>Lần đầu chọn ngôn ngữ giao diện VI/EN; ngôn ngữ thuyết minh đa ngôn ngữ đổi trong full audio player khi POI có audio ready</td><td>20.10</td></tr>
         <tr><td><span class="badge badge-blue">Tourist</span></td><td>Map Discovery</td><td>Xem bản đồ + POI markers</td><td>20.11</td></tr>
         <tr><td><span class="badge badge-blue">Tourist</span></td><td>Geofence → Narration</td><td>Tự động trigger thuyết minh khi vào vùng</td><td>20.12</td></tr>
         <tr><td><span class="badge badge-blue">Tourist</span></td><td>QR Deep Link</td><td>Nhận deep link từ QR (quét ngoài app) → mở launcher app, POI public web-first hoặc tour app-first phát ngay</td><td>20.13</td></tr>
@@ -739,16 +750,16 @@ graph TB
     <div class="card">
       <h4>First Launch Flow (không có login/register)</h4>
       <div class="alert info" style="margin-bottom:12px">
-        <strong>Ghi chú từ code thực tế:</strong> <code>VisitorIntroStep</code> khởi tạo ở bước <code>Language</code> (bỏ qua Welcome screen). App hỗ trợ 4 tab chính: <strong>Map</strong>, <strong>Discover</strong>, <strong>Tours</strong>, <strong>Settings</strong> (7 sub-screens: Overview, Audio, GPS, Cache, History, About, Profile).
+        <strong>Ghi chú từ code thực tế:</strong> <code>VisitorIntroStep</code> khởi tạo theo onboarding gate: lần đầu đi qua Welcome → chọn ngôn ngữ → xin vị trí; các lần sau vào thẳng app khi đã lưu trạng thái. App hỗ trợ 4 tab chính: <strong>Map</strong>, <strong>Discover</strong>, <strong>Tours</strong>, <strong>Settings</strong> (6 sub-screens: Overview, Audio, GPS, Cache, History, About).
       </div>
       <div class="timeline">
         <div class="timeline-item">
-          <h4>Bước 1: Chọn ngôn ngữ (Language Step)</h4>
-          <p>Hiển thị danh sách ngôn ngữ active lấy từ <code>managed_languages</code>; bộ seed ban đầu gồm vi/en/ja/ko/zh/fr nhưng không hardcode số lượng. Lưu lựa chọn vào <code>Preferences</code> / <code>SecureStorage</code>. Có thể thay đổi sau bằng nút xoay ngôn ngữ trên header hoặc trong Settings. App mặc định bắt đầu từ bước này (bỏ qua Welcome screen theo <code>VisitorIntroStep.Language</code>).</p>
+          <h4>Bước 1: Welcome + chọn ngôn ngữ giao diện</h4>
+          <p>Lần đầu mở app đi qua Welcome → chọn ngôn ngữ giao diện. Code hiện tách <code>SelectedAppLanguageCode</code> cho UI và <code>SelectedLanguageCode</code> cho audio. Giao diện mobile chỉ hỗ trợ <code>vi</code>/<code>en</code> trong <code>VisitorUiTextCatalog</code>; thuyết minh vẫn lấy danh sách active từ <code>managed_languages</code> và có thể chọn thêm ngôn ngữ khác trong full audio player khi POI có audio ready. Lưu UI language vào <code>visitor.preferences.app-language-code</code>, đồng thời lưu narration default ban đầu vào <code>visitor.preferences.language-code</code>.</p>
         </div>
         <div class="timeline-item">
           <h4>Bước 2: Yêu cầu Location Permission</h4>
-          <p>Giải thích lý do cần GPS: <em>"Để tự động phát thuyết minh khi bạn đến gần điểm tham quan"</em>. Nếu từ chối → vẫn dùng được (danh sách POI + QR deep link). Có nút <strong>"Bật GPS"</strong> và <strong>"Bỏ qua"</strong>. Cả hai đều chuyển sang bước tiếp — khác nhau ở việc <code>LocationPermissionGranted</code> được set.</p>
+          <p>Giải thích lý do cần GPS: <em>"Để tự động phát thuyết minh khi bạn đến gần điểm tham quan"</em>. Luồng hiện tại ưu tiên xin quyền vị trí rõ ràng ở lần đầu; khi cấp quyền thành công mới lưu <code>visitor.onboarding.location-granted</code> và vào Ready. QR/public link vẫn hỗ trợ mở nội dung trực tiếp, nhưng màn onboarding không còn nút bỏ qua treo giữa màn hình.</p>
         </div>
         <div class="timeline-item">
           <h4>Bước 3: Vào Map Discovery (Ready Step)</h4>
@@ -780,7 +791,8 @@ public class AppStateService
 {
     // Lưu trữ local — KHÔNG có login state
     string DeviceId       → SecureStorage (persist, UUID v4)
-    string LanguageCode   → Preferences ("vi" default)
+    string AppLanguageCode → Preferences ("vi" hoặc "en" cho giao diện)
+    string LanguageCode   → Preferences ("vi" default cho thuyết minh)
     bool   IsFirstLaunch  → Preferences (true → false sau onboarding)
     int    PoiListenCount  → Session counter (reset mỗi phiên)
 
@@ -827,11 +839,12 @@ flowchart TD
   CHECK -->|Có| WELCOME["Welcome Screen"]
   CHECK -->|Không| MAP
 
-  WELCOME --> LANG["Chọn Ngôn ngữ"]
-  LANG --> GPS{"Cho phép GPS?"}
+  WELCOME --> LANG["Chọn ngôn ngữ giao diện VI/EN"]
+  LANG --> SAVE_LANG["Lưu app-language-code + narration language mặc định"]
+  SAVE_LANG --> GPS{"Cho phép GPS?"}
   GPS -->|Có| MAP["Map Discovery"]
-  GPS -->|Không| LIST["Danh sách POI"]
-  LIST --> MAP
+  GPS -->|Không| PERM["Ở lại màn quyền vị trí"]
+  PERM --> GPS
 
   MAP --> GEO{"Vào vùng Geofence?"}
   GEO -->|Có| NARR["Phát Thuyết Minh"]
@@ -950,14 +963,14 @@ DELETE /api/categories/{id}               # Admin (xóa danh mục)</div>
         <div class="code-block">POST   /api/moderation-requests            # Owner (gửi duyệt)
 GET    /api/moderation-requests/my         # Owner (xem yêu cầu)</div>
       </div>
-      <div class="card"><h3>Notification Center (Admin/Owner only)</h3>
+      <div class="card"><h3>Notification Center</h3>
         <div class="code-block">GET    /api/notifications                   # Admin/Owner (danh sách thông báo)
 GET    /api/notifications/unread-count      # Admin/Owner (số chưa đọc → badge)
 PUT    /api/notifications/{id}/read        # Admin/Owner (đánh dấu đã đọc)
 PUT    /api/notifications/read-all         # Admin/Owner (đánh dấu tất cả đã đọc)
 DELETE /api/notifications/{id}             # Admin/Owner (xóa thông báo)
 
-# Tourist: KHÔNG có notification (không có login).</div>
+GET    /api/visitor-notifications          # Tourist mobile Map feed, anonymous, theo lat/lng + languageCode</div>
       </div>
     </div>
     <div class="card">
@@ -1527,9 +1540,48 @@ classDiagram
       Sequence chia theo <strong>role → nhóm chức năng</strong>. Mỗi nhóm chức năng chỉ có <strong>1 sequence</strong> duy nhất và ghi rõ component/service/hàm chính đang chịu trách nhiệm thay vì chỉ ghi chung chung là API.
     </div>
 
+    <div id="sequence-toc" class="sequence-toc">
+      <h3>Mục lục sequence</h3>
+      <p>Dùng mục lục này để nhảy nhanh tới đúng sequence khi trình bày hoặc đối chiếu với code.</p>
+      <div class="sequence-toc-grid">
+        <div class="sequence-toc-group">
+          <strong>Admin</strong>
+          <a href="#seq-admin-poi-moderation">20.1 POI Moderation</a>
+          <a href="#seq-admin-audio-management">20.2 Audio Management</a>
+          <a href="#seq-admin-translation-review">20.3 Translation Review</a>
+          <a href="#seq-admin-analytics">20.4 Analytics Dashboard</a>
+          <a href="#seq-admin-dashboard">20.4b Dashboard Overview</a>
+          <a href="#seq-admin-tour-management">20.5 Tour Management</a>
+          <a href="#seq-admin-moderation-queue">20.6 Moderation Queue</a>
+          <a href="#seq-admin-visitor-devices">20.15 Visitor Devices</a>
+          <a href="#seq-admin-qr-codes">20.16 QR Codes Management</a>
+          <a href="#seq-admin-categories">20.17 Categories</a>
+        </div>
+        <div class="sequence-toc-group">
+          <strong>Owner</strong>
+          <a href="#seq-owner-poi-crud">20.7 POI CRUD</a>
+          <a href="#seq-owner-submit-moderation">20.8 Gửi duyệt thay đổi POI</a>
+          <a href="#seq-owner-notifications">20.9 Notification Center</a>
+        </div>
+        <div class="sequence-toc-group">
+          <strong>Tourist / Mobile</strong>
+          <a href="#seq-tourist-language">20.10 App language & narration language</a>
+          <a href="#seq-tourist-map">20.11 Map Discovery</a>
+          <a href="#seq-tourist-geofence">20.12 Geofence → Auto Narration</a>
+          <a href="#seq-tourist-qr">20.13 QR Deep Link</a>
+          <a href="#seq-tourist-tour">20.14 Tour</a>
+          <a href="#seq-tourist-settings-audio">20.18 Settings & Audio Preferences</a>
+          <a href="#seq-tourist-content-fallback">20.19 Content Loading & Fallback</a>
+          <a href="#seq-future-offline-pack">20.20 Future V1 — Offline Content/Audio Pack</a>
+          <a href="#seq-future-social-sharing">20.21 Future V1 — Social Sharing</a>
+          <a href="#seq-future-review-rating">20.22 Future V1 — Review / Rating POI</a>
+        </div>
+      </div>
+    </div>
+
     <h3>Admin</h3>
 
-    <h4>20.1 Admin — POI Moderation</h4>
+    <h4 id="seq-admin-poi-moderation">20.1 Admin — POI Moderation</h4>
     <div class="diagram">
       <pre class="mermaid">
 sequenceDiagram
@@ -1579,7 +1631,7 @@ sequenceDiagram
       </pre>
     </div>
 
-    <h4>20.2 Admin — Audio Management</h4>
+    <h4 id="seq-admin-audio-management">20.2 Admin — Audio Management</h4>
     <div class="diagram">
       <pre class="mermaid">
 sequenceDiagram
@@ -1660,7 +1712,7 @@ sequenceDiagram
       </pre>
     </div>
 
-    <h4>20.3 Admin — Translation Review</h4>
+    <h4 id="seq-admin-translation-review">20.3 Admin — Translation Review</h4>
     <div class="diagram">
       <pre class="mermaid">
 sequenceDiagram
@@ -1775,7 +1827,7 @@ sequenceDiagram
       </pre>
     </div>
 
-    <h4>20.4 Admin — Analytics Dashboard</h4>
+    <h4 id="seq-admin-analytics">20.4 Admin — Analytics Dashboard</h4>
     <div class="diagram">
       <pre class="mermaid">
 sequenceDiagram
@@ -1857,7 +1909,7 @@ sequenceDiagram
       </pre>
     </div>
 
-    <h4>20.4b Admin — Dashboard (Overview)</h4>
+    <h4 id="seq-admin-dashboard">20.4b Admin — Dashboard (Overview)</h4>
     <div class="diagram">
       <pre class="mermaid">
 sequenceDiagram
@@ -1935,7 +1987,7 @@ sequenceDiagram
       </pre>
     </div>
 
-    <h4>20.5 Admin — Tour Management</h4>
+    <h4 id="seq-admin-tour-management">20.5 Admin — Tour Management</h4>
     <div class="diagram">
       <pre class="mermaid">
 sequenceDiagram
@@ -1975,7 +2027,7 @@ sequenceDiagram
       </pre>
     </div>
 
-    <h4>20.6 Admin — Moderation Queue</h4>
+    <h4 id="seq-admin-moderation-queue">20.6 Admin — Moderation Queue</h4>
     <div class="diagram">
       <pre class="mermaid">
 sequenceDiagram
@@ -2015,7 +2067,7 @@ sequenceDiagram
       </pre>
     </div>
 
-    <h4>20.15 Admin — Visitor Devices</h4>
+    <h4 id="seq-admin-visitor-devices">20.15 Admin — Visitor Devices</h4>
     <div class="diagram">
       <pre class="mermaid">
 sequenceDiagram
@@ -2033,34 +2085,35 @@ sequenceDiagram
 
   Tourist->>MobileApp: Mở app / để app hoạt động
   MobileApp->>MobileApp: StartPresenceHeartbeatLoopIfNeeded()
-  loop Mỗi 5 giây khi app còn mounted
-    MobileApp->>PresenceReporter: TrackAsync()
-    PresenceReporter->>PresenceCtrl: Heartbeat(VisitorPresenceHeartbeatRequest)
-    PresenceCtrl->>PresenceTracker: Track(deviceId, source, preferredLanguage, seenAtUtc)
+  loop Mỗi 4 giây khi app còn mounted
+    MobileApp->>PresenceReporter: Gọi phương thức TrackAsync()
+    PresenceReporter->>PresenceCtrl: Gọi phương thức Heartbeat(VisitorPresenceHeartbeatRequest)
+    PresenceCtrl->>PresenceTracker: Gọi phương thức Track(deviceId, source, preferredLanguage, seenAtUtc)
     PresenceTracker-->>PresenceCtrl: Presence updated in memory
   end
   opt App đóng / component DisposeAsync()
-    MobileApp->>PresenceReporter: MarkOfflineAsync()
-    PresenceReporter->>PresenceCtrl: MarkOffline(VisitorPresenceOfflineRequest)
-    PresenceCtrl->>PresenceTracker: MarkOffline(deviceId, seenAtUtc)
+    MobileApp->>PresenceReporter: Gọi phương thức MarkOfflineAsync()
+    PresenceReporter->>PresenceCtrl: Gọi phương thức Offline(VisitorPresenceOfflineRequest)
+    PresenceCtrl->>PresenceTracker: Gọi phương thức MarkOffline(deviceId)
   end
 
   Admin->>Portal: Mở Visitor Devices
-  Portal->>AdminPortalSvc: GetVisitorDevicesAsync()
-  AdminPortalSvc->>AdminCtrl: VisitorDevicesAsync()
-  AdminCtrl->>VisitorDeviceSvc: GetAsync(cancellationToken)
-  VisitorDeviceSvc->>PresenceTracker: GetAll()
+  Portal->>AdminPortalSvc: Gọi phương thức GetVisitorDevicesAsync()
+  AdminPortalSvc->>AdminCtrl: Gọi phương thức VisitorDevicesAsync()
+  AdminCtrl->>VisitorDeviceSvc: Gọi phương thức GetAsync(cancellationToken)
+  VisitorDeviceSvc->>PresenceTracker: Gọi phương thức GetAll()
   PresenceTracker-->>VisitorDeviceSvc: Mobile presence snapshots
   VisitorDeviceSvc->>DB: Đọc visit_events + tourist users theo device_id
   DB-->>VisitorDeviceSvc: Visit count + trigger count + tourist labels
-  VisitorDeviceSvc->>VisitorDeviceSvc: BuildPresenceOnlyVisitorDevices() + merge QR/mobile online state
+  VisitorDeviceSvc->>VisitorDeviceSvc: Gọi phương thức BuildFromVisitGroup(...) + BuildPresenceOnlyVisitorDevices(...)
+  VisitorDeviceSvc->>VisitorDeviceSvc: Gọi phương thức IsVisitorOnline(...), timeout mobile/QR presence sau 5 giây
   VisitorDeviceSvc-->>AdminCtrl: VisitorDeviceSummaryDto[]
   AdminCtrl-->>AdminPortalSvc: ApiResponse VisitorDeviceSummaryDto list
   Portal-->>Admin: Hiển thị chỉ những thiết bị đang online
   loop Auto refresh mỗi 5 giây hoặc manual refresh
-    Portal->>AdminPortalSvc: GetVisitorDevicesAsync()
-    AdminPortalSvc->>AdminCtrl: VisitorDevicesAsync()
-    AdminCtrl->>VisitorDeviceSvc: GetAsync(cancellationToken)
+    Portal->>AdminPortalSvc: Gọi phương thức GetVisitorDevicesAsync()
+    AdminPortalSvc->>AdminCtrl: Gọi phương thức VisitorDevicesAsync()
+    AdminCtrl->>VisitorDeviceSvc: Gọi phương thức GetAsync(cancellationToken)
     VisitorDeviceSvc-->>AdminCtrl: Snapshot online mới nhất
     AdminCtrl-->>AdminPortalSvc: ApiResponse VisitorDeviceSummaryDto list
   end
@@ -2068,7 +2121,7 @@ sequenceDiagram
       </pre>
     </div>
 
-    <h4>20.16 Admin — QR Codes Management</h4>
+    <h4 id="seq-admin-qr-codes">20.16 Admin — QR Codes Management</h4>
     <div class="diagram">
       <pre class="mermaid">
 sequenceDiagram
@@ -2092,9 +2145,9 @@ sequenceDiagram
   DB-->>QrSvc: QrCodeDto[]
   QrSvc-->>QrCtrl: QR list
   QrCtrl-->>QrPortalSvc: ApiResponse
-  Portal->>Portal: GetQrTargetLabel(qr) + CountByTarget(open_app/poi/tour)
+  Portal->>Portal: GetQrTargetLabel(qr) + CountByTarget(open_app/poi/poi_list/tour)
   alt Tạo QR code mới
-    Admin->>Portal: Chọn target (POI/Open App/Tour), location_hint
+    Admin->>Portal: Chọn target (POI/Danh sách POI/Open App/Tour), location_hint
     Portal->>Portal: UpdateQrTargetType(value) + EnsureQrDefaults()
     alt target = tour
       Admin->>Portal: Chọn tour trong select[data-field='qr-tour-id']
@@ -2104,19 +2157,21 @@ sequenceDiagram
       Admin->>Portal: Chọn POI trong select[data-field='qr-poi-id']
       Portal->>Portal: UpdateQrPoi(poiId)
       Portal->>Portal: QrEditorModel.ToRequest() đặt TargetId = PoiId
+    else target = poi_list
+      Portal->>Portal: QrEditorModel.ToRequest() đặt TargetId = 0
     else target = open_app
       Portal->>Portal: QrEditorModel.ToRequest() đặt TargetId = 0
     end
     Portal->>QrPortalSvc: CreateAsync(CreateQrRequest)
     QrPortalSvc->>QrCtrl: CreateAsync(request)
     QrCtrl->>QrSvc: CreateAsync(request)
-    QrSvc->>QrSvc: NormalizeTargetType(open_app/poi/tour)
+    QrSvc->>QrSvc: NormalizeTargetType(open_app/poi/poi_list/tour)
     QrSvc->>DB: ValidateTargetAsync() kiểm tra POI hoặc Tour tồn tại
     QrSvc->>DB: Tạo qr_codes record
     QrSvc-->>QrCtrl: QrCodeDto
     QrCtrl-->>QrPortalSvc: ApiResponse [QrCodeDto]
     Portal->>Portal: BuildPreviewPublicUrl(qr) + BuildPreviewQrImageSource(qr)
-    Note right of Portal: Target hiện hành gồm open_app, poi, tour
+    Note right of Portal: Target hiện hành gồm open_app, poi, poi_list, tour
   else Lọc QR tour
     Admin->>Portal: Chọn filter targetType = tour
     Portal->>QrPortalSvc: GetAsync("tour")
@@ -2136,7 +2191,7 @@ sequenceDiagram
       </pre>
     </div>
 
-    <h4>20.17 Admin — Categories (Danh mục)</h4>
+    <h4 id="seq-admin-categories">20.17 Admin — Categories (Danh mục)</h4>
     <div class="diagram">
       <pre class="mermaid">
 sequenceDiagram
@@ -2181,7 +2236,7 @@ sequenceDiagram
 
     <h3>POI Owner</h3>
 
-    <h4>20.7 Owner — POI CRUD</h4>
+    <h4 id="seq-owner-poi-crud">20.7 Owner — POI CRUD</h4>
     <div class="diagram">
       <pre class="mermaid">
 sequenceDiagram
@@ -2233,7 +2288,7 @@ sequenceDiagram
       </pre>
     </div>
 
-    <h4>20.8 Owner — Gửi duyệt thay đổi POI</h4>
+    <h4 id="seq-owner-submit-moderation">20.8 Owner — Gửi duyệt thay đổi POI</h4>
     <div class="diagram">
       <pre class="mermaid">
 sequenceDiagram
@@ -2261,7 +2316,7 @@ sequenceDiagram
       </pre>
     </div>
 
-    <h4>20.9 Owner — Notification Center</h4>
+    <h4 id="seq-owner-notifications">20.9 Owner — Notification Center</h4>
     <div class="diagram">
       <pre class="mermaid">
 sequenceDiagram
@@ -2293,32 +2348,74 @@ sequenceDiagram
 
     <h3>Tourist (App Android)</h3>
 
-    <h4>20.10 Tourist — Chọn ngôn ngữ</h4>
+    <h4 id="seq-tourist-language">20.10 Tourist — Ngôn ngữ app & ngôn ngữ thuyết minh</h4>
     <div class="diagram">
       <pre class="mermaid">
 sequenceDiagram
   actor Tourist
   participant App as Android App
   participant State as VisitorShellState
+  participant Prefs as Maui Preferences
+  participant Setup as VisitorSetupFlow
+  participant SettingsScreen as VisitorSettingsOverviewScreen
+  participant FullPlayer as VisitorFullPlayerScreen
+  participant UiText as VisitorUiTextCatalog
   participant AudioSvc as VisitorAudioCatalogService
   participant OfflineStore as VisitorOfflineCacheStore
   participant AudioCtrl as AudioController
   participant AudioDomain as AudioService
   participant Player as JS Audio Player
 
-  alt Onboarding (lần đầu)
-    Tourist->>App: Chọn ngôn ngữ từ managed_languages active
+  alt First-run onboarding
+    App->>Prefs: Get("visitor.onboarding.welcome-seen")
+    App->>Prefs: Get("visitor.onboarding.language-selected")
+    App->>Prefs: Get("visitor.onboarding.location-granted")
+    App->>State: ApplyOnboardingStep(VisitorOnboardingGate.ResolveInitialStep(...))
+    App-->>Tourist: Welcome screen
+    Tourist->>Setup: Bấm "Bắt đầu khám phá"
+    Setup->>App: ContinueFromWelcomeAsync()
+    App->>Prefs: Set("visitor.onboarding.welcome-seen", true)
+    App->>State: ContinueFromWelcome()
+    App-->>Tourist: Màn chọn ngôn ngữ giao diện
+    Tourist->>Setup: Chọn VI hoặc EN
+    Setup->>App: SelectSetupLanguage(code)
+    App->>State: ChangeAppLanguage(code)
     App->>State: SelectLanguage(code)
+    App->>UiText: ForLanguage(SelectedAppLanguageCode)
+    App->>Prefs: Set("visitor.preferences.app-language-code", code)
+    App->>Prefs: Set("visitor.preferences.language-code", code)
+    Tourist->>Setup: Bấm "Tiếp tục"
+    Setup->>App: ContinueFromLanguageSelection()
+    App->>Prefs: Set("visitor.onboarding.language-selected", true)
+    App->>Prefs: Set("visitor.preferences.app-language-code", SelectedAppLanguageCode)
+    App->>Prefs: Set("visitor.preferences.language-code", selectedCode)
     App->>State: AdvanceFromLanguageSelection()
-  else Header CycleLanguage (đã vào app)
-    Tourist->>App: Tap nút xoay ngôn ngữ trên header
-    App->>App: CycleLanguage()
-    App->>State: ChangeLanguage(nextCode)
-  else Settings
-    Tourist->>App: Mở Settings → chọn ngôn ngữ
+    App-->>Tourist: Màn xin quyền vị trí
+    Tourist->>Setup: Bấm "Cho phép vị trí"
+    Setup->>App: EnableLocationAsync()
+    App->>Prefs: Set("visitor.onboarding.location-granted", true)
+    App->>State: CompletePermissions(granted=true)
+  else App launch sau khi đã onboard
+    App->>Prefs: Get("visitor.preferences.app-language-code")
+    App->>Prefs: Get("visitor.preferences.language-code")
+    App->>State: ChangeAppLanguage(preferredAppLanguageCode)
+    App->>State: ChangeLanguage(preferredLanguageCode)
+    App->>State: ApplyOnboardingStep(Ready)
+  else Settings dropdown đổi giao diện app
+    Tourist->>SettingsScreen: Chọn VI hoặc EN trong dropdown
+    SettingsScreen->>App: SelectSettingsLanguageAsync(code)
+    App->>State: ChangeAppLanguage(code)
+    App->>UiText: ForLanguage(SelectedAppLanguageCode)
+    App->>Prefs: Set("visitor.preferences.app-language-code", code)
+    App-->>Tourist: UI app đổi VI/EN, audio hiện tại không bị ép đổi
+  else Full audio player đổi ngôn ngữ thuyết minh
+    Tourist->>FullPlayer: Mở picker ngôn ngữ audio
+    FullPlayer->>App: SelectFullPlayerLanguageAsync(code)
+    App->>App: SelectAudioLanguageAsync(code, keepPlayback=true)
     App->>State: ChangeLanguage(code)
+    App->>Prefs: Set("visitor.preferences.language-code", code)
   end
-  opt Đang mở POI có audio
+  opt Đổi ngôn ngữ thuyết minh và đang mở POI
     App->>App: PrepareSelectedPoiAudioAsync(autoPlay=false)
     App->>AudioSvc: LoadBestForPoiAsync(selectedPoiId, newLang, selectedPoi.Name)
     AudioSvc->>AudioSvc: TryParseServerPoiId(poiId)
@@ -2348,11 +2445,11 @@ sequenceDiagram
     App->>State: SetAudioCue(cue)
     App->>Player: visitorAudio.preload(cue.StreamUrl)
   end
-  App-->>Tourist: Cập nhật UI + narration theo ngôn ngữ mới
+  App-->>Tourist: UI app chỉ VI hoặc EN, thuyết minh vẫn đa ngôn ngữ theo audio ready
       </pre>
     </div>
 
-    <h4>20.11 Tourist — Map Discovery</h4>
+    <h4 id="seq-tourist-map">20.11 Tourist — Map Discovery</h4>
     <div class="diagram">
       <pre class="mermaid">
 sequenceDiagram
@@ -2368,6 +2465,8 @@ sequenceDiagram
   participant AudioSvc as VisitorAudioCatalogService
   participant AudioCtrl as AudioController
   participant State as VisitorShellState
+  participant NotifyFeed as VisitorNotificationFeedService
+  participant NotifyCtrl as VisitorNotificationsController
   participant ProxEngine as VisitorProximityEngine
   participant Queue as VisitorProximityQueueCoordinator
   participant SnapshotBuilder as VisitorMapSnapshotBuilder
@@ -2424,6 +2523,17 @@ sequenceDiagram
     MapJS->>MapJS: renderOfflineFallback(container, snapshot, dotNetRef, message)
     MapJS-->>Tourist: Hiển thị offline schematic map/list từ snapshot
   end
+
+  opt Bấm bell thông báo trên Map
+    Tourist->>App: ToggleNotificationsPanel()
+    App->>NotifyFeed: LoadAsync(VisitorNotificationFeedRequest(CurrentLocation, SelectedLanguageCode))
+    NotifyFeed->>NotifyCtrl: VisitorNotificationsController.GetAsync(query)
+    NotifyCtrl-->>NotifyFeed: VisitorNotificationDto[]
+    NotifyFeed-->>App: VisitorNotification[]
+    App->>State: ApplyLiveNotifications()
+    App-->>Tourist: Mở notification panel cuộn độc lập trên Map
+  end
+
   Tourist->>MapJS: Tap marker lần 1
   MapJS->>App: SelectPoiFromMap(markerId)
   App->>State: PreviewPoi(poiId)
@@ -2475,7 +2585,7 @@ sequenceDiagram
       </pre>
     </div>
 
-    <h4>20.12 Tourist — Geofence → Auto Narration</h4>
+    <h4 id="seq-tourist-geofence">20.12 Tourist — Geofence → Auto Narration</h4>
     <div class="diagram">
       <pre class="mermaid">
 sequenceDiagram
@@ -2560,9 +2670,9 @@ sequenceDiagram
       </pre>
     </div>
 
-    <h4>20.13 Tourist — QR Deep Link</h4>
+    <h4 id="seq-tourist-qr">20.13 Tourist — QR Deep Link</h4>
     <div class="alert info">
-      QR Code được quét <strong>ngoài ứng dụng</strong> bằng camera thiết bị hoặc app QR scanner bên ngoài. Luồng public vẫn đi qua <code>/qr/{code}</code>. Target <code>poi</code> là web-first: người dùng xem POI public web ngay lập tức rồi có thể mở app. Target <code>tour</code> là app-first: dùng cho điểm dừng xe buýt, mở app và phát thuyết minh stop đầu tiên ngay bằng <code>VisitorShellState.StartTour(tourId)</code> + <code>PrepareSelectedPoiAudioAsync(autoPlay=true, forceAutoPlay=true)</code>, không cần GPS. Hỗ trợ 3 target: <code>open_app</code>, <code>poi</code>, <code>tour</code>.
+      QR Code được quét <strong>ngoài ứng dụng</strong> bằng camera thiết bị hoặc app QR scanner bên ngoài. Luồng public vẫn đi qua <code>/qr/{code}</code>. Target <code>poi</code> là web-first: người dùng xem POI public web ngay lập tức rồi có thể mở app. Target <code>poi_list</code> là danh sách POI public: backend random cấu hình thiết bị bằng <code>QrDeviceConfigService.Decide()</code>; giá trị <code>0</code> là cấu hình mạnh tự mở app, giá trị <code>1</code> là cấu hình yếu giữ web fallback để vẫn xem và nghe được. Target <code>tour</code> là app-first: dùng cho điểm dừng xe buýt, mở app và phát thuyết minh stop đầu tiên ngay bằng <code>VisitorShellState.StartTour(tourId)</code> + <code>PrepareSelectedPoiAudioAsync(autoPlay=true, forceAutoPlay=true)</code>, không cần GPS. Hỗ trợ 4 target: <code>open_app</code>, <code>poi</code>, <code>poi_list</code>, <code>tour</code>.
     </div>
     <div class="diagram">
       <pre class="mermaid">
@@ -2576,7 +2686,14 @@ sequenceDiagram
   participant QrDomain as QrService
   participant PoiDomain as PoiService
   participant AudioDomain as AudioService
+  participant DeviceSvc as QrDeviceConfigService
+  participant DeviceDecision as QrDeviceConfigDecision
+  participant Random as RandomNumberGenerator
   participant QrCtrl as QrController
+  participant QrPresence as IQrWebPresenceTracker
+  participant Admin as AdminController
+  participant Dashboard as VisitorDeviceDashboardService
+  participant Gate as HTML launch script
   participant OS as Android OS
   participant App as Android App
   participant MainActivity as MainActivity
@@ -2594,28 +2711,94 @@ sequenceDiagram
 
   Tourist->>Camera: Quét QR bằng camera thiết bị
   Camera->>Browser: Mở URL /qr/{code}
-  Browser->>QrLaunch: LaunchAsync(code)
-  QrLaunch->>QrDomain: ResolveAsync(code)
-  QrLaunch->>LinkBuilder: BuildAppDeepLink(code) + BuildPublicUrl(HttpContext, code)
+  Browser->>QrLaunch: Gọi phương thức LaunchAsync(code, cancellationToken)
+  QrLaunch->>QrDomain: Gọi phương thức qrService.ResolveAsync(code, cancellationToken)
+  QrDomain->>QrDomain: Gọi phương thức FindActiveCodeAsync(code, cancellationToken)
+  QrDomain->>QrDomain: Gọi phương thức BuildDtoAsync(qrCode, cancellationToken)
+  QrLaunch->>LinkBuilder: Gọi phương thức qrPublicLinkBuilder.BuildAppDeepLink(qrCode.Code)
+  QrLaunch->>LinkBuilder: Gọi phương thức qrPublicLinkBuilder.BuildPublicUrl(HttpContext, qrCode.Code)
+  LinkBuilder->>LinkBuilder: Gọi phương thức ResolveBaseAddress(context)
+  alt PublicQr:BaseUrl hợp lệ
+    LinkBuilder->>LinkBuilder: Gọi phương thức EnsureTrailingSlash(absoluteBaseAddress)
+  else Request localhost/loopback
+    LinkBuilder->>LinkBuilder: Gọi phương thức IsLoopbackHost(context.Request.Host.Host)
+    LinkBuilder->>LinkBuilder: Gọi phương thức TryResolveLanBaseAddress(out baseAddress)
+    LinkBuilder->>LinkBuilder: Gọi phương thức ResolvePrivateIpv4Address()
+    LinkBuilder->>LinkBuilder: Gọi phương thức SelectPreferredLanAddress(candidates)
+    LinkBuilder->>LinkBuilder: Gọi phương thức EnsureTrailingSlash(requestBaseAddress)
+  end
 
   alt target = open_app
-    QrLaunch->>HtmlBuilder: BuildLaunchHtml(code, targetType, appDeepLink, publicUrl)
+    QrLaunch->>HtmlBuilder: Gọi phương thức BuildLaunchHtml(code, targetType, appDeepLink, publicUrl)
     HtmlBuilder-->>QrLaunch: HTML launcher
     QrLaunch-->>Browser: HTML launcher + nút Mở ứng dụng
   else target = poi
-    QrLaunch->>PoiDomain: GetByIdAsync(targetId)
-    QrLaunch->>AudioDomain: GetByPoiAsync(targetId, languageCode=null)
-    QrLaunch->>HtmlBuilder: BuildPoiLaunchHtml(code, poi, audioItems, appDeepLink, publicUrl)
+    QrLaunch->>PoiDomain: Gọi phương thức poiService.GetByIdAsync(targetId, cancellationToken)
+    QrLaunch->>AudioDomain: Gọi phương thức audioService.GetByPoiAsync(targetId, languageCode: null, cancellationToken)
+    QrLaunch->>HtmlBuilder: Gọi phương thức BuildPoiLaunchHtml(code, poi, audioItems, appDeepLink, publicUrl)
     HtmlBuilder-->>QrLaunch: HTML POI public
     QrLaunch-->>Browser: HTML POI public + audio đa ngôn ngữ + nút Mở ứng dụng
-    Browser->>QrCtrl: ScanAsync(code, X-Device-Id)
-    Browser->>QrCtrl: TrackPresenceAsync(code, X-Device-Id) mỗi 15s
+    Browser->>Gate: Thực thi getOrCreateVisitorDeviceId() + trackPublicQrVisit()
+    Gate->>QrCtrl: Gọi phương thức ScanAsync(code, deviceId, cancellationToken)
+    QrCtrl->>QrDomain: Gọi phương thức qrService.ScanAsync(code, normalizedDeviceId, cancellationToken)
+    loop Mỗi 4 giây khi web fallback còn mở
+      Gate->>QrCtrl: Gọi phương thức TrackPresenceAsync(code, deviceId, cancellationToken)
+      QrCtrl->>QrDomain: Gọi phương thức qrService.ResolveAsync(code, cancellationToken)
+      QrCtrl->>QrPresence: Gọi phương thức qrWebPresenceTracker.Track(normalizedDeviceId)
+    end
+  else target = poi_list
+    QrLaunch->>QrLaunch: Gọi phương thức BuildPoiListLaunchResponseAsync(qrCode.Code, appDeepLink, publicUrl, cancellationToken)
+    QrLaunch->>PoiDomain: Gọi phương thức poiService.GetAllAsync(cancellationToken)
+    loop Mỗi POI published
+      QrLaunch->>AudioDomain: Gọi phương thức audioService.GetByPoiAsync(poi.Id, languageCode: null, cancellationToken)
+    end
+    QrLaunch->>DeviceSvc: Gọi phương thức qrDeviceConfigService.Decide()
+    alt Có QrDeviceConfig:ForcedValue hợp lệ
+      DeviceSvc->>DeviceDecision: Gọi phương thức QrDeviceConfigDecision.FromValue(forcedValue)
+    else Không có ForcedValue
+      DeviceSvc->>Random: Gọi phương thức RandomNumberGenerator.GetInt32(0, 2)
+      DeviceSvc->>DeviceDecision: Gọi phương thức QrDeviceConfigDecision.FromValue(value)
+    end
+    QrLaunch->>HtmlBuilder: Gọi phương thức BuildPoiListLaunchHtml(code, pois, audioByPoiId, appDeepLink, publicUrl, deviceConfig)
+    HtmlBuilder->>DeviceDecision: Gọi phương thức deviceConfig.BuildAppDeepLink(appDeepLink)
+    HtmlBuilder->>HtmlBuilder: Gọi phương thức BuildPoiListCardsHtml(pois, audioItemsByPoiId)
+    loop Mỗi POI card public
+      HtmlBuilder->>HtmlBuilder: Gọi phương thức BuildPoiListCardHtml(poi, audioItems)
+      HtmlBuilder->>HtmlBuilder: Gọi phương thức ResolvePrimaryTranslation(poi)
+      HtmlBuilder->>HtmlBuilder: Gọi phương thức SelectReadyAudio(audioItems)
+      HtmlBuilder->>HtmlBuilder: Gọi phương thức BuildAudioLabel(defaultAudio/audio)
+      HtmlBuilder->>HtmlBuilder: Gọi phương thức BuildAudioButtonsHtml(readyAudio)
+    end
+    HtmlBuilder->>HtmlBuilder: Gọi phương thức BuildPublicQrTrackingScript(safeScanEndpoint, safePresenceEndpoint, safeAppDeepLink, trackVisibilityChange: false, deviceConfig)
+    QrLaunch-->>Browser: HTML danh sách POI + audio web + kết quả cấu hình thiết bị
+    Browser->>Gate: Thực thi generateVisitorDeviceId(), getOrCreateVisitorDeviceId(), trackPublicQrVisit(), trackPublicQrPresence()
+    Gate->>QrCtrl: Gọi phương thức ScanAsync(code, deviceId, cancellationToken)
+    QrCtrl->>QrDomain: Gọi phương thức qrService.ScanAsync(code, normalizedDeviceId, cancellationToken)
+    QrCtrl->>QrPresence: Gọi phương thức qrWebPresenceTracker.Track(normalizedDeviceId)
+    loop Mỗi 4 giây khi web fallback còn mở
+      Gate->>QrCtrl: Gọi phương thức TrackPresenceAsync(code, deviceId, cancellationToken)
+      QrCtrl->>QrDomain: Gọi phương thức qrService.ResolveAsync(code, cancellationToken)
+      QrCtrl->>QrPresence: Gọi phương thức qrWebPresenceTracker.Track(normalizedDeviceId)
+    end
+    Admin->>Admin: Gọi phương thức VisitorDevicesAsync(cancellationToken)
+    Admin->>Dashboard: Gọi phương thức visitorDeviceDashboardService.GetAsync(cancellationToken)
+    Dashboard->>QrPresence: Gọi phương thức qrWebPresenceTracker.GetAll()
+    Dashboard->>Dashboard: Gọi phương thức BuildFromVisitGroup(...)
+    Dashboard->>Dashboard: Gọi phương thức BuildPresenceOnlyQrWebVisitorDevices(...)
+    Dashboard->>Dashboard: Gọi phương thức BuildPresenceOnlyVisitorDevices(...)
+    Dashboard->>Dashboard: Gọi phương thức IsVisitorOnline(source, deviceId, effectiveLastSeenAtUtc, onlineThresholdUtc, nowUtc)
+    Note right of Dashboard: QR web/mobile presence quá 5 giây sẽ không còn online
+    alt deviceConfig value = 0
+      Gate->>OS: window.location.href = foodstreet://qr/{code}?qrLaunch=strong0
+    else deviceConfig value = 1
+      Gate-->>Browser: Giữ web fallback, không mở app
+    end
   else target = tour
-    QrLaunch->>HtmlBuilder: BuildLaunchHtml(code, targetType=tour, appDeepLink, publicUrl)
+    QrLaunch->>HtmlBuilder: Gọi phương thức BuildLaunchHtml(code, targetType=tour, appDeepLink, publicUrl)
     HtmlBuilder-->>QrLaunch: HTML tour launcher
     QrLaunch-->>Browser: HTML mở tour + auto redirect appDeepLink
   else QR không hợp lệ / hết hạn
-    QrLaunch->>HtmlBuilder: BuildErrorHtml(message)
+    QrLaunch->>HtmlBuilder: Gọi phương thức BuildErrorHtml(message)
     HtmlBuilder-->>QrLaunch: HTML error page
     QrLaunch-->>Browser: Trang lỗi QR / mã hết hạn
   end
@@ -2625,58 +2808,58 @@ sequenceDiagram
   else Đã cài app và người dùng bấm Mở ứng dụng
     Browser->>OS: Open app deep link hoặc app link
     OS->>MainActivity: OnCreate/OnNewIntent(intent)
-    MainActivity->>PendingStore: SetPendingUri(intent.DataString)
-    PendingStore->>Parser: TryParse(rawUri)
+    MainActivity->>PendingStore: Gọi phương thức SetPendingUri(intent.DataString)
+    PendingStore->>Parser: Gọi phương thức TryParse(rawUri)
     Parser-->>PendingStore: VisitorQrDeepLinkRequest(code, sourceUri)
-    App->>HomeDeepLink: ProcessPendingDeepLinkAsync()
-    HomeDeepLink->>PendingStore: Consume()
-    HomeDeepLink->>QrDeepLinkSvc: ResolveAsync(request)
-    QrDeepLinkSvc->>QrApiSvc: OpenAsync(code, deviceId)
-    QrApiSvc->>QrCtrl: ScanAsync(code, X-Device-Id)
+    App->>HomeDeepLink: Gọi phương thức ProcessPendingDeepLinkAsync()
+    HomeDeepLink->>PendingStore: Gọi phương thức Consume()
+    HomeDeepLink->>QrDeepLinkSvc: Gọi phương thức ResolveAsync(request)
+    QrDeepLinkSvc->>QrApiSvc: Gọi phương thức OpenAsync(code, deviceId)
+    QrApiSvc->>QrCtrl: Gọi phương thức ScanAsync(code, X-Device-Id)
     alt ScanAsync lỗi
-      QrApiSvc->>QrCtrl: ResolveAsync(code)
+      QrApiSvc->>QrCtrl: Gọi phương thức ResolveAsync(code)
     end
-    QrCtrl->>QrDomain: ScanAsync(code, deviceId) hoặc ResolveAsync(code)
+    QrCtrl->>QrDomain: Gọi phương thức ScanAsync(code, deviceId) hoặc ResolveAsync(code)
     QrDomain-->>QrCtrl: QrCodeDto(targetType, targetId)
     QrDeepLinkSvc-->>HomeDeepLink: VisitorQrNavigationTarget
-    HomeDeepLink->>State: ApplyQrNavigationTarget(target)
+    HomeDeepLink->>State: Gọi phương thức ApplyQrNavigationTarget(target)
 
     alt target = open_app
       HomeDeepLink-->>Tourist: Vào app ở tab hiện tại
     else target = poi
-      HomeDeepLink->>HomeDeepLink: OpenDiscoverPoiDetailForQr(poiId)
-      HomeDeepLink->>HomeDeepLink: HandlePoiDeepLinkAudioAsync()
+      HomeDeepLink->>HomeDeepLink: Gọi phương thức OpenDiscoverPoiDetailForQr(poiId)
+      HomeDeepLink->>HomeDeepLink: Gọi phương thức HandlePoiDeepLinkAudioAsync()
     else target = tour
-      State->>State: StartTour(tourId) + OpenPoi(firstStopPoiId)
-      HomeDeepLink->>HomeDeepLink: HandlePoiDeepLinkAudioAsync()
+      State->>State: Gọi phương thức StartTour(tourId) + OpenPoi(firstStopPoiId)
+      HomeDeepLink->>HomeDeepLink: Gọi phương thức HandlePoiDeepLinkAudioAsync()
     end
 
     opt target = poi hoặc tour
-      HomeDeepLink->>HomeDeepLink: PrepareSelectedPoiAudioAsync(autoPlay=true, forceAutoPlay=true)
-      HomeDeepLink->>AudioCatalogSvc: LoadBestForPoiAsync(poiId, selectedLanguageCode, poiName)
-      AudioCatalogSvc->>AudioCatalogSvc: LoadLiveCueAsync(...) → SelectReadyAsset(exact selectedLanguageCode)
-      AudioCatalogSvc->>AudioCtrl: AudioController.GetByPoiAsync(poiId=serverPoiId, lang=null)
+      HomeDeepLink->>HomeDeepLink: Gọi phương thức PrepareSelectedPoiAudioAsync(autoPlay=true, forceAutoPlay=true)
+      HomeDeepLink->>AudioCatalogSvc: Gọi phương thức LoadBestForPoiAsync(poiId, selectedLanguageCode, poiName)
+      AudioCatalogSvc->>AudioCatalogSvc: Gọi phương thức LoadLiveCueAsync(...) + SelectReadyAsset(exact selectedLanguageCode)
+      AudioCatalogSvc->>AudioCtrl: Gọi phương thức AudioController.GetByPoiAsync(poiId=serverPoiId, lang=null)
       AudioCtrl-->>AudioCatalogSvc: AudioDto[] ready/missing
       alt Có audio ready đúng ngôn ngữ
-        AudioCatalogSvc->>OfflineStore: CacheSelectedAudioAsync() → CacheAudioAsync(request, stream)
+        AudioCatalogSvc->>OfflineStore: Gọi phương thức CacheSelectedAudioAsync() + CacheAudioAsync(request, stream)
         AudioCatalogSvc-->>HomeDeepLink: VisitorAudioCue(file cache hoặc live stream)
       else Không có audio ready đúng ngôn ngữ
         AudioCatalogSvc-->>HomeDeepLink: VisitorAudioCue.Unavailable()
       else AudioController.GetByPoiAsync hoặc network lỗi
-        AudioCatalogSvc->>OfflineStore: LoadCachedCueOrUnavailableAsync() → FindBestAudioAsync(poiId, selectedLanguageCode)
+        AudioCatalogSvc->>OfflineStore: Gọi phương thức LoadCachedCueOrUnavailableAsync() + FindBestAudioAsync(poiId, selectedLanguageCode)
         AudioCatalogSvc-->>HomeDeepLink: VisitorAudioCue cached hoặc Unavailable
       end
-      HomeDeepLink->>Player: visitorAudio.preload(streamUrl) + visitorAudio.play(streamUrl)
-      HomeDeepLink->>State: SetAudioPlaybackState(Playing) + UpsertCurrentListeningHistoryEntry()
-      HomeDeepLink->>Reporter: TrackAudioPlayAsync(cue)
-      Reporter-->>HomeDeepLink: VisitEventService.CreateAsync(audio_play)
+      HomeDeepLink->>Player: Gọi phương thức visitorAudio.preload(streamUrl) + visitorAudio.play(streamUrl)
+      HomeDeepLink->>State: Gọi phương thức SetAudioPlaybackState(Playing) + UpsertCurrentListeningHistoryEntry()
+      HomeDeepLink->>Reporter: Gọi phương thức TrackAudioPlayAsync(cue)
+      Reporter-->>HomeDeepLink: Gọi phương thức VisitEventService.CreateAsync(audio_play)
       Player-->>Tourist: Phát thuyết minh trong app, QR không cần GPS
     end
   end
       </pre>
     </div>
 
-    <h4>20.14 Tourist — Tour (Không cần đăng nhập)</h4>
+    <h4 id="seq-tourist-tour">20.14 Tourist — Tour (Không cần đăng nhập)</h4>
     <div class="diagram">
       <pre class="mermaid">
 sequenceDiagram
@@ -2762,9 +2945,9 @@ sequenceDiagram
       </pre>
     </div>
 
-    <h4>20.18 Tourist — Settings & Audio Preferences</h4>
+    <h4 id="seq-tourist-settings-audio">20.18 Tourist — Settings & Audio Preferences</h4>
     <div class="alert info">
-      Settings có các sub-screens chính: Overview, Audio, GPS, Cache, History, About, Profile. Dưới đây mô tả flow chính cho Audio Preferences và Offline Pack — hai phần ảnh hưởng trực tiếp đến trải nghiệm nghe và khả năng dùng app khi mạng yếu.
+      Settings có các sub-screens chính: Overview, Audio, GPS, Cache, History, About. Dropdown ở Overview hiện là <strong>ngôn ngữ giao diện app</strong> và chỉ cho chọn <code>vi</code>/<code>en</code> để tránh rối trong lúc demo; ngôn ngữ thuyết minh đa ngôn ngữ vẫn đổi trong full audio player theo các audio ready của từng POI. Settings không còn icon bell; thông báo của tourist được mở từ bell icon ở Map để giữ luồng thao tác tập trung. Dưới đây mô tả flow chính cho App Language, Audio Preferences và Offline content/audio pack.
     </div>
     <div class="diagram">
       <pre class="mermaid">
@@ -2773,8 +2956,12 @@ sequenceDiagram
   participant App as Android App
   participant State as VisitorShellState
   participant SettingsActions as Home.Settings.razor.cs
+  participant SettingsOverview as VisitorSettingsOverviewScreen
+  participant UiText as VisitorUiTextCatalog
   participant AudioSettingsActions as Home.AudioSettingsActions.razor.cs
   participant GpsSettingsActions as Home.GpsSettingsActions.razor.cs
+  participant PlayerLang as Home.PlayerLanguage.razor.cs
+  participant Prefs as Maui Preferences
   participant SettingsFeedback as Home.SettingsFeedback.razor.cs
   participant CacheScreen as VisitorCacheManagerScreen
   participant CacheActions as Home.CacheSettingsActions.razor.cs
@@ -2785,9 +2972,17 @@ sequenceDiagram
   Tourist->>App: Mở tab Settings
   App->>State: SwitchTab(VisitorTab.Settings)
   App->>SettingsActions: OpenSettingsScreen(Overview)
-  App-->>Tourist: Overview stats + navigation links
+  App-->>Tourist: Overview stats + dropdown ngôn ngữ app + navigation links, không có bell icon
 
-  alt Audio Settings
+  alt Đổi ngôn ngữ giao diện app ở Overview
+    Tourist->>SettingsOverview: Chọn VI hoặc EN trong dropdown
+    SettingsOverview->>App: OnLanguageChangedAsync(code)
+    App->>SettingsFeedback: ApplySettingsStateChangeAsync(...)
+    App->>State: ChangeAppLanguage(code)
+    App->>UiText: ForLanguage(SelectedAppLanguageCode)
+    App->>Prefs: Set("visitor.preferences.app-language-code", code)
+    App-->>Tourist: UI đổi VI/EN, narration language giữ nguyên
+  else Audio Settings
     Tourist->>App: Mở Audio Settings
     App->>SettingsActions: OpenSettingsScreen(Audio)
     App-->>Tourist: Hiển thị Audio Preferences
@@ -2811,7 +3006,7 @@ sequenceDiagram
     OfflineStore-->>App: VisitorCachedAudioItem[]
     App->>State: SetCachedAudioItems(items)
     App->>CacheScreen: Render gói offline + content snapshot + total size + preload status
-    alt Tải gói offline cho ngôn ngữ hiện tại
+    alt Tải gói offline cho ngôn ngữ thuyết minh hiện tại
       Tourist->>CacheScreen: Bấm PreloadActionLabel
       CacheScreen->>PreloadActions: PreloadSelectedLanguageAudioAsync()
       PreloadActions->>PreloadSvc: PreloadAsync(_state.Pois, SelectedLanguageCode, progress)
@@ -2853,7 +3048,7 @@ sequenceDiagram
       </pre>
     </div>
 
-    <h4>20.19 Tourist — Content Loading & Fallback</h4>
+    <h4 id="seq-tourist-content-fallback">20.19 Tourist — Content Loading & Fallback</h4>
     <div class="alert info">
       <code>VisitorContentService.LoadAsync()</code> orchestrate toàn bộ việc tải nội dung cho app. Đây là entry point cho mọi data loading — cả khi mở app lần đầu, refresh, và thay đổi location permission. Bản hiện tại ưu tiên dữ liệu thật từ API; nếu API lỗi thì thử đọc snapshot đã lưu trong <code>VisitorOfflineCacheStore.LoadContentSnapshotAsync()</code> trước, chỉ trả snapshot rỗng khi chưa từng cache dữ liệu.
     </div>
@@ -2935,9 +3130,9 @@ sequenceDiagram
       </pre>
     </div>
 
-    <h4>20.20 Future V1 — Offline Pack</h4>
+    <h4 id="seq-future-offline-pack">20.20 Future V1 — Offline Content/Audio Pack</h4>
     <div class="alert info">
-      Offline Pack trong đồ án không phải offline tile pack đầy đủ. Phạm vi đã triển khai là snapshot nội dung + audio cache theo ngôn ngữ hiện tại, đủ để app mở lại nội dung gần nhất và phát audio đã tải trước khi mạng yếu.
+      Offline content/audio pack trong đồ án không phải offline tile map đầy đủ. Phạm vi đã triển khai là snapshot nội dung + audio cache theo ngôn ngữ thuyết minh hiện tại, đủ để app mở lại nội dung gần nhất và phát audio đã tải trước khi mạng yếu.
     </div>
     <div class="diagram">
       <pre class="mermaid">
@@ -2959,7 +3154,7 @@ sequenceDiagram
   App-->>CacheScreen: Render gói offline
 
   alt Tải gói offline
-    Tourist->>CacheScreen: Bấm tải gói ngôn ngữ hiện tại
+    Tourist->>CacheScreen: Bấm tải gói ngôn ngữ thuyết minh hiện tại
     CacheScreen->>PreloadActions: PreloadSelectedLanguageAudioAsync()
     PreloadActions->>PreloadSvc: PreloadAsync(_state.Pois, SelectedLanguageCode, progress)
     PreloadSvc->>OfflineStore: ListCachedAudioAsync()
@@ -2983,7 +3178,7 @@ sequenceDiagram
       </pre>
     </div>
 
-    <h4>20.21 Future V1 — Social Sharing</h4>
+    <h4 id="seq-future-social-sharing">20.21 Future V1 — Social Sharing</h4>
     <div class="alert info">
       Share page là web public, không cần login. Nó khác QR launcher ở chỗ mục tiêu là preview có thể chia sẻ ra ngoài app, có metadata và CTA mở app.
     </div>
@@ -3018,7 +3213,7 @@ sequenceDiagram
       </pre>
     </div>
 
-    <h4>20.22 Future V1 — Review / Rating POI</h4>
+    <h4 id="seq-future-review-rating">20.22 Future V1 — Review / Rating POI</h4>
     <div class="alert info">
       Review không hiển thị public ngay. Tourist gửi review ở trạng thái pending, Admin duyệt hoặc từ chối; summary public chỉ lấy review approved để tránh spam và đánh giá bẩn.
     </div>
@@ -3072,7 +3267,10 @@ sequenceDiagram
       <pre class="mermaid">
 flowchart TD
   A[Mở app] --> B{Lần đầu?}
-  B -->|Có| C["Chọn ngôn ngữ từ managed_languages active + GPS Permission"]
+  B -->|Có| C0["Welcome screen: Bắt đầu khám phá"]
+  C0 --> C1["Chọn ngôn ngữ giao diện VI/EN lần đầu"]
+  C1 --> C2["Lưu visitor.onboarding.language-selected + app-language-code + language-code mặc định"]
+  C2 --> C["GPS Permission bắt buộc để auto narration"]
   B -->|Không| F["VisitorContentService.LoadAsync() — GPS + parallel fetch POI/Tours/Categories/Languages"]
   C --> F
 
@@ -3089,7 +3287,7 @@ flowchart TD
   H -->|Tab Discover| I2[Danh sách POI + Search/Filter]
   H -->|QR Deep Link| J["Parser.TryParse → QrSvc.Resolve → Navigate"]
   H -->|Tab Tours| K["Xem tour + StartTour + AdvanceActiveTour"]
-  H -->|Tab Settings| S0["Settings: Audio/GPS/Cache/History/About/Profile"]
+  H -->|Tab Settings| S0["Settings: Audio/GPS/Cache/History/About"]
   H -->|Di chuyển| M1{GPS cập nhật vị trí}
   H -->|Map render| MAP1["VisitorMapSnapshotBuilder.Build()"]
   MAP1 --> MAP2["GetVisiblePois trả toàn bộ POI đã map + RadiusMeters từ POI"]

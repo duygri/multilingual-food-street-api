@@ -15,6 +15,8 @@ param(
 
     [string]$OutputRoot = "",
 
+    [switch]$SkipClean,
+
     [switch]$NoRestore
 )
 
@@ -75,6 +77,17 @@ Write-Host "OutputPath   : $outputPath"
 
 if ($Environment -in @("Staging", "Production") -and [string]::IsNullOrWhiteSpace($env:ANDROID_KEYSTORE_PATH)) {
     Write-Warning "ANDROID_KEYSTORE_PATH is not set. Build can still run, but signed package output depends on your local signing setup."
+}
+
+if (-not $SkipClean) {
+    Write-Host "Clean       : enabled"
+    & dotnet clean $projectPath -c $configuration -f $Framework
+    if ($LASTEXITCODE -ne 0) {
+        exit $LASTEXITCODE
+    }
+}
+else {
+    Write-Host "Clean       : skipped"
 }
 
 & dotnet @arguments

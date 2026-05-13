@@ -40,9 +40,10 @@ public static class VisitorMapSnapshotBuilder
         IReadOnlyList<VisitorPoi> pois,
         string? selectedPoiId,
         VisitorLocationSnapshot? location,
-        VisitorMapRoute? route = null)
+        VisitorMapRoute? route = null,
+        string userLocationLabel = "Vị trí của bạn")
     {
-        var userLocation = BuildUserLocation(location);
+        var userLocation = BuildUserLocation(location, userLocationLabel);
         var visiblePois = VisitorMapMarkerVisibilityPolicy.GetVisiblePois(pois, selectedPoiId, location);
         var nearestPoiId = GetNearestPoiId(visiblePois, location);
         var markers = visiblePois
@@ -103,10 +104,10 @@ public static class VisitorMapSnapshotBuilder
             .FirstOrDefault();
     }
 
-    private static VisitorMapUserLocation? BuildUserLocation(VisitorLocationSnapshot? location)
+    private static VisitorMapUserLocation? BuildUserLocation(VisitorLocationSnapshot? location, string label)
     {
         return VisitorGeoMath.TryGetCoordinates(location, out var latitude, out var longitude)
-            ? new VisitorMapUserLocation(latitude, longitude, "Vị trí của bạn")
+            ? new VisitorMapUserLocation(latitude, longitude, label)
             : null;
     }
 

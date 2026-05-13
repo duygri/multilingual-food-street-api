@@ -8,15 +8,45 @@ public partial class Home
     {
         if (_state.CurrentAudioCue is not null)
         {
-            return $"{_state.AudioStatusLabel} • {GetCurrentAudioLanguageLabel()}";
+            return $"{UiText.LocalizeKnownStatus(_state.AudioStatusLabel)} • {GetCurrentAudioLanguageLabel()}";
         }
 
-        return $"Chưa phát • ưu tiên {_state.CurrentLanguage.Label}";
+        return UiText.FormatNotPlayedPriority(UiText.LocalizeLanguageLabel(_state.CurrentLanguage.Label));
     }
 
     private string? GetQueuedPoiStatus() =>
-        VisitorMapQueueStatusFormatter.Build(
+        UiText.LocalizeKnownStatus(VisitorMapQueueStatusFormatter.Build(
             _state.SelectedPoi?.Id,
             _state.ActiveProximity,
-            _proximityQueueState.QueuedMatch);
+            _proximityQueueState.QueuedMatch));
+
+    private string GetSelectedPoiDistanceLabel()
+    {
+        var poi = _state.SelectedPoi;
+        if (poi is null)
+        {
+            return UiText.CalculatingDistanceLabel();
+        }
+
+        var distanceMeters = VisitorGeoMath.TryGetCoordinates(_state.CurrentLocation, out var latitude, out var longitude)
+            ? VisitorGeoMath.CalculateDistanceMeters(latitude, longitude, poi.Latitude, poi.Longitude)
+            : poi.DistanceMeters;
+
+        return FormatPoiDistance(distanceMeters);
+    }
+
+    private static string FormatPoiDistance(int distanceMeters)
+    {
+        if (distanceMeters < 1000)
+        {
+            return $"{Math.Max(0, distanceMeters)} m";
+        }
+
+        return $"{distanceMeters / 1000d:0.#} km";
+    }
+
+    private async Task SelectMapPoiLanguageAsync(string languageCode)
+    {
+        await SelectAudioLanguageAsync(languageCode, keepPlayback: false);
+    }
 }

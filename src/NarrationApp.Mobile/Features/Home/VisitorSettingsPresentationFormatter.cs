@@ -61,7 +61,7 @@ public static class VisitorSettingsPresentationFormatter
         int tourCount,
         int cachedAudioFileCount,
         double estimatedSizeMb) =>
-        $"{poiCount} POI • {tourCount} tour • {cachedAudioFileCount} audio • {estimatedSizeMb.ToString("0.0", CultureInfo.InvariantCulture)} MB offline";
+        $"{poiCount} POI • {tourCount} tour • {cachedAudioFileCount} audio • {estimatedSizeMb.ToString("0.0", CultureInfo.InvariantCulture)} MB cache";
 
     public static string FormatAudioPackProgressStyle(int totalPoiCount, int readyPoiCount)
     {

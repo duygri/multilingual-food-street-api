@@ -1,13 +1,10 @@
 using System.Net;
-using System.Text;
 using NarrationApp.Shared.DTOs.Audio;
 using NarrationApp.Shared.DTOs.Poi;
-using NarrationApp.Shared.DTOs.Translation;
-using NarrationApp.Shared.Enums;
 
 namespace NarrationApp.Server.Services;
 
-internal static class QrLaunchHtmlBuilder
+internal static partial class QrLaunchHtmlBuilder
 {
     public static string BuildPoiLaunchHtml(
         string code,
@@ -17,11 +14,7 @@ internal static class QrLaunchHtmlBuilder
         string publicUrl)
     {
         var primaryTranslation = ResolvePrimaryTranslation(poi);
-        var readyAudio = audioItems
-            .Where(item => item.Status == AudioStatus.Ready && !string.IsNullOrWhiteSpace(item.Url))
-            .OrderByDescending(item => string.Equals(item.LanguageCode, "vi", StringComparison.OrdinalIgnoreCase))
-            .ThenBy(item => item.LanguageCode, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+        var readyAudio = SelectReadyAudio(audioItems);
         var defaultAudio = readyAudio.FirstOrDefault();
 
         var safeCode = WebUtility.HtmlEncode(code);
@@ -317,14 +310,6 @@ internal static class QrLaunchHtmlBuilder
         const player = document.getElementById('poi-audio-player');
         const label = document.getElementById('audio-label');
         const chips = Array.from(document.querySelectorAll('[data-audio-src]'));
-        const scanEndpoint = "{{safeScanEndpoint}}";
-        const presenceEndpoint = "{{safePresenceEndpoint}}";
-        const scanStorageKey = "foodstreet.qr.public.device-id";
-        const heartbeatIntervalMs = 15000;
-
-        window.setTimeout(function () {
-            window.location.href = "{{safeAppDeepLink}}";
-        }, 180);
 
         chips.forEach(function (chip) {
             chip.addEventListener('click', function () {
@@ -342,87 +327,33 @@ internal static class QrLaunchHtmlBuilder
                 player.play().catch(function () { });
             });
         });
-
-        function generateVisitorDeviceId() {
-            const randomToken = Math.random().toString(36).slice(2, 10);
-            const timeToken = Date.now().toString(36);
-            return "qr-web-" + randomToken + timeToken;
-        }
-
-        function getOrCreateVisitorDeviceId() {
-            try {
-                const existing = window.localStorage.getItem(scanStorageKey);
-                if (existing && existing.trim().length > 0) {
-                    return existing;
-                }
-
-                const generated = window.crypto && typeof window.crypto.randomUUID === 'function'
-                    ? "qr-web-" + window.crypto.randomUUID()
-                    : generateVisitorDeviceId();
-
-                window.localStorage.setItem(scanStorageKey, generated);
-                return generated;
-            } catch (error) {
-                return generateVisitorDeviceId();
-            }
-        }
-
-        async function trackPublicQrVisit() {
-            try {
-                await window.fetch(scanEndpoint, {
-                    method: 'POST',
-                    keepalive: true,
-                    credentials: 'same-origin',
-                    headers: {
-                        'X-Device-Id': getOrCreateVisitorDeviceId()
-                    }
-                });
-            } catch (error) {
-            }
-        }
-
-        async function trackPublicQrPresence() {
-            try {
-                await window.fetch(presenceEndpoint, {
-                    method: 'POST',
-                    keepalive: true,
-                    credentials: 'same-origin',
-                    headers: {
-                        'X-Device-Id': getOrCreateVisitorDeviceId()
-                    }
-                });
-            } catch (error) {
-            }
-        }
-
-        trackPublicQrVisit();
-        trackPublicQrPresence();
-        window.setInterval(trackPublicQrPresence, heartbeatIntervalMs);
-        document.addEventListener('visibilitychange', function () {
-            if (!document.hidden) {
-                trackPublicQrPresence();
-            }
-        });
+{{BuildPublicQrTrackingScript(safeScanEndpoint, safePresenceEndpoint, safeAppDeepLink, trackVisibilityChange: true)}}
     </script>
 </body>
 </html>
 """;
     }
 
-    public static string BuildLaunchHtml(string code, string targetType, string appDeepLink, string publicUrl)
+    public static string BuildPoiListLaunchHtml(
+        string code,
+        IReadOnlyList<PoiDto> pois,
+        IReadOnlyDictionary<int, IReadOnlyList<AudioDto>> audioItemsByPoiId,
+        string appDeepLink,
+        string publicUrl,
+        QrDeviceConfigDecision deviceConfig)
     {
+        var appLaunchDeepLink = deviceConfig.BuildAppDeepLink(appDeepLink);
         var safeCode = WebUtility.HtmlEncode(code);
-        var safeDeepLink = WebUtility.HtmlEncode(appDeepLink);
+        var safeAppDeepLink = WebUtility.HtmlEncode(appLaunchDeepLink);
         var safePublicUrl = WebUtility.HtmlEncode(publicUrl);
-        var isTourQr = string.Equals(targetType, "tour", StringComparison.OrdinalIgnoreCase);
-        var safeEyebrow = isTourQr ? "QR mở tour" : "QR mở app";
-        var safeTitle = isTourQr ? "Mở tour Food Street" : "Launcher mở Food Street";
-        var safeBody = isTourQr
-            ? "Đây là mã QR tour. Chạm nút bên dưới để mở ứng dụng và nghe ngay điểm đầu tiên, không cần chờ GPS."
-            : "Đây là mã QR dành riêng cho luồng mở ứng dụng. Chạm nút bên dưới để chuyển sang app Food Street.";
-        var safeMeta = isTourQr
-            ? "Nếu chưa cài app, bạn vẫn đang ở trang QR public này bằng trình duyệt. Khi đã cài app, hãy chạm Mở ứng dụng để app tự chọn tour và chuẩn bị audio điểm đầu tiên."
-            : "Nếu chưa cài app, bạn vẫn mở được trang QR public này bằng trình duyệt. Khi đã cài app, hãy chạm lại nút Mở ứng dụng.";
+        var safeDeviceLabel = deviceConfig.Label;
+        var safeDeviceNotice = deviceConfig.Notice;
+        var safeScanEndpoint = WebUtility.HtmlEncode($"/api/qr/{Uri.EscapeDataString(code)}/scan");
+        var safePresenceEndpoint = WebUtility.HtmlEncode($"/api/qr/{Uri.EscapeDataString(code)}/presence");
+        var poiCards = BuildPoiListCardsHtml(pois, audioItemsByPoiId);
+        var appActionHtml = deviceConfig.ShouldOpenApp
+            ? $"""<a class="button button--primary" href="{safeAppDeepLink}">Mở danh sách trong app</a>"""
+            : """<span class="button button--disabled" aria-disabled="true">Dùng web fallback</span>""";
 
         return $$"""
 <!doctype html>
@@ -430,71 +361,75 @@ internal static class QrLaunchHtmlBuilder
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>Mở Food Street</title>
+    <title>Danh sách POI · Food Street</title>
     <style>
         :root { color-scheme: dark; }
         * { box-sizing: border-box; }
         body {
             margin: 0;
             min-height: 100vh;
-            display: grid;
-            place-items: center;
-            padding: 24px;
-            background: linear-gradient(180deg, #020617 0%, #0f172a 100%);
+            padding: 18px;
+            background:
+                radial-gradient(circle at 10% 0%, rgba(20, 184, 166, 0.18), transparent 28%),
+                linear-gradient(180deg, #020617 0%, #0f172a 100%);
             color: #e2e8f0;
             font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         }
         .shell {
-            width: min(100%, 460px);
+            width: min(100%, 980px);
+            margin: 0 auto;
+            display: grid;
+            gap: 18px;
+        }
+        .hero,
+        .poi-card {
             border-radius: 24px;
             border: 1px solid rgba(59, 130, 246, 0.18);
             background: rgba(15, 23, 42, 0.94);
-            box-shadow: 0 24px 80px rgba(2, 6, 23, 0.45);
-            padding: 28px;
+            box-shadow: 0 22px 60px rgba(2, 6, 23, 0.34);
+        }
+        .hero {
+            padding: 24px;
+            display: grid;
+            gap: 16px;
         }
         .eyebrow {
-            margin: 0 0 10px;
-            color: #38bdf8;
+            margin: 0;
+            color: #2dd4bf;
             text-transform: uppercase;
             letter-spacing: 0.18em;
             font-size: 12px;
-            font-weight: 700;
+            font-weight: 800;
         }
+        h1, h2, h3, p { margin: 0; }
         h1 {
-            margin: 0 0 12px;
-            font-size: 32px;
-            line-height: 1.08;
+            font-size: clamp(2rem, 5vw, 3.6rem);
+            line-height: 1.02;
         }
         p {
-            margin: 0 0 14px;
             color: #94a3b8;
             line-height: 1.6;
         }
-        .code {
-            display: inline-flex;
-            margin: 8px 0 18px;
-            padding: 10px 14px;
-            border-radius: 999px;
-            background: rgba(15, 118, 110, 0.18);
-            color: #5eead4;
-            font-weight: 700;
-            letter-spacing: 0.06em;
-        }
-        .actions {
+        .hero-actions,
+        .poi-list,
+        .poi-meta,
+        .audio-toolbar {
             display: flex;
-            gap: 12px;
             flex-wrap: wrap;
-            margin: 8px 0 18px;
+            gap: 12px;
+        }
+        .hero-actions {
+            align-items: center;
         }
         .button {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            min-height: 48px;
+            min-height: 46px;
             padding: 0 18px;
             border-radius: 14px;
             text-decoration: none;
-            font-weight: 700;
+            font-weight: 800;
         }
         .button--primary {
             background: linear-gradient(135deg, #14b8a6 0%, #34d399 100%);
@@ -505,109 +440,156 @@ internal static class QrLaunchHtmlBuilder
             color: #e2e8f0;
             background: rgba(15, 23, 42, 0.82);
         }
-        .meta {
-            margin-top: 18px;
-            padding-top: 18px;
-            border-top: 1px solid rgba(148, 163, 184, 0.14);
+        .button--disabled {
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            color: #94a3b8;
+            background: rgba(15, 23, 42, 0.62);
         }
-        .meta a {
-            color: #38bdf8;
+        .device-notice {
+            display: grid;
+            gap: 6px;
+            padding: 12px 14px;
+            border-radius: 16px;
+            border: 1px solid rgba(45, 212, 191, 0.24);
+            background: rgba(15, 118, 110, 0.12);
+        }
+        .device-notice strong {
+            color: #ccfbf1;
+        }
+        .poi-list {
+            align-items: stretch;
+        }
+        .poi-card {
+            flex: 1 1 300px;
+            min-width: min(100%, 300px);
+            overflow: hidden;
+            display: grid;
+        }
+        .poi-card__image {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+            background: linear-gradient(135deg, rgba(20, 184, 166, 0.18), rgba(59, 130, 246, 0.18));
+        }
+        .poi-card__body {
+            padding: 18px;
+            display: grid;
+            gap: 12px;
+        }
+        .poi-meta {
+            gap: 8px;
+        }
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            min-height: 30px;
+            padding: 0 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(45, 212, 191, 0.24);
+            background: rgba(15, 118, 110, 0.14);
+            color: #99f6e4;
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+        .audio-box {
+            display: grid;
+            gap: 10px;
+            border-radius: 16px;
+            border: 1px solid rgba(59, 130, 246, 0.16);
+            background: rgba(2, 6, 23, 0.34);
+            padding: 12px;
+        }
+        .audio-chip {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 34px;
+            padding: 0 12px;
+            border-radius: 999px;
+            border: 1px solid rgba(45, 212, 191, 0.28);
+            background: rgba(8, 47, 73, 0.54);
+            color: #a5f3fc;
+            font-weight: 800;
+            text-transform: lowercase;
+            cursor: pointer;
+        }
+        .audio-chip.is-active {
+            background: linear-gradient(135deg, rgba(20, 184, 166, 0.92), rgba(34, 197, 94, 0.92));
+            color: #04212b;
+        }
+        audio {
+            width: 100%;
+            accent-color: #2dd4bf;
+        }
+        .empty-audio {
+            color: #94a3b8;
+            font-weight: 700;
+        }
+        .meta {
+            color: #7dd3fc;
             word-break: break-word;
+            font-size: 0.9rem;
+        }
+        @media (max-width: 640px) {
+            body { padding: 12px; }
+            .hero,
+            .poi-card__body { padding: 16px; }
+            .poi-card__image { height: 136px; }
         }
     </style>
 </head>
 <body>
     <main class="shell">
-        <p class="eyebrow">{{safeEyebrow}}</p>
-        <h1>{{safeTitle}}</h1>
-        <p>{{safeBody}}</p>
-        <div class="code">{{safeCode}}</div>
-        <div class="actions">
-            <a class="button button--primary" href="{{safeDeepLink}}">Mở ứng dụng</a>
-            <a class="button button--ghost" href="{{safePublicUrl}}">Tải lại trang QR</a>
-        </div>
-        <div class="meta">
-            <p>{{safeMeta}}</p>
-            <p><a href="{{safeDeepLink}}">{{safeDeepLink}}</a></p>
-        </div>
+        <section class="hero">
+            <p class="eyebrow">QR danh sách POI</p>
+            <h1>Danh sách điểm tham quan</h1>
+            <p>Quét một mã để xem các POI ẩm thực Vĩnh Khánh. Nếu chưa cài app, bạn vẫn có thể mở từng điểm và nghe audio theo ngôn ngữ sẵn có ngay trên web.</p>
+            <p class="meta">Quy ước server: 0 = cấu hình mạnh, 1 = cấu hình yếu.</p>
+            <div class="hero-actions">
+                {{appActionHtml}}
+                <a class="button button--ghost" href="{{safePublicUrl}}">Tải lại trang QR</a>
+            </div>
+            <div class="device-notice" data-qr-device-config="{{deviceConfig.Value}}">
+                <strong>{{safeDeviceLabel}}</strong>
+                <span>{{safeDeviceNotice}}</span>
+            </div>
+            <p class="meta">Mã QR {{safeCode}} · {{safePublicUrl}}</p>
+        </section>
+
+        <section class="poi-list" aria-label="Danh sách POI">
+            {{poiCards}}
+        </section>
     </main>
     <script>
-        window.setTimeout(function () {
-            window.location.href = "{{safeDeepLink}}";
-        }, 180);
+        document.querySelectorAll('[data-audio-src]').forEach(function (chip) {
+            chip.addEventListener('click', function () {
+                const card = chip.closest('[data-poi-card]');
+                if (!card) {
+                    return;
+                }
+
+                const player = card.querySelector('audio');
+                const label = card.querySelector('[data-audio-label]');
+                if (!player) {
+                    return;
+                }
+
+                card.querySelectorAll('[data-audio-src]').forEach(function (item) {
+                    item.classList.remove('is-active');
+                });
+                chip.classList.add('is-active');
+                player.src = chip.getAttribute('data-audio-src') || '';
+                if (label) {
+                    label.textContent = chip.getAttribute('data-audio-label') || '';
+                }
+                player.play().catch(function () { });
+            });
+        });
+{{BuildPublicQrTrackingScript(safeScanEndpoint, safePresenceEndpoint, safeAppDeepLink, trackVisibilityChange: false, deviceConfig)}}
     </script>
 </body>
 </html>
 """;
     }
 
-    public static string BuildErrorHtml(string message)
-    {
-        var safeMessage = WebUtility.HtmlEncode(message);
-
-        return $$"""
-<!doctype html>
-<html lang="vi">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>QR không hợp lệ</title>
-    <style>
-        body {
-            margin: 0;
-            min-height: 100vh;
-            display: grid;
-            place-items: center;
-            padding: 24px;
-            background: #020617;
-            color: #e2e8f0;
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        }
-        .shell {
-            width: min(100%, 420px);
-            padding: 28px;
-            border-radius: 24px;
-            border: 1px solid rgba(239, 68, 68, 0.18);
-            background: rgba(15, 23, 42, 0.94);
-        }
-        h1 { margin: 0 0 12px; font-size: 30px; }
-        p { margin: 0; color: #94a3b8; line-height: 1.6; }
-    </style>
-</head>
-<body>
-    <main class="shell">
-        <h1>QR không dùng được</h1>
-        <p>{{safeMessage}}</p>
-    </main>
-</body>
-</html>
-""";
-    }
-
-    private static string BuildAudioButtonsHtml(IReadOnlyList<AudioDto> audioItems)
-    {
-        var builder = new StringBuilder();
-
-        for (var index = 0; index < audioItems.Count; index++)
-        {
-            var audio = audioItems[index];
-            var activeClass = index == 0 ? " is-active" : string.Empty;
-            var safeUrl = WebUtility.HtmlEncode(audio.Url);
-            var safeLabel = WebUtility.HtmlEncode(BuildAudioLabel(audio));
-            var safeCode = WebUtility.HtmlEncode(audio.LanguageCode);
-            builder.Append($"""<button type="button" class="audio-chip{activeClass}" data-audio-src="{safeUrl}" data-audio-label="{safeLabel}">{safeCode}</button>""");
-        }
-
-        return builder.ToString();
-    }
-
-    private static string BuildAudioLabel(AudioDto audio) => $"{audio.LanguageCode.ToUpperInvariant()} • {audio.SourceType}";
-
-    private static TranslationDto? ResolvePrimaryTranslation(PoiDto poi)
-    {
-        return poi.Translations
-            .OrderByDescending(item => string.Equals(item.LanguageCode, "vi", StringComparison.OrdinalIgnoreCase))
-            .ThenBy(item => item.IsFallback)
-            .FirstOrDefault();
-    }
 }

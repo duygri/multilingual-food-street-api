@@ -138,7 +138,8 @@ public sealed class MobileProjectConfigurationTests
         var apiConfig = File.ReadAllText(Path.GetFullPath(filePath));
 
         Assert.DoesNotContain("192.168.98.219", apiConfig, StringComparison.Ordinal);
-        Assert.Contains("\"androidDevice\": \"http://192.168.31.137:5000/\"", apiConfig, StringComparison.Ordinal);
+        Assert.DoesNotContain("192.168.31.137", apiConfig, StringComparison.Ordinal);
+        Assert.Contains("\"androidDevice\": \"http://192.168.31.136:5000/\"", apiConfig, StringComparison.Ordinal);
     }
 
     [Fact]

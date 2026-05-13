@@ -153,6 +153,7 @@ public sealed class QrService(AppDbContext dbContext) : IQrService
         switch (targetType)
         {
             case "open_app":
+            case "poi_list":
                 return 0;
             case "poi":
                 _ = await dbContext.Pois.AsNoTracking().SingleOrDefaultAsync(item => item.Id == targetId, cancellationToken)
@@ -173,6 +174,7 @@ public sealed class QrService(AppDbContext dbContext) : IQrService
         return normalized switch
         {
             "open_app" => normalized,
+            "poi_list" => normalized,
             "poi" => normalized,
             "tour" => normalized,
             _ => throw new ArgumentException("Unsupported QR target type.", nameof(targetType))

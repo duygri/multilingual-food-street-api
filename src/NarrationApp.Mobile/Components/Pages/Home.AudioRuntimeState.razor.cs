@@ -58,15 +58,15 @@ public partial class Home
             MarkAutoNarrationStarted(cue, forceAutoPlay);
             await JS.InvokeVoidAsync("visitorAudio.play", playbackUrl, _audioBridge);
             var playbackLabel = forceAutoPlay
-                ? $"Đang phát từ QR • {cue.LanguageCode.ToUpperInvariant()}"
-                : $"Đang phát tự động • {cue.LanguageCode.ToUpperInvariant()}";
+                ? UiText.FormatQrPlayingLabel(cue.LanguageCode)
+                : UiText.FormatAutoPlayingLabel(cue.LanguageCode);
             _state.SetAudioPlaybackState(VisitorAudioPlaybackState.Playing, playbackLabel);
             await TrackAudioPlayAsync(cue);
         }
         catch (Exception ex)
         {
             VisitorMobileDiagnostics.Log("AudioRuntime", $"Playback source failed: {ex.Message}");
-            _state.SetAudioPlaybackState(VisitorAudioPlaybackState.Error, "Audio chưa sẵn sàng");
+            _state.SetAudioPlaybackState(VisitorAudioPlaybackState.Error, UiText.AudioNotReadyLabel());
         }
     }
 }

@@ -4,7 +4,7 @@ namespace NarrationApp.Mobile.Components.Pages;
 
 public partial class Home
 {
-    private static readonly TimeSpan PresenceHeartbeatInterval = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan PresenceHeartbeatInterval = TimeSpan.FromSeconds(4);
     private CancellationTokenSource? _presenceHeartbeatLoopCts;
     private Task? _presenceHeartbeatLoopTask;
 

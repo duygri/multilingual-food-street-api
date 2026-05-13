@@ -5,43 +5,43 @@
         <button type="button" class="icon-button" @onclick="OnBack">←</button>
         <div>
             <span class="eyebrow">GPS settings</span>
-            <h2>Vị trí & GPS</h2>
-            <p>Điều chỉnh quyền truy cập, mức chính xác và cách map tự focus theo vị trí hiện tại.</p>
+            <h2>@Text.GpsSettingsTitle</h2>
+            <p>@Text.GpsSettingsDescription()</p>
         </div>
     </header>
 
     <article class="setting-card settings-gps-status">
-        <span class="sheet-label">Trạng thái hiện tại</span>
+        <span class="sheet-label">@Text.CurrentStatusLabel()</span>
         <strong>@StatusLabel</strong>
-        <p>@Preferences.StatusLabel</p>
+        <p>@Text.LocalizeKnownStatus(Preferences.StatusLabel)</p>
         <div class="auth-inline auth-inline--summary">
-            <span>Pin @Preferences.BatteryPercent%</span>
-            <span>@Preferences.BatteryLabel</span>
+            <span>@Text.BatteryLabel(Preferences.BatteryPercent)</span>
+            <span>@Text.LocalizeKnownStatus(Preferences.BatteryLabel)</span>
         </div>
     </article>
 
     <article class="setting-card">
-        <span class="sheet-label">Theo dõi nền</span>
+        <span class="sheet-label">@Text.BackgroundTrackingLabel()</span>
 
         <button type="button" class="settings-toggle-row" @onclick="() => OnBackgroundTrackingChanged.InvokeAsync(!Preferences.BackgroundTrackingEnabled)">
             <div class="settings-row__copy">
-                <strong class="settings-row__title">Cho phép geofence khi app nền</strong>
-                <span class="settings-row__subtitle">Giữ trạng thái nhận biết POI gần bạn khi đang đi bộ hoặc khóa màn hình.</span>
+                <strong class="settings-row__title">@Text.BackgroundGeofenceTitle()</strong>
+                <span class="settings-row__subtitle">@Text.BackgroundGeofenceDescription()</span>
             </div>
             <span class="settings-switch @(Preferences.BackgroundTrackingEnabled ? "is-on" : string.Empty)">@GetToggleLabel(Preferences.BackgroundTrackingEnabled)</span>
         </button>
 
         <button type="button" class="settings-toggle-row" @onclick="() => OnAutoFocusChanged.InvokeAsync(!Preferences.AutoFocusEnabled)">
             <div class="settings-row__copy">
-                <strong class="settings-row__title">Tự focus vị trí hiện tại</strong>
-                <span class="settings-row__subtitle">Map sẽ ưu tiên quay lại khu vực bạn đang đứng khi mở app hoặc đổi tab.</span>
+                <strong class="settings-row__title">@Text.GpsAutoFocusTitle()</strong>
+                <span class="settings-row__subtitle">@Text.GpsAutoFocusDescription()</span>
             </div>
             <span class="settings-switch @(Preferences.AutoFocusEnabled ? "is-on" : string.Empty)">@GetToggleLabel(Preferences.AutoFocusEnabled)</span>
         </button>
     </article>
 
     <article class="setting-card">
-        <span class="sheet-label">Mức chính xác GPS</span>
+        <span class="sheet-label">@Text.GpsAccuracyLabel()</span>
         <div class="settings-segment">
             @foreach (var mode in Enum.GetValues<VisitorGpsAccuracyMode>())
             {
@@ -57,12 +57,12 @@
     </article>
 
     <article class="setting-card settings-debug-log">
-        <span class="sheet-label">Nhật ký geofence</span>
+        <span class="sheet-label">@Text.GpsDebugLogLabel()</span>
         @if (GeofenceDebugEvents.Count == 0)
         {
             <div class="debug-log-item debug-log-item--empty">
-                <strong>Chưa có sự kiện overlap</strong>
-                <span>Đi bộ vào vùng POI để xem app chọn active, queue và promote như thế nào.</span>
+                <strong>@Text.GpsDebugEmptyTitle()</strong>
+                <span>@Text.GpsDebugEmptyDescription()</span>
             </div>
         }
         else
@@ -72,7 +72,7 @@
                 {
                     <article class="debug-log-item">
                         <strong>@item.TimeLabel</strong>
-                        <span>@item.Message</span>
+                        <span>@Text.LocalizeKnownStatus(item.Message)</span>
                     </article>
                 }
             </div>
@@ -82,6 +82,7 @@
 
 @code {
     [Parameter] public VisitorGpsPreferences Preferences { get; set; } = new(true, true, VisitorGpsAccuracyMode.Adaptive, 0, string.Empty, string.Empty);
+    [Parameter] public VisitorUiText Text { get; set; } = VisitorUiTextCatalog.ForLanguage("vi");
     [Parameter] public IReadOnlyList<VisitorDebugEvent> GeofenceDebugEvents { get; set; } = [];
     [Parameter] public string StatusLabel { get; set; } = string.Empty;
     [Parameter] public EventCallback OnBack { get; set; }
@@ -89,7 +90,7 @@
     [Parameter] public EventCallback<bool> OnAutoFocusChanged { get; set; }
     [Parameter] public EventCallback<VisitorGpsAccuracyMode> OnAccuracyModeChanged { get; set; }
 
-    private static string GetToggleLabel(bool isEnabled) => isEnabled ? "Bật" : "Tắt";
+    private string GetToggleLabel(bool isEnabled) => Text.ToggleLabel(isEnabled);
 
     private static string GetAccuracyLabel(VisitorGpsAccuracyMode mode) =>
         mode switch
@@ -99,11 +100,6 @@
             _ => "Adaptive"
         };
 
-    private static string GetAccuracyDescription(VisitorGpsAccuracyMode mode) =>
-        mode switch
-        {
-            VisitorGpsAccuracyMode.High => "Ưu tiên độ chính xác tối đa cho geofence và auto-play, đổi lại sẽ dùng pin nhiều hơn.",
-            VisitorGpsAccuracyMode.BatterySaver => "Giảm tần suất cập nhật vị trí khi bạn chỉ muốn theo tour nhẹ và ít hao pin.",
-            _ => "Cân bằng giữa độ mượt khi đi bộ và mức tiêu thụ pin trong ngày."
-        };
+    private string GetAccuracyDescription(VisitorGpsAccuracyMode mode) =>
+        Text.AccuracyDescription(mode);
 }

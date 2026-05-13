@@ -123,6 +123,39 @@ public sealed class QrPublicLinkIntegrationTests
     }
 
     [Fact]
+    public async Task Public_qr_route_returns_poi_list_with_appless_audio_language_fallback()
+    {
+        await using var factory = new TestWebApplicationFactory();
+        await factory.SeedAsync();
+
+        var qr = await CreatePoiListQrAsync(factory);
+        var poiId = await GetFirstPublishedPoiIdAsync(factory);
+        await AddQrPreviewAudioAsync(factory, poiId);
+
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("http://localhost"),
+            AllowAutoRedirect = false
+        });
+
+        var response = await client.GetAsync($"/qr/{qr.Code}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var html = await response.Content.ReadAsStringAsync();
+        Assert.Contains("QR danh sách POI", html, StringComparison.Ordinal);
+        Assert.Contains("Danh sách điểm tham quan", html, StringComparison.Ordinal);
+        Assert.Contains("Ốc Oanh", html, StringComparison.Ordinal);
+        Assert.Contains("/api/audio/501/stream", html, StringComparison.Ordinal);
+        Assert.Contains("/api/audio/502/stream", html, StringComparison.Ordinal);
+        Assert.Contains(">vi<", html, StringComparison.Ordinal);
+        Assert.Contains(">en<", html, StringComparison.Ordinal);
+        Assert.Contains($"foodstreet://qr/{qr.Code}", html, StringComparison.Ordinal);
+        Assert.Contains("data-poi-card", html, StringComparison.Ordinal);
+        Assert.Contains("data-audio-src", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Public_qr_route_embeds_scan_tracking_for_visitor_devices()
     {
         await using var factory = new TestWebApplicationFactory();
@@ -148,7 +181,104 @@ public sealed class QrPublicLinkIntegrationTests
         Assert.Contains("localStorage", html, StringComparison.Ordinal);
         Assert.Contains("qr-web-", html, StringComparison.Ordinal);
         Assert.Contains("trackPublicQrPresence", html, StringComparison.Ordinal);
-        Assert.Contains("15000", html, StringComparison.Ordinal);
+        Assert.Contains("4000", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Poi_list_qr_scan_registers_qr_web_device_as_online_for_admin_dashboard()
+    {
+        await using var factory = new TestWebApplicationFactory();
+        await factory.SeedAsync();
+
+        var qr = await CreatePoiListQrAsync(factory);
+
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("http://localhost"),
+            AllowAutoRedirect = false
+        });
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"/api/qr/{qr.Code}/scan");
+        request.Headers.Add("X-Device-Id", "qr-web-poi-list-dashboard-001");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        await using var scope = factory.Services.CreateAsyncScope();
+        var dashboardService = scope.ServiceProvider.GetRequiredService<IVisitorDeviceDashboardService>();
+        var devices = await dashboardService.GetAsync();
+        var device = Assert.Single(devices.Where(item => item.DeviceId == "qr-web-poi-list-dashboard-001"));
+
+        Assert.True(device.IsOnline);
+        Assert.Equal("guest", device.RoleName);
+        Assert.False(device.AutoPlayEnabled);
+        Assert.False(device.BackgroundTrackingEnabled);
+    }
+
+    [Fact]
+    public async Task Public_poi_list_qr_route_uses_server_device_config_zero_to_open_app()
+    {
+        await using var factory = new TestWebApplicationFactory(new Dictionary<string, string?>
+        {
+            ["QrDeviceConfig:ForcedValue"] = "0"
+        });
+        await factory.SeedAsync();
+
+        var qr = await CreatePoiListQrAsync(factory);
+        var poiId = await GetFirstPublishedPoiIdAsync(factory);
+        await AddQrPreviewAudioAsync(factory, poiId);
+
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("http://localhost"),
+            AllowAutoRedirect = false
+        });
+
+        var response = await client.GetAsync($"/qr/{qr.Code}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var html = await response.Content.ReadAsStringAsync();
+        Assert.Contains("QR danh sách POI", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Math.floor(Math.random() * 2)", html, StringComparison.Ordinal);
+        Assert.Contains("0 = cấu hình mạnh", html, StringComparison.Ordinal);
+        Assert.Contains("1 = cấu hình yếu", html, StringComparison.Ordinal);
+        Assert.Contains("data-qr-device-config=\"0\"", html, StringComparison.Ordinal);
+        Assert.Contains("Cấu hình mạnh (0)", html, StringComparison.Ordinal);
+        Assert.Contains("App sẽ hiển thị thông báo QR cấu hình mạnh", html, StringComparison.Ordinal);
+        Assert.Contains($"window.location.href = \"foodstreet://qr/{qr.Code}?qrLaunch=strong0\"", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Public_poi_list_qr_route_uses_server_device_config_one_for_web_fallback()
+    {
+        await using var factory = new TestWebApplicationFactory(new Dictionary<string, string?>
+        {
+            ["QrDeviceConfig:ForcedValue"] = "1"
+        });
+        await factory.SeedAsync();
+
+        var qr = await CreatePoiListQrAsync(factory);
+        var poiId = await GetFirstPublishedPoiIdAsync(factory);
+        await AddQrPreviewAudioAsync(factory, poiId);
+
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("http://localhost"),
+            AllowAutoRedirect = false
+        });
+
+        var response = await client.GetAsync($"/qr/{qr.Code}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var html = await response.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("Math.floor(Math.random() * 2)", html, StringComparison.Ordinal);
+        Assert.Contains("data-qr-device-config=\"1\"", html, StringComparison.Ordinal);
+        Assert.Contains("Cấu hình yếu (1)", html, StringComparison.Ordinal);
+        Assert.Contains("Máy yếu nên giữ bản web fallback", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("window.location.href = \"foodstreet://qr/", html, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -266,6 +396,19 @@ public sealed class QrPublicLinkIntegrationTests
             TargetType = "tour",
             TargetId = tour.Id,
             LocationHint = "Integration tour gate"
+        });
+    }
+
+    private static async Task<QrCodeDto> CreatePoiListQrAsync(TestWebApplicationFactory factory)
+    {
+        await using var scope = factory.Services.CreateAsyncScope();
+        var qrService = scope.ServiceProvider.GetRequiredService<IQrService>();
+
+        return await qrService.CreateAsync(new CreateQrRequest
+        {
+            TargetType = "poi_list",
+            TargetId = 0,
+            LocationHint = "Danh sách POI Vĩnh Khánh"
         });
     }
 

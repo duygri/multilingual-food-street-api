@@ -132,6 +132,44 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.settings-language-dropdown {
+    display: grid;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.settings-language-dropdown span {
+    color: var(--muted);
+    font-size: 0.84rem;
+    font-weight: 700;
+}
+
+.settings-language-select {
+    width: 100%;
+    min-height: 50px;
+    padding: 0 44px 0 16px;
+    border-radius: 18px;
+    border: 1px solid rgba(75, 111, 166, 0.42);
+    outline: none;
+    appearance: none;
+    background:
+        linear-gradient(45deg, transparent 50%, #9fb1d3 50%) calc(100% - 24px) 21px / 7px 7px no-repeat,
+        linear-gradient(135deg, #9fb1d3 50%, transparent 50%) calc(100% - 18px) 21px / 7px 7px no-repeat,
+        linear-gradient(180deg, rgba(9, 18, 34, 0.98), rgba(13, 24, 43, 0.96));
+    color: var(--text);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.settings-language-select:focus {
+    border-color: rgba(39, 226, 191, 0.62);
+    box-shadow: 0 0 0 3px rgba(39, 226, 191, 0.14);
+}
+
+.settings-language-select option {
+    background: #0b1424;
+    color: #eff6ff;
+}
+
 .language-chip {
     width: 100%;
     min-height: 46px;

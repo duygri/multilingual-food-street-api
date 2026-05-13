@@ -19,6 +19,7 @@ public partial class Home
 
             _state.UpdateLocation(result.Location);
             _state.ApplyContent(result.Content, result.IsFallback, result.SourceLabel, result.Message);
+            await RefreshNotificationsAsync(force: result.IsFallback is false);
             await ApplyPendingDeepLinkAudioAfterContentAsync();
             var nextProximity = ResolveNextProximity(result.Location);
             await ApplyProximityNarrationAsync(previousProximity, nextProximity);

@@ -22,13 +22,13 @@ window.visitorMap = (() => {
         }
 
         if (!accessToken || accessToken.startsWith("YOUR_")) {
-            renderOfflineFallback(container, snapshot, dotNetRef, "Chưa có Mapbox access token. Đang dùng bản đồ offline từ dữ liệu đã lưu.");
+            renderOfflineFallback(container, snapshot, dotNetRef, "Chưa có Mapbox access token. Đang dùng bản đồ tạm từ dữ liệu đã lưu.");
             console.warn("[visitorMap] Mapbox token is a placeholder – skipping render.");
             return;
         }
 
         if (!window.mapboxgl) {
-            renderOfflineFallback(container, snapshot, dotNetRef, "Mapbox chưa tải được. Đang dùng bản đồ offline từ dữ liệu đã lưu.");
+            renderOfflineFallback(container, snapshot, dotNetRef, "Mapbox chưa tải được. Đang dùng bản đồ tạm từ dữ liệu đã lưu.");
             return;
         }
 
@@ -36,7 +36,7 @@ window.visitorMap = (() => {
             renderMapbox(containerId, accessToken, styleUrl, snapshot, dotNetRef);
         } catch (error) {
             console.warn("[visitorMap] Mapbox render failed.", error);
-            renderOfflineFallback(container, snapshot, dotNetRef, "Không khởi tạo được Mapbox. Đang dùng bản đồ offline từ dữ liệu đã lưu.");
+            renderOfflineFallback(container, snapshot, dotNetRef, "Không khởi tạo được Mapbox. Đang dùng bản đồ tạm từ dữ liệu đã lưu.");
         }
     }
 
@@ -193,7 +193,7 @@ window.visitorMap = (() => {
 
         const badge = document.createElement("div");
         badge.className = "visitor-map-offline__badge";
-        badge.innerHTML = `<strong>Bản đồ offline</strong><span>${escapeHtml(message)}</span>`;
+        badge.innerHTML = `<strong>Bản đồ tạm</strong><span>${escapeHtml(message)}</span>`;
         fallback.appendChild(badge);
 
         for (const marker of snapshot.markers) {
