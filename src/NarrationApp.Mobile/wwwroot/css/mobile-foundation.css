@@ -1,3 +1,27 @@
+@font-face {
+    font-family: "Lora";
+    src: url("../fonts/Lora-SemiBold.woff2") format("woff2");
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Be Vietnam Pro";
+    src: url("../fonts/BeVietnamPro-Regular.woff2") format("woff2");
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Be Vietnam Pro";
+    src: url("../fonts/BeVietnamPro-SemiBold.woff2") format("woff2");
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+}
+
 :root {
     color-scheme: dark;
     --bg-0: #050914;
@@ -13,6 +37,19 @@
     --cyan: #59b8ff;
     --danger: #ff6a87;
     --shadow: 0 24px 60px rgba(0, 0, 0, 0.36);
+    --sgk-brand: #9a3412;
+    --sgk-brand-strong: #7c2d12;
+    --sgk-canvas: #fffbeb;
+    --sgk-surface: #ffffff;
+    --sgk-ink: #0f172a;
+    --sgk-muted: #475569;
+    --sgk-audio: #047857;
+    --sgk-cultural: #854d0e;
+    --sgk-border: #f2e6e2;
+    --sgk-danger: #dc2626;
+    --sgk-focus: #7c2d12;
+    --sgk-font-display: "Lora", Georgia, serif;
+    --sgk-font-ui: "Be Vietnam Pro", system-ui, sans-serif;
     --mobile-bottom-nav-height: 84px;
     --mobile-mini-player-height: 92px;
     --mobile-bottom-safe-offset: calc(var(--mobile-bottom-nav-height) + 28px);
@@ -32,13 +69,30 @@ body {
         radial-gradient(circle at top right, rgba(39, 226, 191, 0.14), transparent 28%),
         linear-gradient(180deg, #050914 0%, #08101f 42%, #050914 100%);
     color: var(--text);
-    font-family: "Segoe UI", "Arial Nova", sans-serif;
+    font-family: var(--sgk-font-ui);
 }
 
 button,
 input,
 select {
     font: inherit;
+    min-height: 44px;
+}
+
+:focus-visible {
+    outline: 3px solid var(--sgk-focus);
+    outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
 }
 
 button {
@@ -50,6 +104,13 @@ button {
 input,
 select {
     color: inherit;
+}
+
+h1,
+h2,
+h3 {
+    font-family: var(--sgk-font-display);
+    font-weight: 600;
 }
 
 h1,

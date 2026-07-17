@@ -5,25 +5,45 @@ namespace NarrationApp.Mobile.Features.Home;
 
 public static class VisitorCategoryPresentationFormatter
 {
+    private static readonly HashSet<string> SupportedIconNames = new(StringComparer.Ordinal)
+    {
+        "discover",
+        "map",
+        "journey",
+        "user",
+        "search",
+        "language",
+        "refresh",
+        "location",
+        "audio",
+        "directions",
+        "close",
+        "notification",
+        "history",
+        "download",
+        "settings"
+    };
+
     public static string GetCategoryIcon(string categoryId, IReadOnlyList<VisitorCategory> categories, string? fallbackLabel = null)
     {
         var category = categories.FirstOrDefault(item => string.Equals(item.Id, categoryId, StringComparison.OrdinalIgnoreCase));
-        if (category is not null && !string.IsNullOrWhiteSpace(category.MarkerLabel))
+        var configuredIcon = NormalizeIconName(category?.MarkerLabel);
+        if (configuredIcon is not null)
         {
-            return category.MarkerLabel;
+            return configuredIcon;
         }
 
         var normalized = NormalizeCategoryKey(categoryId, fallbackLabel);
         return normalized switch
         {
-            var value when value.Contains("hai-san") || value.Contains("seafood") || value.Contains("shrimp") => "🦐",
-            var value when value.Contains("bun") || value.Contains("pho") || value.Contains("noodle") || value.Contains("food") || value.Contains("am-thuc") => "🍜",
-            var value when value.Contains("an-vat") || value.Contains("snack") || value.Contains("dem") => "🍢",
-            var value when value.Contains("uong") || value.Contains("drink") || value.Contains("coffee") || value.Contains("ca-phe") || value.Contains("tea") => "🥤",
-            var value when value.Contains("song") || value.Contains("river") || value.Contains("bridge") || value.Contains("cau") => "🌉",
-            var value when value.Contains("lich-su") || value.Contains("history") || value.Contains("di-tich") || value.Contains("heritage") => "🏛️",
-            "all" => "🏷️",
-            _ => "📍"
+            var value when value.Contains("lich-su") || value.Contains("history") || value.Contains("di-tich") || value.Contains("heritage") => "history",
+            var value when value.Contains("song") || value.Contains("river") || value.Contains("bridge") || value.Contains("cau") => "map",
+            var value when value.Contains("hai-san") || value.Contains("seafood") || value.Contains("shrimp") => "discover",
+            var value when value.Contains("bun") || value.Contains("pho") || value.Contains("noodle") || value.Contains("food") || value.Contains("am-thuc") => "discover",
+            var value when value.Contains("an-vat") || value.Contains("snack") || value.Contains("dem") => "discover",
+            var value when value.Contains("uong") || value.Contains("drink") || value.Contains("coffee") || value.Contains("ca-phe") || value.Contains("tea") => "discover",
+            "all" => "discover",
+            _ => "location"
         };
     }
 
@@ -66,8 +86,14 @@ public static class VisitorCategoryPresentationFormatter
 
     public static VisitorCategory CreateCategory(string id, string label, string? markerLabel = null)
     {
-        var icon = string.IsNullOrWhiteSpace(markerLabel) ? GetCategoryIcon(id, [], label) : markerLabel.Trim();
+        var icon = NormalizeIconName(markerLabel) ?? GetCategoryIcon(id, [], label);
         return new VisitorCategory(id, label, icon, GetCategoryTone(id, [], label));
+    }
+
+    private static string? NormalizeIconName(string? iconName)
+    {
+        var normalized = iconName?.Trim().ToLowerInvariant();
+        return normalized is not null && SupportedIconNames.Contains(normalized) ? normalized : null;
     }
 
     private static string NormalizeCategoryKey(string categoryId, string? fallbackLabel)

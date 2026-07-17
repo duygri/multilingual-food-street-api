@@ -5,6 +5,41 @@ namespace NarrationApp.Web.Tests.Mobile;
 public sealed class MobileSectionMarkupTests
 {
     [Fact]
+    public void Mobile_shared_icon_uses_a_finite_accessible_vector_glyph_set()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var iconPath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Shared", "VisitorIcon.razor");
+        var formatterPath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Features", "Home", "VisitorCategoryPresentationFormatter.cs");
+        var importsPath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "_Imports.razor");
+
+        var iconMarkup = File.ReadAllText(iconPath);
+        var formatterSource = File.ReadAllText(formatterPath);
+        var imports = File.ReadAllText(importsPath);
+        var iconNames = new[]
+        {
+            "discover", "map", "journey", "user", "search", "language", "refresh", "location",
+            "audio", "directions", "close", "notification", "history", "download", "settings"
+        };
+
+        Assert.Contains("@using NarrationApp.Mobile.Components.Shared", imports, StringComparison.Ordinal);
+        Assert.Contains("viewBox=\"0 0 24 24\"", iconMarkup, StringComparison.Ordinal);
+        Assert.Contains("stroke-width=\"2\"", iconMarkup, StringComparison.Ordinal);
+        Assert.Contains("aria-hidden", iconMarkup, StringComparison.Ordinal);
+        Assert.Contains("aria-label", iconMarkup, StringComparison.Ordinal);
+        Assert.Contains("role=", iconMarkup, StringComparison.Ordinal);
+        foreach (var iconName in iconNames)
+        {
+            Assert.Contains($"\"{iconName}\"", iconMarkup, StringComparison.Ordinal);
+        }
+
+        Assert.DoesNotContain("_ =>", iconMarkup, StringComparison.Ordinal);
+        Assert.DoesNotContain("🦐", iconMarkup, StringComparison.Ordinal);
+        Assert.DoesNotContain("🍜", formatterSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("📍", formatterSource, StringComparison.Ordinal);
+        Assert.Contains("\"location\"", formatterSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Mobile_home_uses_dedicated_section_components_for_discover_and_tour_flows()
     {
         var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));

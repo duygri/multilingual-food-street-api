@@ -6,6 +6,35 @@ namespace NarrationApp.Web.Tests.Mobile;
 public sealed class MobileStylesTests
 {
     [Fact]
+    public void Mobile_foundation_defines_sai_gon_ke_tokens_fonts_and_accessibility_guards()
+    {
+        var css = ReadMobileCss("mobile-foundation.css");
+
+        Assert.Contains("--sgk-brand: #9a3412", css, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("--sgk-brand-strong: #7c2d12", css, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("--sgk-canvas: #fffbeb", css, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("--sgk-surface: #ffffff", css, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("--sgk-ink: #0f172a", css, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("--sgk-muted: #475569", css, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("--sgk-audio: #047857", css, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("--sgk-cultural: #854d0e", css, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("--sgk-border: #f2e6e2", css, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("--sgk-danger: #dc2626", css, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("--sgk-focus: #7c2d12", css, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("--sgk-font-display: \"Lora\"", css, StringComparison.Ordinal);
+        Assert.Contains("--sgk-font-ui: \"Be Vietnam Pro\"", css, StringComparison.Ordinal);
+        Assert.Contains("font-family: \"Lora\"", css, StringComparison.Ordinal);
+        Assert.Contains("font-family: \"Be Vietnam Pro\"", css, StringComparison.Ordinal);
+        Assert.Contains("url(\"../fonts/Lora-SemiBold.woff2\")", css, StringComparison.Ordinal);
+        Assert.Contains("url(\"../fonts/BeVietnamPro-Regular.woff2\")", css, StringComparison.Ordinal);
+        Assert.Contains("url(\"../fonts/BeVietnamPro-SemiBold.woff2\")", css, StringComparison.Ordinal);
+        Assert.Contains(":focus-visible", css, StringComparison.Ordinal);
+        Assert.Contains("outline: 3px solid var(--sgk-focus)", css, StringComparison.Ordinal);
+        Assert.Contains("@media (prefers-reduced-motion: reduce)", css, StringComparison.Ordinal);
+        Assert.Contains("min-height: 44px", css, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Mobile_styles_are_split_into_domain_modules()
     {
         var webRoot = GetMobileWebRoot();
@@ -344,6 +373,11 @@ public sealed class MobileStylesTests
         }
 
         return builder.ToString();
+    }
+
+    private static string ReadMobileCss(string fileName)
+    {
+        return File.ReadAllText(Path.Combine(GetMobileWebRoot(), "css", fileName));
     }
 
     private static string GetMobileWebRoot()

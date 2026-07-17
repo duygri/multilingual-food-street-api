@@ -3,6 +3,37 @@ namespace NarrationApp.Web.Tests.Mobile;
 public sealed class MobileProjectConfigurationTests
 {
     [Fact]
+    public void Mobile_project_bundles_documented_vietnamese_font_assets()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var fontsRoot = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "wwwroot", "fonts");
+        var expectedFonts = new[]
+        {
+            "Lora-SemiBold.woff2",
+            "BeVietnamPro-Regular.woff2",
+            "BeVietnamPro-SemiBold.woff2"
+        };
+
+        foreach (var fontName in expectedFonts)
+        {
+            var fontPath = Path.Combine(fontsRoot, fontName);
+            Assert.True(File.Exists(fontPath), $"Expected bundled font '{fontName}'.");
+            Assert.True(new FileInfo(fontPath).Length > 0, $"Expected bundled font '{fontName}' to contain data.");
+        }
+
+        var readme = File.ReadAllText(Path.Combine(fontsRoot, "README.md"));
+        Assert.Contains("OFL.txt", readme, StringComparison.Ordinal);
+        Assert.Contains("SHA-256", readme, StringComparison.Ordinal);
+        Assert.Contains("github.com/google/fonts/blob/", readme, StringComparison.Ordinal);
+        Assert.Contains("ofl/lora", readme, StringComparison.Ordinal);
+        Assert.Contains("ofl/bevietnampro", readme, StringComparison.Ordinal);
+        foreach (var fontName in expectedFonts)
+        {
+            Assert.Contains(fontName, readme, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
     public void Mobile_project_defines_a_dedicated_smoke_configuration()
     {
         var filePath = Path.Combine(
