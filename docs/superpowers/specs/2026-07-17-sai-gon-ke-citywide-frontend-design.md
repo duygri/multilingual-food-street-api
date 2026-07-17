@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-17  
 **Status:** Approved design  
-**Scope:** Mobile visitor experience first; brand alignment for Admin and Owner portals
+**Scope:** .NET MAUI Blazor Hybrid visitor app first; brand alignment for Blazor Web Admin and Owner portals
 
 ## 1. Objective
 
@@ -15,6 +15,8 @@ The redesign must:
 - preserve the existing audio, multilingual narration, GPS, proximity, QR, cache, directions, notification, and tour capabilities;
 - align Admin and Owner portals with the new brand without turning operational screens into editorial layouts;
 - remain usable when GPS, network access, images, or current-area content are unavailable.
+
+The visitor redesign targets `NarrationApp.Mobile`, which is a .NET MAUI Blazor Hybrid app. `NarrationApp.Web` does not host a mobile-browser visitor experience; it contains Admin, Owner, authentication, and public QR portal surfaces. Native permission, safe-area, notification, and keyboard requirements therefore apply to the MAUI WebView host. The Web project only receives the portal alignment described in Section 10.
 
 ## 2. Product Positioning
 
@@ -36,7 +38,7 @@ Food remains the primary discovery hook. Cultural context appears through place 
 - A new mobile information architecture and shared visual system.
 - New brand name, tagline, content labels, empty states, and citywide copy in Vietnamese and English.
 - Removal of structural emoji icons in favor of one vector icon family.
-- Citywide map defaults and data-driven area filters.
+- Citywide map defaults and theme/category filters derived from existing API data.
 - Replacement of Vĩnh Khánh-centric fallback/demo presentation with representative citywide examples.
 - Basic Admin and Owner brand alignment: brand labels, color tokens, typography, and citywide copy.
 - Responsive, accessibility, and regression coverage appropriate to the affected surfaces.
@@ -47,7 +49,7 @@ Food remains the primary discovery hook. Cultural context appears through place 
 - A new content recommendation engine.
 - New geocoding, district-boundary, or editorial CMS services.
 - Rebuilding operational Admin/Owner workflows.
-- Fabricating citywide catalog coverage when the API only contains a smaller data set.
+- Fabricating production citywide catalog coverage when the API only contains a smaller data set.
 
 ## 4. Chosen Design Direction
 
@@ -81,21 +83,22 @@ Use four bottom-navigation destinations:
 
 1. **Khám phá / Discover**
    - default landing surface after onboarding;
-   - current-area context;
+   - current-location or neutral city context;
    - search entry;
    - compact City Lens map preview;
-   - nearby stories and time-relevant editorial selections;
-   - district/area and theme filters derived from available data.
+   - nearby stories ordered deterministically: `Priority` descending, then GPS-derived distance ascending when a valid location is available, then stable POI ID ascending; without valid GPS, omit the distance comparator and use `Priority` descending followed by stable POI ID ascending;
+   - theme/category filters derived from available API data;
+   - city-scale spatial discovery through CityLens and Map.
 
 2. **Bản đồ / Map**
    - full-screen city map;
    - marker clustering at city scale;
    - individual POIs at closer zoom levels;
-   - shared place bottom sheet with image, area, distance, narration duration, directions, and listening actions.
+   - shared place bottom sheet with image, optional neutral location label, distance, narration duration, directions, and listening actions.
 
 3. **Hành trình / Journeys**
    - renames the current Tour destination in the UI;
-   - curated routes with duration, distance, stop count, theme, and progress;
+   - curated routes with duration, stop count, difficulty, and progress;
    - retains existing tour session and progression behavior.
 
 4. **Của tôi / My**
@@ -120,11 +123,13 @@ The primary visitor flow is:
 | Foreground | `#0F172A` | Primary text and high-contrast content |
 | Surface | `#FFFFFF` | Cards, sheets, operational surfaces |
 | Audio/success | `#047857` | Audio, GPS, success, secondary action states |
-| Cultural accent | `#A16207` | Editorial labels and cultural emphasis |
+| Cultural accent | `#854D0E` | Editorial labels and cultural emphasis |
+| Muted foreground | `#475569` | Secondary metadata on light surfaces |
 | Border | `#F2E6E2` | Surface separation |
 | Destructive | `#DC2626` | Errors and destructive actions only |
+| Focus ring | `#7C2D12` | Keyboard/accessibility focus indication |
 
-All semantic foreground/background pairs must meet WCAG AA for their rendered text size. Do not use the lighter concept orange `#E7512C` behind normal white body text.
+All semantic foreground/background pairs must meet WCAG AA for their rendered text size. Production components may use only the semantic tokens in this table; concept-only colors are not valid implementation tokens. Brand primary, foreground, audio/success, cultural accent, and destructive colors may be used for normal text on the listed light surfaces only after an automated contrast assertion and a rendered-device check. Small metadata defaults to `Foreground` or a separately verified muted-foreground token, not to an accent color.
 
 ### Typography
 
@@ -133,6 +138,7 @@ All semantic foreground/background pairs must meet WCAG AA for their rendered te
 - Base body size is at least 16px with 1.5–1.7 line height.
 - Serif must not be used for dense data, small labels, forms, or navigation.
 - Fonts must be bundled or have a reliable local fallback so offline mobile use remains legible.
+- Bundled Lora and Be Vietnam Pro files must include the complete Vietnamese character subset and be verified with representative Vietnamese copy on a physical or emulated device.
 
 ### Imagery and icons
 
@@ -154,19 +160,19 @@ All semantic foreground/background pairs must meet WCAG AA for their rendered te
 
 ### CityLens
 
-A compact, non-interactive-or-lightly-interactive map preview on Discover that communicates nearby density and opens the full Map surface. It should not consume more than roughly 35% of the initial viewport.
+A compact static map snapshot on Discover that communicates nearby density and opens the full Map surface. It reuses the existing client-side map runtime in a non-interactive configuration and does not introduce a new static-map service. CityLens does not support pan, zoom, pinch, or marker-level interaction, so it cannot capture the vertical feed gesture. The whole preview is one accessible tap target labeled to open Map. It occupies 28–35% of the initial viewport at supported phone sizes.
 
 ### StoryCard
 
-Displays a real image or branded fallback, place name, theme/category, area, distance when available, narration duration/status, and one clear action. The whole card may open detail, while secondary actions must remain distinct and accessible.
+Displays a real image or branded fallback, place name, theme/category, optional neutral location label, distance when available, narration duration/status, and one clear action. The whole card may open detail, while secondary actions must remain distinct and accessible.
 
 ### JourneyCard
 
-Displays journey artwork, name, theme, stop count, distance, duration, and current progress when active.
+Displays the existing tour cover image when available, name, stop count, duration, difficulty label, and current progress when active. Theme and route-distance metadata are omitted in this release because `TourDto` does not provide authoritative values for them.
 
-### AreaChip and ThemeChip
+### ThemeChip
 
-Filter controls for available areas and content themes. Areas must be derived from returned content rather than a fixed list of districts.
+Filter controls for categories/themes already provided by `CategoryDto` and mapped to `VisitorCategory`. An `AreaChip` is intentionally not included in this frontend-only release because `PoiDto` currently contains coordinates but no authoritative district/neighborhood field. Citywide spatial discovery remains available through search, CityLens, and the full Map. Area filtering can be added later only after the API provides trustworthy area metadata; the frontend must not infer districts from POI names or coarse latitude rules.
 
 ### AudioDock
 
@@ -197,22 +203,23 @@ Place Detail → Audio / Directions / Offline
 Requirements:
 
 - remove hard-coded Vĩnh Khánh and District 4 assumptions from user-facing brand copy, default map framing, filters, and empty states;
-- derive area options from POI/tour data already returned by the API;
+- use `CategoryDto` / `VisitorCategory` as the authoritative source for theme filters;
+- stop using the current `BuildAreaLabel` name/latitude heuristics as district truth; until the API exposes an authoritative area field, show a neutral city label or omit area metadata rather than guessing a district;
 - center on the user when GPS is available and fall back to a citywide Ho Chi Minh City view otherwise;
 - preserve actual API truth: the UI must not claim complete citywide coverage;
 - keep existing audio, GPS, proximity, QR, notification, directions, offline cache, and tour progression services intact;
-- distribute fallback/demo POIs across multiple representative areas without treating those examples as production coverage.
+- maintain a clearly labeled, code-owned non-production `VisitorContentSnapshot.CreateDemo()` set with illustrative POIs across representative areas for offline/demo states. These records are demo fixtures only, never merged into live API results, never counted as catalog coverage, and must not cause the UI to claim production citywide availability.
 
 ## 9. Resilience and Empty States
 
 - **Loading:** fixed-size skeletons reserve card and image space to prevent layout shift.
 - **Offline:** cached content remains usable; show last-sync context where available.
-- **GPS denied/unavailable:** allow manual exploration by available area and explain which nearby features are unavailable.
-- **No filter results:** offer clear-filter and change-area actions.
+- **GPS denied/unavailable:** allow manual exploration through search, themes, and the city map, and explain which nearby features are unavailable.
+- **No filter results:** offer clear-filter and change-theme actions.
 - **Image failure:** show branded fallback without layout collapse.
 - **Map failure:** keep list discovery available and provide retry.
 - **API failure:** prefer cached/fallback content with explicit source status; otherwise provide retry and a useful empty state.
-- **No citywide content yet:** describe the currently available area honestly rather than showing a false coverage claim.
+- **No citywide content yet:** describe the currently available catalog honestly rather than showing a false coverage claim.
 
 ## 10. Admin and Owner Alignment
 
@@ -233,7 +240,7 @@ Changes are limited to:
 - Accessible labels for icon-only controls and map actions.
 - Selected, expanded, playing, loading, offline, and disabled state semantics must not rely on color alone.
 - Predictable back behavior across overlays, detail screens, full player, and settings subpages.
-- Test at 375px, a large phone viewport, tablet portrait/landscape, and desktop portal sizes.
+- Test at 375px, a large phone viewport, phone landscape, tablet portrait/landscape, and desktop portal sizes.
 - No horizontal page scrolling.
 - Keyboard/search input must not cover results or navigation.
 - Dynamic text growth must not clip core actions.
@@ -243,7 +250,7 @@ Changes are limited to:
 ### Automated
 
 - Update/add component tests for navigation labels, brand copy, filters, loading, empty, offline, error, and selected states.
-- Add presentation-selector tests for area derivation and citywide fallback behavior.
+- Add presentation-selector tests for category/theme derivation, neutral area-label behavior, and citywide fallback behavior.
 - Update tests that assert legacy brand labels or District 4-only UI copy.
 - Run the existing Web and Mobile test suites to protect audio, GPS, proximity, QR, cache, directions, notifications, and tour behavior.
 
@@ -256,11 +263,12 @@ Changes are limited to:
 
 ## 13. Implementation Boundaries
 
-- Prefer focused components and presentation helpers over further growth of the already-partial `Home.razor` implementation.
+- Incrementally extract focused components and presentation helpers from the existing partial `Home.razor` implementation. Do not run a parallel replacement shell or a big-bang rewrite; each extracted surface must replace the existing path and keep tests green.
 - Reuse the current service and state boundaries.
 - Centralize semantic visual tokens; do not scatter raw colors across components.
 - Keep the redesign incremental enough that tests can validate each surface, while the delivered visitor experience must feel cohesive and complete.
 - Backend or content-operations gaps discovered during implementation must be documented rather than hidden with fabricated UI behavior.
+- Rename `Tour` to `Hành trình / Journeys` only at the presentation layer. Existing enum values, deep-link targets, cache keys, API routes, session identifiers, and analytics event identifiers remain unchanged.
 
 ## 14. Success Criteria
 
@@ -268,7 +276,7 @@ The work is complete when:
 
 - a new visitor sees **Sài Gòn Kể**, not a renamed Vĩnh Khánh app;
 - Discover provides both nearby spatial context and editorial food/culture stories;
-- Map and area navigation work sensibly at city scale;
+- Map and theme navigation work sensibly at city scale;
 - no primary user-facing surface assumes that all content belongs to Vĩnh Khánh or District 4;
 - existing visitor capabilities continue to work;
 - Admin and Owner visibly belong to the same brand while remaining operational tools;
