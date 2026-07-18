@@ -110,6 +110,20 @@ public sealed class VisitorMapSnapshotBuilderTests
     }
 
     [Fact]
+    public void Build_DoesNotLabelAnUnreliableFallbackDistanceAsNearest()
+    {
+        var pois = new[]
+        {
+            new VisitorPoi("poi-1", "One", "history", "Lịch sử", "TP.HCM", "Live", "desc", "highlight", 10, 10, 0, "1:00", "Ready", 10.1, 106.1),
+            new VisitorPoi("poi-2", "Two", "history", "Lịch sử", "TP.HCM", "Live", "desc", "highlight", 20, 20, 0, "1:00", "Ready", 10.2, 106.2)
+        };
+
+        var snapshot = VisitorMapSnapshotBuilder.Build(pois, null, VisitorLocationSnapshot.Disabled());
+
+        Assert.DoesNotContain(snapshot.Markers, marker => marker.IsNearest);
+    }
+
+    [Fact]
     public void Build_CarriesPoiGeofenceRadiusIntoMapMarkers()
     {
         var pois = new[]

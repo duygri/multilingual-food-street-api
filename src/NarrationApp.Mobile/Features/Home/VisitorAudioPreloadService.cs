@@ -33,8 +33,10 @@ public sealed class VisitorAudioPreloadService(
         var normalizedLanguageCode = languageCode.Trim();
         var candidates = pois
             .Where(poi => HasReadyAudio(poi, normalizedLanguageCode))
-            .OrderBy(poi => poi.DistanceMeters)
+            .OrderByDescending(poi => poi.HasReliableDistance)
+            .ThenBy(poi => poi.HasReliableDistance ? poi.DistanceMeters : int.MaxValue)
             .ThenByDescending(poi => poi.Priority)
+            .ThenBy(poi => poi.Id, StringComparer.Ordinal)
             .ToArray();
 
         var cachedKeys = await LoadCachedAudioKeysAsync(cancellationToken);

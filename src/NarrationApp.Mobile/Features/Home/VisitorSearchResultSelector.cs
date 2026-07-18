@@ -7,14 +7,15 @@ public static class VisitorSearchResultSelector
 {
     public static IReadOnlyList<VisitorPoi> GetPoiResults(IReadOnlyList<VisitorPoi> filteredPois, string searchTerm) =>
         string.IsNullOrWhiteSpace(searchTerm)
-            ? filteredPois
-                .OrderBy(poi => poi.DistanceMeters)
-                .Take(6)
-                .ToList()
-            : filteredPois
-                .OrderBy(poi => poi.DistanceMeters)
-                .Take(8)
-                .ToList();
+            ? OrderPois(filteredPois).Take(6).ToList()
+            : OrderPois(filteredPois).Take(8).ToList();
+
+    private static IOrderedEnumerable<VisitorPoi> OrderPois(IReadOnlyList<VisitorPoi> pois) =>
+        pois
+            .OrderByDescending(poi => poi.HasReliableDistance)
+            .ThenBy(poi => poi.HasReliableDistance ? poi.DistanceMeters : int.MaxValue)
+            .ThenByDescending(poi => poi.Priority)
+            .ThenBy(poi => poi.Id, StringComparer.Ordinal);
 
     public static IReadOnlyList<VisitorTourCard> GetTourResults(
         IReadOnlyList<VisitorTourCard> tours,

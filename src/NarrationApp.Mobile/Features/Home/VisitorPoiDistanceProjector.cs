@@ -4,9 +4,25 @@ public static class VisitorPoiDistanceProjector
 {
     public static IReadOnlyList<VisitorPoi> Apply(IReadOnlyList<VisitorPoi> pois, VisitorLocationSnapshot? location)
     {
-        if (pois.Count == 0 || !VisitorGeoMath.TryGetCoordinates(location, out var latitude, out var longitude))
+        if (pois.Count == 0)
         {
             return pois;
+        }
+
+        if (!VisitorGeoMath.TryGetCoordinates(location, out var latitude, out var longitude))
+        {
+            if (!pois.Any(poi => poi.HasReliableDistance || poi.DistanceMeters != 0))
+            {
+                return pois;
+            }
+
+            return pois
+                .Select(poi => poi with
+                {
+                    DistanceMeters = 0,
+                    HasReliableDistance = false
+                })
+                .ToArray();
         }
 
         return pois
@@ -16,7 +32,8 @@ public static class VisitorPoiDistanceProjector
                     latitude,
                     longitude,
                     poi.Latitude,
-                    poi.Longitude)
+                    poi.Longitude),
+                HasReliableDistance = true
             })
             .ToArray();
     }

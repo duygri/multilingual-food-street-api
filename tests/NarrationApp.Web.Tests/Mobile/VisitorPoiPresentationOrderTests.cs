@@ -15,6 +15,8 @@ public sealed class VisitorPoiPresentationOrderTests
             CreatePoi("poi-near", priority: 5, distanceMeters: 100)
         ];
 
+        source = source.Select(poi => poi with { HasReliableDistance = true }).ToArray();
+
         var ordered = VisitorPoiPresentationOrder.Apply(source, hasValidGps: true);
 
         Assert.Equal(["poi-near", "poi-a", "poi-b", "poi-low"], ordered.Select(poi => poi.Id));
@@ -37,6 +39,21 @@ public sealed class VisitorPoiPresentationOrderTests
 
         Assert.Equal(["poi-A", "poi-B", "poi-a", "poi-z"], ordered.Select(poi => poi.Id));
         Assert.NotSame(source, ordered);
+    }
+
+    [Fact]
+    public void Apply_DoesNotUseDistanceWhenGpsFlagIsTrueButDistancesAreUnreliable()
+    {
+        VisitorPoi[] source =
+        [
+            CreatePoi("poi-z", priority: 7, distanceMeters: 1),
+            CreatePoi("poi-a", priority: 7, distanceMeters: 900),
+            CreatePoi("poi-low", priority: 2, distanceMeters: 0)
+        ];
+
+        var ordered = VisitorPoiPresentationOrder.Apply(source, hasValidGps: true);
+
+        Assert.Equal(["poi-a", "poi-z", "poi-low"], ordered.Select(poi => poi.Id));
     }
 
     private static VisitorPoi CreatePoi(string id, int priority, int distanceMeters) =>

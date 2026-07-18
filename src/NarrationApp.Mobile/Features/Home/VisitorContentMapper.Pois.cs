@@ -46,7 +46,6 @@ public static partial class VisitorContentMapper
                 var translations = MapTranslations(poi.Translations);
                 var readyAudioLanguageCodes = ResolveReadyAudioLanguageCodes(poi.Id, readyAudioLanguageCodesByPoiId);
                 var geofenceRadiusMeters = Math.Max(30, poi.Geofences.FirstOrDefault()?.RadiusMeters ?? 30);
-                var nearbyDistanceMeters = Math.Max(geofenceRadiusMeters + 75, 120 + index * 30);
 
                 return new VisitorPoi(
                     Id: $"poi-{poi.Id}",
@@ -59,7 +58,7 @@ public static partial class VisitorContentMapper
                     Highlight: ResolveDefaultHighlight(poi),
                     MapTopPercent: Normalize(poi.Lat, minLat, maxLat, 18d, 74d, index),
                     MapLeftPercent: Normalize(poi.Lng, minLng, maxLng, 18d, 72d, index),
-                    DistanceMeters: nearbyDistanceMeters,
+                    DistanceMeters: 0,
                     AudioDuration: EstimateAudioDuration(poi),
                     StatusLabel: BuildStatusLabel(poi),
                     Latitude: poi.Lat,

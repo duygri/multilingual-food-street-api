@@ -415,6 +415,25 @@ public sealed class MobileSectionMarkupTests
         Assert.Contains("<mark>", markup, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData("VisitorDiscoverScreen.razor", "@if (poi.HasReliableDistance)")]
+    [InlineData("VisitorSearchScreen.razor", "@if (poi.HasReliableDistance)")]
+    [InlineData("VisitorPoiDetailScreen.razor", "@if (Poi.HasReliableDistance)")]
+    public void Direct_poi_distance_markup_requires_reliable_distance(string fileName, string condition)
+    {
+        var markup = ReadSectionMarkup(fileName);
+
+        Assert.Contains(condition, markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Related_poi_distance_label_requires_reliable_distance()
+    {
+        var markup = ReadSectionMarkup("VisitorPoiDetailScreen.razor");
+
+        Assert.Contains("poi.HasReliableDistance", markup, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void Mobile_full_player_screen_matches_sample_strict_layout_hooks()
     {

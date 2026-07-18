@@ -28,11 +28,9 @@ public partial class Home
             return UiText.CalculatingDistanceLabel();
         }
 
-        var distanceMeters = VisitorGeoMath.TryGetCoordinates(_state.CurrentLocation, out var latitude, out var longitude)
-            ? VisitorGeoMath.CalculateDistanceMeters(latitude, longitude, poi.Latitude, poi.Longitude)
-            : poi.DistanceMeters;
-
-        return FormatPoiDistance(distanceMeters);
+        return poi.HasReliableDistance
+            ? FormatPoiDistance(poi.DistanceMeters)
+            : UiText.CalculatingDistanceLabel();
     }
 
     private static string FormatPoiDistance(int distanceMeters)

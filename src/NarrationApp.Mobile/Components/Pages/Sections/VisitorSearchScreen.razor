@@ -66,7 +66,10 @@
                                 </div>
                                 <div class="search-result-item__headline">
                                     <strong>@HighlightText(poi.Name)</strong>
-                                    <span>@poi.DistanceMeters m</span>
+                                    @if (poi.HasReliableDistance)
+                                    {
+                                        <span>@poi.DistanceMeters m</span>
+                                    }
                                 </div>
                                 <div class="search-result-item__meta">
                                     <span>🔊 @Text.LocalizeKnownStatus(poi.StatusLabel)</span>

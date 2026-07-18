@@ -106,7 +106,10 @@
                     <div class="discover-poi-card__body">
                         <div class="discover-poi-card__topline">
                             <strong class="discover-poi-card__title">@poi.Name</strong>
-                            <span class="discover-poi-card__distance">@poi.DistanceMeters m</span>
+                            @if (poi.HasReliableDistance)
+                            {
+                                <span class="discover-poi-card__distance">@poi.DistanceMeters m</span>
+                            }
                         </div>
                         <div class="discover-poi-card__meta">
                             <span class="discover-badge">@GetCategoryLabel(poi)</span>

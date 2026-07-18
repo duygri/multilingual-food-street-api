@@ -99,7 +99,10 @@ public static class VisitorMapSnapshotBuilder
         }
 
         return pois
+            .Where(poi => poi.HasReliableDistance)
             .OrderBy(poi => poi.DistanceMeters)
+            .ThenByDescending(poi => poi.Priority)
+            .ThenBy(poi => poi.Id, StringComparer.Ordinal)
             .Select(poi => poi.Id)
             .FirstOrDefault();
     }

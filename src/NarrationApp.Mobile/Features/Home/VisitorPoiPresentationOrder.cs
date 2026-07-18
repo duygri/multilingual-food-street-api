@@ -6,7 +6,9 @@ public static class VisitorPoiPresentationOrder
     {
         ArgumentNullException.ThrowIfNull(pois);
 
-        return hasValidGps
+        var hasReliableGpsDistances = hasValidGps && pois.All(poi => poi.HasReliableDistance);
+
+        return hasReliableGpsDistances
             ? pois
                 .OrderByDescending(poi => poi.Priority)
                 .ThenBy(poi => poi.DistanceMeters)

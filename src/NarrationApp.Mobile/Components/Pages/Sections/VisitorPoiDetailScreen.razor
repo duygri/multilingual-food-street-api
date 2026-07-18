@@ -25,7 +25,14 @@
                 <span class="tour-stop-chip">@Text.LocalizeKnownStatus(Poi.StatusLabel)</span>
             </div>
             <div class="poi-detail-headline__meta">
-                <span class="poi-detail-headline__distance">📍 @Poi.DistanceMeters m • @Poi.District</span>
+                @if (Poi.HasReliableDistance)
+                {
+                    <span class="poi-detail-headline__distance">📍 @Poi.DistanceMeters m • @Poi.District</span>
+                }
+                else
+                {
+                    <span class="poi-detail-headline__distance">📍 @Poi.District</span>
+                }
             </div>
         </div>
 
@@ -205,7 +212,9 @@
         VisitorCategoryPresentationFormatter.GetPoiIcon(poi, Categories);
 
     private string GetRelatedPoiLabel(VisitorPoi poi) =>
-        $"{GetCategoryLabel(poi)} • {poi.DistanceMeters}m";
+        poi.HasReliableDistance
+            ? $"{GetCategoryLabel(poi)} • {poi.DistanceMeters}m"
+            : GetCategoryLabel(poi);
 
     private string GetCategoryLabel(VisitorPoi poi) =>
         string.IsNullOrWhiteSpace(poi.CategoryLabel)

@@ -247,6 +247,67 @@ public sealed class VisitorShellStateTests
     }
 
     [Fact]
+    public void UpdateLocation_WhenGpsBecomesUnavailable_ClearsDistancesWithoutLosingSelectionOrFilters()
+    {
+        var state = VisitorShellState.CreateRuntimeDefault();
+        state.ApplyContent(new VisitorContentSnapshot(
+            [CreateOrderingPoi("poi-b", "food", 5, 900), CreateOrderingPoi("poi-a", "food", 5, 1)],
+            [],
+            [new VisitorCategory("food", "Ẩm thực", "audio")]));
+        state.SelectCategory("food");
+        state.PreviewPoi("poi-b");
+        state.UpdateLocation(new VisitorLocationSnapshot(true, true, 10.70, 106.70, "GPS live"));
+
+        state.UpdateLocation(VisitorLocationSnapshot.Disabled());
+
+        Assert.All(state.Pois, poi =>
+        {
+            Assert.Equal(0, poi.DistanceMeters);
+            Assert.False(poi.HasReliableDistance);
+        });
+        Assert.Equal("food", state.SelectedCategoryId);
+        Assert.Equal("poi-b", state.SelectedPoiId);
+    }
+
+    [Fact]
+    public void ApplyContent_WithCurrentGps_ReprojectsCachedPoisBeforeOrdering()
+    {
+        var state = VisitorShellState.CreateRuntimeDefault();
+        state.UpdateLocation(new VisitorLocationSnapshot(true, true, 10.70, 106.70, "GPS live"));
+
+        state.ApplyContent(new VisitorContentSnapshot(
+            [
+                CreateOrderingPoi("poi-stale-near", "food", 5, 1, latitude: 10.80),
+                CreateOrderingPoi("poi-stale-far", "food", 5, 900, latitude: 10.70)
+            ],
+            [],
+            [new VisitorCategory("food", "Ẩm thực", "audio")]));
+
+        Assert.Equal(["poi-stale-far", "poi-stale-near"], state.Pois.Select(poi => poi.Id));
+        Assert.All(state.Pois, poi => Assert.True(poi.HasReliableDistance));
+        Assert.Equal(0, state.Pois[0].DistanceMeters);
+    }
+
+    [Fact]
+    public void UpdateLocation_RepeatedUnavailableRefreshKeepsPoiViewCaches()
+    {
+        var state = VisitorShellState.CreateRuntimeDefault();
+        state.ApplyContent(new VisitorContentSnapshot(
+            [CreateOrderingPoi("poi-a", "food", 5, 0)],
+            [],
+            [new VisitorCategory("food", "Ẩm thực", "audio")]));
+        var pois = state.Pois;
+        var filtered = state.FilteredPois;
+        var featured = state.FeaturedPois;
+
+        state.UpdateLocation(VisitorLocationSnapshot.Disabled());
+
+        Assert.Same(pois, state.Pois);
+        Assert.Same(filtered, state.FilteredPois);
+        Assert.Same(featured, state.FeaturedPois);
+    }
+
+    [Fact]
     public void Poi_view_lists_are_cached_until_filters_or_content_change()
     {
         var state = VisitorShellState.CreateDefault();

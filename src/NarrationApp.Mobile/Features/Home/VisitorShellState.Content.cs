@@ -11,9 +11,11 @@ public sealed partial class VisitorShellState
         _categories.Clear();
         _categories.AddRange(VisitorCategoryFilterBuilder.Build(snapshot));
 
+        var projectedPois = VisitorPoiDistanceProjector.Apply(snapshot.Pois, CurrentLocation);
+
         _pois.Clear();
         _pois.AddRange(VisitorPoiPresentationOrder.Apply(
-            snapshot.Pois,
+            projectedPois,
             VisitorGeoMath.TryGetCoordinates(CurrentLocation, out _, out _)));
         InvalidatePoiViews();
 

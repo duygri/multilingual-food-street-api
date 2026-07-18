@@ -46,6 +46,8 @@ public sealed record VisitorPoi(
     IReadOnlyList<string>? ReadyAudioLanguageCodesRaw = null,
     IReadOnlyList<VisitorPoiTranslation>? TranslationsRaw = null)
 {
+    public bool HasReliableDistance { get; init; }
+
     public IReadOnlyList<string> ReadyAudioLanguageCodes { get; init; } = ReadyAudioLanguageCodesRaw ?? Array.Empty<string>();
 
     public IReadOnlyList<VisitorPoiTranslation> Translations { get; init; } = TranslationsRaw ?? Array.Empty<VisitorPoiTranslation>();

@@ -85,6 +85,23 @@ public sealed class VisitorAudioPreloadServiceTests
         Assert.Equal(1, result.Failed);
     }
 
+    [Fact]
+    public async Task PreloadAsync_WithoutReliableDistances_UsesPriorityThenId()
+    {
+        var audioCatalog = new FakeVisitorAudioCatalogService();
+        var service = new VisitorAudioPreloadService(audioCatalog, new FakeVisitorOfflineCacheStore());
+
+        await service.PreloadAsync(
+            [
+                CreatePoi("poi-z", "Z", ["en"]) with { DistanceMeters = 1, Priority = 5 },
+                CreatePoi("poi-a", "A", ["en"]) with { DistanceMeters = 900, Priority = 5 },
+                CreatePoi("poi-low", "Low", ["en"]) with { DistanceMeters = 0, Priority = 2 }
+            ],
+            "en");
+
+        Assert.Equal(["poi-a", "poi-z", "poi-low"], audioCatalog.Requests.Select(request => request.PoiId));
+    }
+
     private static VisitorPoi CreatePoi(string id, string name, IReadOnlyList<string> readyLanguages)
     {
         return new VisitorPoi(

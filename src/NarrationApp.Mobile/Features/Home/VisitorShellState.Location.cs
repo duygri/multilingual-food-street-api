@@ -11,6 +11,11 @@ public sealed partial class VisitorShellState
         LocationStatusLabel = VisitorLocationStatusFormatter.Build(location);
 
         var projectedPois = VisitorPoiDistanceProjector.Apply(_pois, location);
+        if (ReferenceEquals(projectedPois, _pois))
+        {
+            return;
+        }
+
         var orderedPois = VisitorPoiPresentationOrder.Apply(
             projectedPois,
             VisitorGeoMath.TryGetCoordinates(location, out _, out _));

@@ -22,16 +22,16 @@ public sealed class VisitorRelatedPoiSelectorTests
             "2:10",
             "Ready",
             10.1,
-            106.1);
+            106.1) { HasReliableDistance = true };
 
-        IReadOnlyList<VisitorPoi> pois =
-        [
+        IReadOnlyList<VisitorPoi> pois = new VisitorPoi[]
+        {
             selectedPoi,
             new VisitorPoi("poi-1", "Ốc A", "food", "Ẩm thực", "Khánh Hội", "A", "Mô tả", "Nổi bật", 10, 10, 95, "2:10", "Ready", 10.2, 106.2),
             new VisitorPoi("poi-2", "Ốc B", "food", "Ẩm thực", "Quận 4", "B", "Mô tả", "Nổi bật", 10, 10, 110, "2:10", "Ready", 10.3, 106.3),
             new VisitorPoi("poi-3", "Lẩu C", "night", "Đêm", "Khánh Hội", "C", "Mô tả", "Nổi bật", 10, 10, 101, "2:10", "Ready", 10.4, 106.4),
             new VisitorPoi("poi-4", "Bún D", "food", "Ẩm thực", "Khánh Hội", "D", "Mô tả", "Nổi bật", 10, 10, 140, "2:10", "Ready", 10.5, 106.5)
-        ];
+        }.Select(poi => poi with { HasReliableDistance = true }).ToArray();
 
         var related = VisitorRelatedPoiSelector.Select(pois, selectedPoi);
 
@@ -45,4 +45,25 @@ public sealed class VisitorRelatedPoiSelectorTests
 
         Assert.Empty(related);
     }
+
+    [Fact]
+    public void Select_without_reliable_distances_uses_priority_then_id_as_tiebreakers()
+    {
+        var selected = CreatePoi("selected", priority: 1, distanceMeters: 100);
+        var pois = new[]
+        {
+            selected,
+            CreatePoi("poi-z", priority: 5, distanceMeters: 1),
+            CreatePoi("poi-a", priority: 5, distanceMeters: 900),
+            CreatePoi("poi-low", priority: 2, distanceMeters: 100)
+        };
+
+        var related = VisitorRelatedPoiSelector.Select(pois, selected);
+
+        Assert.Equal(["poi-a", "poi-z"], related.Select(poi => poi.Id));
+    }
+
+    private static VisitorPoi CreatePoi(string id, int priority, int distanceMeters) =>
+        new(id, id, "food", "Ẩm thực", "TP.HCM", "Test", "Description", "Highlight", 10, 10,
+            distanceMeters, "1:00", "Ready", 10.1, 106.1, Priority: priority);
 }

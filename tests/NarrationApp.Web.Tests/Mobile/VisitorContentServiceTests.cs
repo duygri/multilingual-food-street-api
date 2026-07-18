@@ -52,6 +52,31 @@ public sealed class VisitorContentServiceTests
     }
 
     [Fact]
+    public void Map_WithoutGps_DoesNotFabricateAPresentableDistance()
+    {
+        var pois = new[]
+        {
+            new PoiDto
+            {
+                Id = 42,
+                Name = "Truthful distance",
+                Slug = "truthful-distance",
+                Description = "Test",
+                TtsScript = "Test script",
+                Lat = 10.7607,
+                Lng = 106.7033,
+                Status = PoiStatus.Published
+            }
+        };
+
+        var snapshot = VisitorContentMapper.Map(pois, [], [], VisitorLocationSnapshot.Disabled());
+
+        var poi = Assert.Single(snapshot.Pois);
+        Assert.Equal(0, poi.DistanceMeters);
+        Assert.False(poi.HasReliableDistance);
+    }
+
+    [Fact]
     public void CreateDemo_IsClearlyIllustrativeCitywideFallbackContentWithVectorCategoryKeys()
     {
         var demo = VisitorContentSnapshot.CreateDemo();
@@ -61,6 +86,11 @@ public sealed class VisitorContentServiceTests
         Assert.Contains(demo.Pois, poi => poi.Name.Contains("Thủ Đức", StringComparison.Ordinal));
         Assert.Contains(demo.Pois, poi => poi.Name.Contains("Cần Giờ", StringComparison.Ordinal));
         Assert.All(demo.Categories!, category => Assert.Contains(category.MarkerLabel, ["audio", "history", "map", "journey"]));
+        Assert.All(demo.Pois, poi =>
+        {
+            Assert.Equal(0, poi.DistanceMeters);
+            Assert.False(poi.HasReliableDistance);
+        });
 
         var fallbackState = VisitorShellState.CreateDefault();
         Assert.True(fallbackState.IsUsingFallbackData);
@@ -184,7 +214,8 @@ public sealed class VisitorContentServiceTests
         Assert.NotEqual(poi.CategoryLabel, poi.District);
         Assert.Contains("Live API", poi.StoryTag);
         Assert.Equal(45, poi.GeofenceRadiusMeters);
-        Assert.True(poi.DistanceMeters > poi.GeofenceRadiusMeters);
+        Assert.Equal(0, poi.DistanceMeters);
+        Assert.False(poi.HasReliableDistance);
         var tour = Assert.Single(result.Content.Tours);
         Assert.Equal("Tour ven sông", tour.Title);
         Assert.Equal("2 điểm dừng", tour.StopCountLabel);

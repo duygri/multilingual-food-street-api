@@ -93,6 +93,21 @@ public sealed class VisitorSearchResultSelectorTests
     }
 
     [Fact]
+    public void Poi_results_without_reliable_distance_use_priority_then_id()
+    {
+        var pois = new[]
+        {
+            Pois[0] with { Id = "poi-z", Priority = 5, DistanceMeters = 1 },
+            Pois[1] with { Id = "poi-a", Priority = 5, DistanceMeters = 900 },
+            Pois[2] with { Id = "poi-low", Priority = 2, DistanceMeters = 0 }
+        };
+
+        var results = VisitorSearchResultSelector.GetPoiResults(pois, string.Empty);
+
+        Assert.Equal(["poi-a", "poi-z", "poi-low"], results.Select(poi => poi.Id));
+    }
+
+    [Fact]
     public void Tour_results_filter_by_selected_category()
     {
         var results = VisitorSearchResultSelector.GetTourResults(Tours, Pois, "river", string.Empty);

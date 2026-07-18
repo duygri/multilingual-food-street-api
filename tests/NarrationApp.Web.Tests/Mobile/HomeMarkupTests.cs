@@ -5,6 +5,18 @@ namespace NarrationApp.Web.Tests.Mobile;
 public sealed class HomeMarkupTests
 {
     [Fact]
+    public void Tour_and_map_sheet_distance_presentations_require_reliable_distance()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var toursSource = File.ReadAllText(Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Home.Tours.razor.cs"));
+        var mapSheetSource = File.ReadAllText(Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Home.MapPoiSheet.razor.cs"));
+
+        Assert.Contains("poi is null || !poi.HasReliableDistance", toursSource, StringComparison.Ordinal);
+        Assert.Contains("return poi.HasReliableDistance", mapSheetSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("VisitorGeoMath.CalculateDistanceMeters", mapSheetSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Mobile_home_keeps_markup_separate_from_behavior_code()
     {
         var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
