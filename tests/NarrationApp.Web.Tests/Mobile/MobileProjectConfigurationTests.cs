@@ -83,7 +83,7 @@ public sealed class MobileProjectConfigurationTests
 
         Assert.Contains("<Configurations>Debug;Smoke;Staging;Release</Configurations>", projectFile, StringComparison.Ordinal);
         Assert.Contains("<PropertyGroup Condition=\"'$(Configuration)' == 'Smoke'\">", projectFile, StringComparison.Ordinal);
-        Assert.Contains("<ApplicationTitle>Food Street Visitor Smoke</ApplicationTitle>", projectFile, StringComparison.Ordinal);
+        Assert.Contains("<ApplicationTitle>Sai Gon Ke Smoke</ApplicationTitle>", projectFile, StringComparison.Ordinal);
         Assert.Contains("<ApplicationId>com.foodstreet.tourist.smoke</ApplicationId>", projectFile, StringComparison.Ordinal);
         Assert.DoesNotContain("<ApplicationId>com.foodstreet.visitor.smoke</ApplicationId>", projectFile, StringComparison.Ordinal);
     }
@@ -104,12 +104,33 @@ public sealed class MobileProjectConfigurationTests
 
         var projectFile = File.ReadAllText(Path.GetFullPath(filePath));
 
-        Assert.Contains("<ApplicationTitle>Food Street Visitor</ApplicationTitle>", projectFile, StringComparison.Ordinal);
+        Assert.Contains("<ApplicationTitle>Sai Gon Ke</ApplicationTitle>", projectFile, StringComparison.Ordinal);
         Assert.Contains("<ApplicationId>com.foodstreet.tourist</ApplicationId>", projectFile, StringComparison.Ordinal);
         Assert.Contains("<ApplicationId>com.foodstreet.tourist.dev</ApplicationId>", projectFile, StringComparison.Ordinal);
         Assert.Contains("<ApplicationId>com.foodstreet.tourist.smoke</ApplicationId>", projectFile, StringComparison.Ordinal);
         Assert.Contains("<ApplicationId>com.foodstreet.tourist.staging</ApplicationId>", projectFile, StringComparison.Ordinal);
         Assert.DoesNotContain("<ApplicationId>com.foodstreet.visitor", projectFile, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mobile_host_and_vector_assets_use_sai_gon_ke_brand()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var mobileRoot = Path.Combine(projectRoot, "src", "NarrationApp.Mobile");
+        var projectFile = File.ReadAllText(Path.Combine(mobileRoot, "NarrationApp.Mobile.csproj"));
+        var host = File.ReadAllText(Path.Combine(mobileRoot, "wwwroot", "index.html"));
+        var iconBackground = File.ReadAllText(Path.Combine(mobileRoot, "Resources", "AppIcon", "appicon.svg"));
+        var iconForeground = File.ReadAllText(Path.Combine(mobileRoot, "Resources", "AppIcon", "appiconfg.svg"));
+        var splash = File.ReadAllText(Path.Combine(mobileRoot, "Resources", "Splash", "splash.svg"));
+
+        Assert.Contains("<ApplicationTitle>Sai Gon Ke Dev</ApplicationTitle>", projectFile, StringComparison.Ordinal);
+        Assert.Contains("<ApplicationTitle>Sai Gon Ke Staging</ApplicationTitle>", projectFile, StringComparison.Ordinal);
+        Assert.Contains("Color=\"#9A3412\"", projectFile, StringComparison.Ordinal);
+        Assert.Contains("<title>Sài Gòn Kể</title>", host, StringComparison.Ordinal);
+        Assert.Contains("name=\"theme-color\" content=\"#9A3412\"", host, StringComparison.Ordinal);
+        Assert.Contains("#9A3412", iconBackground, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("aria-label=\"Sài Gòn Kể\"", iconForeground, StringComparison.Ordinal);
+        Assert.Contains("aria-label=\"Sài Gòn Kể\"", splash, StringComparison.Ordinal);
     }
 
     [Fact]

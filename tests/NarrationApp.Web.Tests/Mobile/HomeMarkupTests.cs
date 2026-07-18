@@ -340,6 +340,51 @@ public sealed class HomeMarkupTests
     }
 
     [Fact]
+    public void Mobile_bottom_navigation_uses_accessible_vector_icons_in_product_order()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var homePath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Home.razor");
+        var markup = File.ReadAllText(homePath);
+        var navigation = ExtractSection(markup, "<nav class=\"bottom-nav\"", "</nav>");
+
+        var discoverIndex = navigation.IndexOf("SwitchTabFromShell(VisitorTab.Discover)", StringComparison.Ordinal);
+        var mapIndex = navigation.IndexOf("SwitchTabFromShell(VisitorTab.Map)", StringComparison.Ordinal);
+        var journeysIndex = navigation.IndexOf("SwitchTabFromShell(VisitorTab.Tours)", StringComparison.Ordinal);
+        var myIndex = navigation.IndexOf("SwitchTabFromShell(VisitorTab.Settings)", StringComparison.Ordinal);
+
+        Assert.True(discoverIndex >= 0 && discoverIndex < mapIndex && mapIndex < journeysIndex && journeysIndex < myIndex,
+            "Bottom navigation must render Discover, Map, Journeys, then My without changing legacy tab identifiers.");
+        Assert.Contains("aria-label=\"@UiText.TabDiscover\"", navigation, StringComparison.Ordinal);
+        Assert.Contains("aria-label=\"@UiText.TabMap\"", navigation, StringComparison.Ordinal);
+        Assert.Contains("aria-label=\"@UiText.TabTours\"", navigation, StringComparison.Ordinal);
+        Assert.Contains("aria-label=\"@UiText.TabMe\"", navigation, StringComparison.Ordinal);
+        Assert.Contains("<VisitorIcon Name=\"discover\"", navigation, StringComparison.Ordinal);
+        Assert.Contains("<VisitorIcon Name=\"map\"", navigation, StringComparison.Ordinal);
+        Assert.Contains("<VisitorIcon Name=\"journey\"", navigation, StringComparison.Ordinal);
+        Assert.Contains("<VisitorIcon Name=\"user\"", navigation, StringComparison.Ordinal);
+        Assert.DoesNotContain("🗺️", navigation, StringComparison.Ordinal);
+        Assert.DoesNotContain("🚶", navigation, StringComparison.Ordinal);
+        Assert.DoesNotContain("📍", navigation, StringComparison.Ordinal);
+        Assert.DoesNotContain("👤", navigation, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mobile_onboarding_presents_brand_tagline_and_vector_icons()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var setupPath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Sections", "VisitorSetupFlow.razor");
+        var markup = File.ReadAllText(setupPath);
+
+        Assert.Contains("Text.PageTitle", markup, StringComparison.Ordinal);
+        Assert.Contains("Text.BrandTagline()", markup, StringComparison.Ordinal);
+        Assert.Contains("<VisitorIcon Name=\"audio\"", markup, StringComparison.Ordinal);
+        Assert.Contains("<VisitorIcon Name=\"location\"", markup, StringComparison.Ordinal);
+        Assert.Contains("<VisitorIcon Name=\"language\"", markup, StringComparison.Ordinal);
+        Assert.Contains("<VisitorIcon Name=\"journey\"", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("NarrationApp</span>", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Mobile_home_setup_starts_at_welcome_without_auth_or_guest_gate()
     {
         var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));

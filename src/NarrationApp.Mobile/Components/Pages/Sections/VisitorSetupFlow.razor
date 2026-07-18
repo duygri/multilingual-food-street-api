@@ -6,7 +6,7 @@
             <div class="setup-statusbar">
                 <span class="setup-statusbar__time">16:02</span>
                 <span class="setup-dynamic-island" aria-hidden="true"></span>
-                <span class="setup-statusbar__system">📶 🔋 85%</span>
+                <span class="setup-statusbar__system" aria-label="85% battery">85%</span>
             </div>
         </div>
 
@@ -15,8 +15,9 @@
             case VisitorIntroStep.Welcome:
                 <div class="setup-stack setup-stack--welcome">
                     <div class="setup-welcome-hero">
-                        <span class="setup-welcome-icon" aria-hidden="true">🎧</span>
-                        <h1>@Text.WelcomeTitlePrefix <span>NarrationApp</span></h1>
+                        <span class="setup-welcome-icon" aria-hidden="true"><VisitorIcon Name="audio" /></span>
+                        <h1>@Text.WelcomeTitlePrefix <span>@Text.PageTitle</span></h1>
+                        <p class="setup-tagline">@Text.BrandTagline()</p>
                         <p class="setup-copy setup-copy--centered">
                             @Text.WelcomeDescription
                         </p>
@@ -24,15 +25,15 @@
 
                     <div class="setup-feature-list">
                         <article class="setup-feature-card">
-                            <span aria-hidden="true">📍</span>
+                            <span aria-hidden="true"><VisitorIcon Name="location" /></span>
                             <p><strong>@Text.FeatureAutoPlayTitle</strong> @Text.FeatureAutoPlayBody</p>
                         </article>
                         <article class="setup-feature-card">
-                            <span aria-hidden="true">🌐</span>
+                            <span aria-hidden="true"><VisitorIcon Name="language" /></span>
                             <p><strong>@Text.FeatureLanguageTitle</strong> — @Text.FeatureLanguageBody</p>
                         </article>
                         <article class="setup-feature-card">
-                            <span aria-hidden="true">🗺️</span>
+                            <span aria-hidden="true"><VisitorIcon Name="journey" /></span>
                             <p><strong>@Text.FeatureTourTitle</strong> — @Text.FeatureTourBody</p>
                         </article>
                     </div>
@@ -48,7 +49,7 @@
             case VisitorIntroStep.Language:
                 <div class="setup-stack setup-stack--language">
                     <div class="setup-intro setup-intro--language">
-                        <span class="setup-hero-icon" aria-hidden="true">🌐</span>
+                        <span class="setup-hero-icon" aria-hidden="true"><VisitorIcon Name="language" /></span>
                         <div class="setup-intro__copy">
                             <h1>@Text.LanguageTitle</h1>
                             <p class="setup-copy">
@@ -91,7 +92,7 @@
             case VisitorIntroStep.Permissions:
                 <div class="setup-stack setup-stack--permissions">
                     <div class="setup-permission-hero">
-                        <span class="setup-permission-icon" aria-hidden="true">📍</span>
+                        <span class="setup-permission-icon" aria-hidden="true"><VisitorIcon Name="location" /></span>
                         <h1>@Text.LocationPermissionTitle</h1>
                         <p class="setup-copy setup-copy--centered">
                             @Text.LocationPermissionDescription

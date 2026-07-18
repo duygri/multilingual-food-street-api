@@ -297,20 +297,20 @@ else
             }
 
             <nav class="bottom-nav">
-                <button type="button" class="nav-pill @GetTabClass(VisitorTab.Map)" @onclick="() => SwitchTabFromShell(VisitorTab.Map)">
-                    <span class="nav-pill__icon">🗺️</span>
-                    <span>@UiText.TabMap</span>
-                </button>
-                <button type="button" class="nav-pill @GetTabClass(VisitorTab.Tours)" @onclick="() => SwitchTabFromShell(VisitorTab.Tours)">
-                    <span class="nav-pill__icon">🚶</span>
-                    <span>@UiText.TabTours</span>
-                </button>
-                <button type="button" class="nav-pill @GetTabClass(VisitorTab.Discover)" @onclick="() => SwitchTabFromShell(VisitorTab.Discover)">
-                    <span class="nav-pill__icon">📍</span>
+                <button type="button" class="nav-pill @GetTabClass(VisitorTab.Discover)" aria-label="@UiText.TabDiscover" @onclick="() => SwitchTabFromShell(VisitorTab.Discover)">
+                    <span class="nav-pill__icon" aria-hidden="true"><VisitorIcon Name="discover" /></span>
                     <span>@UiText.TabDiscover</span>
                 </button>
-                <button type="button" class="nav-pill @GetTabClass(VisitorTab.Settings)" @onclick="() => SwitchTabFromShell(VisitorTab.Settings)">
-                    <span class="nav-pill__icon">👤</span>
+                <button type="button" class="nav-pill @GetTabClass(VisitorTab.Map)" aria-label="@UiText.TabMap" @onclick="() => SwitchTabFromShell(VisitorTab.Map)">
+                    <span class="nav-pill__icon" aria-hidden="true"><VisitorIcon Name="map" /></span>
+                    <span>@UiText.TabMap</span>
+                </button>
+                <button type="button" class="nav-pill @GetTabClass(VisitorTab.Tours)" aria-label="@UiText.TabTours" @onclick="() => SwitchTabFromShell(VisitorTab.Tours)">
+                    <span class="nav-pill__icon" aria-hidden="true"><VisitorIcon Name="journey" /></span>
+                    <span>@UiText.TabTours</span>
+                </button>
+                <button type="button" class="nav-pill @GetTabClass(VisitorTab.Settings)" aria-label="@UiText.TabMe" @onclick="() => SwitchTabFromShell(VisitorTab.Settings)">
+                    <span class="nav-pill__icon" aria-hidden="true"><VisitorIcon Name="user" /></span>
                     <span>@UiText.TabMe</span>
                 </button>
             </nav>

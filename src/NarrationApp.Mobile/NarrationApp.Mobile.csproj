@@ -21,7 +21,7 @@
                <MauiXaml Update="MyPage.xaml" Inflator="Runtime" /> (force runtime inflation) -->
         <MauiXamlInflator>SourceGen</MauiXamlInflator>
 
-        <ApplicationTitle>Food Street Visitor</ApplicationTitle>
+        <ApplicationTitle>Sai Gon Ke</ApplicationTitle>
         <ApplicationId>com.foodstreet.tourist</ApplicationId>
 
         <!-- Versions -->
@@ -35,14 +35,14 @@
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
-        <ApplicationTitle>Food Street Visitor Dev</ApplicationTitle>
+        <ApplicationTitle>Sai Gon Ke Dev</ApplicationTitle>
         <ApplicationId>com.foodstreet.tourist.dev</ApplicationId>
         <AndroidPackageFormats>apk</AndroidPackageFormats>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)' == 'Smoke'">
         <DefineConstants>$(DefineConstants);SMOKE</DefineConstants>
-        <ApplicationTitle>Food Street Visitor Smoke</ApplicationTitle>
+        <ApplicationTitle>Sai Gon Ke Smoke</ApplicationTitle>
         <ApplicationId>com.foodstreet.tourist.smoke</ApplicationId>
         <AndroidPackageFormats>apk</AndroidPackageFormats>
         <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
@@ -51,7 +51,7 @@
 
     <PropertyGroup Condition="'$(Configuration)' == 'Staging'">
         <DefineConstants>$(DefineConstants);STAGING</DefineConstants>
-        <ApplicationTitle>Food Street Visitor Staging</ApplicationTitle>
+        <ApplicationTitle>Sai Gon Ke Staging</ApplicationTitle>
         <ApplicationId>com.foodstreet.tourist.staging</ApplicationId>
         <AndroidPackageFormats>apk</AndroidPackageFormats>
         <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
@@ -107,10 +107,10 @@
 
     <ItemGroup>
         <!-- App Icon -->
-        <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#1ED6AF" />
+        <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#9A3412" />
 
         <!-- Splash Screen -->
-        <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#07111F" BaseSize="128,128" />
+        <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#FFFBEB" BaseSize="128,128" />
 
         <!-- Images -->
         <MauiImage Include="Resources\Images\*" />

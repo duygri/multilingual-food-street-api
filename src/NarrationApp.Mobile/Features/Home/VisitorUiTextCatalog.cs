@@ -90,12 +90,12 @@ public static class VisitorUiTextCatalog
         new HashSet<string>(new[] { "vi", "en" }, StringComparer.OrdinalIgnoreCase);
 
     private static readonly VisitorUiText Vietnamese = new(
-        "Đa thuyết minh ẩm thực Vĩnh Khánh",
+        "Sài Gòn Kể",
         "Cài đặt",
         "Bản đồ",
-        "Tour",
+        "Hành trình",
         "Khám phá",
-        "Tôi",
+        "Của tôi",
         "Chào mừng đến",
         "Khám phá các điểm tham quan với thuyết minh tự động đa ngôn ngữ. Chỉ cần đi bộ, chúng tôi sẽ kể cho bạn nghe.",
         "Tự động phát",
@@ -170,12 +170,12 @@ public static class VisitorUiTextCatalog
         "Về ứng dụng");
 
     private static readonly VisitorUiText English = new(
-        "Vinh Khanh Food Narration",
+        "Sai Gon Ke",
         "Settings",
         "Map",
-        "Tour",
+        "Journeys",
         "Discover",
-        "Me",
+        "My",
         "Welcome to",
         "Explore nearby food stops with automatic multilingual narration. Just walk around and we will tell the story.",
         "Auto play",
