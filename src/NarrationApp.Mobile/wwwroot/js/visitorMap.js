@@ -77,10 +77,9 @@ window.visitorMap = (() => {
                 interactive: mapOptions.interactive,
                 attributionControl: false
             });
-            map.getCanvas().setAttribute("tabindex", "-1");
-            map.getCanvas().setAttribute("aria-hidden", "true");
-
             if (!mapOptions.interactive) {
+                map.getCanvas().setAttribute("tabindex", "-1");
+                map.getCanvas().setAttribute("aria-hidden", "true");
                 map.boxZoom.disable();
                 map.dragRotate.disable();
                 map.dragPan.disable();

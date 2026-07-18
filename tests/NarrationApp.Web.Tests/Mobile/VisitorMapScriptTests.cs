@@ -25,6 +25,7 @@ public sealed class VisitorMapScriptTests
         Assert.Contains("instance.optionsKey !== optionsKey", script, StringComparison.Ordinal);
         Assert.Contains("map.getCanvas().setAttribute(\"tabindex\", \"-1\")", script, StringComparison.Ordinal);
         Assert.Contains("map.getCanvas().setAttribute(\"aria-hidden\", \"true\")", script, StringComparison.Ordinal);
+        Assert.Contains("if (!mapOptions.interactive) {\n                map.getCanvas().setAttribute(\"tabindex\", \"-1\");\n                map.getCanvas().setAttribute(\"aria-hidden\", \"true\");", script.ReplaceLineEndings("\n"), StringComparison.Ordinal);
     }
 
     [Fact]
