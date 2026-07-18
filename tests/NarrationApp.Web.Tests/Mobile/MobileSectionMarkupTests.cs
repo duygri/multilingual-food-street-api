@@ -384,7 +384,8 @@ public sealed class MobileSectionMarkupTests
         Assert.Contains("settings-detail-screen", aboutMarkup, StringComparison.Ordinal);
         Assert.Contains("about-info-card", aboutMarkup, StringComparison.Ordinal);
         Assert.Contains("about-link-list", aboutMarkup, StringComparison.Ordinal);
-        Assert.Contains("NarrationApp Mobile", aboutMarkup, StringComparison.Ordinal);
+        Assert.Contains("@Text.PageTitle", aboutMarkup, StringComparison.Ordinal);
+        Assert.DoesNotContain("NarrationApp Mobile", aboutMarkup, StringComparison.Ordinal);
         Assert.DoesNotContain("Build dành cho visitor", aboutMarkup, StringComparison.Ordinal);
     }
 

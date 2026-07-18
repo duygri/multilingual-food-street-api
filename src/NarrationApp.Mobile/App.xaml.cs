@@ -9,6 +9,9 @@ public partial class App : Application
 
 	protected override Window CreateWindow(IActivationState? activationState)
 	{
-		return new Window(new MainPage()) { Title = "NarrationApp.Mobile" };
+		var languageCode = Microsoft.Maui.Storage.Preferences.Default.Get(
+			Features.Home.VisitorBrand.PreferredAppLanguageCodeKey,
+			"vi");
+		return new Window(new MainPage()) { Title = Features.Home.VisitorBrand.DisplayName(languageCode) };
 	}
 }

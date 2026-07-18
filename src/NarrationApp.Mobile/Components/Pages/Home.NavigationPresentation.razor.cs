@@ -31,6 +31,7 @@ public partial class Home
     private string GetTabClass(VisitorTab tab) =>
         VisitorNavigationPresentationFormatter.GetActiveClass(_state.CurrentTab == tab);
 
+    private string? GetTabAriaCurrent(VisitorTab tab) => VisitorNavigationPresentationFormatter.GetAriaCurrent(_state.CurrentTab == tab);
     private string GetTourCardClass(string tourId) =>
         VisitorNavigationPresentationFormatter.GetSelectionClass(_state.SelectedTourId == tourId);
 

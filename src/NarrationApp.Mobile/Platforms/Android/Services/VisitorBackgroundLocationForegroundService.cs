@@ -4,6 +4,7 @@ using Android.OS;
 using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Devices.Sensors;
 using Microsoft.Maui.Storage;
+using NarrationApp.Mobile.Features.Home;
 using System.Runtime.Versioning;
 
 namespace NarrationApp.Mobile.Platforms.Android.Services;
@@ -103,15 +104,17 @@ public class VisitorBackgroundLocationForegroundService : Service
 
     private Notification BuildNotification(int intervalSeconds)
     {
+        var languageCode = Preferences.Default.Get(VisitorBrand.PreferredAppLanguageCodeKey, "vi");
+        var copy = VisitorBrand.BackgroundTrackingNotification(languageCode, intervalSeconds);
 #pragma warning disable CA1416, CA1422
         if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
         {
-            return BuildNotificationApi26(intervalSeconds);
+            return BuildNotificationApi26(copy);
         }
 
         return new Notification.Builder(this)
-            .SetContentTitle("Food Street Visitor")
-            .SetContentText($"Background tracking đang chạy • chu kỳ {intervalSeconds}s")
+            .SetContentTitle(copy.Title)
+            .SetContentText(copy.Body)
             .SetSmallIcon(Resource.Mipmap.appicon)
             .SetOngoing(true)
             .Build();
@@ -119,11 +122,11 @@ public class VisitorBackgroundLocationForegroundService : Service
     }
 
     [SupportedOSPlatform("android26.0")]
-    private Notification BuildNotificationApi26(int intervalSeconds)
+    private Notification BuildNotificationApi26(VisitorBackgroundTrackingNotificationCopy copy)
     {
         return new Notification.Builder(this, NotificationChannelId)
-            .SetContentTitle("Food Street Visitor")
-            .SetContentText($"Background tracking đang chạy • chu kỳ {intervalSeconds}s")
+            .SetContentTitle(copy.Title)
+            .SetContentText(copy.Body)
             .SetSmallIcon(Resource.Mipmap.appicon)
             .SetOngoing(true)
             .Build();
@@ -150,12 +153,14 @@ public class VisitorBackgroundLocationForegroundService : Service
             return;
         }
 
+        var languageCode = Preferences.Default.Get(VisitorBrand.PreferredAppLanguageCodeKey, "vi");
+        var copy = VisitorBrand.BackgroundTrackingNotification(languageCode, 12);
         var channel = new NotificationChannel(
             NotificationChannelId,
-            "Visitor background tracking",
+            copy.ChannelName,
             NotificationImportance.Low)
         {
-            Description = "Giữ GPS visitor chạy nền cho geofence và nearby POI."
+            Description = copy.ChannelDescription
         };
 
         manager?.CreateNotificationChannel(channel);

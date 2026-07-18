@@ -358,6 +358,11 @@ public sealed class HomeMarkupTests
         Assert.Contains("aria-label=\"@UiText.TabMap\"", navigation, StringComparison.Ordinal);
         Assert.Contains("aria-label=\"@UiText.TabTours\"", navigation, StringComparison.Ordinal);
         Assert.Contains("aria-label=\"@UiText.TabMe\"", navigation, StringComparison.Ordinal);
+        Assert.Contains("aria-label=\"@UiText.BottomNavigationLabel()\"", navigation, StringComparison.Ordinal);
+        Assert.Contains("aria-current=\"@GetTabAriaCurrent(VisitorTab.Discover)\"", navigation, StringComparison.Ordinal);
+        Assert.Contains("aria-current=\"@GetTabAriaCurrent(VisitorTab.Map)\"", navigation, StringComparison.Ordinal);
+        Assert.Contains("aria-current=\"@GetTabAriaCurrent(VisitorTab.Tours)\"", navigation, StringComparison.Ordinal);
+        Assert.Contains("aria-current=\"@GetTabAriaCurrent(VisitorTab.Settings)\"", navigation, StringComparison.Ordinal);
         Assert.Contains("<VisitorIcon Name=\"discover\"", navigation, StringComparison.Ordinal);
         Assert.Contains("<VisitorIcon Name=\"map\"", navigation, StringComparison.Ordinal);
         Assert.Contains("<VisitorIcon Name=\"journey\"", navigation, StringComparison.Ordinal);
@@ -366,6 +371,22 @@ public sealed class HomeMarkupTests
         Assert.DoesNotContain("🚶", navigation, StringComparison.Ordinal);
         Assert.DoesNotContain("📍", navigation, StringComparison.Ordinal);
         Assert.DoesNotContain("👤", navigation, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mobile_shell_uses_runtime_brand_copy_without_changing_navigation_contracts()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var homePath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Home.razor");
+        var navigationPath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Home.NavigationPresentation.razor.cs");
+        var markup = File.ReadAllText(homePath);
+        var navigationSource = File.ReadAllText(navigationPath);
+
+        Assert.Contains("<span class=\"eyebrow\">@UiText.PageTitle</span>", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("<span class=\"eyebrow\">Food Street</span>", markup, StringComparison.Ordinal);
+        Assert.Contains("GetTabAriaCurrent", navigationSource, StringComparison.Ordinal);
+        Assert.Contains("VisitorNavigationPresentationFormatter.GetAriaCurrent(_state.CurrentTab == tab)", navigationSource, StringComparison.Ordinal);
+        Assert.Contains("SwitchTabFromShell(VisitorTab.Tours)", markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -382,6 +403,7 @@ public sealed class HomeMarkupTests
         Assert.Contains("<VisitorIcon Name=\"language\"", markup, StringComparison.Ordinal);
         Assert.Contains("<VisitorIcon Name=\"journey\"", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("NarrationApp</span>", markup, StringComparison.Ordinal);
+        Assert.Contains("class=\"setup-phone-chrome\" aria-hidden=\"true\"", markup, StringComparison.Ordinal);
     }
 
     [Fact]

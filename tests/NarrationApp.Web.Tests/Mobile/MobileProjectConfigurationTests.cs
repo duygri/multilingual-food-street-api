@@ -134,6 +134,52 @@ public sealed class MobileProjectConfigurationTests
     }
 
     [Fact]
+    public void Mobile_native_window_and_background_notification_use_shared_localized_brand_copy()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var mobileRoot = Path.Combine(projectRoot, "src", "NarrationApp.Mobile");
+        var appSource = File.ReadAllText(Path.Combine(mobileRoot, "App.xaml.cs"));
+        var startupSource = File.ReadAllText(Path.Combine(mobileRoot, "Components", "Pages", "Home.Startup.razor.cs"));
+        var notificationSource = File.ReadAllText(Path.Combine(mobileRoot, "Platforms", "Android", "Services", "VisitorBackgroundLocationForegroundService.cs"));
+
+        Assert.Contains("VisitorBrand.DisplayName", appSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Title = \"NarrationApp.Mobile\"", appSource, StringComparison.Ordinal);
+        Assert.Contains("VisitorBrand.PreferredAppLanguageCodeKey", startupSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("private const string PreferredAppLanguageCodeKey", startupSource, StringComparison.Ordinal);
+        Assert.Contains("Preferences.Default.Get(VisitorBrand.PreferredAppLanguageCodeKey", notificationSource, StringComparison.Ordinal);
+        Assert.Contains("VisitorBrand.BackgroundTrackingNotification", notificationSource, StringComparison.Ordinal);
+        Assert.Contains(".SetContentTitle(copy.Title)", notificationSource, StringComparison.Ordinal);
+        Assert.Contains(".SetContentText(copy.Body)", notificationSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Food Street Visitor", notificationSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Background tracking đang chạy", notificationSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mobile_user_facing_title_contexts_reject_legacy_brand_literals()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var mobileRoot = Path.Combine(projectRoot, "src", "NarrationApp.Mobile");
+        var userFacingSources = new[]
+        {
+            Path.Combine(mobileRoot, "App.xaml.cs"),
+            Path.Combine(mobileRoot, "Components", "Pages", "Home.razor"),
+            Path.Combine(mobileRoot, "Components", "Pages", "Sections", "VisitorAboutScreen.razor"),
+            Path.Combine(mobileRoot, "Platforms", "Android", "Services", "VisitorBackgroundLocationForegroundService.cs"),
+            Path.Combine(mobileRoot, "wwwroot", "index.html"),
+            Path.Combine(mobileRoot, "NarrationApp.Mobile.csproj")
+        };
+
+        foreach (var sourcePath in userFacingSources)
+        {
+            var source = File.ReadAllText(sourcePath);
+            Assert.DoesNotContain("Food Street Visitor", source, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(">Food Street<", source, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("Title = \"NarrationApp.Mobile\"", source, StringComparison.Ordinal);
+            Assert.DoesNotContain("NarrationApp Mobile", source, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
     public void Web_test_project_pins_bunit_version_for_offline_restore_stability()
     {
         var filePath = Path.Combine(

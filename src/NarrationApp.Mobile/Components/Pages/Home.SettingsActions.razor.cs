@@ -11,7 +11,7 @@ public partial class Home
             () =>
             {
                 _state.ChangeAppLanguage(languageCode);
-                Preferences.Default.Set(PreferredAppLanguageCodeKey, _state.SelectedAppLanguageCode);
+                Preferences.Default.Set(VisitorBrand.PreferredAppLanguageCodeKey, _state.SelectedAppLanguageCode);
                 _cachePreloadStatusLabel = UiText.ReadyPreloadStatus();
                 return Task.CompletedTask;
             });

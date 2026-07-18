@@ -63,4 +63,37 @@ public sealed class VisitorUiTextCatalogTests
         Assert.Equal("Bắt đầu khám phá ->", text.StartExploringButton);
         Assert.Equal("Bản đồ", text.TabMap);
     }
+
+    [Fact]
+    public void Visitor_brand_localizes_native_titles_and_background_tracking_copy()
+    {
+        Assert.Equal("visitor.preferences.app-language-code", VisitorBrand.PreferredAppLanguageCodeKey);
+        Assert.Equal("Sài Gòn Kể", VisitorBrand.DisplayName("vi"));
+        Assert.Equal("Sai Gon Ke", VisitorBrand.DisplayName("en-US"));
+
+        var vietnamese = VisitorBrand.BackgroundTrackingNotification("vi", 12);
+        Assert.Equal("Sài Gòn Kể", vietnamese.Title);
+        Assert.Equal("Đang theo dõi vị trí trong nền • chu kỳ 12 giây", vietnamese.Body);
+
+        var english = VisitorBrand.BackgroundTrackingNotification("en", 12);
+        Assert.Equal("Sai Gon Ke", english.Title);
+        Assert.Equal("Background location tracking is active • every 12 seconds", english.Body);
+    }
+
+    [Fact]
+    public void Navigation_accessibility_copy_and_current_state_are_localized()
+    {
+        Assert.Equal("Điều hướng chính", VisitorUiTextCatalog.ForLanguage("vi").BottomNavigationLabel());
+        Assert.Equal("Primary navigation", VisitorUiTextCatalog.ForLanguage("en").BottomNavigationLabel());
+        Assert.Equal("page", VisitorNavigationPresentationFormatter.GetAriaCurrent(isActive: true));
+        Assert.Null(VisitorNavigationPresentationFormatter.GetAriaCurrent(isActive: false));
+
+        var tabs = new[] { VisitorTab.Discover, VisitorTab.Map, VisitorTab.Tours, VisitorTab.Settings };
+        foreach (var activeTab in tabs)
+        {
+            var currentItems = tabs.Count(tab =>
+                VisitorNavigationPresentationFormatter.GetAriaCurrent(tab == activeTab) == "page");
+            Assert.Equal(1, currentItems);
+        }
+    }
 }

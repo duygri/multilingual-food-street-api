@@ -23,6 +23,9 @@ public static class VisitorNavigationPresentationFormatter
     public static string GetActiveClass(bool isActive) =>
         isActive ? "is-active" : string.Empty;
 
+    public static string? GetAriaCurrent(bool isActive) =>
+        isActive ? "page" : null;
+
     public static string GetCategoryIcon(string categoryId) =>
         categoryId switch
         {

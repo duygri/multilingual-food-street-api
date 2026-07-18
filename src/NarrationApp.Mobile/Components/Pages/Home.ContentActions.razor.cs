@@ -9,7 +9,7 @@ public partial class Home
     {
         _state.ChangeAppLanguage(languageCode);
         _state.SelectLanguage(languageCode);
-        Preferences.Default.Set(PreferredAppLanguageCodeKey, _state.SelectedAppLanguageCode);
+        Preferences.Default.Set(VisitorBrand.PreferredAppLanguageCodeKey, _state.SelectedAppLanguageCode);
         Preferences.Default.Set(PreferredLanguageCodeKey, languageCode);
         _cachePreloadStatusLabel = UiText.ReadyPreloadStatus();
         return Task.CompletedTask;
@@ -19,7 +19,7 @@ public partial class Home
     {
         Preferences.Default.Set(OnboardingWelcomeSeenKey, true);
         Preferences.Default.Set(OnboardingLanguageSelectedKey, true);
-        Preferences.Default.Set(PreferredAppLanguageCodeKey, _state.SelectedAppLanguageCode);
+        Preferences.Default.Set(VisitorBrand.PreferredAppLanguageCodeKey, _state.SelectedAppLanguageCode);
         Preferences.Default.Set(PreferredLanguageCodeKey, _state.SelectedLanguageCode);
         _state.AdvanceFromLanguageSelection();
         return Task.CompletedTask;
@@ -60,7 +60,7 @@ public partial class Home
 
         var nextLanguageCode = appLanguages[(currentIndex + 1) % appLanguages.Count].Code;
         _state.ChangeAppLanguage(nextLanguageCode);
-        Preferences.Default.Set(PreferredAppLanguageCodeKey, nextLanguageCode);
+        Preferences.Default.Set(VisitorBrand.PreferredAppLanguageCodeKey, nextLanguageCode);
         _cachePreloadStatusLabel = UiText.ReadyPreloadStatus();
         return Task.CompletedTask;
     }

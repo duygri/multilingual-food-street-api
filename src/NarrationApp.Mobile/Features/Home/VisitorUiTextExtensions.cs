@@ -8,6 +8,9 @@ public static class VisitorUiTextExtensions
     public static string BrandTagline(this VisitorUiText text) =>
         text.Pick("Hear the streets, taste Saigon.", "Nghe chuyện phố, nếm vị Sài Gòn.");
 
+    public static string BottomNavigationLabel(this VisitorUiText text) =>
+        text.Pick("Primary navigation", "Điều hướng chính");
+
     public static bool UsesEnglishUi(this VisitorUiText text) =>
         string.Equals(text.TabMap, "Map", StringComparison.OrdinalIgnoreCase);
 
