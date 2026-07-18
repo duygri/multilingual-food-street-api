@@ -5,6 +5,38 @@ namespace NarrationApp.Web.Tests.Mobile;
 public sealed class VisitorMapScriptTests
 {
     [Fact]
+    public void Visitor_map_script_keeps_full_map_defaults_and_accepts_static_preview_options()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var scriptPath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "wwwroot", "js", "visitorMap.js");
+        var script = File.ReadAllText(scriptPath);
+
+        Assert.Contains("function render(containerId, accessToken, styleUrl, snapshot, dotNetRef, options)", script, StringComparison.Ordinal);
+        Assert.Contains("interactive: options?.interactive !== false", script, StringComparison.Ordinal);
+        Assert.Contains("markersInteractive: options?.markersInteractive !== false", script, StringComparison.Ordinal);
+        Assert.Contains("showRadius: options?.showRadius !== false", script, StringComparison.Ordinal);
+        Assert.Contains("cluster: options?.cluster === true", script, StringComparison.Ordinal);
+        Assert.Contains("dragPan.disable()", script, StringComparison.Ordinal);
+        Assert.Contains("scrollZoom.disable()", script, StringComparison.Ordinal);
+        Assert.Contains("document.createElement(mapOptions.markersInteractive ? \"button\" : \"div\")", script, StringComparison.Ordinal);
+        Assert.Contains("if (mapOptions.showRadius)", script, StringComparison.Ordinal);
+        Assert.Contains("if (mapOptions.interactive && hasRenderableRoute(snapshot.route))", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Visitor_map_offline_preview_uses_non_button_markers_without_radius_or_route_controls()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var scriptPath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "wwwroot", "js", "visitorMap.js");
+        var script = File.ReadAllText(scriptPath);
+
+        Assert.Contains("createOfflineMarker(marker, point, dotNetRef, mapOptions.markersInteractive)", script, StringComparison.Ordinal);
+        Assert.Contains("document.createElement(markersInteractive ? \"button\" : \"div\")", script, StringComparison.Ordinal);
+        Assert.Contains("mapOptions.showRadius", script, StringComparison.Ordinal);
+        Assert.Contains("mapOptions.interactive && hasRenderableRoute(snapshot.route)", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Visitor_map_script_does_not_attach_default_mapbox_navigation_controls()
     {
         var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
@@ -101,7 +133,7 @@ public sealed class VisitorMapScriptTests
 
         Assert.Contains("renderOfflineFallback(container, snapshot, dotNetRef", script, StringComparison.Ordinal);
         Assert.Contains("visitor-map-offline", script, StringComparison.Ordinal);
-        Assert.Contains("createOfflineMarkerButton", script, StringComparison.Ordinal);
+        Assert.Contains("createOfflineMarker(marker, point, dotNetRef, mapOptions.markersInteractive)", script, StringComparison.Ordinal);
         Assert.Contains("safeSelectPoi(dotNetRef, marker.id)", script, StringComparison.Ordinal);
         Assert.Contains("dotNetRef.invokeMethodAsync(\"SelectPoiFromMap\", markerId)", script, StringComparison.Ordinal);
     }
@@ -170,7 +202,7 @@ public sealed class VisitorMapScriptTests
 
         var script = File.ReadAllText(scriptPath);
 
-        Assert.Contains("renderMapbox(containerId, accessToken, styleUrl, snapshot, dotNetRef)", script, StringComparison.Ordinal);
+        Assert.Contains("renderMapbox(containerId, accessToken, styleUrl, snapshot, dotNetRef, mapOptions)", script, StringComparison.Ordinal);
         Assert.Contains("catch (error)", script, StringComparison.Ordinal);
         Assert.Contains("Không khởi tạo được Mapbox", script, StringComparison.Ordinal);
     }

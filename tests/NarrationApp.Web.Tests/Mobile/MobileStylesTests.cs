@@ -6,6 +6,37 @@ namespace NarrationApp.Web.Tests.Mobile;
 public sealed class MobileStylesTests
 {
     [Fact]
+    public void Mobile_city_lens_uses_brand_tokens_static_preview_bounds_and_safe_interactions()
+    {
+        var css = ReadMobileCss();
+
+        Assert.Contains(".city-lens", css, StringComparison.Ordinal);
+        Assert.Contains("font-family: var(--sgk-font-display);", css, StringComparison.Ordinal);
+        Assert.Contains("font-family: var(--sgk-font-ui);", css, StringComparison.Ordinal);
+        Assert.Contains("background: var(--sgk-surface);", css, StringComparison.Ordinal);
+        Assert.Contains("color: var(--sgk-ink);", css, StringComparison.Ordinal);
+        Assert.Contains("height: clamp(224px, 31dvh, 280px);", css, StringComparison.Ordinal);
+        Assert.Contains("pointer-events: none;", css, StringComparison.Ordinal);
+        Assert.Contains("min-height: 44px;", css, StringComparison.Ordinal);
+        Assert.Contains("env(safe-area-inset-bottom)", css, StringComparison.Ordinal);
+        Assert.Contains("@media (prefers-reduced-motion: reduce)", css, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mobile_discover_story_feed_and_theme_chips_are_scroll_safe_and_tokenized()
+    {
+        var css = ReadMobileCss();
+
+        Assert.Contains(".theme-chips", css, StringComparison.Ordinal);
+        Assert.Contains("overflow-x: auto;", css, StringComparison.Ordinal);
+        Assert.Contains("scrollbar-width: none;", css, StringComparison.Ordinal);
+        Assert.Contains(".story-card", css, StringComparison.Ordinal);
+        Assert.Contains("var(--sgk-brand)", css, StringComparison.Ordinal);
+        Assert.Contains("var(--sgk-audio)", css, StringComparison.Ordinal);
+        Assert.Contains(".city-lens:focus-visible", css, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Mobile_accessibility_guard_wins_the_component_cascade_for_every_control_type()
     {
         var webRoot = GetMobileWebRoot();

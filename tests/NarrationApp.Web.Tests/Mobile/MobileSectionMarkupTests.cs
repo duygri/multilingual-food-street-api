@@ -4,9 +4,55 @@ namespace NarrationApp.Web.Tests.Mobile;
 
 public sealed class MobileSectionMarkupTests
 {
+    [Fact]
+    public void Mobile_discover_composes_one_search_city_lens_theme_chips_and_ordered_story_cards()
+    {
+        var markup = ReadSectionMarkup("VisitorDiscoverScreen.razor");
+
+        Assert.Equal(1, CountOccurrences(markup, "class=\"discover-search"));
+        Assert.Contains("class=\"theme-chips\"", markup, StringComparison.Ordinal);
+        Assert.Contains("@foreach (var category in Categories)", markup, StringComparison.Ordinal);
+        Assert.Contains("OnSelectCategory.InvokeAsync(category.Id)", markup, StringComparison.Ordinal);
+        Assert.Contains("<VisitorCityLens", markup, StringComparison.Ordinal);
+        Assert.Contains("OnOpenMap=\"OnOpenMap\"", markup, StringComparison.Ordinal);
+        Assert.Contains("discover-sync-banner", markup, StringComparison.Ordinal);
+        Assert.Contains("@foreach (var poi in Pois)", markup, StringComparison.Ordinal);
+        Assert.Contains("<VisitorStoryCard", markup, StringComparison.Ordinal);
+        Assert.Contains("OnListen=\"OnSelectPoi\"", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mobile_city_lens_is_one_accessible_map_button_with_a_separate_static_preview_container()
+    {
+        var markup = ReadSectionMarkup("VisitorCityLens.razor");
+
+        Assert.Equal(1, CountOccurrences(markup, "<button"));
+        Assert.Contains("aria-label=\"@Text.Pick(", markup, StringComparison.Ordinal);
+        Assert.Contains("@onclick=\"() => OnOpenMap.InvokeAsync()\"", markup, StringComparison.Ordinal);
+        Assert.Contains("id=\"city-lens-map\"", markup, StringComparison.Ordinal);
+        Assert.Contains("aria-hidden=\"true\"", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("visitor-map-marker", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mobile_story_card_shows_honest_metadata_and_one_primary_listen_affordance()
+    {
+        var markup = ReadSectionMarkup("VisitorStoryCard.razor");
+
+        Assert.Contains("Poi.ImageUrl", markup, StringComparison.Ordinal);
+        Assert.Contains("<VisitorIcon Name=\"@GetPoiIcon()\" />", markup, StringComparison.Ordinal);
+        Assert.Contains("@if (ShowCityLabel)", markup, StringComparison.Ordinal);
+        Assert.Contains("TP.HCM", markup, StringComparison.Ordinal);
+        Assert.Contains("@if (Poi.HasReliableDistance)", markup, StringComparison.Ordinal);
+        Assert.Contains("Poi.AudioDuration", markup, StringComparison.Ordinal);
+        Assert.Equal(1, CountOccurrences(markup, "story-card__listen"));
+        Assert.Contains("Text.Pick(\"Listen\", \"Nghe câu chuyện\")", markup, StringComparison.Ordinal);
+        Assert.Contains("OnListen.InvokeAsync(Poi.Id)", markup, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData("VisitorDiscoverScreen.razor", "<VisitorIcon Name=\"@GetCategoryIcon(category.Id)\" />", "@GetCategoryIcon(category.Id)</span>")]
-    [InlineData("VisitorDiscoverScreen.razor", "<VisitorIcon Name=\"@GetPoiIcon(poi)\" />", "@GetPoiIcon(poi)</span>")]
+    [InlineData("VisitorStoryCard.razor", "<VisitorIcon Name=\"@GetPoiIcon()\" />", "@GetPoiIcon()</span>")]
     [InlineData("VisitorSearchScreen.razor", "<VisitorIcon Name=\"@GetCategoryIcon(category.Id)\" />", "@GetCategoryIcon(category.Id)</span>")]
     [InlineData("VisitorSearchScreen.razor", "<VisitorIcon Name=\"@GetPoiIcon(poi)\" />", "@GetPoiIcon(poi)</span>")]
     [InlineData("VisitorPoiDetailScreen.razor", "<VisitorIcon Name=\"@GetPoiIcon()\" />", ">@GetPoiIcon()</div>")]
@@ -265,17 +311,15 @@ public sealed class MobileSectionMarkupTests
         Assert.Contains("search-field__hint", markup, StringComparison.Ordinal);
         Assert.Contains("OnOpenSearch", markup, StringComparison.Ordinal);
         Assert.Contains("readonly", markup, StringComparison.Ordinal);
-        Assert.Contains("discover-chip-row", markup, StringComparison.Ordinal);
+        Assert.Contains("theme-chips", markup, StringComparison.Ordinal);
+        Assert.Contains("VisitorCityLens", markup, StringComparison.Ordinal);
+        Assert.Contains("VisitorStoryCard", markup, StringComparison.Ordinal);
         Assert.Contains("discover-list--stagger", markup, StringComparison.Ordinal);
         Assert.Contains("discover-poi-card", markup, StringComparison.Ordinal);
         Assert.Contains("discover-poi-card--skeleton", markup, StringComparison.Ordinal);
         Assert.Contains("discover-poi-card__skeleton", markup, StringComparison.Ordinal);
         Assert.Contains("discover-poi-card__media", markup, StringComparison.Ordinal);
-        Assert.Contains("discover-poi-card__image", markup, StringComparison.Ordinal);
-        Assert.Contains("discover-poi-card__image-fallback", markup, StringComparison.Ordinal);
         Assert.Contains("discover-poi-card__topline", markup, StringComparison.Ordinal);
-        Assert.Contains("discover-poi-card__title", markup, StringComparison.Ordinal);
-        Assert.Contains("discover-poi-card__summary", markup, StringComparison.Ordinal);
         Assert.Contains("discover-poi-card__status", markup, StringComparison.Ordinal);
         Assert.DoesNotContain("discover-refresh-indicator", markup, StringComparison.Ordinal);
     }
@@ -417,7 +461,7 @@ public sealed class MobileSectionMarkupTests
     }
 
     [Theory]
-    [InlineData("VisitorDiscoverScreen.razor", "@if (poi.HasReliableDistance)")]
+    [InlineData("VisitorStoryCard.razor", "@if (Poi.HasReliableDistance)")]
     [InlineData("VisitorSearchScreen.razor", "@if (poi.HasReliableDistance)")]
     [InlineData("VisitorPoiDetailScreen.razor", "@if (Poi.HasReliableDistance)")]
     public void Direct_poi_distance_markup_requires_reliable_distance(string fileName, string condition)
@@ -501,6 +545,9 @@ public sealed class MobileSectionMarkupTests
     {
         return File.ReadAllText(GetSectionPath(fileName));
     }
+
+    private static int CountOccurrences(string source, string value) =>
+        source.Split(value, StringSplitOptions.None).Length - 1;
 
     private static string ProjectRoot => Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
 

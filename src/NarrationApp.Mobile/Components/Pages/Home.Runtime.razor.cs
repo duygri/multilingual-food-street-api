@@ -5,6 +5,9 @@ namespace NarrationApp.Mobile.Components.Pages;
 
 public partial class Home
 {
+    private readonly VisitorMapRenderState _cityLensRenderState = new();
+    private bool _isCityLensSurfaceMounted;
+
     [JSInvokable]
     public Task SelectPoiFromMap(string poiId)
     {

@@ -1,0 +1,55 @@
+@using NarrationApp.Mobile.Features.Home
+
+<article class="story-card">
+    <div class="story-card__media">
+        @if (!string.IsNullOrWhiteSpace(Poi.ImageUrl))
+        {
+            <img class="story-card__image" src="@Poi.ImageUrl" alt="@Poi.Name" loading="lazy" />
+        }
+        else
+        {
+            <div class="story-card__fallback @GetPoiTone()" aria-hidden="true"><VisitorIcon Name="@GetPoiIcon()" /></div>
+        }
+    </div>
+    <div class="story-card__body">
+        <div class="story-card__eyebrow">
+            <span>@GetCategoryLabel()</span>
+            @if (ShowCityLabel)
+            {
+                <span>TP.HCM</span>
+            }
+        </div>
+        <h2>@Poi.Name</h2>
+        <p>@Truncate(Poi.Description, 112)</p>
+        <div class="story-card__footer">
+            <span class="story-card__facts">
+                @if (Poi.HasReliableDistance)
+                {
+                    <span>@Poi.DistanceMeters m</span>
+                }
+                <span><span aria-hidden="true">◉</span> @Poi.AudioDuration</span>
+            </span>
+            <button type="button" class="story-card__listen" @onclick="() => OnListen.InvokeAsync(Poi.Id)">
+                <span aria-hidden="true">▶</span><span>@Text.Pick("Listen", "Nghe câu chuyện")</span>
+            </button>
+        </div>
+    </div>
+</article>
+
+@code {
+    [Parameter, EditorRequired] public VisitorPoi Poi { get; set; } = default!;
+    [Parameter] public VisitorUiText Text { get; set; } = VisitorUiTextCatalog.ForLanguage("vi");
+    [Parameter] public IReadOnlyList<VisitorCategory> Categories { get; set; } = [];
+    [Parameter] public EventCallback<string> OnListen { get; set; }
+
+    private bool ShowCityLabel => !Poi.District.Contains("TP.HCM", StringComparison.OrdinalIgnoreCase)
+        && !Poi.District.Contains("Ho Chi Minh", StringComparison.OrdinalIgnoreCase);
+    private string GetPoiIcon() => VisitorCategoryPresentationFormatter.GetPoiIcon(Poi, Categories);
+    private string GetPoiTone() => VisitorCategoryPresentationFormatter.GetCategoryTone(Poi.CategoryId, Categories);
+    private string GetCategoryLabel() => string.IsNullOrWhiteSpace(Poi.CategoryLabel)
+        ? Text.LocalizeCategoryLabel(Categories.FirstOrDefault(category => category.Id == Poi.CategoryId)?.Label ?? Poi.District)
+        : Text.LocalizeCategoryLabel(Poi.CategoryLabel);
+    private static string Truncate(string text, int maxLength) => string.IsNullOrWhiteSpace(text) || text.Length <= maxLength
+        ? text
+        : $"{text[..maxLength].TrimEnd()}...";
+}

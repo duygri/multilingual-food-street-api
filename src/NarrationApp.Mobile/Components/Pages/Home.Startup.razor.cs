@@ -58,5 +58,6 @@ public partial class Home
         }
 
         await RenderMapIfNeededAsync();
+        await RenderCityLensIfNeededAsync();
     }
 }

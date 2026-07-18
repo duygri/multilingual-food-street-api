@@ -15,32 +15,39 @@ window.visitorMap = (() => {
         return container;
     }
 
-    function render(containerId, accessToken, styleUrl, snapshot, dotNetRef) {
+    function render(containerId, accessToken, styleUrl, snapshot, dotNetRef, options) {
         const container = ensureContainer(containerId);
         if (!container) {
             return;
         }
 
+        const mapOptions = {
+            interactive: options?.interactive !== false,
+            markersInteractive: options?.markersInteractive !== false,
+            showRadius: options?.showRadius !== false,
+            cluster: options?.cluster === true
+        };
+
         if (!accessToken || accessToken.startsWith("YOUR_")) {
-            renderOfflineFallback(container, snapshot, dotNetRef, "Chưa có Mapbox access token. Đang dùng bản đồ tạm từ dữ liệu đã lưu.");
+            renderOfflineFallback(container, snapshot, dotNetRef, "Chưa có Mapbox access token. Đang dùng bản đồ tạm từ dữ liệu đã lưu.", mapOptions);
             console.warn("[visitorMap] Mapbox token is a placeholder – skipping render.");
             return;
         }
 
         if (!window.mapboxgl) {
-            renderOfflineFallback(container, snapshot, dotNetRef, "Mapbox chưa tải được. Đang dùng bản đồ tạm từ dữ liệu đã lưu.");
+            renderOfflineFallback(container, snapshot, dotNetRef, "Mapbox chưa tải được. Đang dùng bản đồ tạm từ dữ liệu đã lưu.", mapOptions);
             return;
         }
 
         try {
-            renderMapbox(containerId, accessToken, styleUrl, snapshot, dotNetRef);
+            renderMapbox(containerId, accessToken, styleUrl, snapshot, dotNetRef, mapOptions);
         } catch (error) {
             console.warn("[visitorMap] Mapbox render failed.", error);
-            renderOfflineFallback(container, snapshot, dotNetRef, "Không khởi tạo được Mapbox. Đang dùng bản đồ tạm từ dữ liệu đã lưu.");
+            renderOfflineFallback(container, snapshot, dotNetRef, "Không khởi tạo được Mapbox. Đang dùng bản đồ tạm từ dữ liệu đã lưu.", mapOptions);
         }
     }
 
-    function renderMapbox(containerId, accessToken, styleUrl, snapshot, dotNetRef) {
+    function renderMapbox(containerId, accessToken, styleUrl, snapshot, dotNetRef, mapOptions) {
         const container = ensureContainer(containerId);
         if (!container) {
             return;
@@ -61,8 +68,19 @@ window.visitorMap = (() => {
                 style: styleUrl,
                 center: [snapshot.centerLng, snapshot.centerLat],
                 zoom: snapshot.zoom,
+                interactive: mapOptions.interactive,
                 attributionControl: false
             });
+
+            if (!mapOptions.interactive) {
+                map.boxZoom.disable();
+                map.dragRotate.disable();
+                map.dragPan.disable();
+                map.keyboard.disable();
+                map.doubleClickZoom.disable();
+                map.touchZoomRotate.disable();
+                map.scrollZoom.disable();
+            }
 
             instance = {
                 containerId,
@@ -112,30 +130,41 @@ window.visitorMap = (() => {
         }
 
         if (markersChanged) {
-            updateRadiusLayers(instance, snapshot.markers);
+            if (mapOptions.showRadius) {
+                updateRadiusLayers(instance, snapshot.markers);
+            } else {
+                removeRadiusLayers(instance.map);
+            }
 
             for (const marker of instance.markers) {
                 marker.remove();
             }
 
             instance.markers = snapshot.markers.map(marker => {
-                const element = document.createElement("button");
-                element.type = "button";
+                const element = document.createElement(mapOptions.markersInteractive ? "button" : "div");
+                if (mapOptions.markersInteractive) {
+                    element.type = "button";
+                }
                 element.className = `visitor-map-marker${marker.isSelected ? " is-selected" : ""}${marker.isNearest ? " is-nearest" : ""}`;
                 element.style.background = marker.accent;
                 element.title = marker.label;
-                element.addEventListener("click", () => {
-                    safeSelectPoi(dotNetRef, marker.id);
-                });
+                if (mapOptions.markersInteractive) {
+                    element.addEventListener("click", () => {
+                        safeSelectPoi(dotNetRef, marker.id);
+                    });
+                }
 
                 const popupContent = document.createElement("div");
                 popupContent.className = "visitor-map-popup__title";
                 popupContent.textContent = marker.label;
 
-                return new mapboxgl.Marker({ element })
-                    .setLngLat([marker.longitude, marker.latitude])
-                    .setPopup(new mapboxgl.Popup({ offset: 16, className: "visitor-map-popup" }).setDOMContent(popupContent))
-                    .addTo(instance.map);
+                const mapMarker = new mapboxgl.Marker({ element })
+                    .setLngLat([marker.longitude, marker.latitude]);
+                if (mapOptions.markersInteractive) {
+                    mapMarker.setPopup(new mapboxgl.Popup({ offset: 16, className: "visitor-map-popup" }).setDOMContent(popupContent));
+                }
+
+                return mapMarker.addTo(instance.map);
             });
 
             instance.markersKey = markersKey;
@@ -146,13 +175,13 @@ window.visitorMap = (() => {
             instance.userLocationKey = userLocationKey;
         }
 
-        if (routeChanged) {
+        if (routeChanged && mapOptions.interactive) {
             instance.routeKey = routeKey;
             updateRouteLayer(instance, snapshot.route);
         }
 
         if (needsViewportAdjust || routeChanged) {
-            if (hasRenderableRoute(snapshot.route)) {
+            if (mapOptions.interactive && hasRenderableRoute(snapshot.route)) {
                 fitBoundsForRoute(instance.map, snapshot, snapshot.route);
             } else if (hasMultipleMarkers) {
                 const bounds = new mapboxgl.LngLatBounds();
@@ -177,13 +206,13 @@ window.visitorMap = (() => {
         instance.centerKey = centerKey;
     }
 
-    function renderOfflineFallback(container, snapshot, dotNetRef, message) {
+    function renderOfflineFallback(container, snapshot, dotNetRef, message, mapOptions) {
         clearMapboxInstance(container.id);
         const bounds = calculateOfflineBounds(snapshot);
         const fallback = document.createElement("div");
         fallback.className = "visitor-map-offline";
 
-        if (hasRenderableRoute(snapshot.route)) {
+        if (mapOptions.interactive && hasRenderableRoute(snapshot.route)) {
             fallback.appendChild(createOfflineRoute(snapshot.route, bounds));
         } else {
             const routeLayer = document.createElement("div");
@@ -196,16 +225,18 @@ window.visitorMap = (() => {
         badge.innerHTML = `<strong>Bản đồ tạm</strong><span>${escapeHtml(message)}</span>`;
         fallback.appendChild(badge);
 
-        for (const marker of snapshot.markers) {
-            const radius = createOfflineRadius(marker, bounds);
-            if (radius) {
-                fallback.appendChild(radius);
+        if (mapOptions.showRadius) {
+            for (const marker of snapshot.markers) {
+                const radius = createOfflineRadius(marker, bounds);
+                if (radius) {
+                    fallback.appendChild(radius);
+                }
             }
         }
 
         for (const marker of snapshot.markers) {
             const point = projectOfflinePoint(marker.latitude, marker.longitude, bounds);
-            fallback.appendChild(createOfflineMarkerButton(marker, point, dotNetRef));
+            fallback.appendChild(createOfflineMarker(marker, point, dotNetRef, mapOptions.markersInteractive));
         }
 
         if (snapshot.userLocation) {
@@ -221,20 +252,24 @@ window.visitorMap = (() => {
         container.replaceChildren(fallback);
     }
 
-    function createOfflineMarkerButton(marker, point, dotNetRef) {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = `visitor-map-offline__marker${marker.isSelected ? " is-selected" : ""}${marker.isNearest ? " is-nearest" : ""}`;
-        button.style.left = `${point.x}%`;
-        button.style.top = `${point.y}%`;
-        button.style.background = marker.accent;
-        button.title = marker.label;
-        button.innerHTML = `<span>${escapeHtml(marker.label)}</span>`;
-        button.addEventListener("click", () => {
-            safeSelectPoi(dotNetRef, marker.id);
-        });
+    function createOfflineMarker(marker, point, dotNetRef, markersInteractive) {
+        const element = document.createElement(markersInteractive ? "button" : "div");
+        if (markersInteractive) {
+            element.type = "button";
+        }
+        element.className = `visitor-map-offline__marker${marker.isSelected ? " is-selected" : ""}${marker.isNearest ? " is-nearest" : ""}`;
+        element.style.left = `${point.x}%`;
+        element.style.top = `${point.y}%`;
+        element.style.background = marker.accent;
+        element.title = marker.label;
+        element.innerHTML = `<span>${escapeHtml(marker.label)}</span>`;
+        if (markersInteractive) {
+            element.addEventListener("click", () => {
+                safeSelectPoi(dotNetRef, marker.id);
+            });
+        }
 
-        return button;
+        return element;
     }
 
     function createOfflineRadius(marker, bounds) {

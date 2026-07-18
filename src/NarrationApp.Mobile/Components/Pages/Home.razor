@@ -113,6 +113,7 @@ else
                         CurrentLanguageChipLabel="@_state.CurrentAppLanguage.ChipLabel"
                         Text="UiText"
                         OnOpenSearch="OpenSearchOverlay"
+                        OnOpenMap="@(() => SwitchTabFromShell(VisitorTab.Map))"
                         OnRefresh="RefreshDiscoverAsync"
                         OnCycleLanguage="CycleLanguage"
                         OnSelectCategory="SelectDiscoverCategory"

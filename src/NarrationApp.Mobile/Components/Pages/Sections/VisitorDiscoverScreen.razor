@@ -5,8 +5,9 @@
         <div class="discover-header__title">
             <span class="discover-header__icon">📍</span>
             <div>
-                <h1>@Text.DiscoverTitle</h1>
-                <p>@Text.DiscoverSubtitle</p>
+                <span class="discover-header__eyebrow">@Text.Pick("STORIES OF THE CITY", "CHUYỆN CỦA THÀNH PHỐ")</span>
+                <h1>@Text.Pick("Saigon, told by its streets", "Sài Gòn kể chuyện qua từng con phố")</h1>
+                <p>@Text.Pick("Local voices, food and memories—ready when you are.", "Giọng kể, món ngon và ký ức địa phương—sẵn sàng khi bạn muốn nghe.")</p>
             </div>
         </div>
         <div class="discover-header__actions">
@@ -33,7 +34,7 @@
         <span class="search-field__hint">@Text.SearchHint</span>
     </label>
 
-    <section class="discover-chip-row">
+    <section class="theme-chips" aria-label="@Text.Pick("Story themes", "Chủ đề câu chuyện")">
         @foreach (var category in Categories)
         {
             <button
@@ -45,6 +46,8 @@
             </button>
         }
     </section>
+
+    <VisitorCityLens Text="Text" OnOpenMap="OnOpenMap" />
 
     @if (IsUsingFallbackData && !string.IsNullOrWhiteSpace(SyncMessage))
     {
@@ -90,37 +93,7 @@
         {
             @foreach (var poi in Pois)
             {
-                <button type="button" class="discover-poi-card" @onclick="() => OnSelectPoi.InvokeAsync(poi.Id)">
-                    <div class="discover-poi-card__media">
-                        @if (!string.IsNullOrWhiteSpace(poi.ImageUrl))
-                        {
-                            <img class="discover-poi-card__image" src="@poi.ImageUrl" alt="@poi.Name" loading="lazy" />
-                        }
-                        else
-                        {
-                            <div class="discover-poi-card__image-fallback @GetPoiTone(poi.CategoryId)">
-                                <VisitorIcon Name="@GetPoiIcon(poi)" />
-                            </div>
-                        }
-                    </div>
-                    <div class="discover-poi-card__body">
-                        <div class="discover-poi-card__topline">
-                            <strong class="discover-poi-card__title">@poi.Name</strong>
-                            @if (poi.HasReliableDistance)
-                            {
-                                <span class="discover-poi-card__distance">@poi.DistanceMeters m</span>
-                            }
-                        </div>
-                        <div class="discover-poi-card__meta">
-                            <span class="discover-badge">@GetCategoryLabel(poi)</span>
-                            <div class="discover-poi-card__status">
-                                <span>🔊 @Text.LocalizeKnownStatus(poi.StatusLabel)</span>
-                                <span>🌐 @Text.FormatLanguageCount(poi.AvailableLanguageCount)</span>
-                            </div>
-                        </div>
-                        <p class="discover-poi-card__summary">@Truncate(poi.Description, 88)</p>
-                    </div>
-                </button>
+                <VisitorStoryCard Poi="poi" Text="Text" Categories="Categories" OnListen="OnSelectPoi" />
             }
         }
     </section>
@@ -138,6 +111,7 @@
     [Parameter] public string SyncMessage { get; set; } = string.Empty;
     [Parameter] public string CurrentLanguageChipLabel { get; set; } = "VN";
     [Parameter] public EventCallback OnOpenSearch { get; set; }
+    [Parameter] public EventCallback OnOpenMap { get; set; }
     [Parameter] public EventCallback OnRefresh { get; set; }
     [Parameter] public EventCallback OnCycleLanguage { get; set; }
     [Parameter] public EventCallback<string> OnSelectCategory { get; set; }
@@ -146,24 +120,4 @@
     private string GetCategoryIcon(string categoryId) =>
         VisitorCategoryPresentationFormatter.GetCategoryIcon(categoryId, Categories);
 
-    private string GetPoiIcon(VisitorPoi poi) =>
-        VisitorCategoryPresentationFormatter.GetPoiIcon(poi, Categories);
-
-    private string GetPoiTone(string categoryId) =>
-        VisitorCategoryPresentationFormatter.GetCategoryTone(categoryId, Categories);
-
-    private string GetCategoryLabel(VisitorPoi poi) =>
-        string.IsNullOrWhiteSpace(poi.CategoryLabel)
-            ? Text.LocalizeCategoryLabel(Categories.FirstOrDefault(category => category.Id == poi.CategoryId)?.Label ?? poi.District)
-            : Text.LocalizeCategoryLabel(poi.CategoryLabel);
-
-    private static string Truncate(string text, int maxLength)
-    {
-        if (string.IsNullOrWhiteSpace(text) || text.Length <= maxLength)
-        {
-            return text;
-        }
-
-        return $"{text[..maxLength].TrimEnd()}...";
-    }
 }

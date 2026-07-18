@@ -1,0 +1,17 @@
+@using NarrationApp.Mobile.Features.Home
+
+<button type="button" class="city-lens" aria-label="@Text.Pick("Open the full city map", "Mở bản đồ thành phố đầy đủ")" @onclick="() => OnOpenMap.InvokeAsync()">
+    <span class="city-lens__heading">
+        <span>
+            <span class="city-lens__eyebrow">@Text.Pick("CITY LENS", "LĂNG KÍNH THÀNH PHỐ")</span>
+            <strong>@Text.Pick("See Saigon at a glance", "Ngắm Sài Gòn trong một thoáng")</strong>
+        </span>
+        <span class="city-lens__open" aria-hidden="true">@Text.Pick("Open map", "Mở bản đồ") →</span>
+    </span>
+    <span id="city-lens-map" class="city-lens-map" aria-hidden="true"></span>
+</button>
+
+@code {
+    [Parameter] public VisitorUiText Text { get; set; } = VisitorUiTextCatalog.ForLanguage("vi");
+    [Parameter] public EventCallback OnOpenMap { get; set; }
+}

@@ -5,6 +5,48 @@ namespace NarrationApp.Web.Tests.Mobile;
 public sealed class HomeMarkupTests
 {
     [Fact]
+    public void Mobile_home_wires_city_lens_to_full_map_and_existing_poi_detail_flow()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var homePath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Home.razor");
+        var markup = File.ReadAllText(homePath);
+
+        Assert.Contains("OnOpenMap=\"@(() => SwitchTabFromShell(VisitorTab.Map))\"", markup, StringComparison.Ordinal);
+        Assert.Contains("OnSelectPoi=\"OpenPoiDetailAsync\"", markup, StringComparison.Ordinal);
+        Assert.Contains("OnOpenSearch=\"OpenSearchOverlay\"", markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mobile_home_city_lens_runtime_uses_ordered_discover_pois_and_isolates_preview_disposal()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var runtimePath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Home.CityLensRuntime.razor.cs");
+        var source = File.ReadAllText(runtimePath);
+
+        Assert.Contains("_state.DiscoverPois", source, StringComparison.Ordinal);
+        Assert.Contains("VisitorMapSnapshotBuilder.Build(", source, StringComparison.Ordinal);
+        Assert.Contains("_state.CurrentTab != VisitorTab.Discover", source, StringComparison.Ordinal);
+        Assert.Contains("_state.CurrentStep != VisitorIntroStep.Ready", source, StringComparison.Ordinal);
+        Assert.Contains("new { interactive = false, markersInteractive = false, showRadius = false }", source, StringComparison.Ordinal);
+        Assert.Contains("\"city-lens-map\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"discover-map\"", source, StringComparison.Ordinal);
+        Assert.Contains("visitorMap.dispose", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mobile_home_renders_full_map_then_city_lens_in_stable_lifecycle_order()
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var startupPath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Home.Startup.razor.cs");
+        var source = File.ReadAllText(startupPath);
+        var mapIndex = source.IndexOf("await RenderMapIfNeededAsync();", StringComparison.Ordinal);
+        var cityLensIndex = source.IndexOf("await RenderCityLensIfNeededAsync();", StringComparison.Ordinal);
+
+        Assert.True(mapIndex >= 0, "Full map lifecycle call is missing.");
+        Assert.True(cityLensIndex > mapIndex, "City Lens must render after the full map lifecycle call.");
+    }
+
+    [Fact]
     public void Tour_and_map_sheet_distance_presentations_require_reliable_distance()
     {
         var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));

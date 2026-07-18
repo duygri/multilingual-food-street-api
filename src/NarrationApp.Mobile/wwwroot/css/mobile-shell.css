@@ -102,6 +102,20 @@
     box-sizing: border-box;
 }
 
+/* City Lens owns a passive map surface; all interaction belongs to its outer button. */
+#city-lens-map,
+#city-lens-map .mapboxgl-map,
+#city-lens-map .mapboxgl-canvas-container,
+#city-lens-map .mapboxgl-canvas {
+    touch-action: none;
+    pointer-events: none;
+}
+
+#city-lens-map .mapboxgl-control-container,
+#city-lens-map .visitor-map-offline__badge {
+    display: none;
+}
+
 .mini-player {
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
