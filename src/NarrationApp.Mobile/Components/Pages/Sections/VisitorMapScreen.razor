@@ -23,7 +23,7 @@
                                 type="button"
                                 class="category-chip @CategoryChipClassSelector(category.Id)"
                                 @onclick="() => OnSelectCategory.InvokeAsync(category.Id)">
-                                <span>@CategoryIconSelector(category.Id)</span>
+                                <VisitorIcon Name="@CategoryIconSelector(category.Id)" />
                                 <span>@Text.LocalizeCategoryLabel(category.Label)</span>
                             </button>
                         }
@@ -112,7 +112,7 @@
                 <section class="poi-sheet poi-sheet--floating">
                     <div class="poi-sheet__grabber"></div>
                     <div class="poi-sheet__head">
-                        <div class="poi-sheet__icon">@CategoryIconSelector(State.SelectedPoi.CategoryId)</div>
+                        <div class="poi-sheet__icon"><VisitorIcon Name="@CategoryIconSelector(State.SelectedPoi.CategoryId)" /></div>
                         <div class="poi-sheet__title">
                             <h3>@State.SelectedPoi.Name</h3>
                             <span class="poi-sheet__badge">@PoiCategoryLabelSelector(State.SelectedPoi)</span>

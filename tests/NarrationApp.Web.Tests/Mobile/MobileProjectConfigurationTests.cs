@@ -1,14 +1,17 @@
+using System.Security.Cryptography;
+
 namespace NarrationApp.Web.Tests.Mobile;
 
 public sealed class MobileProjectConfigurationTests
 {
     [Theory]
-    [InlineData("Lora-OFL.txt", "Copyright 2011 The Lora Project Authors", "Reserved Font Name \"Lora\"")]
-    [InlineData("BeVietnamPro-OFL.txt", "Copyright 2021 The Be Vietnam Pro Project Authors", "Reserved Font Name")]
+    [InlineData("Lora-OFL.txt", "Copyright 2011 The Lora Project Authors", "Reserved Font Name \"Lora\"", "1D9A970809AC804B582A6CE7F0EBC4E7FEFCBFD7FF6299CAD35EE656A21BE716")]
+    [InlineData("BeVietnamPro-OFL.txt", "Copyright 2021 The Be Vietnam Pro Project Authors", "Reserved Font Name", "6B7F8F73609A25EA78C891E34CF37B06F8A676B7EA986E941E43B009110F2A85")]
     public void Mobile_project_bundles_exact_upstream_font_license_notices(
         string fileName,
         string copyrightNotice,
-        string reservedFontNameNotice)
+        string reservedFontNameNotice,
+        string expectedSha256)
     {
         var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
         var fontsRoot = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "wwwroot", "fonts");
@@ -20,6 +23,7 @@ public sealed class MobileProjectConfigurationTests
         Assert.Contains("SIL OPEN FONT LICENSE Version 1.1", license, StringComparison.Ordinal);
         Assert.Contains(copyrightNotice, license, StringComparison.Ordinal);
         Assert.Contains(reservedFontNameNotice, license, StringComparison.Ordinal);
+        Assert.Equal(expectedSha256, Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(licensePath))));
 
         var readme = File.ReadAllText(Path.Combine(fontsRoot, "README.md"));
         Assert.Contains(fileName, readme, StringComparison.Ordinal);

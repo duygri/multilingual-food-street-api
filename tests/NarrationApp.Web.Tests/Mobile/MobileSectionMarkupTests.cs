@@ -12,6 +12,8 @@ public sealed class MobileSectionMarkupTests
     [InlineData("VisitorPoiDetailScreen.razor", "<VisitorIcon Name=\"@GetPoiIcon()\" />", ">@GetPoiIcon()</div>")]
     [InlineData("VisitorPoiDetailScreen.razor", "<VisitorIcon Name=\"@GetRelatedPoiIcon(relatedPoi)\" />", "@GetRelatedPoiIcon(relatedPoi)</span>")]
     [InlineData("VisitorFullPlayerScreen.razor", "<VisitorIcon Name=\"@GetPoiIcon()\" />", ">@GetPoiIcon()</div>")]
+    [InlineData("VisitorMapScreen.razor", "<VisitorIcon Name=\"@CategoryIconSelector(category.Id)\" />", "@CategoryIconSelector(category.Id)</span>")]
+    [InlineData("VisitorMapScreen.razor", "<VisitorIcon Name=\"@CategoryIconSelector(State.SelectedPoi.CategoryId)\" />", ">@CategoryIconSelector(State.SelectedPoi.CategoryId)</div>")]
     public void Mobile_formatter_consumers_render_icon_keys_through_visitor_icon(
         string fileName,
         string expectedComponent,
