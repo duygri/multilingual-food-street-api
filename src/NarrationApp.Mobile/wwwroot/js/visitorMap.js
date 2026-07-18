@@ -55,8 +55,14 @@ window.visitorMap = (() => {
 
         mapboxgl.accessToken = accessToken;
 
+        const optionsKey = `${mapOptions.interactive ? 1 : 0}|${mapOptions.markersInteractive ? 1 : 0}|${mapOptions.showRadius ? 1 : 0}|${mapOptions.cluster ? 1 : 0}`;
         let instance = instances.get(containerId);
         if (instance && (instance.container !== container || !document.contains(instance.container))) {
+            clearMapboxInstance(containerId);
+            instance = null;
+        }
+
+        if (instance && instance.optionsKey !== optionsKey) {
             clearMapboxInstance(containerId);
             instance = null;
         }
@@ -71,6 +77,8 @@ window.visitorMap = (() => {
                 interactive: mapOptions.interactive,
                 attributionControl: false
             });
+            map.getCanvas().setAttribute("tabindex", "-1");
+            map.getCanvas().setAttribute("aria-hidden", "true");
 
             if (!mapOptions.interactive) {
                 map.boxZoom.disable();
@@ -86,6 +94,7 @@ window.visitorMap = (() => {
                 containerId,
                 container,
                 map,
+                optionsKey,
                 markers: [],
                 userMarker: null,
                 userLocation: snapshot.userLocation,

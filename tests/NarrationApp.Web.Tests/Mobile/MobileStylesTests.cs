@@ -26,6 +26,7 @@ public sealed class MobileStylesTests
     public void Mobile_discover_story_feed_and_theme_chips_are_scroll_safe_and_tokenized()
     {
         var css = ReadMobileCss();
+        var discoveryCss = ReadMobileCss("mobile-discovery.css");
 
         Assert.Contains(".theme-chips", css, StringComparison.Ordinal);
         Assert.Contains("overflow-x: auto;", css, StringComparison.Ordinal);
@@ -34,6 +35,8 @@ public sealed class MobileStylesTests
         Assert.Contains("var(--sgk-brand)", css, StringComparison.Ordinal);
         Assert.Contains("var(--sgk-audio)", css, StringComparison.Ordinal);
         Assert.Contains(".city-lens:focus-visible", css, StringComparison.Ordinal);
+        Assert.Contains(".discover-header h1", discoveryCss, StringComparison.Ordinal);
+        Assert.DoesNotContain(".discover-header--editorial h1", discoveryCss, StringComparison.Ordinal);
     }
 
     [Fact]

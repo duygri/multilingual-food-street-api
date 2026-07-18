@@ -21,6 +21,10 @@ public sealed class VisitorMapScriptTests
         Assert.Contains("document.createElement(mapOptions.markersInteractive ? \"button\" : \"div\")", script, StringComparison.Ordinal);
         Assert.Contains("if (mapOptions.showRadius)", script, StringComparison.Ordinal);
         Assert.Contains("if (mapOptions.interactive && hasRenderableRoute(snapshot.route))", script, StringComparison.Ordinal);
+        Assert.Contains("const optionsKey", script, StringComparison.Ordinal);
+        Assert.Contains("instance.optionsKey !== optionsKey", script, StringComparison.Ordinal);
+        Assert.Contains("map.getCanvas().setAttribute(\"tabindex\", \"-1\")", script, StringComparison.Ordinal);
+        Assert.Contains("map.getCanvas().setAttribute(\"aria-hidden\", \"true\")", script, StringComparison.Ordinal);
     }
 
     [Fact]

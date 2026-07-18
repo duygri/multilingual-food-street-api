@@ -12,7 +12,7 @@ public sealed class HomeMarkupTests
         var markup = File.ReadAllText(homePath);
 
         Assert.Contains("OnOpenMap=\"@(() => SwitchTabFromShell(VisitorTab.Map))\"", markup, StringComparison.Ordinal);
-        Assert.Contains("OnSelectPoi=\"OpenPoiDetailAsync\"", markup, StringComparison.Ordinal);
+        Assert.Contains("OnSelectPoi=\"ListenToPoiAsync\"", markup, StringComparison.Ordinal);
         Assert.Contains("OnOpenSearch=\"OpenSearchOverlay\"", markup, StringComparison.Ordinal);
     }
 
@@ -31,6 +31,10 @@ public sealed class HomeMarkupTests
         Assert.Contains("\"city-lens-map\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("\"discover-map\"", source, StringComparison.Ordinal);
         Assert.Contains("visitorMap.dispose", source, StringComparison.Ordinal);
+
+        var disposalPath = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "Components", "Pages", "Home.RuntimeDisposal.razor.cs");
+        var disposalSource = File.ReadAllText(disposalPath);
+        Assert.Contains("DisposeJsResourceAsync(\"visitorMap.dispose\", \"city-lens-map\")", disposalSource, StringComparison.Ordinal);
     }
 
     [Fact]

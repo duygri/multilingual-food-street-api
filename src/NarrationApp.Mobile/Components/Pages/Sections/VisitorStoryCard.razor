@@ -27,10 +27,10 @@
                 {
                     <span>@Poi.DistanceMeters m</span>
                 }
-                <span><span aria-hidden="true">◉</span> @Poi.AudioDuration</span>
+                <span><VisitorIcon Name="audio" /> @Poi.AudioDuration</span>
             </span>
             <button type="button" class="story-card__listen" @onclick="() => OnListen.InvokeAsync(Poi.Id)">
-                <span aria-hidden="true">▶</span><span>@Text.Pick("Listen", "Nghe câu chuyện")</span>
+                <VisitorIcon Name="audio" /><span>@Text.Pick("Listen", "Nghe câu chuyện")</span>
             </button>
         </div>
     </div>

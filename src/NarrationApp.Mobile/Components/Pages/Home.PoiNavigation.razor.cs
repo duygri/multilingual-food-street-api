@@ -15,6 +15,12 @@ public partial class Home
         await OpenDiscoverPoiDetailCoreAsync(poiId);
     }
 
+    private async Task ListenToPoiAsync(string poiId)
+    {
+        await OpenDiscoverPoiDetailCoreAsync(poiId);
+        await PlaySelectedPoiAsync();
+    }
+
     private void ClosePoiDetail()
     {
         CloseDiscoverPoiDetailSelection();

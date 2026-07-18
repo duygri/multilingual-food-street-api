@@ -47,6 +47,9 @@ public sealed class MobileSectionMarkupTests
         Assert.DoesNotContain("!Poi.District.Contains(\"TP.HCM\"", markup, StringComparison.Ordinal);
         Assert.Contains("@if (Poi.HasReliableDistance)", markup, StringComparison.Ordinal);
         Assert.Contains("Poi.AudioDuration", markup, StringComparison.Ordinal);
+        Assert.Contains("<VisitorIcon Name=\"audio\" />", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("▶", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("◉", markup, StringComparison.Ordinal);
         Assert.Equal(1, CountOccurrences(markup, "story-card__listen"));
         Assert.Contains("Text.Pick(\"Listen\", \"Nghe câu chuyện\")", markup, StringComparison.Ordinal);
         Assert.Contains("OnListen.InvokeAsync(Poi.Id)", markup, StringComparison.Ordinal);
