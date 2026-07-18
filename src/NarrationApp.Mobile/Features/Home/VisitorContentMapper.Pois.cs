@@ -53,7 +53,7 @@ public static partial class VisitorContentMapper
                     Name: poi.Name,
                     CategoryId: ResolveCategoryId(poi, categoriesById),
                     CategoryLabel: BuildCategoryLabel(poi, categoriesById),
-                    District: BuildAreaLabel(poi),
+                    District: "TP.HCM",
                     StoryTag: BuildStoryTag(poi, readyAudioLanguageCodes),
                     Description: poi.Description,
                     Highlight: ResolveDefaultHighlight(poi),
@@ -203,28 +203,6 @@ public static partial class VisitorContentMapper
             "river" => "Ven sông",
             _ => "Di tích"
         };
-    }
-
-    private static string BuildAreaLabel(PoiDto poi)
-    {
-        var normalized = $"{poi.Name} {poi.Slug}".ToLowerInvariant();
-
-        if (normalized.Contains("khánh hội") || normalized.Contains("xóm chiếu"))
-        {
-            return "Q4, Xóm Chiếu";
-        }
-
-        if (normalized.Contains("bến thành") || normalized.Contains("đức bà") || normalized.Contains("nguyễn huệ"))
-        {
-            return "Q1, Trung tâm";
-        }
-
-        if (normalized.Contains("nhà rồng") || normalized.Contains("bến"))
-        {
-            return "Q4, Bến Nhà Rồng";
-        }
-
-        return poi.Lat < 10.7670 ? "Q4, Khánh Hội" : "Q1, Sài Gòn";
     }
 
     private static string ResolveCategoryId(PoiDto poi, IReadOnlyDictionary<int, CategoryDto> categoriesById)

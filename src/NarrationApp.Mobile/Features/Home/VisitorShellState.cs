@@ -34,7 +34,7 @@ public sealed partial class VisitorShellState
 
     public VisitorIntroStep CurrentStep { get; private set; } = VisitorIntroStep.Welcome;
 
-    public VisitorTab CurrentTab { get; private set; } = VisitorTab.Map;
+    public VisitorTab CurrentTab { get; private set; } = VisitorTab.Discover;
 
     public VisitorSettingsScreen CurrentSettingsScreen { get; private set; } = VisitorSettingsScreen.Overview;
 
@@ -149,7 +149,6 @@ public sealed partial class VisitorShellState
 
     public IReadOnlyList<VisitorPoi> FeaturedPois =>
         _featuredPoisCache ??= FilteredPois
-            .OrderBy(poi => poi.DistanceMeters)
             .Take(5)
             .ToArray();
 
@@ -158,7 +157,6 @@ public sealed partial class VisitorShellState
 
     public IReadOnlyList<VisitorPoi> FeaturedDiscoverPois =>
         _featuredDiscoverPoisCache ??= DiscoverPois
-            .OrderBy(poi => poi.DistanceMeters)
             .Take(5)
             .ToArray();
 
@@ -185,7 +183,7 @@ public sealed partial class VisitorShellState
             languages: VisitorLanguageCatalog.Defaults.ToList(),
             categories:
             [
-                new VisitorCategory("all", "Tất cả", "🏷️", "is-history")
+                new VisitorCategory("all", "Tất cả", "map", "is-history")
             ],
             pois: [],
             notifications: includeDemoNotifications

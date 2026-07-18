@@ -11,12 +11,13 @@ public sealed partial class VisitorShellState
         LocationStatusLabel = VisitorLocationStatusFormatter.Build(location);
 
         var projectedPois = VisitorPoiDistanceProjector.Apply(_pois, location);
-        if (!ReferenceEquals(projectedPois, _pois))
-        {
-            _pois.Clear();
-            _pois.AddRange(projectedPois);
-            InvalidatePoiViews();
-        }
+        var orderedPois = VisitorPoiPresentationOrder.Apply(
+            projectedPois,
+            VisitorGeoMath.TryGetCoordinates(location, out _, out _));
+
+        _pois.Clear();
+        _pois.AddRange(orderedPois);
+        InvalidatePoiViews();
     }
 
     public void ApplyProximityFocus(VisitorProximityMatch? proximity)

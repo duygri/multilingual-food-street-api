@@ -10,7 +10,7 @@ public sealed class VisitorShellStateTests
         var state = VisitorShellState.CreateDefault();
 
         Assert.Equal(VisitorIntroStep.Welcome, state.CurrentStep);
-        Assert.Equal(VisitorTab.Map, state.CurrentTab);
+        Assert.Equal(VisitorTab.Discover, state.CurrentTab);
         Assert.Equal(VisitorSettingsScreen.Overview, state.CurrentSettingsScreen);
         Assert.NotEmpty(state.Pois);
     }
@@ -21,6 +21,7 @@ public sealed class VisitorShellStateTests
         var state = VisitorShellState.CreateRuntimeDefault();
 
         Assert.Equal(VisitorIntroStep.Welcome, state.CurrentStep);
+        Assert.Equal(VisitorTab.Discover, state.CurrentTab);
         Assert.Empty(state.Pois);
         Assert.Empty(state.Tours);
         Assert.Equal(["all"], state.Categories.Select(category => category.Id));
@@ -28,6 +29,19 @@ public sealed class VisitorShellStateTests
         Assert.Empty(state.ListeningHistoryDays);
         Assert.True(state.IsUsingFallbackData);
         Assert.Equal("Đang chờ đồng bộ dữ liệu từ máy chủ.", state.SyncMessage);
+    }
+
+    [Fact]
+    public void CreateRuntimeDefault_LandsOnDiscoverAfterOnboarding()
+    {
+        var state = VisitorShellState.CreateRuntimeDefault();
+
+        state.ContinueFromWelcome();
+        state.AdvanceFromLanguageSelection();
+        state.CompletePermissions(granted: true);
+
+        Assert.Equal(VisitorIntroStep.Ready, state.CurrentStep);
+        Assert.Equal(VisitorTab.Discover, state.CurrentTab);
     }
 
     [Fact]
@@ -110,7 +124,7 @@ public sealed class VisitorShellStateTests
         state.CompletePermissions(granted: true);
 
         Assert.Equal(VisitorIntroStep.Ready, state.CurrentStep);
-        Assert.Equal(VisitorTab.Map, state.CurrentTab);
+        Assert.Equal(VisitorTab.Discover, state.CurrentTab);
         Assert.Equal("en", state.SelectedLanguageCode);
         Assert.True(state.LocationPermissionGranted);
     }
@@ -175,7 +189,61 @@ public sealed class VisitorShellStateTests
         state.SetSearchTerm("banh");
 
         var matchingPoi = Assert.Single(state.FilteredPois);
-        Assert.Equal("Tiệm Bánh Mì Cô Lan", matchingPoi.Name);
+        Assert.Equal("Minh họa • Bánh mì Thủ Đức", matchingPoi.Name);
+    }
+
+    [Fact]
+    public void ApplyContent_OrdersPoisBeforeApplyingExistingFilters()
+    {
+        var state = VisitorShellState.CreateRuntimeDefault();
+        state.ApplyContent(new VisitorContentSnapshot(
+            [
+                CreateOrderingPoi("poi-z", "food", priority: 2, distanceMeters: 1),
+                CreateOrderingPoi("poi-b", "food", priority: 8, distanceMeters: 900),
+                CreateOrderingPoi("poi-a", "history", priority: 8, distanceMeters: 10)
+            ],
+            [],
+            [
+                new VisitorCategory("food", "Ẩm thực", "audio"),
+                new VisitorCategory("history", "Lịch sử", "history")
+            ]));
+
+        Assert.Equal(["poi-a", "poi-b", "poi-z"], state.Pois.Select(poi => poi.Id));
+
+        state.SelectCategory("food");
+
+        Assert.Equal(["poi-b", "poi-z"], state.FilteredPois.Select(poi => poi.Id));
+    }
+
+    [Fact]
+    public void UpdateLocation_ReordersPoisByProjectedDistanceWithoutLosingSelectionOrFilters()
+    {
+        var state = VisitorShellState.CreateRuntimeDefault();
+        state.ApplyContent(new VisitorContentSnapshot(
+            [
+                CreateOrderingPoi("poi-far", "food", priority: 5, distanceMeters: 10, latitude: 10.80),
+                CreateOrderingPoi("poi-near", "food", priority: 5, distanceMeters: 900, latitude: 10.70),
+                CreateOrderingPoi("poi-other", "history", priority: 9, distanceMeters: 1, latitude: 10.75)
+            ],
+            [],
+            [
+                new VisitorCategory("food", "Ẩm thực", "audio"),
+                new VisitorCategory("history", "Lịch sử", "history")
+            ]));
+        state.SelectCategory("food");
+        state.PreviewPoi("poi-near");
+
+        state.UpdateLocation(new VisitorLocationSnapshot(
+            PermissionGranted: true,
+            IsLocationAvailable: true,
+            Latitude: 10.70,
+            Longitude: 106.70,
+            StatusLabel: "GPS live"));
+
+        Assert.Equal(["poi-other", "poi-near", "poi-far"], state.Pois.Select(poi => poi.Id));
+        Assert.Equal(["poi-near", "poi-far"], state.FilteredPois.Select(poi => poi.Id));
+        Assert.Equal("food", state.SelectedCategoryId);
+        Assert.Equal("poi-near", state.SelectedPoiId);
     }
 
     [Fact]
@@ -757,7 +825,7 @@ public sealed class VisitorShellStateTests
         Assert.Equal(0, state.ActiveTourSession.CurrentStopSequence);
         Assert.Equal(4, state.ActiveTourSession.TotalStops);
         Assert.Equal("poi-khanh-hoi-bridge", state.ActiveTourSession.NextPoiId);
-        Assert.Equal("Cầu Khánh Hội", state.ActiveTourSession.NextPoiName);
+        Assert.Equal("Minh họa • Bưu điện Trung tâm", state.ActiveTourSession.NextPoiName);
     }
 
     [Fact]
@@ -775,7 +843,7 @@ public sealed class VisitorShellStateTests
         Assert.True(firstPoiAccepted);
         Assert.Equal(1, state.ActiveTourSession.CurrentStopSequence);
         Assert.Equal("poi-ben-nha-rong", state.ActiveTourSession.NextPoiId);
-        Assert.Equal("Bến Nhà Rồng", state.ActiveTourSession.NextPoiName);
+        Assert.Equal("Minh họa • Rừng ngập mặn Cần Giờ", state.ActiveTourSession.NextPoiName);
     }
 
     [Fact]
@@ -940,4 +1008,28 @@ public sealed class VisitorShellStateTests
         Assert.True(state.ShowPoiSheet);
         Assert.True(state.ShowMiniPlayer);
     }
+
+    private static VisitorPoi CreateOrderingPoi(
+        string id,
+        string categoryId,
+        int priority,
+        int distanceMeters,
+        double latitude = 10.7769) =>
+        new(
+            id,
+            id,
+            categoryId,
+            categoryId,
+            "TP.HCM",
+            "Test",
+            "Test POI",
+            "Test",
+            50,
+            50,
+            distanceMeters,
+            "1:00",
+            "Sẵn sàng",
+            latitude,
+            106.70,
+            Priority: priority);
 }

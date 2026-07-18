@@ -16,6 +16,57 @@ namespace NarrationApp.Web.Tests.Mobile;
 public sealed class VisitorContentServiceTests
 {
     [Fact]
+    public void Map_UsesNeutralCityLabelRegardlessOfPoiNameOrCoordinates()
+    {
+        IReadOnlyList<PoiDto> pois =
+        [
+            new PoiDto
+            {
+                Id = 501,
+                Name = "Xóm Chiếu",
+                Slug = "xom-chieu",
+                Lat = 10.7600,
+                Lng = 106.7000,
+                Description = "Tên gợi nhớ một khu vực nhưng API không cung cấp quận.",
+                TtsScript = "Minh họa",
+                Status = PoiStatus.Published
+            },
+            new PoiDto
+            {
+                Id = 502,
+                Name = "Bến Thành",
+                Slug = "ben-thanh",
+                Lat = 10.7800,
+                Lng = 106.7000,
+                Description = "Tọa độ không phải dữ liệu nhãn khu vực.",
+                TtsScript = "Minh họa",
+                Status = PoiStatus.Published
+            }
+        ];
+
+        var mapped = VisitorContentMapper.Map(pois, [], [], VisitorLocationSnapshot.Disabled());
+
+        Assert.All(mapped.Pois, poi => Assert.Equal("TP.HCM", poi.District));
+        Assert.DoesNotContain(mapped.Pois, poi => poi.District.Contains("Q1", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(mapped.Pois, poi => poi.District.Contains("Q4", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void CreateDemo_IsClearlyIllustrativeCitywideFallbackContentWithVectorCategoryKeys()
+    {
+        var demo = VisitorContentSnapshot.CreateDemo();
+
+        Assert.All(demo.Pois, poi => Assert.StartsWith("Minh họa • ", poi.Name, StringComparison.Ordinal));
+        Assert.Contains(demo.Pois, poi => poi.Name.Contains("Chợ Lớn", StringComparison.Ordinal));
+        Assert.Contains(demo.Pois, poi => poi.Name.Contains("Thủ Đức", StringComparison.Ordinal));
+        Assert.Contains(demo.Pois, poi => poi.Name.Contains("Cần Giờ", StringComparison.Ordinal));
+        Assert.All(demo.Categories!, category => Assert.Contains(category.MarkerLabel, ["audio", "history", "map", "journey"]));
+
+        var fallbackState = VisitorShellState.CreateDefault();
+        Assert.True(fallbackState.IsUsingFallbackData);
+    }
+
+    [Fact]
     public async Task LoadAsync_ReturnsLiveContentWhenApiSucceeds()
     {
         var poiResponse = new ApiResponse<IReadOnlyList<PoiDto>>
@@ -120,6 +171,7 @@ public sealed class VisitorContentServiceTests
 
         Assert.False(result.IsFallback);
         Assert.Equal("Live API", result.SourceLabel);
+        Assert.DoesNotContain(result.Content.Pois, poi => poi.Name.StartsWith("Minh họa • ", StringComparison.Ordinal));
         var category = Assert.Single(result.Content.Categories!);
         Assert.Equal("di-tich", category.Id);
         Assert.Equal("Di tích", category.Label);

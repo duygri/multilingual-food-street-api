@@ -12,7 +12,9 @@ public sealed partial class VisitorShellState
         _categories.AddRange(VisitorCategoryFilterBuilder.Build(snapshot));
 
         _pois.Clear();
-        _pois.AddRange(snapshot.Pois);
+        _pois.AddRange(VisitorPoiPresentationOrder.Apply(
+            snapshot.Pois,
+            VisitorGeoMath.TryGetCoordinates(CurrentLocation, out _, out _)));
         InvalidatePoiViews();
 
         _tours.Clear();
