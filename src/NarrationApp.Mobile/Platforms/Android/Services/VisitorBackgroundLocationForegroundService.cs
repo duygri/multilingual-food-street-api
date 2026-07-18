@@ -148,11 +148,6 @@ public class VisitorBackgroundLocationForegroundService : Service
     private void EnsureNotificationChannelApi26()
     {
         var manager = (NotificationManager?)GetSystemService(NotificationService);
-        if (manager?.GetNotificationChannel(NotificationChannelId) is not null)
-        {
-            return;
-        }
-
         var languageCode = Preferences.Default.Get(VisitorBrand.PreferredAppLanguageCodeKey, "vi");
         var copy = VisitorBrand.BackgroundTrackingNotification(languageCode, 12);
         var channel = new NotificationChannel(

@@ -74,10 +74,14 @@ public sealed class VisitorUiTextCatalogTests
         var vietnamese = VisitorBrand.BackgroundTrackingNotification("vi", 12);
         Assert.Equal("Sài Gòn Kể", vietnamese.Title);
         Assert.Equal("Đang theo dõi vị trí trong nền • chu kỳ 12 giây", vietnamese.Body);
+        Assert.Equal("Theo dõi vị trí trong nền", vietnamese.ChannelName);
+        Assert.Equal("Duy trì vị trí để phát thuyết minh khi bạn đến gần một địa điểm.", vietnamese.ChannelDescription);
 
         var english = VisitorBrand.BackgroundTrackingNotification("en", 12);
         Assert.Equal("Sai Gon Ke", english.Title);
         Assert.Equal("Background location tracking is active • every 12 seconds", english.Body);
+        Assert.Equal("Background location tracking", english.ChannelName);
+        Assert.Equal("Keeps location active for nearby place narration while the app is in the background.", english.ChannelDescription);
     }
 
     [Fact]

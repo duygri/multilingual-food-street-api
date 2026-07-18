@@ -150,6 +150,11 @@ public sealed class MobileProjectConfigurationTests
         Assert.Contains("VisitorBrand.BackgroundTrackingNotification", notificationSource, StringComparison.Ordinal);
         Assert.Contains(".SetContentTitle(copy.Title)", notificationSource, StringComparison.Ordinal);
         Assert.Contains(".SetContentText(copy.Body)", notificationSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("GetNotificationChannel(NotificationChannelId)", notificationSource, StringComparison.Ordinal);
+        Assert.Contains("Preferences.Default.Get(VisitorBrand.PreferredAppLanguageCodeKey, \"vi\")", notificationSource, StringComparison.Ordinal);
+        Assert.Contains("NotificationChannelId,\n            copy.ChannelName,\n            NotificationImportance.Low", notificationSource.Replace("\r\n", "\n", StringComparison.Ordinal), StringComparison.Ordinal);
+        Assert.Contains("Description = copy.ChannelDescription", notificationSource, StringComparison.Ordinal);
+        Assert.Contains("manager?.CreateNotificationChannel(channel);", notificationSource, StringComparison.Ordinal);
         Assert.DoesNotContain("Food Street Visitor", notificationSource, StringComparison.Ordinal);
         Assert.DoesNotContain("Background tracking đang chạy", notificationSource, StringComparison.Ordinal);
     }
