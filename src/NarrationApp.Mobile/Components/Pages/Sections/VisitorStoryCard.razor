@@ -42,8 +42,7 @@
     [Parameter] public IReadOnlyList<VisitorCategory> Categories { get; set; } = [];
     [Parameter] public EventCallback<string> OnListen { get; set; }
 
-    private bool ShowCityLabel => !Poi.District.Contains("TP.HCM", StringComparison.OrdinalIgnoreCase)
-        && !Poi.District.Contains("Ho Chi Minh", StringComparison.OrdinalIgnoreCase);
+    private bool ShowCityLabel => !string.IsNullOrWhiteSpace(Poi.District);
     private string GetPoiIcon() => VisitorCategoryPresentationFormatter.GetPoiIcon(Poi, Categories);
     private string GetPoiTone() => VisitorCategoryPresentationFormatter.GetCategoryTone(Poi.CategoryId, Categories);
     private string GetCategoryLabel() => string.IsNullOrWhiteSpace(Poi.CategoryLabel)
