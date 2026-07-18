@@ -40,7 +40,7 @@
                 type="button"
                 class="category-chip @(SelectedCategoryId == category.Id ? "is-selected" : string.Empty)"
                 @onclick="() => OnSelectCategory.InvokeAsync(category.Id)">
-                <span>@GetCategoryIcon(category.Id)</span>
+                <VisitorIcon Name="@GetCategoryIcon(category.Id)" />
                 <span>@Text.LocalizeCategoryLabel(category.Label)</span>
             </button>
         }
@@ -99,7 +99,7 @@
                         else
                         {
                             <div class="discover-poi-card__image-fallback @GetPoiTone(poi.CategoryId)">
-                                <span>@GetPoiIcon(poi)</span>
+                                <VisitorIcon Name="@GetPoiIcon(poi)" />
                             </div>
                         }
                     </div>

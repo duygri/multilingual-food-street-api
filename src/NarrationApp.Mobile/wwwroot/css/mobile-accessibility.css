@@ -1,0 +1,15 @@
+/* Mandatory interaction guards live last in the cascade and use !important narrowly
+   so later component styles cannot reduce hit targets or hide keyboard focus. */
+:where(button, input, select, textarea, [role="button"]) {
+    min-block-size: 44px !important;
+}
+
+:where(button, [role="button"]) {
+    min-inline-size: 44px !important;
+}
+
+:where(button, input, select, textarea, [role="button"]):focus-visible {
+    outline: 3px solid var(--sgk-focus) !important;
+    outline-offset: 3px !important;
+    box-shadow: 0 0 0 2px var(--sgk-surface), 0 0 0 5px var(--sgk-focus) !important;
+}

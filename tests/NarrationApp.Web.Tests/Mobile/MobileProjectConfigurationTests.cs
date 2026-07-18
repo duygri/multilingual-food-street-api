@@ -2,6 +2,34 @@ namespace NarrationApp.Web.Tests.Mobile;
 
 public sealed class MobileProjectConfigurationTests
 {
+    [Theory]
+    [InlineData("Lora-OFL.txt", "Copyright 2011 The Lora Project Authors", "Reserved Font Name \"Lora\"")]
+    [InlineData("BeVietnamPro-OFL.txt", "Copyright 2021 The Be Vietnam Pro Project Authors", "Reserved Font Name")]
+    public void Mobile_project_bundles_exact_upstream_font_license_notices(
+        string fileName,
+        string copyrightNotice,
+        string reservedFontNameNotice)
+    {
+        var projectRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+        var fontsRoot = Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "wwwroot", "fonts");
+        var licensePath = Path.Combine(fontsRoot, fileName);
+
+        Assert.True(File.Exists(licensePath), $"Expected bundled license '{fileName}'.");
+        var license = File.ReadAllText(licensePath);
+        Assert.False(string.IsNullOrWhiteSpace(license));
+        Assert.Contains("SIL OPEN FONT LICENSE Version 1.1", license, StringComparison.Ordinal);
+        Assert.Contains(copyrightNotice, license, StringComparison.Ordinal);
+        Assert.Contains(reservedFontNameNotice, license, StringComparison.Ordinal);
+
+        var readme = File.ReadAllText(Path.Combine(fontsRoot, "README.md"));
+        Assert.Contains(fileName, readme, StringComparison.Ordinal);
+        Assert.Contains("389b770410cc0b7c21c85673bfa2077420fe7f65", readme, StringComparison.Ordinal);
+
+        var projectFile = File.ReadAllText(Path.Combine(projectRoot, "src", "NarrationApp.Mobile", "NarrationApp.Mobile.csproj"));
+        Assert.Contains("<MauiAsset Include=\"wwwroot\\fonts\\*-OFL.txt\"", projectFile, StringComparison.Ordinal);
+        Assert.Contains("LogicalName=\"wwwroot/fonts/%(Filename)%(Extension)\"", projectFile, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void Mobile_project_bundles_documented_vietnamese_font_assets()
     {

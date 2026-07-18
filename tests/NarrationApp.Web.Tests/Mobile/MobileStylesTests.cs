@@ -6,6 +6,25 @@ namespace NarrationApp.Web.Tests.Mobile;
 public sealed class MobileStylesTests
 {
     [Fact]
+    public void Mobile_accessibility_guard_wins_the_component_cascade_for_every_control_type()
+    {
+        var webRoot = GetMobileWebRoot();
+        var entryCss = File.ReadAllText(Path.Combine(webRoot, "app.css")).ReplaceLineEndings("\n");
+        var guardImport = "@import url(\"css/mobile-accessibility.css\");";
+        var guardCss = ReadMobileCss("mobile-accessibility.css").ReplaceLineEndings("\n");
+
+        Assert.EndsWith(guardImport, entryCss.Trim(), StringComparison.Ordinal);
+        Assert.Contains(":where(button, input, select, textarea, [role=\"button\"])", guardCss, StringComparison.Ordinal);
+        Assert.Contains("min-block-size: 44px !important;", guardCss, StringComparison.Ordinal);
+        Assert.Contains(":where(button, [role=\"button\"])", guardCss, StringComparison.Ordinal);
+        Assert.Contains("min-inline-size: 44px !important;", guardCss, StringComparison.Ordinal);
+        Assert.Contains(":focus-visible", guardCss, StringComparison.Ordinal);
+        Assert.Contains("outline: 3px solid var(--sgk-focus) !important;", guardCss, StringComparison.Ordinal);
+        Assert.Contains("box-shadow: 0 0 0 2px var(--sgk-surface), 0 0 0 5px var(--sgk-focus) !important;", guardCss, StringComparison.Ordinal);
+        Assert.DoesNotContain("outline: none", guardCss, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Mobile_foundation_defines_sai_gon_ke_tokens_fonts_and_accessibility_guards()
     {
         var css = ReadMobileCss("mobile-foundation.css");

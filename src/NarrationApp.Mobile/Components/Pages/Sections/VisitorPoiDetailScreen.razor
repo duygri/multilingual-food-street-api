@@ -12,7 +12,7 @@
         }
         else
         {
-            <div class="poi-detail-hero__icon">@GetPoiIcon()</div>
+            <div class="poi-detail-hero__icon"><VisitorIcon Name="@GetPoiIcon()" /></div>
         }
     </header>
 
@@ -133,7 +133,7 @@
                             class="poi-detail-related__item"
                             @onclick="() => OnSelectRelatedPoi.InvokeAsync(relatedPoi.Id)">
                             <div class="poi-detail-related__icon @GetHeroTone(relatedPoi.CategoryId)">
-                                <span>@GetRelatedPoiIcon(relatedPoi)</span>
+                                <VisitorIcon Name="@GetRelatedPoiIcon(relatedPoi)" />
                             </div>
                             <div class="poi-detail-related__copy">
                                 <strong>@relatedPoi.Name</strong>

@@ -20,7 +20,7 @@ public enum VisitorTab
 
 public sealed record VisitorLanguageOption(string Code, string Label, string SubLabel, string ChipLabel);
 
-/// <param name="MarkerLabel">A stable <c>VisitorIcon</c> name, not display text or an emoji glyph.</param>
+/// <param name="MarkerLabel">A preferred <c>VisitorIcon</c> name; raw configured values are normalized by <see cref="VisitorCategoryPresentationFormatter"/> before presentation.</param>
 public sealed record VisitorCategory(string Id, string Label, string MarkerLabel, string ToneKey = "is-history");
 
 public sealed record VisitorPoi(

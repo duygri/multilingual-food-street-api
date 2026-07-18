@@ -31,7 +31,7 @@
                     type="button"
                     class="category-chip @(SelectedCategoryId == category.Id ? "is-selected" : string.Empty)"
                     @onclick="() => OnSelectCategory.InvokeAsync(category.Id)">
-                    <span>@GetCategoryIcon(category.Id)</span>
+                    <VisitorIcon Name="@GetCategoryIcon(category.Id)" />
                     <span>@Text.LocalizeCategoryLabel(category.Label)</span>
                 </button>
             }
@@ -57,7 +57,7 @@
                     {
                         <button type="button" class="search-result-item" @onclick="() => OnSelectPoi.InvokeAsync(poi.Id)">
                             <div class="search-result-item__icon @GetPoiTone(poi.CategoryId)">
-                                <span>@GetPoiIcon(poi)</span>
+                                <VisitorIcon Name="@GetPoiIcon(poi)" />
                             </div>
                             <div class="search-result-item__body">
                                 <div class="search-result-item__eyebrow">

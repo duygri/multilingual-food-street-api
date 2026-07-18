@@ -4,6 +4,35 @@ namespace NarrationApp.Web.Tests.Mobile;
 
 public sealed class MobileSectionMarkupTests
 {
+    [Theory]
+    [InlineData("VisitorDiscoverScreen.razor", "<VisitorIcon Name=\"@GetCategoryIcon(category.Id)\" />", "@GetCategoryIcon(category.Id)</span>")]
+    [InlineData("VisitorDiscoverScreen.razor", "<VisitorIcon Name=\"@GetPoiIcon(poi)\" />", "@GetPoiIcon(poi)</span>")]
+    [InlineData("VisitorSearchScreen.razor", "<VisitorIcon Name=\"@GetCategoryIcon(category.Id)\" />", "@GetCategoryIcon(category.Id)</span>")]
+    [InlineData("VisitorSearchScreen.razor", "<VisitorIcon Name=\"@GetPoiIcon(poi)\" />", "@GetPoiIcon(poi)</span>")]
+    [InlineData("VisitorPoiDetailScreen.razor", "<VisitorIcon Name=\"@GetPoiIcon()\" />", ">@GetPoiIcon()</div>")]
+    [InlineData("VisitorPoiDetailScreen.razor", "<VisitorIcon Name=\"@GetRelatedPoiIcon(relatedPoi)\" />", "@GetRelatedPoiIcon(relatedPoi)</span>")]
+    [InlineData("VisitorFullPlayerScreen.razor", "<VisitorIcon Name=\"@GetPoiIcon()\" />", ">@GetPoiIcon()</div>")]
+    public void Mobile_formatter_consumers_render_icon_keys_through_visitor_icon(
+        string fileName,
+        string expectedComponent,
+        string forbiddenPlainText)
+    {
+        var markup = ReadSectionMarkup(fileName);
+
+        Assert.Contains(expectedComponent, markup, StringComparison.Ordinal);
+        Assert.DoesNotContain(forbiddenPlainText, markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mobile_category_model_documents_formatter_normalization_of_configured_marker_values()
+    {
+        var modelPath = Path.Combine(ProjectRoot, "src", "NarrationApp.Mobile", "Features", "Home", "VisitorShellModels.cs");
+        var source = File.ReadAllText(modelPath);
+
+        Assert.Contains("raw configured values are normalized by", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("VisitorCategoryPresentationFormatter", source, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void Mobile_shared_icon_uses_a_finite_accessible_vector_glyph_set()
     {

@@ -119,6 +119,9 @@
         <!-- Custom Fonts -->
         <MauiFont Include="Resources\Fonts\*" />
 
+        <!-- Preserve upstream font license notices in the packaged app. -->
+        <MauiAsset Include="wwwroot\fonts\*-OFL.txt" LogicalName="wwwroot/fonts/%(Filename)%(Extension)" />
+
         <!-- Raw Assets (also remove the "Resources\Raw" prefix) -->
         <MauiAsset Include="Resources\Raw\**" Exclude="Resources\Raw\AboutAssets.txt;Resources\Raw\visitor-api.json" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
         <MauiAsset Include="Resources\Raw\AboutAssets.txt" LogicalName="AboutAssets.txt" />

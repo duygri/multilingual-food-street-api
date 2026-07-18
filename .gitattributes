@@ -1,0 +1,2 @@
+# Preserve byte-exact third-party notices, including upstream whitespace.
+src/NarrationApp.Mobile/wwwroot/fonts/*-OFL.txt -text -whitespace
