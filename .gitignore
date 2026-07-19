@@ -9,6 +9,9 @@ publish-apk/
 *.user
 *.suo
 
+# Isolated agent worktrees
+.worktrees/
+
 # .NET tools & caches
 .dotnet/
 .dotnet-cli/
