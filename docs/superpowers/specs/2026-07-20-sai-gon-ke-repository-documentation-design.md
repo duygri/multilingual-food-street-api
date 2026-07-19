@@ -39,7 +39,7 @@ The repository currently has no root-level `README.md`; only the mobile font ass
 - Without a Mapbox token, the Web analytics map and mobile map/directions surfaces report an unavailable state; POI/audio/QR flows can still be documented separately where they do not require Mapbox.
 - Without Google Cloud credentials, the server registers mock translation and text-to-speech services for local/test use.
 - Without Cloudflare R2 credentials, the server uses local mock storage under its local `wwwroot/audio` path.
-- The Android project targets `net9.0-android35.0` and supports Android API 24+ at runtime. The README should require the MAUI Android workload and Android SDK platform 35, but must not invent a JDK version that is not pinned in the repository. Staging/Release builds require a real `VisitorApiConfigFile` and signing configuration.
+- The Android project targets `net9.0-android35.0` and supports Android API 24+ at runtime. The README should require the MAUI Android workload and Android SDK platform 35, but must not invent a JDK version that is not pinned in the repository. Staging/Release builds require a real `VisitorApiConfigFile`; signed Staging/Release packages additionally require signing configuration, while unsigned builds remain possible for local validation.
 - Before implementation is considered complete, run the documented restore, API/Web build, two test commands, and Debug Android build/workload check on the available environment; record any environment-blocked command honestly.
 
 ## GitHub About metadata
